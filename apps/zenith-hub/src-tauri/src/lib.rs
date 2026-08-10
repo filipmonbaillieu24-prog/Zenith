@@ -712,19 +712,48 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     
     // Start scan
     let _ = adapter.start_scan(ScanFilter::default()).await;
-    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(6)).await;
     
     let peripherals = adapter.peripherals().await.map_err(|e| e.to_string())?;
     let mut ring_peripheral = None;
     
+    use std::io::Write;
+    let mut log_file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("e:\\Google Antgravity\\Zenith\\ble_debug.log");
+
+    if let Ok(ref mut file) = log_file {
+        let _ = writeln!(file, "[Colmi Sync] Scan gestart... Aantal gevonden peripherals in adapter cache: {}", peripherals.len());
+    }
+    
     for peripheral in peripherals {
         if let Ok(Some(properties)) = peripheral.properties().await {
-            let name = properties.local_name.unwrap_or_default().to_lowercase();
+            let name = properties.local_name.clone().unwrap_or_default();
+            let name_lower = name.to_lowercase();
+            let address = peripheral.address().to_string();
+            let services_str: Vec<String> = properties.services.iter().map(|s| s.to_string()).collect();
+
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Apparaat gescand: Naam='{}', Adres='{}', Services={:?}", name, address, services_str);
+            }
+
             let has_service = properties.services.iter().any(|s| {
                 let uuid_str = s.to_string().to_lowercase();
-                uuid_str.contains("56ff") || uuid_str.contains("6e40fff0")
+                uuid_str.contains("56ff") || uuid_str.contains("6e40fff0") || uuid_str.contains("fee7")
             });
-            if name.contains("colmi") || name.contains("r02") || name.contains("r06") || name.contains("r10") || name.contains("ring") || has_service {
+
+            if name_lower.contains("colmi") 
+                || name_lower.contains("r0") 
+                || name_lower.contains("ring") 
+                || name_lower.contains("smart")
+                || name_lower.contains("wearable")
+                || name_lower.contains("mouyoung")
+                || has_service 
+            {
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
+                }
                 ring_peripheral = Some(peripheral);
                 break;
             }
