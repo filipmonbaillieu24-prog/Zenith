@@ -157,7 +157,16 @@ export function predictAutoregWeight(
   const repsToFailure = targetReps + targetRir;
   const predictedWeight = predictedE1RM / (1.0 + repsToFailure / 30.0);
   
-  return Math.max(0.0, predictedWeight);
+  // Apply safety guardrails: clamp predicted weight within 15% of previous weight
+  // and within 10% of the scientific Epley formula weight.
+  const repsToFailurePrev = prevReps + prevRir;
+  const e1RMPrev = prevWeight * (1.0 + repsToFailurePrev / 30.0);
+  const epleyW = e1RMPrev / (1.0 + (targetReps + targetRir) / 30.0);
+  
+  const minSafeW = Math.max(prevWeight * 0.85, epleyW * 0.9);
+  const maxSafeW = Math.min(prevWeight * 1.15, epleyW * 1.1);
+  
+  return Math.max(0.0, Math.min(maxSafeW, Math.max(minSafeW, predictedWeight)));
 }
 
 /**

@@ -769,8 +769,17 @@ fun TrackerScreen(
                                                             val nextTargetReps = nextSet.targetReps
                                                             val step = if (exState.incrementPerSide) 2.0 * exState.incrementWeight else exState.incrementWeight
 
+                                                            val epleyW = {
+                                                                val repsToFailure = r + rir
+                                                                val e1RM = w * (1.0 + repsToFailure / 30.0)
+                                                                e1RM / (1.0 + (nextTargetReps + nextTargetRir) / 30.0)
+                                                            }()
+
+                                                            val minSafeW = Math.max(w * 0.85, epleyW * 0.9)
+                                                            val maxSafeW = Math.min(w * 1.15, epleyW * 1.1)
+
                                                             val predictedW = if (KratosAutoregModel.isLoaded()) {
-                                                                KratosAutoregModel.predictWeight(
+                                                                val rawML = KratosAutoregModel.predictWeight(
                                                                     setIndex = setIndex,
                                                                     prevWeight = w,
                                                                     prevReps = r,
@@ -779,10 +788,9 @@ fun TrackerScreen(
                                                                     targetReps = nextTargetReps,
                                                                     targetRir = nextTargetRir
                                                                 )
+                                                                rawML.coerceIn(minSafeW, maxSafeW)
                                                             } else {
-                                                                val repsToFailure = r + rir
-                                                                val e1RM = w * (1.0 + repsToFailure / 30.0)
-                                                                e1RM / (1.0 + (nextTargetReps + nextTargetRir) / 30.0)
+                                                                epleyW
                                                             }
 
                                                             val roundedW = Math.round(predictedW / step) * step
