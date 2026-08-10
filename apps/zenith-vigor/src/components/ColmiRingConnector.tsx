@@ -254,6 +254,19 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               <strong>Koppeling mislukt:</strong> {errorMsg}
             </div>
           )}
+
+          {status === 'completed' && (
+            <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.15)', borderRadius: '10px', padding: '12px', textAlign: 'left', marginBottom: '20px' }}>
+              <h4 style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', marginBottom: 4 }}>Bèta Protocol Opmerking</h4>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                De fysieke Bluetooth-koppeling en tijdsynchronisatie met uw Colmi Ring zijn succesvol uitgevoerd!
+                <br /><br />
+                Omdat de decryptie van het binaire sportprotocol van de ring momenteel nog in actieve ontwikkeling is in deze pilotfase, zijn de ingeladen stappen en slaapuren tijdelijk <strong>demonstratie-waarden</strong>. 
+                <br /><br />
+                U kunt in de tussentijd de knop <strong>+ Log Handmatig</strong> rechtsboven op het dashboard gebruiken om uw werkelijke daggegevens in te voeren.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="modal-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
