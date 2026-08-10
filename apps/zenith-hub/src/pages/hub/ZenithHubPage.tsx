@@ -87,7 +87,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         .lte('logged_at', todayEnd.toISOString())
         .limit(1);
       if (stData && stData.length > 0) {
-        setTodaySteps(stData[0].steps);
+        setTodaySteps(stData[0].step_count || 0);
       } else {
         // Try fallback to last log to show something, or 0
         setTodaySteps(0);
@@ -416,7 +416,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                         <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800 }}>Stappenteller Vandaag</span>
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>
-                        {todaySteps.toLocaleString()} / {stepsGoal.toLocaleString()}
+                        {(todaySteps || 0).toLocaleString()} / {(stepsGoal || 10000).toLocaleString()}
                       </span>
                     </div>
                     <div style={{ height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
