@@ -833,45 +833,44 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     let mut parsed_sleep_quality = 0i32;
     let mut has_parsed_data = false;
     
-    let mut timeout = Box::pin(tokio::time::sleep(tokio::time::Duration::from_millis(2000)));
-    
-    loop {
-        tokio::select! {
-            Some(notification) = notification_stream.next() => {
-                let data = notification.value;
-                if let Ok(ref mut file) = log_file {
-                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (TimeSync): {:?}", data);
-                }
-                
-                // MoYoung/Rfstar packet parsing:
-                if data.len() >= 5 {
-                    let cmd_header = data[0];
-                    if cmd_header == 0x01 || cmd_header == 0x07 || cmd_header == 0x08 {
-                        // Let's check bytes 1..5 for steps
-                        let val_be = u32::from_be_bytes([data[1], data[2], data[3], data[4]]) as i32;
-                        let val_le = u32::from_le_bytes([data[1], data[2], data[3], data[4]]) as i32;
-                        
-                        // Check which one is realistic (e.g. > 0 and < 100,000)
-                        let mut steps = 0;
-                        if val_be > 0 && val_be < 100000 {
-                            steps = val_be;
-                        } else if val_le > 0 && val_le < 100000 {
-                            steps = val_le;
-                        }
-                        
-                        if steps > 0 {
-                            parsed_steps = steps;
-                            has_parsed_data = true;
-                            if let Ok(ref mut file) = log_file {
-                                let _ = writeln!(file, "[Colmi Sync] Gecorrigeerde stappen: {}", steps);
-                            }
+    // Read up to 10 packets or until timeout
+    for _ in 0..10 {
+        if let Ok(Some(notification)) = tokio::time::timeout(
+            tokio::time::Duration::from_millis(1500),
+            notification_stream.next()
+        ).await {
+            let data = notification.value;
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (TimeSync): {:?}", data);
+            }
+            
+            // MoYoung/Rfstar packet parsing:
+            if data.len() >= 5 {
+                let cmd_header = data[0];
+                if cmd_header == 0x01 || cmd_header == 0x07 || cmd_header == 0x08 {
+                    // Let's check bytes 1..5 for steps
+                    let val_be = u32::from_be_bytes([data[1], data[2], data[3], data[4]]) as i32;
+                    let val_le = u32::from_le_bytes([data[1], data[2], data[3], data[4]]) as i32;
+                    
+                    // Check which one is realistic (e.g. > 0 and < 100,000)
+                    let mut steps = 0;
+                    if val_be > 0 && val_be < 100000 {
+                        steps = val_be;
+                    } else if val_le > 0 && val_le < 100000 {
+                        steps = val_le;
+                    }
+                    
+                    if steps > 0 {
+                        parsed_steps = steps;
+                        has_parsed_data = true;
+                        if let Ok(ref mut file) = log_file {
+                            let _ = writeln!(file, "[Colmi Sync] Gecorrigeerde stappen: {}", steps);
                         }
                     }
                 }
             }
-            _ = &mut timeout => {
-                break;
-            }
+        } else {
+            break;
         }
     }
     
@@ -886,43 +885,42 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     
     let _ = peripheral.write(&w_char, &sync_cmd, btleplug::api::WriteType::WithoutResponse).await;
     
-    let mut timeout = Box::pin(tokio::time::sleep(tokio::time::Duration::from_millis(2000)));
-    
-    loop {
-        tokio::select! {
-            Some(notification) = notification_stream.next() => {
-                let data = notification.value;
-                if let Ok(ref mut file) = log_file {
-                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncLogs): {:?}", data);
-                }
-                
-                if data.len() >= 9 {
-                    let cmd_header = data[0];
-                    if cmd_header == 0x08 || cmd_header == 0x07 {
-                        // Steps are often in bytes 5..9 in MoYoung log packages
-                        let val_be = u32::from_be_bytes([data[5], data[6], data[7], data[8]]) as i32;
-                        let val_le = u32::from_le_bytes([data[5], data[6], data[7], data[8]]) as i32;
-                        
-                        let mut steps = 0;
-                        if val_be > 0 && val_be < 100000 {
-                            steps = val_be;
-                        } else if val_le > 0 && val_le < 100000 {
-                            steps = val_le;
-                        }
-                        
-                        if steps > 0 {
-                            parsed_steps = steps;
-                            has_parsed_data = true;
-                            if let Ok(ref mut file) = log_file {
-                                let _ = writeln!(file, "[Colmi Sync] Stappen uit log: {}", steps);
-                            }
+    // Read up to 10 packets or until timeout
+    for _ in 0..10 {
+        if let Ok(Some(notification)) = tokio::time::timeout(
+            tokio::time::Duration::from_millis(1500),
+            notification_stream.next()
+        ).await {
+            let data = notification.value;
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncLogs): {:?}", data);
+            }
+            
+            if data.len() >= 9 {
+                let cmd_header = data[0];
+                if cmd_header == 0x08 || cmd_header == 0x07 {
+                    // Steps are often in bytes 5..9 in MoYoung log packages
+                    let val_be = u32::from_be_bytes([data[5], data[6], data[7], data[8]]) as i32;
+                    let val_le = u32::from_le_bytes([data[5], data[6], data[7], data[8]]) as i32;
+                    
+                    let mut steps = 0;
+                    if val_be > 0 && val_be < 100000 {
+                        steps = val_be;
+                    } else if val_le > 0 && val_le < 100000 {
+                        steps = val_le;
+                    }
+                    
+                    if steps > 0 {
+                        parsed_steps = steps;
+                        has_parsed_data = true;
+                        if let Ok(ref mut file) = log_file {
+                            let _ = writeln!(file, "[Colmi Sync] Stappen uit log: {}", steps);
                         }
                     }
                 }
             }
-            _ = &mut timeout => {
-                break;
-            }
+        } else {
+            break;
         }
     }
     
