@@ -868,16 +868,18 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     println!("[Colmi Sync] Tijd-commando sturen naar ring...");
     let _ = peripheral.write(&w_char, &time_cmd, btleplug::api::WriteType::WithoutResponse).await;
     
-    // Wait for response and listen for notifications
+    // Variables to hold parsed data
     let mut parsed_steps = 0i32;
     let mut parsed_sleep_minutes = 0i32;
     let mut parsed_sleep_quality = 0i32;
     let mut has_parsed_data = false;
-    
-    // Read up to 10 packets or until timeout
-    for _ in 0..10 {
+
+    // ----------------------------------------------------
+    // PHASE 1: LISTEN FOR RESPONSE TO TIME SYNC
+    // ----------------------------------------------------
+    for _ in 0..6 {
         if let Ok(Some(notification)) = tokio::time::timeout(
-            tokio::time::Duration::from_millis(1500),
+            tokio::time::Duration::from_millis(1000),
             notification_stream.next()
         ).await {
             let data = notification.value;
@@ -886,29 +888,19 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
                 let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (TimeSync): {:?}", data);
             }
             
-            // MoYoung/Rfstar packet parsing:
+            // Generic parser to detect steps in any incoming packet
             if data.len() >= 5 {
-                let cmd_header = data[0];
-                if cmd_header == 0x01 || cmd_header == 0x07 || cmd_header == 0x08 {
-                    // Let's check bytes 1..5 for steps
-                    let val_be = u32::from_be_bytes([data[1], data[2], data[3], data[4]]) as i32;
-                    let val_le = u32::from_le_bytes([data[1], data[2], data[3], data[4]]) as i32;
-                    
-                    // Check which one is realistic (e.g. > 0 and < 100,000)
-                    let mut steps = 0;
+                for offset in 1..=(data.len() - 4) {
+                    let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                    let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
                     if val_be > 0 && val_be < 100000 {
-                        steps = val_be;
-                    } else if val_le > 0 && val_le < 100000 {
-                        steps = val_le;
-                    }
-                    
-                    if steps > 0 {
-                        parsed_steps = steps;
+                        parsed_steps = val_be;
                         has_parsed_data = true;
-                        println!("[Colmi Sync] Stappen gedecoreerd uit TimeSync: {}", steps);
-                        if let Ok(ref mut file) = log_file {
-                            let _ = writeln!(file, "[Colmi Sync] Gecorrigeerde stappen: {}", steps);
-                        }
+                        println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
+                    } else if val_le > 0 && val_le < 100000 {
+                        parsed_steps = val_le;
+                        has_parsed_data = true;
+                        println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
                     }
                 }
             }
@@ -916,52 +908,129 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             break;
         }
     }
+
+    // ----------------------------------------------------
+    // PHASE 2: SEND CURRENT ACTIVITY QUERY (0x02)
+    // ----------------------------------------------------
+    let mut act_cmd = vec![0u8; 16];
+    act_cmd[0] = 0x02; // CMD_CURRENT_ACTIVITY_QUERY
+    act_cmd[15] = 0x02; // Checksum
     
-    // Send sync logs command
-    let mut sync_cmd = vec![0u8; 16];
-    sync_cmd[0] = 0x08; // CMD_SYNC_LOGS / STEPS / SLEEP
-    let mut sum: u32 = 0;
-    for i in 0..15 {
-        sum += sync_cmd[i] as u32;
-    }
-    sync_cmd[15] = (sum & 0xFF) as u8;
+    println!("[Colmi Sync] CurrentActivityQuery-commando (0x02) sturen naar ring...");
+    let _ = peripheral.write(&w_char, &act_cmd, btleplug::api::WriteType::WithoutResponse).await;
     
-    println!("[Colmi Sync] SyncLogs-commando sturen naar ring...");
-    let _ = peripheral.write(&w_char, &sync_cmd, btleplug::api::WriteType::WithoutResponse).await;
-    
-    // Read up to 10 packets or until timeout
-    for _ in 0..10 {
+    for _ in 0..6 {
         if let Ok(Some(notification)) = tokio::time::timeout(
-            tokio::time::Duration::from_millis(1500),
+            tokio::time::Duration::from_millis(1000),
             notification_stream.next()
         ).await {
             let data = notification.value;
-            println!("[Colmi Sync] Notificatie ontvangen (SyncLogs): {:?}", data);
+            println!("[Colmi Sync] Notificatie ontvangen (ActivityQuery): {:?}", data);
             if let Ok(ref mut file) = log_file {
-                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncLogs): {:?}", data);
+                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (ActivityQuery): {:?}", data);
             }
             
-            if data.len() >= 9 {
-                let cmd_header = data[0];
-                if cmd_header == 0x08 || cmd_header == 0x07 {
-                    // Steps are often in bytes 5..9 in MoYoung log packages
-                    let val_be = u32::from_be_bytes([data[5], data[6], data[7], data[8]]) as i32;
-                    let val_le = u32::from_le_bytes([data[5], data[6], data[7], data[8]]) as i32;
-                    
-                    let mut steps = 0;
+            if data.len() >= 5 {
+                for offset in 1..=(data.len() - 4) {
+                    let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                    let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
                     if val_be > 0 && val_be < 100000 {
-                        steps = val_be;
+                        parsed_steps = val_be;
+                        has_parsed_data = true;
+                        println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
                     } else if val_le > 0 && val_le < 100000 {
-                        steps = val_le;
+                        parsed_steps = val_le;
+                        has_parsed_data = true;
+                        println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+                    }
+                }
+            }
+        } else {
+            break;
+        }
+    }
+
+    // ----------------------------------------------------
+    // PHASE 3: SEND SYNC ACTIVITY LOGS (0x43)
+    // ----------------------------------------------------
+    let mut sync_act_cmd = vec![0u8; 16];
+    sync_act_cmd[0] = 0x43; // CMD_SYNC_ACTIVITY
+    sync_act_cmd[15] = 0x43; // Checksum
+    
+    println!("[Colmi Sync] SyncActivity-commando (0x43) sturen naar ring...");
+    let _ = peripheral.write(&w_char, &sync_act_cmd, btleplug::api::WriteType::WithoutResponse).await;
+    
+    for _ in 0..6 {
+        if let Ok(Some(notification)) = tokio::time::timeout(
+            tokio::time::Duration::from_millis(1000),
+            notification_stream.next()
+        ).await {
+            let data = notification.value;
+            println!("[Colmi Sync] Notificatie ontvangen (SyncActivity): {:?}", data);
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncActivity): {:?}", data);
+            }
+            
+            if data.len() >= 5 {
+                for offset in 1..=(data.len() - 4) {
+                    let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                    let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                    if val_be > 0 && val_be < 100000 {
+                        parsed_steps = val_be;
+                        has_parsed_data = true;
+                        println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
+                    } else if val_le > 0 && val_le < 100000 {
+                        parsed_steps = val_le;
+                        has_parsed_data = true;
+                        println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+                    }
+                }
+            }
+        } else {
+            break;
+        }
+    }
+
+    // ----------------------------------------------------
+    // PHASE 4: SEND SYNC SLEEP LOGS (0x44)
+    // ----------------------------------------------------
+    let mut sleep_cmd = vec![0u8; 16];
+    sleep_cmd[0] = 0x44; // CMD_SYNC_SLEEP
+    sleep_cmd[15] = 0x44; // Checksum
+    
+    println!("[Colmi Sync] SyncSleep-commando (0x44) sturen naar ring...");
+    let _ = peripheral.write(&w_char, &sleep_cmd, btleplug::api::WriteType::WithoutResponse).await;
+    
+    for _ in 0..6 {
+        if let Ok(Some(notification)) = tokio::time::timeout(
+            tokio::time::Duration::from_millis(1000),
+            notification_stream.next()
+        ).await {
+            let data = notification.value;
+            println!("[Colmi Sync] Notificatie ontvangen (SyncSleep): {:?}", data);
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncSleep): {:?}", data);
+            }
+            
+            if data.len() >= 4 {
+                let cmd_header = data[0];
+                if cmd_header == 0x44 || cmd_header == 0x05 {
+                    // Try parsing 2-byte duration at offset 1 or 2
+                    let dur_be = u16::from_be_bytes([data[1], data[2]]) as i32;
+                    let dur_le = u16::from_le_bytes([data[1], data[2]]) as i32;
+                    let quality = data[3] as i32;
+                    
+                    let mut dur = 0;
+                    if dur_be > 30 && dur_be < 720 {
+                        dur = dur_be;
+                    } else if dur_le > 30 && dur_le < 720 {
+                        dur = dur_le;
                     }
                     
-                    if steps > 0 {
-                        parsed_steps = steps;
-                        has_parsed_data = true;
-                        println!("[Colmi Sync] Stappen gedecoreerd uit SyncLogs: {}", steps);
-                        if let Ok(ref mut file) = log_file {
-                            let _ = writeln!(file, "[Colmi Sync] Stappen uit log: {}", steps);
-                        }
+                    if dur > 0 && quality > 10 && quality <= 100 {
+                        parsed_sleep_minutes = dur;
+                        parsed_sleep_quality = quality;
+                        println!("[Colmi Sync] Slaap gedecoreerd: {} min, kwaliteit={}", dur, quality);
                     }
                 }
             }
