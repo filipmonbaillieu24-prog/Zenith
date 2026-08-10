@@ -294,6 +294,33 @@ function App() {
             pendingMetrics.current = null;
           }
         }
+      } else if (event.data?.type === 'request-colmi-sync') {
+        console.log("Hub received request-colmi-sync from iframe");
+        const runSync = async () => {
+          try {
+            const { invoke } = await import('@tauri-apps/api/core');
+            const resultStr = await invoke<string>('sync_colmi_ring', { simulate: false });
+            const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
+            if (iframe && iframe.contentWindow) {
+              iframe.contentWindow.postMessage({
+                type: 'colmi-sync-result',
+                success: true,
+                data: resultStr
+              }, '*');
+            }
+          } catch (err: any) {
+            console.error("Hub failed to sync Colmi ring:", err);
+            const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
+            if (iframe && iframe.contentWindow) {
+              iframe.contentWindow.postMessage({
+                type: 'colmi-sync-result',
+                success: false,
+                error: err.message || String(err)
+              }, '*');
+            }
+          }
+        };
+        runSync();
       }
     };
     window.addEventListener('message', handleMessage);

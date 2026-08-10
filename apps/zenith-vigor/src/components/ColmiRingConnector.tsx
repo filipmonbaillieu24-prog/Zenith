@@ -24,61 +24,128 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
     setErrorMsg('');
     addLog('Bluetooth-scan gestart...');
 
-    try {
-      // Physical BLE Mode via Tauri Rust Bridge
-      if (!(window as any).__TAURI__ && !(window as any).__TAURI_INTERNALS__) {
-        throw new Error('Fysieke Bluetooth-synchronisatie is alleen beschikbaar in de desktop-app.');
-      }
-
-      const { invoke } = await import('@tauri-apps/api/core');
-      addLog('Communiceren met Tauri Native BLE Bridge...');
+    if (window.parent !== window) {
+      // In an iframe (Desktop Hub mode)
+      addLog('Verzoek versturen naar Zenith Hub voor Bluetooth-synchronisatie...');
       
+      const messageListener = async (event: MessageEvent) => {
+        if (event.data && event.data.type === 'colmi-sync-result') {
+          window.removeEventListener('message', messageListener);
+          
+          if (event.data.success) {
+            try {
+              const result = JSON.parse(event.data.data);
+              setStatus('syncing');
+              addLog(`Verbonden met apparaat: ${result.device_name}`);
+              addLog('Synchronisatie van historische stappen & slaap gestart...');
+
+              // Process steps
+              if (result.steps && result.steps.length > 0) {
+                const dbSteps = result.steps.map((s: any) => ({
+                  user_id: userId,
+                  step_count: s.step_count,
+                  logged_at: new Date(s.timestamp * 1000).toISOString()
+                }));
+                const { error: stepsError } = await supabase.from('vigor_steps').insert(dbSteps);
+                if (stepsError) throw stepsError;
+                addLog(`Succes: ${result.steps.length} stappendata opgeslagen.`);
+              }
+
+              // Process sleep
+              if (result.sleep && result.sleep.length > 0) {
+                const dbSleep = result.sleep.map((s: any) => ({
+                  user_id: userId,
+                  duration_minutes: s.duration_minutes,
+                  quality_score: s.quality_score,
+                  logged_at: new Date(s.timestamp * 1000).toISOString()
+                }));
+                const { error: sleepError } = await supabase.from('vigor_sleep').insert(dbSleep);
+                if (sleepError) throw sleepError;
+                addLog(`Succes: ${result.sleep.length} slaapdata opgeslagen.`);
+              }
+
+              setStatus('completed');
+              addLog('Synchronisatie volledig voltooid!');
+              if (onPairingSuccess) {
+                onPairingSuccess('Colmi', 'R02');
+              }
+              onSyncComplete();
+            } catch (err: any) {
+              console.error('Ring sync processing error:', err);
+              setStatus('error');
+              setErrorMsg(err.message || 'Fout bij verwerken van ringgegevens.');
+              addLog(`Fout: ${err.message || 'Verwerkingsfout'}`);
+            }
+          } else {
+            setStatus('error');
+            setErrorMsg(event.data.error || 'Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.');
+            addLog(`Fout: ${event.data.error || 'Verbindingsfout'}`);
+          }
+        }
+      };
+
+      window.addEventListener('message', messageListener);
+      window.parent.postMessage({ type: 'request-colmi-sync' }, '*');
       setStatus('connecting');
       addLog('Zoeken naar Colmi Smart Ring in de buurt...');
-      
-      const resultStr = await invoke<string>('sync_colmi_ring', { simulate: false });
-      const result = JSON.parse(resultStr);
+      addLog('Wachten op antwoord van Zenith Hub...');
+    } else {
+      try {
+        // Physical BLE Mode via Tauri Rust Bridge (direct if not in iframe)
+        if (!(window as any).__TAURI__ && !(window as any).__TAURI_INTERNALS__) {
+          throw new Error('Fysieke Bluetooth-synchronisatie is alleen beschikbaar in de desktop-app.');
+        }
 
-      setStatus('syncing');
-      addLog(`Verbonden met apparaat: ${result.device_name}`);
-      addLog('Synchronisatie van historische stappen & slaap gestart...');
+        const { invoke } = await import('@tauri-apps/api/core');
+        addLog('Communiceren met Tauri Native BLE Bridge...');
+        
+        setStatus('connecting');
+        addLog('Zoeken naar Colmi Smart Ring in de buurt...');
+        
+        const resultStr = await invoke<string>('sync_colmi_ring', { simulate: false });
+        const result = JSON.parse(resultStr);
 
-      // Process steps
-      if (result.steps && result.steps.length > 0) {
-        const dbSteps = result.steps.map((s: any) => ({
-          user_id: userId,
-          step_count: s.step_count,
-          logged_at: new Date(s.timestamp * 1000).toISOString()
-        }));
-        const { error: stepsError } = await supabase.from('vigor_steps').insert(dbSteps);
-        if (stepsError) throw stepsError;
-        addLog(`Succes: ${result.steps.length} stappendata opgeslagen.`);
+        setStatus('syncing');
+        addLog(`Verbonden met apparaat: ${result.device_name}`);
+        addLog('Synchronisatie van historische stappen & slaap gestart...');
+
+        // Process steps
+        if (result.steps && result.steps.length > 0) {
+          const dbSteps = result.steps.map((s: any) => ({
+            user_id: userId,
+            step_count: s.step_count,
+            logged_at: new Date(s.timestamp * 1000).toISOString()
+          }));
+          const { error: stepsError } = await supabase.from('vigor_steps').insert(dbSteps);
+          if (stepsError) throw stepsError;
+          addLog(`Succes: ${result.steps.length} stappendata opgeslagen.`);
+        }
+
+        // Process sleep
+        if (result.sleep && result.sleep.length > 0) {
+          const dbSleep = result.sleep.map((s: any) => ({
+            user_id: userId,
+            duration_minutes: s.duration_minutes,
+            quality_score: s.quality_score,
+            logged_at: new Date(s.timestamp * 1000).toISOString()
+          }));
+          const { error: sleepError } = await supabase.from('vigor_sleep').insert(dbSleep);
+          if (sleepError) throw sleepError;
+          addLog(`Succes: ${result.sleep.length} slaapdata opgeslagen.`);
+        }
+
+        setStatus('completed');
+        addLog('Synchronisatie volledig voltooid!');
+        if (onPairingSuccess) {
+          onPairingSuccess('Colmi', 'R02');
+        }
+        onSyncComplete();
+      } catch (err: any) {
+        console.error('Ring sync error:', err);
+        setStatus('error');
+        setErrorMsg(err.message || 'Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.');
+        addLog(`Fout: ${err.message || 'Geen verbinding mogelijk'}`);
       }
-
-      // Process sleep
-      if (result.sleep && result.sleep.length > 0) {
-        const dbSleep = result.sleep.map((s: any) => ({
-          user_id: userId,
-          duration_minutes: s.duration_minutes,
-          quality_score: s.quality_score,
-          logged_at: new Date(s.timestamp * 1000).toISOString()
-        }));
-        const { error: sleepError } = await supabase.from('vigor_sleep').insert(dbSleep);
-        if (sleepError) throw sleepError;
-        addLog(`Succes: ${result.sleep.length} slaapdata opgeslagen.`);
-      }
-
-      setStatus('completed');
-      addLog('Synchronisatie volledig voltooid!');
-      if (onPairingSuccess) {
-        onPairingSuccess('Colmi', 'R02');
-      }
-      onSyncComplete();
-    } catch (err: any) {
-      console.error('Ring sync error:', err);
-      setStatus('error');
-      setErrorMsg(err.message || 'Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.');
-      addLog(`Fout: ${err.message || 'Geen verbinding mogelijk'}`);
     }
   };
 
