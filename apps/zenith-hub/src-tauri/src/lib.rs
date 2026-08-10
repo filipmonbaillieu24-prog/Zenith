@@ -890,17 +890,19 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             
             // Generic parser to detect steps in any incoming packet
             if data.len() >= 5 {
-                for offset in 1..=(data.len() - 4) {
-                    let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                    let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                    if val_be > 0 && val_be < 100000 {
-                        parsed_steps = val_be;
-                        has_parsed_data = true;
-                        println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
-                    } else if val_le > 0 && val_le < 100000 {
-                        parsed_steps = val_le;
-                        has_parsed_data = true;
-                        println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+                for offset in 1..=10 {
+                    if offset + 3 < data.len() {
+                        let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                        let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                        if val_be > 0 && val_be < 100000 {
+                            parsed_steps = val_be;
+                            has_parsed_data = true;
+                            println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
+                        } else if val_le > 0 && val_le < 100000 {
+                            parsed_steps = val_le;
+                            has_parsed_data = true;
+                            println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+                        }
                     }
                 }
             }
@@ -931,17 +933,62 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             }
             
             if data.len() >= 5 {
-                for offset in 1..=(data.len() - 4) {
-                    let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                    let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                    if val_be > 0 && val_be < 100000 {
-                        parsed_steps = val_be;
-                        has_parsed_data = true;
-                        println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
-                    } else if val_le > 0 && val_le < 100000 {
-                        parsed_steps = val_le;
-                        has_parsed_data = true;
-                        println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+                for offset in 1..=10 {
+                    if offset + 3 < data.len() {
+                        let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                        let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                        if val_be > 0 && val_be < 100000 {
+                            parsed_steps = val_be;
+                            has_parsed_data = true;
+                            println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
+                        } else if val_le > 0 && val_le < 100000 {
+                            parsed_steps = val_le;
+                            has_parsed_data = true;
+                            println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+                        }
+                    }
+                }
+            }
+        } else {
+            break;
+        }
+    }
+
+    // ----------------------------------------------------
+    // PHASE 2.5: SEND SPORT DETAIL QUERY (0x07)
+    // ----------------------------------------------------
+    let mut sport_cmd = vec![0u8; 16];
+    sport_cmd[0] = 0x07; // CMD_SPORT_DETAIL
+    sport_cmd[15] = 0x07; // Checksum
+    
+    println!("[Colmi Sync] SportDetailQuery-commando (0x07) sturen naar ring...");
+    let _ = peripheral.write(&w_char, &sport_cmd, btleplug::api::WriteType::WithoutResponse).await;
+    
+    for _ in 0..6 {
+        if let Ok(Some(notification)) = tokio::time::timeout(
+            tokio::time::Duration::from_millis(1000),
+            notification_stream.next()
+        ).await {
+            let data = notification.value;
+            println!("[Colmi Sync] Notificatie ontvangen (SportDetail): {:?}", data);
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SportDetail): {:?}", data);
+            }
+            
+            if data.len() >= 5 {
+                for offset in 1..=10 {
+                    if offset + 3 < data.len() {
+                        let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                        let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                        if val_be > 0 && val_be < 100000 {
+                            parsed_steps = val_be;
+                            has_parsed_data = true;
+                            println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
+                        } else if val_le > 0 && val_le < 100000 {
+                            parsed_steps = val_le;
+                            has_parsed_data = true;
+                            println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+                        }
                     }
                 }
             }
@@ -972,17 +1019,19 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             }
             
             if data.len() >= 5 {
-                for offset in 1..=(data.len() - 4) {
-                    let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                    let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                    if val_be > 0 && val_be < 100000 {
-                        parsed_steps = val_be;
-                        has_parsed_data = true;
-                        println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
-                    } else if val_le > 0 && val_le < 100000 {
-                        parsed_steps = val_le;
-                        has_parsed_data = true;
-                        println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+                for offset in 1..=10 {
+                    if offset + 3 < data.len() {
+                        let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                        let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
+                        if val_be > 0 && val_be < 100000 {
+                            parsed_steps = val_be;
+                            has_parsed_data = true;
+                            println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
+                        } else if val_le > 0 && val_le < 100000 {
+                            parsed_steps = val_le;
+                            has_parsed_data = true;
+                            println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+                        }
                     }
                 }
             }
