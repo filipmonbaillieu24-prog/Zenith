@@ -803,6 +803,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     };
     
     peripheral.subscribe(&n_char).await.map_err(|e| format!("Fout bij abonneren op notificaties: {:?}", e))?;
+    let mut notification_stream = peripheral.notifications().await.map_err(|e| e.to_string())?;
     
     // Send time sync command (Time Sync)
     let now = std::time::SystemTime::now()
@@ -818,7 +819,6 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     time_cmd[3] = time_bytes[2];
     time_cmd[4] = time_bytes[3];
     
-    // Calculate checksum
     let mut sum: u32 = 0;
     for i in 0..15 {
         sum += time_cmd[i] as u32;
@@ -827,8 +827,53 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     
     let _ = peripheral.write(&w_char, &time_cmd, btleplug::api::WriteType::WithoutResponse).await;
     
-    // Wait for response and simulate data transfer
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    // Wait for response and listen for notifications
+    let mut parsed_steps = 0i32;
+    let mut parsed_sleep_minutes = 0i32;
+    let mut parsed_sleep_quality = 0i32;
+    let mut has_parsed_data = false;
+    
+    let mut timeout = Box::pin(tokio::time::sleep(tokio::time::Duration::from_millis(2000)));
+    
+    loop {
+        tokio::select! {
+            Some(notification) = notification_stream.next() => {
+                let data = notification.value;
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (TimeSync): {:?}", data);
+                }
+                
+                // MoYoung/Rfstar packet parsing:
+                if data.len() >= 5 {
+                    let cmd_header = data[0];
+                    if cmd_header == 0x01 || cmd_header == 0x07 || cmd_header == 0x08 {
+                        // Let's check bytes 1..5 for steps
+                        let val_be = u32::from_be_bytes([data[1], data[2], data[3], data[4]]) as i32;
+                        let val_le = u32::from_le_bytes([data[1], data[2], data[3], data[4]]) as i32;
+                        
+                        // Check which one is realistic (e.g. > 0 and < 100,000)
+                        let mut steps = 0;
+                        if val_be > 0 && val_be < 100000 {
+                            steps = val_be;
+                        } else if val_le > 0 && val_le < 100000 {
+                            steps = val_le;
+                        }
+                        
+                        if steps > 0 {
+                            parsed_steps = steps;
+                            has_parsed_data = true;
+                            if let Ok(ref mut file) = log_file {
+                                let _ = writeln!(file, "[Colmi Sync] Gecorrigeerde stappen: {}", steps);
+                            }
+                        }
+                    }
+                }
+            }
+            _ = &mut timeout => {
+                break;
+            }
+        }
+    }
     
     // Send sync logs command
     let mut sync_cmd = vec![0u8; 16];
@@ -841,28 +886,77 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     
     let _ = peripheral.write(&w_char, &sync_cmd, btleplug::api::WriteType::WithoutResponse).await;
     
-    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    let mut timeout = Box::pin(tokio::time::sleep(tokio::time::Duration::from_millis(2000)));
+    
+    loop {
+        tokio::select! {
+            Some(notification) = notification_stream.next() => {
+                let data = notification.value;
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncLogs): {:?}", data);
+                }
+                
+                if data.len() >= 9 {
+                    let cmd_header = data[0];
+                    if cmd_header == 0x08 || cmd_header == 0x07 {
+                        // Steps are often in bytes 5..9 in MoYoung log packages
+                        let val_be = u32::from_be_bytes([data[5], data[6], data[7], data[8]]) as i32;
+                        let val_le = u32::from_le_bytes([data[5], data[6], data[7], data[8]]) as i32;
+                        
+                        let mut steps = 0;
+                        if val_be > 0 && val_be < 100000 {
+                            steps = val_be;
+                        } else if val_le > 0 && val_le < 100000 {
+                            steps = val_le;
+                        }
+                        
+                        if steps > 0 {
+                            parsed_steps = steps;
+                            has_parsed_data = true;
+                            if let Ok(ref mut file) = log_file {
+                                let _ = writeln!(file, "[Colmi Sync] Stappen uit log: {}", steps);
+                            }
+                        }
+                    }
+                }
+            }
+            _ = &mut timeout => {
+                break;
+            }
+        }
+    }
     
     let _ = peripheral.unsubscribe(&n_char).await;
     let _ = peripheral.disconnect().await;
     
-    // Since the connection succeeded, we return the parsed ring details!
+    let final_steps = if has_parsed_data { parsed_steps } else { 0 };
+    let final_sleep_duration = parsed_sleep_minutes;
+    let final_sleep_quality = parsed_sleep_quality;
+    
+    if let Ok(ref mut file) = log_file {
+        let _ = writeln!(file, "[Colmi Sync] Synchronisatie gereed. Resultaat: Stappen={}, Slaap={}", final_steps, final_sleep_duration);
+    }
+
     let response = serde_json::json!({
         "status": "success",
         "device_name": "Colmi R02 Smart Ring",
         "steps": [
             {
-                "step_count": 8420,
-                "timestamp": now - 3600
+                "step_count": final_steps,
+                "timestamp": now
             }
         ],
-        "sleep": [
-            {
-                "duration_minutes": 460,
-                "quality_score": 82,
-                "timestamp": now - 12 * 3600
-            }
-        ]
+        "sleep": if final_sleep_duration > 0 {
+            serde_json::json!([
+                {
+                    "duration_minutes": final_sleep_duration,
+                    "quality_score": final_sleep_quality,
+                    "timestamp": now - 12 * 3600
+                }
+            ])
+        } else {
+            serde_json::json!([])
+        }
     });
     
     Ok(response.to_string())
