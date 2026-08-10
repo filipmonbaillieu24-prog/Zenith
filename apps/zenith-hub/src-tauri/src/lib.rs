@@ -765,8 +765,21 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
         None => return Err("Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.".to_string()),
     };
     
+    if let Ok(ref mut file) = log_file {
+        let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral: {}", peripheral.address());
+    }
+    
     peripheral.connect().await.map_err(|e| format!("Fout bij verbinden met ring: {:?}", e))?;
+    
+    if let Ok(ref mut file) = log_file {
+        let _ = writeln!(file, "[Colmi Sync] Verbonden! Start service discovery...");
+    }
+    
     peripheral.discover_services().await.map_err(|e| format!("Fout bij service discovery: {:?}", e))?;
+    
+    if let Ok(ref mut file) = log_file {
+        let _ = writeln!(file, "[Colmi Sync] Service discovery voltooid. Analyseren van services...");
+    }
     
     // Find characteristics
     let mut write_char = None;
@@ -774,12 +787,18 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     
     for service in peripheral.services() {
         let s_uuid = service.uuid.to_string().to_lowercase();
-        if s_uuid.contains("56ff") || s_uuid.contains("6e40fff0") {
+        let char_uuids: Vec<String> = service.characteristics.iter().map(|c| c.uuid.to_string().to_lowercase()).collect();
+        
+        if let Ok(ref mut file) = log_file {
+            let _ = writeln!(file, "[Colmi Sync] Service ontdekt: {} -> Characteristics: {:?}", s_uuid, char_uuids);
+        }
+        
+        if s_uuid.contains("56ff") || s_uuid.contains("6e40fff0") || s_uuid.contains("fee7") {
             for char in service.characteristics {
                 let c_uuid = char.uuid.to_string().to_lowercase();
-                if c_uuid.contains("33f3") || c_uuid.contains("6e400002") {
+                if c_uuid.contains("33f3") || c_uuid.contains("6e400002") || c_uuid.contains("fe01") {
                     write_char = Some(char);
-                } else if c_uuid.contains("33f4") || c_uuid.contains("6e400003") {
+                } else if c_uuid.contains("33f4") || c_uuid.contains("6e400003") || c_uuid.contains("fe02") {
                     notify_char = Some(char);
                 }
             }
@@ -790,7 +809,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
         Some(c) => c,
         None => {
             let _ = peripheral.disconnect().await;
-            return Err("Write characteristic niet gevonden op ring".to_string());
+            return Err("Write characteristic (33f3/fe01) niet gevonden op ring".to_string());
         }
     };
     
@@ -798,7 +817,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
         Some(c) => c,
         None => {
             let _ = peripheral.disconnect().await;
-            return Err("Notify characteristic niet gevonden op ring".to_string());
+            return Err("Notify characteristic (33f4/fe02) niet gevonden op ring".to_string());
         }
     };
     
