@@ -1442,7 +1442,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       {showDeviceManager && (
         <DeviceManagerModal 
           userId={user.id}
-          onClose={() => setShowDeviceManager(false)}
+          onClose={() => {
+            setShowDeviceManager(false);
+            fetchLogs();
+          }}
           fitnessProfile={dbProfile || user.user_metadata?.fitness_profile || {}}
           onDevicesUpdated={fetchPairedDevices}
         />
