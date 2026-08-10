@@ -723,6 +723,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
         .append(true)
         .open("e:\\Google Antgravity\\Zenith\\ble_debug.log");
 
+    println!("[Colmi Sync] Scan gestart... Aantal peripherals in adapter cache: {}", peripherals.len());
     if let Ok(ref mut file) = log_file {
         let _ = writeln!(file, "[Colmi Sync] Scan gestart... Aantal gevonden peripherals in adapter cache: {}", peripherals.len());
     }
@@ -734,6 +735,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             let address = peripheral.address().to_string();
             let services_str: Vec<String> = properties.services.iter().map(|s| s.to_string()).collect();
 
+            println!("[Colmi Sync] Apparaat gescand: Naam='{}', Adres='{}', Services={:?}", name, address, services_str);
             if let Ok(ref mut file) = log_file {
                 let _ = writeln!(file, "[Colmi Sync] Apparaat gescand: Naam='{}', Adres='{}', Services={:?}", name, address, services_str);
             }
@@ -751,6 +753,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
                 || name_lower.contains("mouyoung")
                 || has_service 
             {
+                println!("[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
                 if let Ok(ref mut file) = log_file {
                     let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
                 }
@@ -762,21 +765,33 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     
     let peripheral = match ring_peripheral {
         Some(p) => p,
-        None => return Err("Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.".to_string()),
+        None => {
+            println!("[Colmi Sync] Fout: Geen Colmi Smart Ring gevonden in de buurt.");
+            return Err("Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.".to_string());
+        }
     };
     
+    println!("[Colmi Sync] Verbinden met peripheral: {}", peripheral.address());
     if let Ok(ref mut file) = log_file {
         let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral: {}", peripheral.address());
     }
     
-    peripheral.connect().await.map_err(|e| format!("Fout bij verbinden met ring: {:?}", e))?;
+    peripheral.connect().await.map_err(|e| {
+        println!("[Colmi Sync] Fout bij verbinden met ring: {:?}", e);
+        format!("Fout bij verbinden met ring: {:?}", e)
+    })?;
     
+    println!("[Colmi Sync] Verbonden! Start service discovery...");
     if let Ok(ref mut file) = log_file {
         let _ = writeln!(file, "[Colmi Sync] Verbonden! Start service discovery...");
     }
     
-    peripheral.discover_services().await.map_err(|e| format!("Fout bij service discovery: {:?}", e))?;
+    peripheral.discover_services().await.map_err(|e| {
+        println!("[Colmi Sync] Fout bij service discovery: {:?}", e);
+        format!("Fout bij service discovery: {:?}", e)
+    })?;
     
+    println!("[Colmi Sync] Service discovery voltooid. Analyseren van services...");
     if let Ok(ref mut file) = log_file {
         let _ = writeln!(file, "[Colmi Sync] Service discovery voltooid. Analyseren van services...");
     }
@@ -789,6 +804,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
         let s_uuid = service.uuid.to_string().to_lowercase();
         let char_uuids: Vec<String> = service.characteristics.iter().map(|c| c.uuid.to_string().to_lowercase()).collect();
         
+        println!("[Colmi Sync] Service ontdekt: {} -> Characteristics: {:?}", s_uuid, char_uuids);
         if let Ok(ref mut file) = log_file {
             let _ = writeln!(file, "[Colmi Sync] Service ontdekt: {} -> Characteristics: {:?}", s_uuid, char_uuids);
         }
@@ -808,6 +824,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     let w_char = match write_char {
         Some(c) => c,
         None => {
+            println!("[Colmi Sync] Fout: Write characteristic (33f3/fe01) niet gevonden op ring.");
             let _ = peripheral.disconnect().await;
             return Err("Write characteristic (33f3/fe01) niet gevonden op ring".to_string());
         }
@@ -816,12 +833,16 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     let n_char = match notify_char {
         Some(c) => c,
         None => {
+            println!("[Colmi Sync] Fout: Notify characteristic (33f4/fe02) niet gevonden op ring.");
             let _ = peripheral.disconnect().await;
             return Err("Notify characteristic (33f4/fe02) niet gevonden op ring".to_string());
         }
     };
     
-    peripheral.subscribe(&n_char).await.map_err(|e| format!("Fout bij abonneren op notificaties: {:?}", e))?;
+    peripheral.subscribe(&n_char).await.map_err(|e| {
+        println!("[Colmi Sync] Fout bij abonneren op notificaties: {:?}", e);
+        format!("Fout bij abonneren op notificaties: {:?}", e)
+    })?;
     let mut notification_stream = peripheral.notifications().await.map_err(|e| e.to_string())?;
     
     // Send time sync command (Time Sync)
@@ -844,6 +865,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     }
     time_cmd[15] = (sum & 0xFF) as u8;
     
+    println!("[Colmi Sync] Tijd-commando sturen naar ring...");
     let _ = peripheral.write(&w_char, &time_cmd, btleplug::api::WriteType::WithoutResponse).await;
     
     // Wait for response and listen for notifications
@@ -859,6 +881,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             notification_stream.next()
         ).await {
             let data = notification.value;
+            println!("[Colmi Sync] Notificatie ontvangen (TimeSync): {:?}", data);
             if let Ok(ref mut file) = log_file {
                 let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (TimeSync): {:?}", data);
             }
@@ -882,6 +905,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
                     if steps > 0 {
                         parsed_steps = steps;
                         has_parsed_data = true;
+                        println!("[Colmi Sync] Stappen gedecoreerd uit TimeSync: {}", steps);
                         if let Ok(ref mut file) = log_file {
                             let _ = writeln!(file, "[Colmi Sync] Gecorrigeerde stappen: {}", steps);
                         }
@@ -902,6 +926,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     }
     sync_cmd[15] = (sum & 0xFF) as u8;
     
+    println!("[Colmi Sync] SyncLogs-commando sturen naar ring...");
     let _ = peripheral.write(&w_char, &sync_cmd, btleplug::api::WriteType::WithoutResponse).await;
     
     // Read up to 10 packets or until timeout
@@ -911,6 +936,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             notification_stream.next()
         ).await {
             let data = notification.value;
+            println!("[Colmi Sync] Notificatie ontvangen (SyncLogs): {:?}", data);
             if let Ok(ref mut file) = log_file {
                 let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncLogs): {:?}", data);
             }
@@ -932,6 +958,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
                     if steps > 0 {
                         parsed_steps = steps;
                         has_parsed_data = true;
+                        println!("[Colmi Sync] Stappen gedecoreerd uit SyncLogs: {}", steps);
                         if let Ok(ref mut file) = log_file {
                             let _ = writeln!(file, "[Colmi Sync] Stappen uit log: {}", steps);
                         }
@@ -950,6 +977,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     let final_sleep_duration = parsed_sleep_minutes;
     let final_sleep_quality = parsed_sleep_quality;
     
+    println!("[Colmi Sync] Synchronisatie gereed. Resultaat: Stappen={}, Slaap={}", final_steps, final_sleep_duration);
     if let Ok(ref mut file) = log_file {
         let _ = writeln!(file, "[Colmi Sync] Synchronisatie gereed. Resultaat: Stappen={}, Slaap={}", final_steps, final_sleep_duration);
     }
