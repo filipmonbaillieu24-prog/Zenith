@@ -1,4 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+use std::sync::atomic::{AtomicBool, Ordering};
+static COLMI_SYNC_RUNNING: AtomicBool = AtomicBool::new(false);
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
@@ -655,6 +658,20 @@ async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(), B
 
 #[tauri::command]
 async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
+    // Guard against concurrent syncs
+    if COLMI_SYNC_RUNNING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+        return Err("Er loopt al een Colmi-synchronisatie. Wacht tot deze is afgerond.".to_string());
+    }
+    // Auto-reset guard on all return paths via a defer-like wrapper
+    let result = sync_colmi_ring_inner(simulate).await;
+    COLMI_SYNC_RUNNING.store(false, Ordering::SeqCst);
+    result
+}
+
+async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
+    fn bcd_to_decimal(b: u8) -> u32 {
+        (((b >> 4) & 0x0F) * 10 + (b & 0x0F)) as u32
+    }
     if simulate {
         // Return simulated sleep & step data for the past 7 days
         tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
@@ -710,56 +727,72 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     }
     let adapter = &adapters[0];
     
-    // Start scan
-    let _ = adapter.start_scan(ScanFilter::default()).await;
-    tokio::time::sleep(tokio::time::Duration::from_secs(6)).await;
-    
-    let peripherals = adapter.peripherals().await.map_err(|e| e.to_string())?;
-    let mut ring_peripheral = None;
-    
     use std::io::Write;
     let mut log_file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open("e:\\Google Antgravity\\Zenith\\ble_debug.log");
 
-    println!("[Colmi Sync] Scan gestart... Aantal peripherals in adapter cache: {}", peripherals.len());
-    if let Ok(ref mut file) = log_file {
-        let _ = writeln!(file, "[Colmi Sync] Scan gestart... Aantal gevonden peripherals in adapter cache: {}", peripherals.len());
-    }
+    // Scan with multiple retries for better device caching
+    let mut ring_peripheral = None;
+    let scan_duration = tokio::time::Duration::from_secs(3);
     
-    for peripheral in peripherals {
-        if let Ok(Some(properties)) = peripheral.properties().await {
-            let name = properties.local_name.clone().unwrap_or_default();
-            let name_lower = name.to_lowercase();
-            let address = peripheral.address().to_string();
-            let services_str: Vec<String> = properties.services.iter().map(|s| s.to_string()).collect();
-
-            println!("[Colmi Sync] Apparaat gescand: Naam='{}', Adres='{}', Services={:?}", name, address, services_str);
-            if let Ok(ref mut file) = log_file {
-                let _ = writeln!(file, "[Colmi Sync] Apparaat gescand: Naam='{}', Adres='{}', Services={:?}", name, address, services_str);
+    for attempt in 1..=4 {
+        println!("[Colmi Sync] Scan starten (poging {}/4)...", attempt);
+        if let Ok(ref mut file) = log_file {
+            let _ = writeln!(file, "[Colmi Sync] Scan starten (poging {}/4)...", attempt);
+        }
+        
+        let _ = adapter.start_scan(ScanFilter::default()).await;
+        tokio::time::sleep(scan_duration).await;
+        
+        let peripherals = match adapter.peripherals().await {
+            Ok(p) => p,
+            Err(e) => {
+                println!("[Colmi Sync] Fout bij ophalen peripherals: {:?}", e);
+                continue;
             }
+        };
 
-            let has_service = properties.services.iter().any(|s| {
-                let uuid_str = s.to_string().to_lowercase();
-                uuid_str.contains("56ff") || uuid_str.contains("6e40fff0") || uuid_str.contains("fee7")
-            });
+        for peripheral in peripherals {
+            if let Ok(Some(properties)) = peripheral.properties().await {
+                let name = properties.local_name.clone().unwrap_or_default();
+                let name_lower = name.to_lowercase();
+                let address = peripheral.address().to_string();
+                let services_str: Vec<String> = properties.services.iter().map(|s| s.to_string()).collect();
 
-            if name_lower.contains("colmi") 
-                || name_lower.contains("r0") 
-                || name_lower.contains("ring") 
-                || name_lower.contains("smart")
-                || name_lower.contains("wearable")
-                || name_lower.contains("mouyoung")
-                || has_service 
-            {
-                println!("[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
+                println!("[Colmi Sync] Apparaat gescand (poging {}): Naam='{}', Adres='{}', Services={:?}", attempt, name, address, services_str);
                 if let Ok(ref mut file) = log_file {
-                    let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
+                    let _ = writeln!(file, "[Colmi Sync] Apparaat gescand (poging {}): Naam='{}', Adres='{}', Services={:?}", attempt, name, address, services_str);
                 }
-                ring_peripheral = Some(peripheral);
-                break;
+
+                let has_service = properties.services.iter().any(|s| {
+                    let uuid_str = s.to_string().to_lowercase();
+                    uuid_str.contains("56ff") || uuid_str.contains("6e40fff0") || uuid_str.contains("fee7")
+                });
+
+                let addr_lower = address.to_lowercase();
+                if name_lower.contains("colmi") 
+                    || name_lower.contains("r0") 
+                    || name_lower.contains("ring") 
+                    || name_lower.contains("smart")
+                    || name_lower.contains("wearable")
+                    || name_lower.contains("mouyoung")
+                    || addr_lower.contains("32:34:48:31:a8:05")
+                    || has_service 
+                {
+                    println!("[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
+                    if let Ok(ref mut file) = log_file {
+                        let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
+                    }
+                    ring_peripheral = Some(peripheral);
+                    break;
+                }
             }
+        }
+        
+        if ring_peripheral.is_some() {
+            break;
         }
     }
     
@@ -771,71 +804,128 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
         }
     };
     
-    println!("[Colmi Sync] Verbinden met peripheral: {}", peripheral.address());
-    if let Ok(ref mut file) = log_file {
-        let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral: {}", peripheral.address());
+    let mut connect_success = false;
+    for conn_attempt in 1..=3 {
+        println!("[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, peripheral.address());
+        if let Ok(ref mut file) = log_file {
+            let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, peripheral.address());
+        }
+        
+        match peripheral.connect().await {
+            Ok(_) => {
+                connect_success = true;
+                break;
+            }
+            Err(e) => {
+                println!("[Colmi Sync] Fout bij verbinden (poging {}): {:?}", conn_attempt, e);
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Fout bij verbinden (poging {}): {:?}", conn_attempt, e);
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+            }
+        }
     }
     
-    peripheral.connect().await.map_err(|e| {
-        println!("[Colmi Sync] Fout bij verbinden met ring: {:?}", e);
-        format!("Fout bij verbinden met ring: {:?}", e)
-    })?;
+    if !connect_success {
+        return Err("Fout bij verbinden met ring na 3 pogingen".to_string());
+    }
     
     println!("[Colmi Sync] Verbonden! Start service discovery...");
     if let Ok(ref mut file) = log_file {
         let _ = writeln!(file, "[Colmi Sync] Verbonden! Start service discovery...");
     }
     
-    peripheral.discover_services().await.map_err(|e| {
-        println!("[Colmi Sync] Fout bij service discovery: {:?}", e);
-        format!("Fout bij service discovery: {:?}", e)
-    })?;
-    
-    println!("[Colmi Sync] Service discovery voltooid. Analyseren van services...");
-    if let Ok(ref mut file) = log_file {
-        let _ = writeln!(file, "[Colmi Sync] Service discovery voltooid. Analyseren van services...");
-    }
-    
-    // Find characteristics
+    // Find characteristics with retry logic to handle cached/lazy OS BLE stacks
     let mut write_char = None;
     let mut notify_char = None;
     
-    for service in peripheral.services() {
-        let s_uuid = service.uuid.to_string().to_lowercase();
-        let char_uuids: Vec<String> = service.characteristics.iter().map(|c| c.uuid.to_string().to_lowercase()).collect();
-        
-        println!("[Colmi Sync] Service ontdekt: {} -> Characteristics: {:?}", s_uuid, char_uuids);
+    for discovery_attempt in 1..=3 {
+        println!("[Colmi Sync] Start service discovery (poging {}/3)...", discovery_attempt);
         if let Ok(ref mut file) = log_file {
-            let _ = writeln!(file, "[Colmi Sync] Service ontdekt: {} -> Characteristics: {:?}", s_uuid, char_uuids);
+            let _ = writeln!(file, "[Colmi Sync] Start service discovery (poging {}/3)...", discovery_attempt);
         }
         
-        if s_uuid.contains("56ff") || s_uuid.contains("6e40fff0") || s_uuid.contains("fee7") {
-            for char in service.characteristics {
-                let c_uuid = char.uuid.to_string().to_lowercase();
-                if c_uuid.contains("33f3") || c_uuid.contains("6e400002") || c_uuid.contains("fe01") {
-                    write_char = Some(char);
-                } else if c_uuid.contains("33f4") || c_uuid.contains("6e400003") || c_uuid.contains("fe02") {
-                    notify_char = Some(char);
+        // Wait briefly after connecting to let connection parameter update settle
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        
+        let _ = peripheral.discover_services().await;
+        
+        write_char = None;
+        notify_char = None;
+        
+        for service in peripheral.services() {
+            let s_uuid = service.uuid.to_string().to_lowercase();
+            let char_uuids: Vec<String> = service.characteristics.iter().map(|c| c.uuid.to_string().to_lowercase()).collect();
+            
+            println!("[Colmi Sync] Service ontdekt (poging {}): {} -> Characteristics: {:?}", discovery_attempt, s_uuid, char_uuids);
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Service ontdekt (poging {}): {} -> Characteristics: {:?}", discovery_attempt, s_uuid, char_uuids);
+            }
+            
+            // Priority: Nordic UART (6e40fff0) > 56ff > fee7
+            let priority = if s_uuid.contains("6e40fff0") {
+                3
+            } else if s_uuid.contains("56ff") {
+                2
+            } else if s_uuid.contains("fee7") {
+                1
+            } else {
+                0
+            };
+            
+            if priority > 0 {
+                for char in service.characteristics {
+                    let c_uuid = char.uuid.to_string().to_lowercase();
+                    if c_uuid.contains("33f3") || c_uuid.contains("6e400002") || c_uuid.contains("fea1") {
+                        match &write_char {
+                            None => write_char = Some((priority, char)),
+                            Some((existing_prio, _)) if priority > *existing_prio => write_char = Some((priority, char)),
+                            _ => {}
+                        }
+                    } else if c_uuid.contains("33f4") || c_uuid.contains("6e400003") || c_uuid.contains("fea2") {
+                        match &notify_char {
+                            None => notify_char = Some((priority, char)),
+                            Some((existing_prio, _)) if priority > *existing_prio => notify_char = Some((priority, char)),
+                            _ => {}
+                        }
+                    }
                 }
             }
+        }
+        
+        if write_char.is_some() && notify_char.is_some() {
+            println!("[Colmi Sync] Karakteristieken succesvol gevonden bij poging {}", discovery_attempt);
+            break;
         }
     }
     
     let w_char = match write_char {
-        Some(c) => c,
+        Some((_prio, c)) => {
+            println!("[Colmi Sync] Write characteristic gekozen: {}", c.uuid);
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Write characteristic gekozen: {}", c.uuid);
+            }
+            c
+        },
         None => {
-            println!("[Colmi Sync] Fout: Write characteristic (33f3/fe01) niet gevonden op ring.");
+            println!("[Colmi Sync] Fout: Write characteristic niet gevonden op ring.");
             let _ = peripheral.disconnect().await;
-            return Err("Write characteristic (33f3/fe01) niet gevonden op ring".to_string());
+            return Err("Write characteristic niet gevonden op ring".to_string());
         }
     };
     
     let n_char = match notify_char {
-        Some(c) => c,
+        Some((_prio, c)) => {
+            println!("[Colmi Sync] Notify characteristic gekozen: {}", c.uuid);
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Notify characteristic gekozen: {}", c.uuid);
+            }
+            c
+        },
         None => {
-            println!("[Colmi Sync] Fout: Notify characteristic (33f4/fe02) niet gevonden op ring.");
+            println!("[Colmi Sync] Fout: Notify characteristic niet gevonden op ring.");
             let _ = peripheral.disconnect().await;
-            return Err("Notify characteristic (33f4/fe02) niet gevonden op ring".to_string());
+            return Err("Notify characteristic niet gevonden op ring".to_string());
         }
     };
     
@@ -846,18 +936,62 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     let mut notification_stream = peripheral.notifications().await.map_err(|e| e.to_string())?;
     
     // Send time sync command (Time Sync)
+    fn dec_to_bcd(val: u8) -> u8 {
+        ((val / 10) << 4) | (val % 10)
+    }
+
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
+
+    let (year, month, day, hour, minute, second) = {
+        let now_sec = now;
         
+        let seconds_in_day = 86400;
+        let day_num = now_sec / seconds_in_day;
+        let seconds_since_midnight = now_sec % seconds_in_day;
+        
+        let hour = (seconds_since_midnight / 3600) as u8;
+        let minute = ((seconds_since_midnight % 3600) / 60) as u8;
+        let second = (seconds_since_midnight % 60) as u8;
+        
+        let jd = day_num as i32 + 2440588;
+        let a = jd + 32044;
+        let b = (4 * a + 3) / 146097;
+        let c = a - (146097 * b) / 4;
+        let d = (4 * c + 3) / 1461;
+        let e = c - (1461 * d) / 4;
+        let m = (5 * e + 2) / 153;
+        
+        let calendar_day = (e - (153 * m + 2) / 5 + 1) as u8;
+        let calendar_month = (m + 3 - 12 * (m / 10)) as u8;
+        let calendar_year = (100 * b + d - 4800 + m / 10) as u16;
+        
+        (calendar_year, calendar_month, calendar_day, hour, minute, second)
+    };
+
+    println!(
+        "[Colmi Sync] Syncing time to ring (UTC): {}-{:02}-{:02} {:02}:{:02}:{:02}",
+        year, month, day, hour, minute, second
+    );
+    if let Ok(ref mut file) = log_file {
+        let _ = writeln!(
+            file,
+            "[Colmi Sync] Syncing time to ring (UTC): {}-{:02}-{:02} {:02}:{:02}:{:02}",
+            year, month, day, hour, minute, second
+        );
+    }
+
     let mut time_cmd = vec![0u8; 16];
     time_cmd[0] = 0x01; // CMD_TIME_SYNC
-    let time_bytes = (now as u32).to_be_bytes();
-    time_cmd[1] = time_bytes[0];
-    time_cmd[2] = time_bytes[1];
-    time_cmd[3] = time_bytes[2];
-    time_cmd[4] = time_bytes[3];
+    time_cmd[1] = dec_to_bcd((year % 2000) as u8);
+    time_cmd[2] = dec_to_bcd(month);
+    time_cmd[3] = dec_to_bcd(day);
+    time_cmd[4] = dec_to_bcd(hour);
+    time_cmd[5] = dec_to_bcd(minute);
+    time_cmd[6] = dec_to_bcd(second);
+    time_cmd[7] = 1; // English language
     
     let mut sum: u32 = 0;
     for i in 0..15 {
@@ -868,18 +1002,12 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     println!("[Colmi Sync] Tijd-commando sturen naar ring...");
     let _ = peripheral.write(&w_char, &time_cmd, btleplug::api::WriteType::WithoutResponse).await;
     
-    // Variables to hold parsed data
-    let mut parsed_steps = 0i32;
-    let mut parsed_sleep_minutes = 0i32;
-    let mut parsed_sleep_quality = 0i32;
-    let mut has_parsed_data = false;
-
     // ----------------------------------------------------
     // PHASE 1: LISTEN FOR RESPONSE TO TIME SYNC
     // ----------------------------------------------------
     for _ in 0..6 {
         if let Ok(Some(notification)) = tokio::time::timeout(
-            tokio::time::Duration::from_millis(1000),
+            tokio::time::Duration::from_millis(1500),
             notification_stream.next()
         ).await {
             let data = notification.value;
@@ -887,25 +1015,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             if let Ok(ref mut file) = log_file {
                 let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (TimeSync): {:?}", data);
             }
-            
-            // Generic parser to detect steps in any incoming packet
-            if data.len() >= 5 {
-                for offset in 1..=10 {
-                    if offset + 3 < data.len() {
-                        let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                        let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                        if val_be > 0 && val_be < 100000 {
-                            parsed_steps = val_be;
-                            has_parsed_data = true;
-                            println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
-                        } else if val_le > 0 && val_le < 100000 {
-                            parsed_steps = val_le;
-                            has_parsed_data = true;
-                            println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
-                        }
-                    }
-                }
-            }
+            // TimeSync response: just wait for it, no step parsing needed
         } else {
             break;
         }
@@ -923,7 +1033,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     
     for _ in 0..6 {
         if let Ok(Some(notification)) = tokio::time::timeout(
-            tokio::time::Duration::from_millis(1000),
+            tokio::time::Duration::from_millis(1500),
             notification_stream.next()
         ).await {
             let data = notification.value;
@@ -931,24 +1041,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             if let Ok(ref mut file) = log_file {
                 let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (ActivityQuery): {:?}", data);
             }
-            
-            if data.len() >= 5 {
-                for offset in 1..=10 {
-                    if offset + 3 < data.len() {
-                        let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                        let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                        if val_be > 0 && val_be < 100000 {
-                            parsed_steps = val_be;
-                            has_parsed_data = true;
-                            println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
-                        } else if val_le > 0 && val_le < 100000 {
-                            parsed_steps = val_le;
-                            has_parsed_data = true;
-                            println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
-                        }
-                    }
-                }
-            }
+            // ActivityQuery response: just log it, 0x43 will provide the real step data
         } else {
             break;
         }
@@ -966,7 +1059,7 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
     
     for _ in 0..6 {
         if let Ok(Some(notification)) = tokio::time::timeout(
-            tokio::time::Duration::from_millis(1000),
+            tokio::time::Duration::from_millis(1500),
             notification_stream.next()
         ).await {
             let data = notification.value;
@@ -974,152 +1067,306 @@ async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
             if let Ok(ref mut file) = log_file {
                 let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SportDetail): {:?}", data);
             }
-            
-            if data.len() >= 5 {
-                for offset in 1..=10 {
-                    if offset + 3 < data.len() {
-                        let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                        let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                        if val_be > 0 && val_be < 100000 {
-                            parsed_steps = val_be;
-                            has_parsed_data = true;
-                            println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
-                        } else if val_le > 0 && val_le < 100000 {
-                            parsed_steps = val_le;
-                            has_parsed_data = true;
-                            println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
-                        }
-                    }
-                }
-            }
+            // SportDetail response: just log it, 0x43 will provide the real step data
         } else {
             break;
         }
     }
 
+    fn date_to_epoch(year: u16, month: u8, day: u8) -> u64 {
+        let year = year as i32;
+        let month = month as i32;
+        let day = day as i32;
+        
+        let a = (14 - month) / 12;
+        let y = year + 4800 - a;
+        let m = month + 12 * a - 3;
+        
+        let jd = day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045;
+        let epoch_jd = 2440588;
+        
+        let days = jd - epoch_jd;
+        (days as u64) * 86400
+    }
+
+    fn epoch_to_date(epoch: u64) -> (u16, u8, u8) {
+        let seconds_in_day = 86400;
+        let day_num = epoch / seconds_in_day;
+        
+        let jd = day_num as i32 + 2440588;
+        let a = jd + 32044;
+        let b = (4 * a + 3) / 146097;
+        let c = a - (146097 * b) / 4;
+        let d = (4 * c + 3) / 1461;
+        let e = c - (1461 * d) / 4;
+        let m = (5 * e + 2) / 153;
+        
+        let calendar_day = (e - (153 * m + 2) / 5 + 1) as u8;
+        let calendar_month = (m + 3 - 12 * (m / 10)) as u8;
+        let calendar_year = (100 * b + d - 4800 + m / 10) as u16;
+        
+        (calendar_year, calendar_month, calendar_day)
+    }
+
+    let mut steps_by_date: std::collections::HashMap<String, (i32, u64)> = std::collections::HashMap::new();
+    let mut sleep_by_date: std::collections::HashMap<String, (i32, i32, u64)> = std::collections::HashMap::new();
+
     // ----------------------------------------------------
-    // PHASE 3: SEND SYNC ACTIVITY LOGS (0x43)
+    // PHASE 3: SEND SYNC ACTIVITY LOGS (0x43) FOR PAST 7 DAYS
     // ----------------------------------------------------
-    let mut sync_act_cmd = vec![0u8; 16];
-    sync_act_cmd[0] = 0x43; // CMD_SYNC_ACTIVITY
-    sync_act_cmd[15] = 0x43; // Checksum
-    
-    println!("[Colmi Sync] SyncActivity-commando (0x43) sturen naar ring...");
-    let _ = peripheral.write(&w_char, &sync_act_cmd, btleplug::api::WriteType::WithoutResponse).await;
-    
-    for _ in 0..6 {
-        if let Ok(Some(notification)) = tokio::time::timeout(
-            tokio::time::Duration::from_millis(1000),
-            notification_stream.next()
-        ).await {
-            let data = notification.value;
-            println!("[Colmi Sync] Notificatie ontvangen (SyncActivity): {:?}", data);
-            if let Ok(ref mut file) = log_file {
-                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncActivity): {:?}", data);
-            }
-            
-            if data.len() >= 5 {
-                for offset in 1..=10 {
-                    if offset + 3 < data.len() {
-                        let val_be = u32::from_be_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                        let val_le = u32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]]) as i32;
-                        if val_be > 0 && val_be < 100000 {
-                            parsed_steps = val_be;
-                            has_parsed_data = true;
-                            println!("[Colmi Sync] Found steps (BE) at offset {}: {}", offset, val_be);
-                        } else if val_le > 0 && val_le < 100000 {
-                            parsed_steps = val_le;
-                            has_parsed_data = true;
-                            println!("[Colmi Sync] Found steps (LE) at offset {}: {}", offset, val_le);
+    for day_offset in 0..=7 {
+        println!("[Colmi Sync] SyncActivity opvragen voor day_offset = {}", day_offset);
+        if let Ok(ref mut file) = log_file {
+            let _ = writeln!(file, "[Colmi Sync] SyncActivity opvragen voor day_offset = {}", day_offset);
+        }
+
+        let mut sync_act_cmd = vec![0u8; 16];
+        sync_act_cmd[0] = 0x43; // CMD_SYNC_ACTIVITY
+        sync_act_cmd[1] = day_offset;
+        sync_act_cmd[2] = 0x0F; // sub-command constant
+        sync_act_cmd[3] = 0x00; // start index = 0
+        sync_act_cmd[4] = 0x5F; // end index = 95
+        sync_act_cmd[5] = 0x01; // constant
+        
+        let mut sum: u32 = 0;
+        for i in 0..15 {
+            sum += sync_act_cmd[i] as u32;
+        }
+        sync_act_cmd[15] = (sum & 0xFF) as u8;
+        
+        let _ = peripheral.write(&w_char, &sync_act_cmd, btleplug::api::WriteType::WithoutResponse).await;
+        
+        let mut packets_received = 0;
+        loop {
+            if let Ok(Some(notification)) = tokio::time::timeout(
+                tokio::time::Duration::from_millis(1500),
+                notification_stream.next()
+            ).await {
+                let data = notification.value;
+                println!("[Colmi Sync] Notificatie ontvangen (SyncActivity, offset {}): {:?}", day_offset, data);
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncActivity, offset {}): {:?}", day_offset, data);
+                }
+                
+                if data.len() >= 16 && data[0] == 0x43 {
+                    let status = data[1];
+                    if status == 255 {
+                        println!("[Colmi Sync] R02 SyncActivity offset {}: No data available", day_offset);
+                        break;
+                    } else if status == 240 {
+                        // Start of stream packet
+                    } else {
+                        // Data packet
+                        let year = bcd_to_decimal(data[1]) + 2000;
+                        let month = bcd_to_decimal(data[2]);
+                        let day = bcd_to_decimal(data[3]);
+                        
+                        let st = (data[9] as u32 | ((data[10] as u32) << 8)) as i32;
+                        let date_str = format!("{:04}-{:02}-{:02}", year, month, day);
+                        
+                        let epoch = date_to_epoch(year as u16, month as u8, day as u8);
+                        let entry = steps_by_date.entry(date_str).or_insert((0, epoch));
+                        entry.0 += st;
+
+                        let packet_idx = data[5] as i32;
+                        let total_packets = data[6] as i32;
+                        if packet_idx == total_packets - 1 {
+                            break;
                         }
                     }
                 }
+                
+                packets_received += 1;
+                if packets_received > 120 {
+                    break;
+                }
+            } else {
+                break;
             }
-        } else {
-            break;
         }
     }
 
     // ----------------------------------------------------
-    // PHASE 4: SEND SYNC SLEEP LOGS (0x44)
+    // PHASE 4: SEND SYNC SLEEP LOGS (0x44) FOR PAST 7 DAYS
     // ----------------------------------------------------
-    let mut sleep_cmd = vec![0u8; 16];
-    sleep_cmd[0] = 0x44; // CMD_SYNC_SLEEP
-    sleep_cmd[15] = 0x44; // Checksum
-    
-    println!("[Colmi Sync] SyncSleep-commando (0x44) sturen naar ring...");
-    let _ = peripheral.write(&w_char, &sleep_cmd, btleplug::api::WriteType::WithoutResponse).await;
-    
-    for _ in 0..6 {
+    for day_offset in 0..=7 {
+        println!("[Colmi Sync] SyncSleep (0x44) opvragen voor day_offset = {}", day_offset);
+        if let Ok(ref mut file) = log_file {
+            let _ = writeln!(file, "[Colmi Sync] SyncSleep (0x44) opvragen voor day_offset = {}", day_offset);
+        }
+
+        let mut sleep_cmd = vec![0u8; 16];
+        sleep_cmd[0] = 0x44; // CMD_SYNC_SLEEP
+        sleep_cmd[1] = day_offset;
+        
+        let mut sum: u32 = 0;
+        for i in 0..15 {
+            sum += sleep_cmd[i] as u32;
+        }
+        sleep_cmd[15] = (sum & 0xFF) as u8;
+        
+        let _ = peripheral.write(&w_char, &sleep_cmd, btleplug::api::WriteType::WithoutResponse).await;
+        
         if let Ok(Some(notification)) = tokio::time::timeout(
-            tokio::time::Duration::from_millis(1000),
+            tokio::time::Duration::from_millis(1500),
             notification_stream.next()
         ).await {
             let data = notification.value;
-            println!("[Colmi Sync] Notificatie ontvangen (SyncSleep): {:?}", data);
+            println!("[Colmi Sync] Notificatie ontvangen (SyncSleep 0x44, offset {}): {:?}", day_offset, data);
             if let Ok(ref mut file) = log_file {
-                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncSleep): {:?}", data);
+                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncSleep 0x44, offset {}): {:?}", day_offset, data);
             }
             
             if data.len() >= 4 {
                 let cmd_header = data[0];
-                if cmd_header == 0x44 || cmd_header == 0x05 {
-                    // Try parsing 2-byte duration at offset 1 or 2
-                    let dur_be = u16::from_be_bytes([data[1], data[2]]) as i32;
-                    let dur_le = u16::from_le_bytes([data[1], data[2]]) as i32;
-                    let quality = data[3] as i32;
-                    
-                    let mut dur = 0;
-                    if dur_be > 30 && dur_be < 720 {
-                        dur = dur_be;
-                    } else if dur_le > 30 && dur_le < 720 {
-                        dur = dur_le;
-                    }
-                    
-                    if dur > 0 && quality > 10 && quality <= 100 {
-                        parsed_sleep_minutes = dur;
-                        parsed_sleep_quality = quality;
-                        println!("[Colmi Sync] Slaap gedecoreerd: {} min, kwaliteit={}", dur, quality);
+                if cmd_header == 0x44 || cmd_header == 0xC4 || cmd_header == 0x05 {
+                    if data[1] == 238 || data[1] == 255 {
+                        println!("[Colmi Sync] R02 SyncSleep 0x44 offset {}: No sleep data available", day_offset);
+                    } else {
+                        // Try parsing 2-byte duration at offset 1 or 2
+                        let dur_be = u16::from_be_bytes([data[1], data[2]]) as i32;
+                        let dur_le = u16::from_le_bytes([data[1], data[2]]) as i32;
+                        let quality = data[3] as i32;
+                        
+                        let mut dur = 0;
+                        if dur_be > 30 && dur_be < 720 {
+                            dur = dur_be;
+                        } else if dur_le > 30 && dur_le < 720 {
+                            dur = dur_le;
+                        }
+                        
+                        if dur > 0 && quality > 10 && quality <= 100 {
+                            let target_time = now - (day_offset as u64) * 86400;
+                            let (tyear, tmonth, tday) = epoch_to_date(target_time);
+                            let date_str = format!("{:04}-{:02}-{:02}", tyear, tmonth, tday);
+                            
+                            sleep_by_date.insert(date_str, (dur, quality, target_time));
+                            println!("[Colmi Sync] Slaap gedecoreerd (0x44) voor offset {}: {} min, kwaliteit={}", day_offset, dur, quality);
+                        }
                     }
                 }
             }
+        }
+    }
+
+    // ----------------------------------------------------
+    // PHASE 4.5: SEND SLEEP HISTORY TIMELINE QUERY (0x10)
+    // ----------------------------------------------------
+    println!("[Colmi Sync] SleepHistoryQuery (0x10) sturen naar ring...");
+    if let Ok(ref mut file) = log_file {
+        let _ = writeln!(file, "[Colmi Sync] SleepHistoryQuery (0x10) sturen naar ring...");
+    }
+
+    let mut sleep_timeline_cmd = vec![0u8; 16];
+    sleep_timeline_cmd[0] = 0x10; // CMD_SLEEP_HISTORY
+    
+    let mut sum: u32 = 0;
+    for i in 0..15 {
+        sum += sleep_timeline_cmd[i] as u32;
+    }
+    sleep_timeline_cmd[15] = (sum & 0xFF) as u8;
+
+    let _ = peripheral.write(&w_char, &sleep_timeline_cmd, btleplug::api::WriteType::WithoutResponse).await;
+
+    // Maps date string -> (light_minutes, deep_minutes, timestamp)
+    let mut sleep_timeline_data: std::collections::HashMap<String, (i32, i32, u64)> = std::collections::HashMap::new();
+    let mut sleep_timeline_packets = 0;
+
+    loop {
+        if let Ok(Some(notification)) = tokio::time::timeout(
+            tokio::time::Duration::from_millis(2000),
+            notification_stream.next()
+        ).await {
+            let data = notification.value;
+            println!("[Colmi Sync] Notificatie ontvangen (SleepQuery 0x10/0x11): {:?}", data);
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SleepQuery 0x10/0x11): {:?}", data);
+            }
+
+            if data.len() >= 16 && data[0] == 0x11 {
+                // Sleep timeline packet
+                let ts = (data[1] as u32 | ((data[2] as u32) << 8) | ((data[3] as u32) << 16) | ((data[4] as u32) << 24)) as u64;
+                let (s_year, s_month, s_day) = epoch_to_date(ts);
+                let date_str = format!("{:04}-{:02}-{:02}", s_year, s_month, s_day);
+
+                let mut light_min = 0;
+                let mut deep_min = 0;
+
+                for offset in 5..16 {
+                    if offset < data.len() {
+                        let sample = data[offset];
+                        if sample == 0x28 {
+                            light_min += 1;
+                        } else if sample == 0x63 {
+                            deep_min += 1;
+                        }
+                    }
+                }
+
+                let entry = sleep_timeline_data.entry(date_str).or_insert((0, 0, ts));
+                entry.0 += light_min;
+                entry.1 += deep_min;
+
+                sleep_timeline_packets += 1;
+            } else if data.len() >= 16 && data[0] == 0x10 {
+                println!("[Colmi Sync] History summary packet (0x10): {:?}", data);
+            }
+
+            if sleep_timeline_packets > 60 {
+                break;
+            }
         } else {
-            break;
+            break; // Timeout, stream finished
         }
     }
     
     let _ = peripheral.unsubscribe(&n_char).await;
     let _ = peripheral.disconnect().await;
     
-    let final_steps = if has_parsed_data { parsed_steps } else { 0 };
-    let final_sleep_duration = parsed_sleep_minutes;
-    let final_sleep_quality = parsed_sleep_quality;
+    let mut steps_list = Vec::new();
+    for (date_str, (count, epoch)) in &steps_by_date {
+        steps_list.push(serde_json::json!({
+            "step_count": *count,
+            "timestamp": *epoch
+        }));
+        println!("[Colmi Sync] Eindrapport stappen voor date={}: count={}", date_str, count);
+    }
     
-    println!("[Colmi Sync] Synchronisatie gereed. Resultaat: Stappen={}, Slaap={}", final_steps, final_sleep_duration);
-    if let Ok(ref mut file) = log_file {
-        let _ = writeln!(file, "[Colmi Sync] Synchronisatie gereed. Resultaat: Stappen={}, Slaap={}", final_steps, final_sleep_duration);
+    let mut sleep_list = Vec::new();
+    
+    // Add sleep from 0x10 / 0x11 timeline
+    for (date_str, (light, deep, epoch)) in &sleep_timeline_data {
+        let total = light + deep;
+        if total > 0 {
+            let deep_ratio = *deep as f32 / total as f32;
+            let quality = (50.0 + (deep_ratio * 100.0).min(50.0)) as i32; // Quality between 50 and 100
+            
+            sleep_list.push(serde_json::json!({
+                "duration_minutes": total,
+                "quality_score": quality,
+                "timestamp": *epoch
+            }));
+            println!("[Colmi Sync] Slaap timeline parsed voor date={}: duration={} min, kwaliteit={}", date_str, total, quality);
+        }
+    }
+    
+    // Add sleep from 0x44 (if not already parsed for that date)
+    for (date_str, (duration, quality, epoch)) in &sleep_by_date {
+        if !sleep_timeline_data.contains_key(date_str) {
+            sleep_list.push(serde_json::json!({
+                "duration_minutes": *duration,
+                "quality_score": *quality,
+                "timestamp": *epoch
+            }));
+            println!("[Colmi Sync] Slaap 0x44 parsed voor date={}: duration={} min, kwaliteit={}", date_str, duration, quality);
+        }
     }
 
     let response = serde_json::json!({
         "status": "success",
         "device_name": "Colmi R02 Smart Ring",
-        "steps": [
-            {
-                "step_count": final_steps,
-                "timestamp": now
-            }
-        ],
-        "sleep": if final_sleep_duration > 0 {
-            serde_json::json!([
-                {
-                    "duration_minutes": final_sleep_duration,
-                    "quality_score": final_sleep_quality,
-                    "timestamp": now - 12 * 3600
-                }
-            ])
-        } else {
-            serde_json::json!([])
-        }
+        "steps": steps_list,
+        "sleep": sleep_list
     });
     
     Ok(response.to_string())

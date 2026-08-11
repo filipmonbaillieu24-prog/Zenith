@@ -78,6 +78,11 @@ function formatDateString(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function toYYYYMMDD(dateTimeStr: string | undefined | null): string {
+  if (!dateTimeStr) return '';
+  return dateTimeStr.substring(0, 10);
+}
+
 function App() {
   // Auth & Session
   const [loadingSession, setLoadingSession] = useState(true);
@@ -549,7 +554,7 @@ function App() {
       setThirtyDayFoodLogs(foodHist || []);
 
       foodHist?.forEach(f => {
-        const dStr = f.logged_at.split('T')[0];
+        const dStr = toYYYYMMDD(f.logged_at);
         if (logsMap[dStr]) {
           logsMap[dStr].calories += Number(f.calories);
           logsMap[dStr].caffeine = (logsMap[dStr].caffeine || 0) + Number(f.caffeine_mg || 0);
@@ -596,14 +601,14 @@ function App() {
       setGymLogs(gymHist || []);
 
       gymHist?.forEach(k => {
-        const dStr = k.completed_at.split('T')[0];
+        const dStr = toYYYYMMDD(k.completed_at);
         if (logsMap[dStr]) {
           logsMap[dStr].gymVolume += Number(k.volume || 0);
         }
       });
 
       supplementsLogs.forEach(s => {
-        const dStr = s.logged_at.split('T')[0];
+        const dStr = toYYYYMMDD(s.logged_at);
         if (logsMap[dStr]) {
           if (s.supplement_type === 'creatine') {
             logsMap[dStr].creatine = (logsMap[dStr].creatine || 0) + Number(s.amount);
@@ -1054,18 +1059,22 @@ function App() {
       return;
     }
 
-    const newLogs = filteredFoodLogs.map(log => ({
-      user_id: userId,
-      logged_at: `${copyTargetDate}T${log.logged_at.split('T')[1]}`,
-      meal_type: log.meal_type,
-      custom_name: log.custom_name,
-      recipe_id: log.recipe_id || null,
-      quantity: log.quantity,
-      calories: log.calories,
-      carbs: log.carbs,
-      protein: log.protein,
-      fat: log.fat
-    }));
+    const newLogs = filteredFoodLogs.map(log => {
+      const timePart = log.logged_at.includes('T') ? log.logged_at.split('T')[1] : log.logged_at.substring(11);
+      return {
+        user_id: userId,
+        logged_at: `${copyTargetDate}T${timePart}`,
+        meal_type: log.meal_type,
+        custom_name: log.custom_name,
+        recipe_id: log.recipe_id || null,
+        quantity: log.quantity,
+        calories: log.calories,
+        carbs: log.carbs,
+        protein: log.protein,
+        fat: log.fat,
+        caffeine_mg: log.caffeine_mg || 0
+      };
+    });
 
     try {
       const { data, error } = await supabase
@@ -1129,7 +1138,7 @@ function App() {
       entry.carbs = Math.round(ing.carbs_per_100g * ratio);
       entry.protein = Math.round(ing.protein_per_100g * ratio);
       entry.fat = Math.round(ing.fat_per_100g * ratio);
-      entry.caffeine_mg = Math.round((ing.caffeine_mg_per_100g || 0) * ratio);
+      entry.caffeine_mg = Math.round((Number(ing.caffeine_mg_per_100g) || 0) * ratio);
     } else if (logSource === 'recipe') {
       const rec = recipes.find(r => r.id === selectedLogRecipe);
       if (!rec) return;
@@ -1142,7 +1151,7 @@ function App() {
       entry.carbs = Math.round(rec.carbs * servings);
       entry.protein = Math.round(rec.protein * servings);
       entry.fat = Math.round(rec.fat * servings);
-      entry.caffeine_mg = Math.round((rec.caffeine_mg || 0) * servings);
+      entry.caffeine_mg = Math.round((Number(rec.caffeine_mg) || 0) * servings);
     }
 
     try {
@@ -1281,7 +1290,7 @@ function App() {
 
   // Filter food logs for active date
   const filteredFoodLogs = useMemo(() => {
-    return weeklyFoodLogs.filter(log => log.logged_at.split('T')[0] === selectedDateStr);
+    return weeklyFoodLogs.filter(log => toYYYYMMDD(log.logged_at) === selectedDateStr);
   }, [weeklyFoodLogs, selectedDateStr]);
 
   // Supplements Calculations & Stats
@@ -1298,7 +1307,7 @@ function App() {
     const intakeMap: { [date: string]: number } = {};
     dates30Days.forEach(date => { intakeMap[date] = 0; });
     sortedLogs.forEach(s => {
-      const dStr = s.logged_at.split('T')[0];
+      const dStr = toYYYYMMDD(s.logged_at);
       if (s.supplement_type === 'creatine' && dStr in intakeMap) {
         intakeMap[dStr] += Number(s.amount);
       }
@@ -1339,14 +1348,14 @@ function App() {
     const intakeMap: { [date: string]: number } = {};
     dates30Days.forEach(date => { intakeMap[date] = 0; });
     supplementsLogs.forEach(s => {
-      const dStr = s.logged_at.split('T')[0];
+      const dStr = toYYYYMMDD(s.logged_at);
       if (s.supplement_type === 'caffeine' && dStr in intakeMap) {
         intakeMap[dStr] += Number(s.amount);
       }
     });
 
     thirtyDayFoodLogs.forEach(f => {
-      const dStr = f.logged_at.split('T')[0];
+      const dStr = toYYYYMMDD(f.logged_at);
       if (dStr in intakeMap) {
         intakeMap[dStr] += Number(f.caffeine_mg || 0);
       }
@@ -1354,7 +1363,7 @@ function App() {
 
     const sleepMap: { [date: string]: number } = {};
     sleepLogs.forEach(s => {
-      const dStr = s.logged_at.split('T')[0];
+      const dStr = toYYYYMMDD(s.logged_at);
       sleepMap[dStr] = Number(s.quality_score);
     });
 
@@ -2428,7 +2437,7 @@ function App() {
           <div className="col-12" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12, marginBottom: 12 }}>
             {weekDays.map(day => {
               const isSelected = day.dateStr === selectedDateStr;
-              const daySupps = supplementsLogs.filter(s => s.logged_at.split('T')[0] === day.dateStr);
+              const daySupps = supplementsLogs.filter(s => toYYYYMMDD(s.logged_at) === day.dateStr);
               const dayCreatine = daySupps.filter(s => s.supplement_type === 'creatine').reduce((sum, s) => sum + Number(s.amount), 0);
               const dayCaffeine = daySupps.filter(s => s.supplement_type === 'caffeine').reduce((sum, s) => sum + Number(s.amount), 0);
               return (
@@ -2649,13 +2658,13 @@ function App() {
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', marginBottom: 20 }}>
               Geregistreerde Supplementen op {new Date(selectedDateStr).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })}
             </h2>
-            {supplementsLogs.filter(s => s.logged_at.split('T')[0] === selectedDateStr).length === 0 ? (
+            {supplementsLogs.filter(s => toYYYYMMDD(s.logged_at) === selectedDateStr).length === 0 ? (
               <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
                 Geen supplementen geregistreerd voor deze datum.
               </div>
             ) : (
               <div className="timeline">
-                {supplementsLogs.filter(s => s.logged_at.split('T')[0] === selectedDateStr).map(s => {
+                {supplementsLogs.filter(s => toYYYYMMDD(s.logged_at) === selectedDateStr).map(s => {
                   const timeStr = new Date(s.logged_at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
                   return (
                     <div key={s.id} className="timeline-item">

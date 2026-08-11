@@ -9,6 +9,7 @@ export interface BugReportSubmitData {
   problemType: string;
   severity: string;
   screenshot: File | null;
+  screenshots: File[];
   developerToken?: string;
   developerRepo?: string;
 }
@@ -32,11 +33,10 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
   const [problemType, setProblemType] = useState('ui');
   const [severity, setSeverity] = useState('medium');
   
-  const [screenshot, setScreenshot] = useState<File | null>(null);
-  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [screenshots, setScreenshots] = useState<File[]>([]);
+  const [screenshotPreviews, setScreenshotPreviews] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
   
-
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ success: boolean; error?: string; githubUrl?: string } | null>(null);
@@ -51,8 +51,8 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
       setCategory(prefilledCategory || 'hub');
       setProblemType('ui');
       setSeverity('medium');
-      setScreenshot(null);
-      setScreenshotPreview(null);
+      setScreenshots([]);
+      setScreenshotPreviews([]);
       setSubmitResult(null);
     }
   }, [isOpen, prefilledCategory]);
@@ -76,21 +76,28 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
     }
   };
 
-  const processFile = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert('Selecteer a.u.b. een afbeeldingsbestand (PNG, JPG, enz.)');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Afbeelding is te groot. Maximale grootte is 5MB.');
-      return;
-    }
-    setScreenshot(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setScreenshotPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+  const processFiles = (files: FileList) => {
+    const newFiles: File[] = [];
+    
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) {
+        alert(`Bestand "${file.name}" is geen afbeelding.`);
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        alert(`Afbeelding "${file.name}" is te groot (max 5MB).`);
+        return;
+      }
+      newFiles.push(file);
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setScreenshotPreviews(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    setScreenshots(prev => [...prev, ...newFiles]);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -98,26 +105,24 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
     e.stopPropagation();
     setDragActive(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      processFile(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(e.target.files);
     }
   };
 
-  const handleRemoveScreenshot = () => {
-    setScreenshot(null);
-    setScreenshotPreview(null);
+  const handleRemoveScreenshot = (index: number) => {
+    setScreenshots(prev => prev.filter((_, i) => i !== index));
+    setScreenshotPreviews(prev => prev.filter((_, i) => i !== index));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
-
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,7 +141,8 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
         category,
         problemType,
         severity,
-        screenshot,
+        screenshot: screenshots.length > 0 ? screenshots[0] : null,
+        screenshots,
         developerToken: undefined,
         developerRepo: undefined,
       });
@@ -284,35 +290,61 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
 
               {/* Image Upload Zone */}
               <div className="bug-form-group">
-                <label>Screenshot / Foto uploaden (optioneel)</label>
-                {screenshotPreview ? (
-                  <div className="bug-preview-container">
-                    <img src={screenshotPreview} alt="Screenshot preview" className="bug-screenshot-preview" />
-                    <button type="button" className="bug-remove-img-btn" onClick={handleRemoveScreenshot}>
-                      <X size={14} /> Afbeelding Verwijderen
-                    </button>
-                  </div>
-                ) : (
-                  <div 
-                    className={`bug-upload-dropzone ${dragActive ? 'active' : ''}`}
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload size={24} className="bug-upload-icon" />
-                    <p>Sleep een afbeelding hierheen of klik om te bladeren</p>
-                    <span>Maximale grootte: 5MB (PNG, JPG, GIF)</span>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                    />
+                <label>Screenshots / Foto's uploaden (optioneel, meerdere toegestaan)</label>
+                
+                {screenshotPreviews.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+                    {screenshotPreviews.map((preview, idx) => (
+                      <div key={idx} className="bug-preview-container" style={{ position: 'relative', width: 90, height: 90, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <img src={preview} alt={`Preview ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveScreenshot(idx)} 
+                          style={{ 
+                            position: 'absolute', 
+                            top: 4, 
+                            right: 4, 
+                            background: 'rgba(0, 0, 0, 0.7)', 
+                            color: '#fff', 
+                            border: 'none', 
+                            borderRadius: '50%', 
+                            width: 18, 
+                            height: 18, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            cursor: 'pointer',
+                            padding: 0
+                          }}
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
+
+                <div 
+                  className={`bug-upload-dropzone ${dragActive ? 'active' : ''}`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ padding: '16px 20px', minHeight: 'auto' }}
+                >
+                  <Upload size={20} className="bug-upload-icon" style={{ marginBottom: 6 }} />
+                  <p style={{ margin: '0 0 4px', fontSize: 11 }}>Sleep afbeeldingen hierheen of klik om te bladeren</p>
+                  <span style={{ fontSize: 9, opacity: 0.6 }}>Maximale grootte: 5MB per bestand (PNG, JPG, GIF)</span>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    multiple
+                    style={{ display: 'none' }}
+                  />
+                </div>
               </div>
 
 

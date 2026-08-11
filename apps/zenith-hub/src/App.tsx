@@ -525,16 +525,18 @@ function App() {
       throw new Error("U moet ingelogd zijn om een bug te melden.");
     }
 
-    let imageUrl: string | null = null;
+    const imageUrls: string[] = [];
 
-    // 1. Upload screenshot to Supabase Storage if present
-    if (data.screenshot) {
-      const fileExt = data.screenshot.name.split('.').pop() || 'png';
-      const fileName = `${session.user.id}/${Date.now()}_screenshot.${fileExt}`;
+    // 1. Upload screenshots to Supabase Storage if present
+    const filesToUpload = data.screenshots || (data.screenshot ? [data.screenshot] : []);
+    for (let idx = 0; idx < filesToUpload.length; idx++) {
+      const file = filesToUpload[idx];
+      const fileExt = file.name.split('.').pop() || 'png';
+      const fileName = `${session.user.id}/${Date.now()}_screenshot_${idx}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('bug-reports')
-        .upload(fileName, data.screenshot, {
+        .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false
         });
@@ -547,8 +549,10 @@ function App() {
         .from('bug-reports')
         .getPublicUrl(fileName);
 
-      imageUrl = publicUrl;
+      imageUrls.push(publicUrl);
     }
+    
+    const imageUrl = imageUrls.length > 0 ? imageUrls.join(',') : null;
 
     // 2. Resolve environment details
     const envOs = navigator.platform || 'Onbekend';
@@ -570,6 +574,12 @@ function App() {
 
     // 4. Format the Markdown body of the GitHub issue
     const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';
+    
+    let imagesMarkdown = '';
+    if (imageUrls.length > 0) {
+      imagesMarkdown = '### Schermafbeeldingen\n\n' + imageUrls.map((url, idx) => `![Screenshot ${idx + 1}](${url})`).join('\n\n');
+    }
+
     const bodyContent = `### Omschrijving / Reproductie
 ${data.description}
 
@@ -585,7 +595,7 @@ ${data.description}
 - **Schermresolutie:** ${envScreen}
 - **Applicatie Versie:** 0.1.0 (Tauri)
 
-${imageUrl ? `### Schermafbeelding\n\n![Screenshot](${imageUrl})` : ''}
+${imagesMarkdown}
 `;
 
     // 5. Send post request to GitHub Issues API

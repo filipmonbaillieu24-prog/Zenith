@@ -263,6 +263,67 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     );
   }, [tsb, latestSleep, latestWeight, fitnessProfile.weight, weeklyGymVolume, todaySteps, atl, mlModelsLoaded]);
 
+  const recoveryCardStyle = useMemo(() => {
+    if (recoveryScore === null) {
+      return {
+        bg: 'linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(20, 20, 20, 0.8) 100%)',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        color: '#cbd5e1',
+        bar: 'rgba(255, 255, 255, 0.1)',
+        circleBg: 'rgba(255, 255, 255, 0.05)',
+        circleBorder: 'rgba(255, 255, 255, 0.1)'
+      };
+    }
+    
+    if (tsb < -25 || recoveryScore < 50) {
+      return {
+        bg: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(20, 20, 20, 0.8) 100%)',
+        border: '1px solid rgba(239, 68, 68, 0.15)',
+        color: '#ff7675',
+        bar: 'linear-gradient(90deg, #ff7675, #ef4444)',
+        circleBg: 'rgba(239, 68, 68, 0.1)',
+        circleBorder: 'rgba(239, 68, 68, 0.2)'
+      };
+    }
+    
+    if (recoveryScore >= 80) {
+      return {
+        bg: 'linear-gradient(135deg, rgba(85, 239, 196, 0.08) 0%, rgba(20, 20, 20, 0.8) 100%)',
+        border: '1px solid rgba(85, 239, 196, 0.15)',
+        color: '#55efc4',
+        bar: 'linear-gradient(90deg, #55efc4, #00b894)',
+        circleBg: 'rgba(85, 239, 196, 0.1)',
+        circleBorder: 'rgba(85, 239, 196, 0.2)'
+      };
+    }
+    
+    return {
+      bg: 'linear-gradient(135deg, rgba(116, 185, 255, 0.08) 0%, rgba(20, 20, 20, 0.8) 100%)',
+      border: '1px solid rgba(116, 185, 255, 0.15)',
+      color: '#74b9ff',
+      bar: 'linear-gradient(90deg, #74b9ff, #0984e3)',
+      circleBg: 'rgba(116, 185, 255, 0.1)',
+      circleBorder: 'rgba(116, 185, 255, 0.2)'
+    };
+  }, [recoveryScore, tsb]);
+
+  const recoveryNote = useMemo(() => {
+    if (recoveryScore === null) {
+      return 'Herstel berekenen...';
+    }
+    
+    if (tsb < -25) {
+      return `⚠️ Overtrainingsrisico gesignaleerd door PMC (Vorm: ${tsb}). Pas belasting aan ondanks eventuele herstelscore.`;
+    }
+    
+    if (recoveryScore >= 80) {
+      return '🏆 Uitstekend hersteld. Klaar voor intensieve training!';
+    } else if (recoveryScore >= 50) {
+      return '💪 Goed hersteld. Normale belasting is prima.';
+    } else {
+      return '⚠️ Vermoeidheid gedetecteerd. Focus op actieve recuperatie of rust.';
+    }
+  }, [recoveryScore, tsb]);
 
   // Helper for steps goal percentage
   const stepsGoal = Number(fitnessProfile.target_steps || 10000);
@@ -331,31 +392,28 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
             </div>
 
             {/* Recovery Score Card */}
-            <div className="zh-stats-card" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(20, 20, 20, 0.8) 100%)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+            <div className="zh-stats-card" style={{ background: recoveryCardStyle.bg, border: recoveryCardStyle.border, transition: 'all 0.3s ease' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Heart size={14} style={{ color: '#ff7675' }} /> AI Recovery Score
+                    <Heart size={14} style={{ color: recoveryCardStyle.color }} /> AI Recovery Score
                   </h3>
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
                     Real-time herstelscore berekend over slaap, cardiobelasting en krachttraining.
                   </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', width: 56, height: 56, borderRadius: '50%' }}>
-                  <strong style={{ fontSize: 20, color: '#ff7675', fontWeight: 900 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: recoveryCardStyle.circleBg, border: `1px solid ${recoveryCardStyle.circleBorder}`, width: 56, height: 56, borderRadius: '50%', transition: 'all 0.3s ease' }}>
+                  <strong style={{ fontSize: 20, color: recoveryCardStyle.color, fontWeight: 900 }}>
                     {recoveryScore !== null ? `${recoveryScore}%` : '--'}
                   </strong>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
                 <div style={{ height: 6, background: 'rgba(255, 255, 255, 0.05)', borderRadius: 3 }}>
-                  <div style={{ height: '100%', width: `${recoveryScore ?? 0}%`, background: 'linear-gradient(90deg, #ff7675, #ef4444)', borderRadius: 3 }} />
+                  <div style={{ height: '100%', width: `${recoveryScore ?? 0}%`, background: recoveryCardStyle.bar, borderRadius: 3, transition: 'width 0.5s ease-out' }} />
                 </div>
                 <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 700 }}>
-                  {recoveryScore === null ? 'Herstel berekenen...' :
-                   recoveryScore >= 80 ? '🏆 Uitstekend hersteld. Klaar voor intensieve training!' :
-                   recoveryScore >= 50 ? '💪 Goed hersteld. Normale belasting is prima.' :
-                   '⚠️ Vermoeidheid gedetecteerd. Focus op actieve recuperatie of rust.'}
+                  {recoveryNote}
                 </span>
               </div>
             </div>
