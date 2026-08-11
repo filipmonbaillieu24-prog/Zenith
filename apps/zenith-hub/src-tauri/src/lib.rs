@@ -795,15 +795,18 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 }
 
                 let addr_lower = address.to_lowercase();
+                let has_service = properties.services.iter().any(|s| {
+                    let uuid_str = s.to_string().to_lowercase();
+                    uuid_str.contains("56ff") 
+                        || uuid_str.contains("6e40fff0") 
+                        || uuid_str.contains("fee7") 
+                        || uuid_str.contains("a201")
+                });
+
                 let is_match = if let Some(ref target) = target_mac {
                     let target_lower = target.to_lowercase();
-                    addr_lower == target_lower
+                    addr_lower == target_lower || has_service
                 } else {
-                    let has_service = properties.services.iter().any(|s| {
-                        let uuid_str = s.to_string().to_lowercase();
-                        uuid_str.contains("56ff") || uuid_str.contains("6e40fff0") || uuid_str.contains("fee7")
-                    });
-                    
                     name_lower.contains("colmi") 
                         || name_lower.contains("r0") 
                         || name_lower.contains("ring") 
@@ -811,6 +814,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                         || name_lower.contains("wearable")
                         || name_lower.contains("mouyoung")
                         || addr_lower.contains("32:34:48:31:a8:05")
+                        || addr_lower.contains("10:5a:17:af:36:bf")
                         || has_service
                 };
 
@@ -958,8 +962,10 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 let _ = writeln!(file, "[Colmi Sync] Service ontdekt (poging {}): {} -> Characteristics: {:?}", discovery_attempt, s_uuid, char_uuids);
             }
             
-            // Priority: Nordic UART (6e40fff0) > 56ff > fee7
+            // Priority: Nordic UART (6e40fff0) > a201 > 56ff > fee7
             let priority = if s_uuid.contains("6e40fff0") {
+                4
+            } else if s_uuid.contains("a201") {
                 3
             } else if s_uuid.contains("56ff") {
                 2
@@ -969,21 +975,30 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 0
             };
             
-            if priority > 0 {
-                for char in service.characteristics {
-                    let c_uuid = char.uuid.to_string().to_lowercase();
-                    if c_uuid.contains("33f3") || c_uuid.contains("6e400002") || c_uuid.contains("fea1") {
-                        match &write_char {
-                            None => write_char = Some((priority, char)),
-                            Some((existing_prio, _)) if priority > *existing_prio => write_char = Some((priority, char)),
-                            _ => {}
-                        }
-                    } else if c_uuid.contains("33f4") || c_uuid.contains("6e400003") || c_uuid.contains("fea2") {
-                        match &notify_char {
-                            None => notify_char = Some((priority, char)),
-                            Some((existing_prio, _)) if priority > *existing_prio => notify_char = Some((priority, char)),
-                            _ => {}
-                        }
+            for char in service.characteristics {
+                let c_uuid = char.uuid.to_string().to_lowercase();
+                let props = char.properties;
+                let is_write = props.contains(btleplug::api::CharPropFlags::WRITE) 
+                    || props.contains(btleplug::api::CharPropFlags::WRITE_WITHOUT_RESPONSE)
+                    || c_uuid.contains("33f3") || c_uuid.contains("6e400002") || c_uuid.contains("fea1") || c_uuid.contains("a202");
+                let is_notify = props.contains(btleplug::api::CharPropFlags::NOTIFY) 
+                    || props.contains(btleplug::api::CharPropFlags::INDICATE)
+                    || c_uuid.contains("33f4") || c_uuid.contains("6e400003") || c_uuid.contains("fea2") || c_uuid.contains("a203");
+
+                let char_prio = if priority > 0 { priority } else { 1 };
+
+                if is_write {
+                    match &write_char {
+                        None => write_char = Some((char_prio, char.clone())),
+                        Some((existing_prio, _)) if char_prio > *existing_prio => write_char = Some((char_prio, char.clone())),
+                        _ => {}
+                    }
+                }
+                if is_notify {
+                    match &notify_char {
+                        None => notify_char = Some((char_prio, char.clone())),
+                        Some((existing_prio, _)) if char_prio > *existing_prio => notify_char = Some((char_prio, char.clone())),
+                        _ => {}
                     }
                 }
             }
