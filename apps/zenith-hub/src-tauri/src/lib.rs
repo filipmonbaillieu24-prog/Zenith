@@ -830,6 +830,14 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
     };
     
+    // Force connect: check if connected locally, disconnect first if so to clear stale handles
+    if let Ok(true) = peripheral.is_connected().await {
+        emit_status(&app, "Apparaat al verbonden. Verbinding resetten...", 0.38);
+        println!("[Colmi Sync] Apparaat is al verbonden. Aanroepen disconnect...");
+        let _ = peripheral.disconnect().await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+    }
+
     let mut connect_success = false;
     let mut last_error = None;
     for conn_attempt in 1..=3 {
@@ -839,6 +847,12 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, peripheral.address());
         }
         
+        // If previous attempt failed, force a disconnect and wait to reset the BLE stack state
+        if conn_attempt > 1 {
+            let _ = peripheral.disconnect().await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        }
+
         match peripheral.connect().await {
             Ok(_) => {
                 connect_success = true;
@@ -850,7 +864,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     let _ = writeln!(file, "[Colmi Sync] Fout bij verbinden (poging {}): {:?}", conn_attempt, e);
                 }
                 last_error = Some(e);
-                tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
             }
         }
     }
