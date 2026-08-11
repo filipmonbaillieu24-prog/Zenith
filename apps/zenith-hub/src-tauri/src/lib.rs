@@ -800,9 +800,12 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     let start_wait = std::time::Instant::now();
     while start_wait.elapsed() < std::time::Duration::from_secs(10) {
         {
-            let cache_guard = LAST_DISCOVERED_RING.lock().await;
+            let mut cache_guard = LAST_DISCOVERED_RING.lock().await;
             if let Some((ref p, ref addr, ref time)) = *cache_guard {
-                if time.elapsed() < std::time::Duration::from_secs(60) {
+                if addr.to_lowercase().contains("10:5a:17:af:36:bf") {
+                    println!("[Colmi Sync] Negeer ongeldig TY apparaat uit cache: {}", addr);
+                    *cache_guard = None;
+                } else if time.elapsed() < std::time::Duration::from_secs(60) {
                     println!("[Colmi Sync] Ring gevonden via achtergrond-scanner! Adres: {}", addr);
                     if let Ok(ref mut file) = log_file {
                         let _ = writeln!(file, "[Colmi Sync] Ring gevonden via achtergrond-scanner! Adres: {}", addr);
