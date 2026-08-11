@@ -87,8 +87,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         .lte('logged_at', todayEnd.toISOString())
         .order('logged_at', { ascending: false });
       if (stData && stData.length > 0) {
-        const maxSteps = Math.max(...stData.map((s: any) => Number(s.step_count) || 0));
-        setTodaySteps(maxSteps);
+        setTodaySteps(Number(stData[0].step_count) || 0);
       } else {
         setTodaySteps(0);
       }

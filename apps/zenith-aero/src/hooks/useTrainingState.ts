@@ -55,12 +55,10 @@ export function useTrainingState(
         .from('vigor_steps')
         .select('step_count')
         .eq('user_id', userId)
-        .gte('logged_at', `${today}T00:00:00.000Z`)
-        .lte('logged_at', `${today}T23:59:59.999Z`)
+        .order('logged_at', { ascending: false })
         .then(({ data: stepsData }) => {
           if (stepsData && stepsData.length > 0) {
-            const maxSteps = Math.max(...stepsData.map((s: any) => Number(s.step_count) || 0));
-            setDailySteps(maxSteps);
+            setDailySteps(Number(stepsData[0].step_count) || 0);
           }
         });
     });
