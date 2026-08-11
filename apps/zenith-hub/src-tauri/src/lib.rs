@@ -829,7 +829,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             if let Ok(adapters) = manager.adapters().await {
                 if !adapters.is_empty() {
                     let adapter = &adapters[0];
-                    let scan_duration = tokio::time::Duration::from_secs(5);
+                                    let scan_duration = tokio::time::Duration::from_secs(5);
                     
                     for attempt in 1..=3 {
                         emit_status(&app, &format!("Scannen naar Colmi Smart Ring (poging {}/3)...", attempt), 0.10 + (attempt as f32 * 0.08));
@@ -845,28 +845,13 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                                     let address = peripheral.address().to_string();
                                     let addr_lower = address.to_lowercase();
 
-                                    let has_service = properties.services.iter().any(|s| {
-                                        let uuid_str = s.to_string().to_lowercase();
-                                        uuid_str.contains("56ff") 
-                                            || uuid_str.contains("6e40fff0") 
-                                            || uuid_str.contains("fee7") 
-                                            || uuid_str.contains("a201")
-                                    });
+                                    if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") {
+                                        continue;
+                                    }
 
-                                    let is_match = if let Some(ref target) = target_mac {
-                                        let target_lower = target.to_lowercase();
-                                        addr_lower == target_lower || has_service
-                                    } else {
-                                        name_lower.contains("colmi") 
-                                            || name_lower.contains("r0") 
-                                            || name_lower.contains("ring") 
-                                            || name_lower.contains("smart")
-                                            || name_lower.contains("wearable")
-                                            || name_lower.contains("mouyoung")
-                                            || addr_lower.contains("32:34:48:31:a8:05")
-                                            || addr_lower.contains("10:5a:17:af:36:bf")
-                                            || has_service
-                                    };
+                                    let is_match = name_lower.contains("colmi") 
+                                        || name_lower.contains("r0") 
+                                        || addr_lower.contains("32:34:48:31:a8:05");
 
                                     if is_match {
                                         emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", address), 0.35);
