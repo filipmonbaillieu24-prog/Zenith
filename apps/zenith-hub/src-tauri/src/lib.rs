@@ -1327,8 +1327,8 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                         entry.0 += st;
 
                         // Parse 15-minute sleep blocks from 0x43
-                        let is_nighttime = slot_idx >= 84 || slot_idx <= 36; // 21:00 PM to 09:00 AM
-                        if st < 60 && (is_nighttime || mode == 1 || mode == 2 || mode == 3 || mode == 4) {
+                        let is_nighttime = slot_idx >= 84 || slot_idx <= 32; // 21:00 PM to 08:00 AM
+                        if (st < 300 && is_nighttime) || mode == 1 || mode == 2 || mode == 3 || mode == 4 {
                             let s_entry = sleep_slots_by_date.entry(date_str.clone()).or_insert((0, 0, 0, epoch));
                             if mode == 2 {
                                 s_entry.0 += 15; // Deep sleep
