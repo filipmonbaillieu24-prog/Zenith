@@ -1414,7 +1414,7 @@ function App() {
   const baseBmr = Math.round(calculateMifflinBmr(latestWeight, height, age, gender));
   const palFactor = 1.25;
   const baseTdee = Math.round(baseBmr * palFactor);
-  const bmrOffset = zaneResult.bmrOffset || 0;
+  const bmrOffset = zaneResult.isCalibrated ? (zaneResult.bmrOffset || 0) : 0;
   const activeCalories = selectedDateActiveCalories;
   
   // Sleep average

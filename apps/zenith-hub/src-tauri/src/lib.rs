@@ -826,11 +826,18 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     let peripheral = match ring_peripheral {
         Some(p) => p,
         None => {
+            let _ = adapter.stop_scan().await;
             println!("[Colmi Sync] Fout: Geen Colmi Smart Ring gevonden in de buurt.");
             return Err("Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.".to_string());
         }
     };
     
+    // Stop actieve scan zodat de Bluetooth-radio 100% van z'n capaciteit kan richten op het opbouwen van de GATT verbinding
+    emit_status(&app, "Scan stopzetten & verbinding voorbereiden...", 0.36);
+    println!("[Colmi Sync] Stopzetten van actieve scan voor verbinden...");
+    let _ = adapter.stop_scan().await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
     // Force connect: check if connected locally, disconnect first if so to clear stale handles
     if let Ok(true) = peripheral.is_connected().await {
         emit_status(&app, "Bestaande verbinding verbreken...", 0.38);

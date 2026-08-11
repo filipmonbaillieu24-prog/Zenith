@@ -196,16 +196,17 @@ export function runZaneCalibration(
 
   // Calculate regression coefficients if we have at least 5 equations (minimum required for a clean 5-parameter solve)
   if (X.length >= 5) {
-    const lambda = 1.0;
+    const lambda = 15.0; // Higher regularization to prevent day-to-day scale noise spikes
     const coefficients = solveRidgeRegression(X, Y, lambda);
-    bmrOffset = coefficients[0];
-    sleepQualityCoeff = coefficients[1];
-    sleepDurationCoeff = coefficients[2];
+    // Clamp BMR offset to realistic physiological limits (+/- 500 kcal)
+    bmrOffset = Math.min(500, Math.max(-500, Math.round(coefficients[0] || 0)));
+    sleepQualityCoeff = Math.min(10, Math.max(-10, coefficients[1] || 0));
+    sleepDurationCoeff = Math.min(50, Math.max(-50, coefficients[2] || 0));
     
-    const deltaGymCoeff = coefficients[3];
+    const deltaGymCoeff = coefficients[3] || 0;
     gymVolumeCoeff = Math.min(0.50, Math.max(0.02, 0.15 + deltaGymCoeff));
 
-    const deltaCaffeineCoeff = coefficients[4];
+    const deltaCaffeineCoeff = coefficients[4] || 0;
     caffeineCoeff = Math.min(0.50, Math.max(0.02, 0.15 + deltaCaffeineCoeff));
   }
 
