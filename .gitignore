@@ -26,3 +26,4 @@ apps/zenith-pilot/app/*.iml
 .DS_Store
 .vscode/
 *.lock
+ble_debug.log
