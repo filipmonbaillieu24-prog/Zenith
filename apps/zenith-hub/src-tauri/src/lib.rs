@@ -1464,6 +1464,45 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 break;
             }
         }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // 4c. Send 0x03 (CMD_SYNC_HEALTH)
+        let mut sleep_cmd_03 = vec![0u8; 16];
+        sleep_cmd_03[0] = 0x03;
+        sleep_cmd_03[1] = day_offset;
+        let mut sum: u32 = 0; for i in 0..15 { sum += sleep_cmd_03[i] as u32; }
+        sleep_cmd_03[15] = (sum & 0xFF) as u8;
+
+        let _ = peripheral.write(&w_char, &sleep_cmd_03, btleplug::api::WriteType::WithoutResponse).await;
+
+        for _ in 0..6 {
+            if let Ok(Some(notification)) = tokio::time::timeout(
+                tokio::time::Duration::from_millis(1000),
+                notification_stream.next()
+            ).await {
+                let data = notification.value;
+                println!("[Colmi Sync] Notificatie ontvangen (Sleep 0x03, offset {}): {:?}", day_offset, data);
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (Sleep 0x03, offset {}): {:?}", day_offset, data);
+                }
+
+                if data.len() >= 8 && (data[0] == 0x03 || data[0] == 0x83) {
+                    if data[1] != 255 && data[1] != 238 {
+                        let deep_mins = u16::from_le_bytes([data[4], data[5]]) as i32;
+                        let light_mins = u16::from_le_bytes([data[6], data[7]]) as i32;
+                        let total_mins = deep_mins + light_mins;
+                        if total_mins > 30 && total_mins < 1440 {
+                            let date_str = format!("{:04}-{:02}-{:02}", tyear, tmonth, tday);
+                            let epoch = date_to_epoch(tyear, tmonth, tday);
+                            sleep_by_date.entry(date_str).or_insert((total_mins, 80, epoch));
+                        }
+                    }
+                }
+            } else {
+                break;
+            }
+        }
     }
 
     // ----------------------------------------------------
@@ -1606,27 +1645,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
     }
 
-    // Fallback: If ring returned step history (confirming user wore the ring overnight), but sleep register was empty,
-    // construct sleep duration for last night (yesterday).
-    if sleep_list.is_empty() {
-        let yesterday_time = now - 86400;
-        let (y_year, y_month, y_day) = epoch_to_date(yesterday_time);
-        let y_date_str = format!("{:04}-{:02}-{:02}", y_year, y_month, y_day);
-        let y_epoch = date_to_epoch(y_year, y_month, y_day);
-        
-        if steps_by_date.contains_key(&y_date_str) || !steps_by_date.is_empty() {
-            println!("[Colmi Sync] Slaapfallback geactiveerd voor datum {}: 450 min (7.5 uur), Kwaliteit 82", y_date_str);
-            sleep_list.push(serde_json::json!({
-                "duration_minutes": 450,
-                "deep_minutes": 115,
-                "light_minutes": 240,
-                "rem_minutes": 80,
-                "awake_minutes": 15,
-                "quality_score": 82,
-                "timestamp": y_epoch
-            }));
-        }
-    }
+
 
     if let Some(ref adapter) = adapter_opt {
         println!("[Colmi Sync] Achtergrond-scanner hervatten...");
