@@ -1264,6 +1264,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
 
     let mut steps_by_date: std::collections::HashMap<String, (i32, u64)> = std::collections::HashMap::new();
     let mut sleep_by_date: std::collections::HashMap<String, (i32, i32, u64)> = std::collections::HashMap::new();
+    let mut sleep_slots_by_date: std::collections::HashMap<String, (i32, i32, i32, u64)> = std::collections::HashMap::new();
 
     // ----------------------------------------------------
     // PHASE 3: SEND SYNC ACTIVITY LOGS (0x43) FOR PAST 7 DAYS
@@ -1316,12 +1317,27 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                         let month = bcd_to_decimal(data[2]);
                         let day = bcd_to_decimal(data[3]);
                         
+                        let slot_idx = data[4];
+                        let mode = data[6];
                         let st = (data[9] as u32 | ((data[10] as u32) << 8)) as i32;
                         let date_str = format!("{:04}-{:02}-{:02}", year, month, day);
                         
                         let epoch = date_to_epoch(year as u16, month as u8, day as u8);
-                        let entry = steps_by_date.entry(date_str).or_insert((0, epoch));
+                        let entry = steps_by_date.entry(date_str.clone()).or_insert((0, epoch));
                         entry.0 += st;
+
+                        // Parse 15-minute sleep blocks from 0x43
+                        let is_nighttime = slot_idx >= 84 || slot_idx <= 36; // 21:00 PM to 09:00 AM
+                        if st < 15 && (is_nighttime || mode == 1 || mode == 2 || mode == 3 || mode == 4) {
+                            let s_entry = sleep_slots_by_date.entry(date_str.clone()).or_insert((0, 0, 0, epoch));
+                            if mode == 2 {
+                                s_entry.0 += 15; // Deep sleep
+                            } else if mode == 3 {
+                                s_entry.2 += 15; // REM sleep
+                            } else {
+                                s_entry.1 += 15; // Light sleep
+                            }
+                        }
 
                         let packet_idx = data[5] as i32;
                         let total_packets = data[6] as i32;
@@ -1338,6 +1354,17 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             } else {
                 break;
             }
+        }
+    }
+
+    // Populate sleep_by_date from 0x43 15-min physical sleep blocks
+    for (date_str, (deep, light, rem, epoch)) in &sleep_slots_by_date {
+        let total_mins = deep + light + rem;
+        if total_mins >= 60 {
+            let deep_ratio = *deep as f32 / total_mins as f32;
+            let quality = (60.0 + (deep_ratio * 40.0).min(38.0)) as i32;
+            sleep_by_date.insert(date_str.clone(), (total_mins, quality, *epoch));
+            println!("[Colmi Sync] Fysieke 0x43 slaap data ontdekt voor {}: total={} min (diep={} min, licht={} min, rem={} min)", date_str, total_mins, deep, light, rem);
         }
     }
 
