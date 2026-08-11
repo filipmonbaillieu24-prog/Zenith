@@ -671,8 +671,15 @@ async fn sync_colmi_ring(app: tauri::AppHandle, simulate: bool, target_mac: Opti
     if COLMI_SYNC_RUNNING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
         return Err("Er loopt al een Colmi-synchronisatie. Wacht tot deze is afgerond.".to_string());
     }
-    // Auto-reset guard on all return paths via a defer-like wrapper
-    let result = sync_colmi_ring_inner(app, simulate, target_mac).await;
+    
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let app_handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let res = sync_colmi_ring_inner(app_handle, simulate, target_mac).await;
+        let _ = tx.send(res);
+    });
+
+    let result = rx.await.unwrap_or_else(|_| Err("Fout bij uitvoeren van achtergrondtaak".to_string()));
     COLMI_SYNC_RUNNING.store(false, Ordering::SeqCst);
     result
 }
