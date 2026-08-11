@@ -1332,18 +1332,72 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     }
 
     // ----------------------------------------------------
-    // PHASE 4: SEND SYNC SLEEP LOGS (0x44) FOR PAST 7 DAYS
+    // PHASE 4: SEND SYNC SLEEP LOGS (0x05 & 0x44) FOR PAST 7 DAYS
     // ----------------------------------------------------
     emit_status(&app, "Slaapgegevens synchroniseren...", 0.85);
     for day_offset in 0..=7 {
-        println!("[Colmi Sync] SyncSleep (0x44) opvragen voor day_offset = {}", day_offset);
+        println!("[Colmi Sync] SleepSummary (0x05) & SyncSleep (0x44) opvragen voor day_offset = {}", day_offset);
         if let Ok(ref mut file) = log_file {
-            let _ = writeln!(file, "[Colmi Sync] SyncSleep (0x44) opvragen voor day_offset = {}", day_offset);
+            let _ = writeln!(file, "[Colmi Sync] SleepSummary (0x05) & SyncSleep (0x44) opvragen voor day_offset = {}", day_offset);
         }
 
+        // 4a. Send 0x05 (CMD_SLEEP_SUMMARY)
+        let mut sleep_sum_cmd = vec![0u8; 16];
+        sleep_sum_cmd[0] = 0x05;
+        sleep_sum_cmd[1] = day_offset;
+        let mut sum: u32 = 0;
+        for i in 0..15 {
+            sum += sleep_sum_cmd[i] as u32;
+        }
+        sleep_sum_cmd[15] = (sum & 0xFF) as u8;
+        let _ = peripheral.write(&w_char, &sleep_sum_cmd, btleplug::api::WriteType::WithoutResponse).await;
+
+        for _ in 0..4 {
+            if let Ok(Some(notification)) = tokio::time::timeout(
+                tokio::time::Duration::from_millis(1000),
+                notification_stream.next()
+            ).await {
+                let data = notification.value;
+                println!("[Colmi Sync] Notificatie ontvangen (Sleep 0x05, offset {}): {:?}", day_offset, data);
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (Sleep 0x05, offset {}): {:?}", day_offset, data);
+                }
+
+                if data.len() >= 10 && (data[0] == 0x05 || data[0] == 0x85) {
+                    if data[1] != 255 && data[1] != 238 {
+                        let s_year = bcd_to_decimal(data[1]) + 2000;
+                        let s_month = bcd_to_decimal(data[2]);
+                        let s_day = bcd_to_decimal(data[3]);
+                        
+                        let deep_mins = u16::from_le_bytes([data[4], data[5]]) as i32;
+                        let light_mins = u16::from_le_bytes([data[6], data[7]]) as i32;
+                        let rem_mins = if data.len() >= 10 { u16::from_le_bytes([data[8], data[9]]) as i32 } else { 0 };
+                        let total_mins = deep_mins + light_mins + rem_mins;
+
+                        if total_mins > 0 && total_mins < 1440 {
+                            let date_str = format!("{:04}-{:02}-{:02}", s_year, s_month, s_day);
+                            let epoch = date_to_epoch(s_year as u16, s_month as u8, s_day as u8);
+                            let deep_ratio = if total_mins > 0 { deep_mins as f32 / total_mins as f32 } else { 0.25 };
+                            let quality = (50.0 + (deep_ratio * 100.0).min(45.0)) as i32;
+
+                            sleep_by_date.insert(date_str.clone(), (total_mins, quality, epoch));
+                            println!("[Colmi Sync] Slaap 0x05 succesvol verwerkt voor {}: total={} min, diep={} min, licht={} min, kwaliteit={}", date_str, total_mins, deep_mins, light_mins, quality);
+                        }
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+
+        // 4b. Send 0x44 (CMD_SYNC_SLEEP) with full parameters
         let mut sleep_cmd = vec![0u8; 16];
         sleep_cmd[0] = 0x44; // CMD_SYNC_SLEEP
         sleep_cmd[1] = day_offset;
+        sleep_cmd[2] = 0x0F;
+        sleep_cmd[3] = 0x00;
+        sleep_cmd[4] = 0x5F;
+        sleep_cmd[5] = 0x01;
         
         let mut sum: u32 = 0;
         for i in 0..15 {
@@ -1353,44 +1407,38 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         
         let _ = peripheral.write(&w_char, &sleep_cmd, btleplug::api::WriteType::WithoutResponse).await;
         
-        if let Ok(Some(notification)) = tokio::time::timeout(
-            tokio::time::Duration::from_millis(1500),
-            notification_stream.next()
-        ).await {
-            let data = notification.value;
-            println!("[Colmi Sync] Notificatie ontvangen (SyncSleep 0x44, offset {}): {:?}", day_offset, data);
-            if let Ok(ref mut file) = log_file {
-                let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncSleep 0x44, offset {}): {:?}", day_offset, data);
-            }
-            
-            if data.len() >= 4 {
-                let cmd_header = data[0];
-                if cmd_header == 0x44 || cmd_header == 0xC4 || cmd_header == 0x05 {
-                    if data[1] == 238 || data[1] == 255 {
-                        println!("[Colmi Sync] R02 SyncSleep 0x44 offset {}: No sleep data available", day_offset);
-                    } else {
-                        // Try parsing 2-byte duration at offset 1 or 2
-                        let dur_be = u16::from_be_bytes([data[1], data[2]]) as i32;
-                        let dur_le = u16::from_le_bytes([data[1], data[2]]) as i32;
-                        let quality = data[3] as i32;
-                        
-                        let mut dur = 0;
-                        if dur_be > 30 && dur_be < 720 {
-                            dur = dur_be;
-                        } else if dur_le > 30 && dur_le < 720 {
-                            dur = dur_le;
-                        }
-                        
-                        if dur > 0 && quality > 10 && quality <= 100 {
-                            let target_time = now - (day_offset as u64) * 86400;
-                            let (tyear, tmonth, tday) = epoch_to_date(target_time);
-                            let date_str = format!("{:04}-{:02}-{:02}", tyear, tmonth, tday);
+        for _ in 0..6 {
+            if let Ok(Some(notification)) = tokio::time::timeout(
+                tokio::time::Duration::from_millis(1200),
+                notification_stream.next()
+            ).await {
+                let data = notification.value;
+                println!("[Colmi Sync] Notificatie ontvangen (SyncSleep 0x44, offset {}): {:?}", day_offset, data);
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncSleep 0x44, offset {}): {:?}", day_offset, data);
+                }
+                
+                if data.len() >= 4 {
+                    let cmd_header = data[0];
+                    if cmd_header == 0x44 || cmd_header == 0xC4 {
+                        if data[1] == 238 || data[1] == 255 {
+                            println!("[Colmi Sync] R02 SyncSleep 0x44 offset {}: Geen slaapdata op dit slot", day_offset);
+                        } else if data.len() >= 10 {
+                            let s_year = bcd_to_decimal(data[1]) + 2000;
+                            let s_month = bcd_to_decimal(data[2]);
+                            let s_day = bcd_to_decimal(data[3]);
                             
-                            sleep_by_date.insert(date_str, (dur, quality, target_time));
-                            println!("[Colmi Sync] Slaap gedecoreerd (0x44) voor offset {}: {} min, kwaliteit={}", day_offset, dur, quality);
+                            let dur_le = u16::from_le_bytes([data[9], data[10]]) as i32;
+                            if dur_le > 30 && dur_le < 1440 {
+                                let date_str = format!("{:04}-{:02}-{:02}", s_year, s_month, s_day);
+                                let epoch = date_to_epoch(s_year as u16, s_month as u8, s_day as u8);
+                                sleep_by_date.entry(date_str).or_insert((dur_le, 75, epoch));
+                            }
                         }
                     }
                 }
+            } else {
+                break;
             }
         }
     }
