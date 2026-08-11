@@ -1265,6 +1265,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     let mut steps_by_date: std::collections::HashMap<String, (i32, u64)> = std::collections::HashMap::new();
     let mut sleep_by_date: std::collections::HashMap<String, (i32, i32, u64)> = std::collections::HashMap::new();
     let mut sleep_slots_by_date: std::collections::HashMap<String, (i32, i32, i32, u64)> = std::collections::HashMap::new();
+    let mut seen_slots: std::collections::HashSet<(String, u8)> = std::collections::HashSet::new();
 
     // ----------------------------------------------------
     // PHASE 3: SEND SYNC ACTIVITY LOGS (0x43) FOR PAST 7 DAYS
@@ -1322,20 +1323,25 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                         let st = (data[7] as u32 | ((data[8] as u32) << 8)) as i32;
                         let date_str = format!("{:04}-{:02}-{:02}", year, month, day);
                         
-                        let epoch = date_to_epoch(year as u16, month as u8, day as u8);
-                        let entry = steps_by_date.entry(date_str.clone()).or_insert((0, epoch));
-                        entry.0 += st;
+                        let slot_key = (date_str.clone(), slot_idx);
+                        if !seen_slots.contains(&slot_key) {
+                            seen_slots.insert(slot_key);
 
-                        // Parse 15-minute sleep blocks from 0x43
-                        let is_nighttime = slot_idx >= 84 || slot_idx <= 32; // 21:00 PM to 08:00 AM
-                        if (st < 300 && is_nighttime) || mode == 1 || mode == 2 || mode == 3 || mode == 4 {
-                            let s_entry = sleep_slots_by_date.entry(date_str.clone()).or_insert((0, 0, 0, epoch));
-                            if mode == 2 {
-                                s_entry.0 += 15; // Deep sleep
-                            } else if mode == 3 {
-                                s_entry.2 += 15; // REM sleep
-                            } else {
-                                s_entry.1 += 15; // Light sleep
+                            let epoch = date_to_epoch(year as u16, month as u8, day as u8);
+                            let entry = steps_by_date.entry(date_str.clone()).or_insert((0, epoch));
+                            entry.0 += st;
+
+                            // Parse 15-minute sleep blocks from 0x43
+                            let is_nighttime = slot_idx >= 84 || slot_idx <= 32; // 21:00 PM to 08:00 AM
+                            if (st < 300 && is_nighttime) || mode == 1 || mode == 2 || mode == 3 || mode == 4 {
+                                let s_entry = sleep_slots_by_date.entry(date_str.clone()).or_insert((0, 0, 0, epoch));
+                                if mode == 2 {
+                                    s_entry.0 += 15; // Deep sleep
+                                } else if mode == 3 {
+                                    s_entry.2 += 15; // REM sleep
+                                } else {
+                                    s_entry.1 += 15; // Light sleep
+                                }
                             }
                         }
 

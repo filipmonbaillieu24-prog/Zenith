@@ -159,33 +159,55 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
         addLog(`Verbonden met apparaat: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
         addLog('Synchronisatie van historische stappen & slaap gestart...');
 
-        // Process steps
+        // Process steps (1 record per day OVERWRITE)
         if (result.steps && result.steps.length > 0) {
-          const dbSteps = result.steps.map((s: any) => ({
-            user_id: userId,
-            step_count: s.step_count,
-            logged_at: new Date(s.timestamp * 1000).toISOString()
-          }));
-          const { error: stepsError } = await supabase.from('vigor_steps').insert(dbSteps);
-          if (stepsError) throw stepsError;
-          addLog(`Succes: ${result.steps.length} stappendata opgeslagen.`);
+          for (const s of result.steps) {
+            const dateStr = new Date(s.timestamp * 1000).toISOString().split('T')[0];
+            const startOfDay = `${dateStr}T00:00:00.000Z`;
+            const endOfDay = `${dateStr}T23:59:59.999Z`;
+
+            await supabase.from('vigor_steps')
+              .delete()
+              .eq('user_id', userId)
+              .gte('logged_at', startOfDay)
+              .lte('logged_at', endOfDay);
+
+            const { error: stepsError } = await supabase.from('vigor_steps').insert([{
+              user_id: userId,
+              step_count: s.step_count,
+              logged_at: startOfDay
+            }]);
+            if (stepsError) throw stepsError;
+          }
+          addLog(`Succes: ${result.steps.length} stappendata bijgewerkt.`);
         }
 
-        // Process sleep
+        // Process sleep (1 record per day OVERWRITE)
         if (result.sleep && result.sleep.length > 0) {
-          const dbSleep = result.sleep.map((s: any) => ({
-            user_id: userId,
-            duration_minutes: s.duration_minutes,
-            deep_minutes: s.deep_minutes || Math.round(s.duration_minutes * 0.25),
-            light_minutes: s.light_minutes || Math.round(s.duration_minutes * 0.55),
-            rem_minutes: s.rem_minutes || Math.round(s.duration_minutes * 0.18),
-            awake_minutes: s.awake_minutes || Math.round(s.duration_minutes * 0.02),
-            quality_score: s.quality_score,
-            logged_at: new Date(s.timestamp * 1000).toISOString()
-          }));
-          const { error: sleepError } = await supabase.from('vigor_sleep').insert(dbSleep);
-          if (sleepError) throw sleepError;
-          addLog(`Succes: ${result.sleep.length} slaapdata opgeslagen.`);
+          for (const s of result.sleep) {
+            const dateStr = new Date(s.timestamp * 1000).toISOString().split('T')[0];
+            const startOfDay = `${dateStr}T00:00:00.000Z`;
+            const endOfDay = `${dateStr}T23:59:59.999Z`;
+
+            await supabase.from('vigor_sleep')
+              .delete()
+              .eq('user_id', userId)
+              .gte('logged_at', startOfDay)
+              .lte('logged_at', endOfDay);
+
+            const { error: sleepError } = await supabase.from('vigor_sleep').insert([{
+              user_id: userId,
+              duration_minutes: s.duration_minutes,
+              deep_minutes: s.deep_minutes || Math.round(s.duration_minutes * 0.25),
+              light_minutes: s.light_minutes || Math.round(s.duration_minutes * 0.55),
+              rem_minutes: s.rem_minutes || Math.round(s.duration_minutes * 0.18),
+              awake_minutes: s.awake_minutes || Math.round(s.duration_minutes * 0.02),
+              quality_score: s.quality_score,
+              logged_at: startOfDay
+            }]);
+            if (sleepError) throw sleepError;
+          }
+          addLog(`Succes: ${result.sleep.length} slaapdata bijgewerkt.`);
         }
 
         setStatus('completed');

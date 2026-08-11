@@ -177,9 +177,16 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         .select('*')
         .eq('user_id', user.id)
         .order('logged_at', { ascending: true })
-        .limit(30);
+        .limit(60);
       if (sError) throw sError;
-      setSleeps(sleepData || []);
+
+      // Deduplicate sleeps by date (keep latest per calendar date)
+      const uniqueSleepsMap = new Map<string, any>();
+      (sleepData || []).forEach((item: any) => {
+        const dateKey = item.logged_at ? item.logged_at.split('T')[0] : '';
+        if (dateKey) uniqueSleepsMap.set(dateKey, item);
+      });
+      setSleeps(Array.from(uniqueSleepsMap.values()));
 
       // 3. Fetch Steps Logs
       const { data: stepData, error: stError } = await supabase
@@ -187,9 +194,16 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         .select('*')
         .eq('user_id', user.id)
         .order('logged_at', { ascending: true })
-        .limit(30);
+        .limit(60);
       if (stError) throw stError;
-      setSteps(stepData || []);
+
+      // Deduplicate steps by date (keep latest per calendar date)
+      const uniqueStepsMap = new Map<string, any>();
+      (stepData || []).forEach((item: any) => {
+        const dateKey = item.logged_at ? item.logged_at.split('T')[0] : '';
+        if (dateKey) uniqueStepsMap.set(dateKey, item);
+      });
+      setSteps(Array.from(uniqueStepsMap.values()));
 
       // 4. Fetch Body Measurements Logs
       const { data: measureData, error: mError } = await supabase
