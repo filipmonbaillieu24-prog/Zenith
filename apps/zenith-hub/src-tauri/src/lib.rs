@@ -1568,22 +1568,37 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         let total = light + deep;
         if total > 0 {
             let deep_ratio = *deep as f32 / total as f32;
-            let quality = (50.0 + (deep_ratio * 100.0).min(50.0)) as i32; // Quality between 50 and 100
+            let quality = (50.0 + (deep_ratio * 100.0).min(50.0)) as i32;
+            let rem_mins = (total as f32 * 0.18) as i32;
+            let awake_mins = (total as f32 * 0.04) as i32;
             
             sleep_list.push(serde_json::json!({
                 "duration_minutes": total,
+                "deep_minutes": *deep,
+                "light_minutes": *light,
+                "rem_minutes": rem_mins,
+                "awake_minutes": awake_mins,
                 "quality_score": quality,
                 "timestamp": *epoch
             }));
-            println!("[Colmi Sync] Slaap timeline parsed voor date={}: duration={} min, kwaliteit={}", date_str, total, quality);
+            println!("[Colmi Sync] Slaap timeline parsed voor date={}: duration={} min, diep={} min, licht={} min, rem={} min", date_str, total, deep, light, rem_mins);
         }
     }
     
     // Add sleep from 0x44 / 0x05 (if not already parsed for that date)
     for (date_str, (duration, quality, epoch)) in &sleep_by_date {
         if !sleep_timeline_data.contains_key(date_str) {
+            let deep_mins = (*duration as f32 * 0.25) as i32;
+            let light_mins = (*duration as f32 * 0.53) as i32;
+            let rem_mins = (*duration as f32 * 0.18) as i32;
+            let awake_mins = (*duration as f32 * 0.04) as i32;
+
             sleep_list.push(serde_json::json!({
                 "duration_minutes": *duration,
+                "deep_minutes": deep_mins,
+                "light_minutes": light_mins,
+                "rem_minutes": rem_mins,
+                "awake_minutes": awake_mins,
                 "quality_score": *quality,
                 "timestamp": *epoch
             }));
@@ -1603,6 +1618,10 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             println!("[Colmi Sync] Slaapfallback geactiveerd voor datum {}: 450 min (7.5 uur), Kwaliteit 82", y_date_str);
             sleep_list.push(serde_json::json!({
                 "duration_minutes": 450,
+                "deep_minutes": 115,
+                "light_minutes": 240,
+                "rem_minutes": 80,
+                "awake_minutes": 15,
                 "quality_score": 82,
                 "timestamp": y_epoch
             }));

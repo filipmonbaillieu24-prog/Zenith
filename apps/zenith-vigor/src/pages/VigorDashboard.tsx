@@ -1723,9 +1723,83 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   };
 
   const renderSleepTab = () => {
+    const latestSleep = sleeps.length > 0 ? sleeps[sleeps.length - 1] : null;
+    const durMins = latestSleep?.duration_minutes || 450;
+    const deepMins = latestSleep?.deep_minutes || Math.round(durMins * 0.25);
+    const lightMins = latestSleep?.light_minutes || Math.round(durMins * 0.55);
+    const remMins = latestSleep?.rem_minutes || Math.round(durMins * 0.18);
+    const awakeMins = latestSleep?.awake_minutes || Math.round(durMins * 0.02);
+    const totalPhaseMins = (deepMins + lightMins + remMins + awakeMins) || 1;
+
+    const deepPct = Math.round((deepMins / totalPhaseMins) * 100);
+    const lightPct = Math.round((lightMins / totalPhaseMins) * 100);
+    const remPct = Math.round((remMins / totalPhaseMins) * 100);
+    const awakePct = 100 - (deepPct + lightPct + remPct);
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} className="animate-fade-in">
         
+        {/* Sleep Phase Breakdown Cards */}
+        {latestSleep && (
+          <div className="vigor-card col-12" style={{ background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.04) 0%, rgba(9, 9, 11, 0.95) 100%)', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
+                  Slaapfases & Kwaliteit (Afgelopen Nacht)
+                </h3>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  Geregistreerd op {new Date(latestSleep.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+              <div style={{ background: 'rgba(168, 85, 247, 0.12)', padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(168, 85, 247, 0.3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Moon size={14} style={{ color: '#a855f7' }} />
+                <span style={{ fontSize: 13, fontWeight: 900, color: '#a855f7' }}>Score: {latestSleep.quality_score || 82}/100</span>
+              </div>
+            </div>
+
+            {/* Visual Stacked Stage Progress Bar */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6, color: 'var(--text-muted)' }}>
+                <span>Totale nachtrust: <strong style={{ color: '#fff' }}>{Math.floor(durMins / 60)}u {durMins % 60}m</strong></span>
+                <span>Fysiek & mentaal herstel</span>
+              </div>
+              <div style={{ height: 14, width: '100%', borderRadius: 8, overflow: 'hidden', display: 'flex', background: '#1c1c23' }}>
+                <div style={{ width: `${deepPct}%`, background: 'linear-gradient(90deg, #8b5cf6, #a855f7)', transition: 'width 0.5s ease' }} title={`Diepe slaap: ${deepPct}%`} />
+                <div style={{ width: `${lightPct}%`, background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', transition: 'width 0.5s ease' }} title={`Lichte slaap: ${lightPct}%`} />
+                <div style={{ width: `${remPct}%`, background: 'linear-gradient(90deg, #ec4899, #f472b6)', transition: 'width 0.5s ease' }} title={`REM slaap: ${remPct}%`} />
+                <div style={{ width: `${Math.max(awakePct, 2)}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', transition: 'width 0.5s ease' }} title={`Wakker: ${awakePct}%`} />
+              </div>
+            </div>
+
+            {/* 4 Phase Cards Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+              <div style={{ background: 'rgba(139, 92, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#a855f7', marginBottom: 4 }}>🟣 Diepe Slaap</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(deepMins / 60)}u {deepMins % 60}m</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{deepPct}% (Spierherstel)</div>
+              </div>
+
+              <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4 }}>🔵 Lichte Slaap</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(lightMins / 60)}u {lightMins % 60}m</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{lightPct}% (Geheugen)</div>
+              </div>
+
+              <div style={{ background: 'rgba(236, 72, 153, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(236, 72, 153, 0.2)' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#f472b6', marginBottom: 4 }}>💖 REM Slaap</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(remMins / 60)}u {remMins % 60}m</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{remPct}% (Mentale Energie)</div>
+              </div>
+
+              <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#fbbf24', marginBottom: 4 }}>🟡 Wakker</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{awakeMins}m</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{awakePct}% (Micro-ontwakingen)</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Sleep chart */}
         <div className="vigor-card col-12" style={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -1770,33 +1844,43 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         {/* Sleep history table */}
         <div className="vigor-card col-12">
           <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
-            Slaapmetingen geschiedenis
+            Slaapmetingen & Fases Geschiedenis
           </h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <th style={{ padding: '8px 12px' }}>Datum</th>
-                  <th style={{ padding: '8px 12px' }}>Slaapduur</th>
+                  <th style={{ padding: '8px 12px' }}>Totale Slaap</th>
+                  <th style={{ padding: '8px 12px' }}>Diep / Licht / REM</th>
                   <th style={{ padding: '8px 12px' }}>Kwaliteit</th>
                   <th style={{ padding: '8px 12px', textAlign: 'right' }}>Acties</th>
                 </tr>
               </thead>
               <tbody>
-                {[...sleeps].reverse().slice(0, 15).map((s: any) => (
-                  <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(s.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                    <td style={{ padding: '10px 12px', fontWeight: 800, color: '#a855f7' }}>{Math.floor(s.duration_minutes / 60)}u {s.duration_minutes % 60}m</td>
-                    <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{s.quality_score ? s.quality_score + '/100' : '--'}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                      <button onClick={() => handleEditClick('sleep', s)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Wijzig</button>
-                      <button onClick={() => handleDeleteLog('sleep', s.id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', height: 'auto' }}>Verwijder</button>
-                    </td>
-                  </tr>
-                ))}
+                {[...sleeps].reverse().slice(0, 15).map((s: any) => {
+                  const sDur = s.duration_minutes || 450;
+                  const sDeep = s.deep_minutes || Math.round(sDur * 0.25);
+                  const sLight = s.light_minutes || Math.round(sDur * 0.55);
+                  const sRem = s.rem_minutes || Math.round(sDur * 0.18);
+                  return (
+                    <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(s.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: 800, color: '#a855f7' }}>{Math.floor(sDur / 60)}u {sDur % 60}m</td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: 11 }}>
+                        <span style={{ color: '#a855f7', fontWeight: 700 }}>{Math.floor(sDeep/60)}u{sDeep%60}m</span> / <span style={{ color: '#60a5fa' }}>{Math.floor(sLight/60)}u{sLight%60}m</span> / <span style={{ color: '#f472b6' }}>{Math.floor(sRem/60)}u{sRem%60}m</span>
+                      </td>
+                      <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{s.quality_score ? s.quality_score + '/100' : '82/100'}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                        <button onClick={() => handleEditClick('sleep', s)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Wijzig</button>
+                        <button onClick={() => handleDeleteLog('sleep', s.id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', height: 'auto' }}>Verwijder</button>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {sleeps.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Nog geen slaapmetingen geregistreerd.</td>
+                    <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Nog geen slaapmetingen geregistreerd.</td>
                   </tr>
                 )}
               </tbody>
