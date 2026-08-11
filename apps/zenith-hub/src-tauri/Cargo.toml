@@ -1,6 +1,6 @@
 [package]
 name = "zenith-hub"
-version = "0.1.39"
+version = "0.1.40"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -29,4 +29,5 @@ rfd = "0.15"
 btleplug = "0.11"
 futures = "0.3"
 tokio = { version = "1.53.1", features = ["sync", "time"] }
+chrono = "0.4"
 

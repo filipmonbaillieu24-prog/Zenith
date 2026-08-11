@@ -1113,39 +1113,26 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         .as_secs();
 
     let (year, month, day, hour, minute, second) = {
-        let now_sec = now;
-        
-        let seconds_in_day = 86400;
-        let day_num = now_sec / seconds_in_day;
-        let seconds_since_midnight = now_sec % seconds_in_day;
-        
-        let hour = (seconds_since_midnight / 3600) as u8;
-        let minute = ((seconds_since_midnight % 3600) / 60) as u8;
-        let second = (seconds_since_midnight % 60) as u8;
-        
-        let jd = day_num as i32 + 2440588;
-        let a = jd + 32044;
-        let b = (4 * a + 3) / 146097;
-        let c = a - (146097 * b) / 4;
-        let d = (4 * c + 3) / 1461;
-        let e = c - (1461 * d) / 4;
-        let m = (5 * e + 2) / 153;
-        
-        let calendar_day = (e - (153 * m + 2) / 5 + 1) as u8;
-        let calendar_month = (m + 3 - 12 * (m / 10)) as u8;
-        let calendar_year = (100 * b + d - 4800 + m / 10) as u16;
-        
-        (calendar_year, calendar_month, calendar_day, hour, minute, second)
+        use chrono::{Datelike, Timelike};
+        let local_now = chrono::Local::now();
+        (
+            local_now.year() as u16,
+            local_now.month() as u8,
+            local_now.day() as u8,
+            local_now.hour() as u8,
+            local_now.minute() as u8,
+            local_now.second() as u8,
+        )
     };
 
     println!(
-        "[Colmi Sync] Syncing time to ring (UTC): {}-{:02}-{:02} {:02}:{:02}:{:02}",
+        "[Colmi Sync] Syncing local time to ring: {}-{:02}-{:02} {:02}:{:02}:{:02}",
         year, month, day, hour, minute, second
     );
     if let Ok(ref mut file) = log_file {
         let _ = writeln!(
             file,
-            "[Colmi Sync] Syncing time to ring (UTC): {}-{:02}-{:02} {:02}:{:02}:{:02}",
+            "[Colmi Sync] Syncing local time to ring: {}-{:02}-{:02} {:02}:{:02}:{:02}",
             year, month, day, hour, minute, second
         );
     }
@@ -1359,8 +1346,11 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     // ----------------------------------------------------
     emit_status(&app, "Slaapgegevens synchroniseren...", 0.85);
     for day_offset in 0..=7 {
-        let target_time = now - (day_offset as u64) * 86400;
-        let (tyear, tmonth, tday) = epoch_to_date(target_time);
+        use chrono::Datelike;
+        let local_target = chrono::Local::now() - chrono::Duration::days(day_offset as i64);
+        let tyear = local_target.year() as u16;
+        let tmonth = local_target.month() as u8;
+        let tday = local_target.day() as u8;
         let target_date_str = format!("{:04}-{:02}-{:02}", tyear, tmonth, tday);
 
         println!("[Colmi Sync] Slaap opvragen voor offset {} (datum {})...", day_offset, target_date_str);
