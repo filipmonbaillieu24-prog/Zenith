@@ -834,6 +834,11 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
     };
 
+    // Stop de actieve scan zodat de WinRT advertisement watcher het bluetooth-kanaal vrijgeeft voor GATT verbinding
+    println!("[Colmi Sync] Stopzetten van scanner voor GATT verbinding...");
+    let _ = adapter.stop_scan().await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
     let mut connect_success = false;
     let mut last_error = None;
     let mut connected_peripheral = None;
