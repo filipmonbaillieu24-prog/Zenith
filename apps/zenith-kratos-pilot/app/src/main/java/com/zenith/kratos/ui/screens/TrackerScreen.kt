@@ -1063,8 +1063,8 @@ fun TrackerScreen(
                                                     if (activeFocusField == "weight") {
                                                         activeSet.weightInput = newText
                                                         val newW = newText.toDoubleOrNull()
-                                                        if (newW != null && activeSet.type == "working" && exState.sets.firstOrNull { it.type == "working" } == activeSet) {
-                                                            recalculateWarmupTargets(exState.sets, newW)
+                                                        if (newW != null && activeSet.type == "working" && activeEx.sets.firstOrNull { it.type == "working" } == activeSet) {
+                                                            recalculateWarmupTargets(activeEx.sets, newW)
                                                         }
                                                     } else {
                                                         activeSet.repsInput = newText
@@ -1134,8 +1134,8 @@ fun TrackerScreen(
                                                 }
 
                                                 // Update warmup sets if first working set is edited
-                                                if (activeSet.type == "working" && exState.sets.firstOrNull { it.type == "working" } == activeSet) {
-                                                    recalculateWarmupTargets(exState.sets, w)
+                                                if (activeSet.type == "working" && activeEx.sets.firstOrNull { it.type == "working" } == activeSet) {
+                                                    recalculateWarmupTargets(activeEx.sets, w)
                                                 }
 
                                                 activeFocusField = null

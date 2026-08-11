@@ -66,12 +66,12 @@ Write-Host "Updated $GradleFile with new version numbers." -ForegroundColor Gree
 # 2. Compile APK using gradle
 Write-Host "Starting Gradle build (assembleDebug)..." -ForegroundColor Yellow
 Push-Location "apps/zenith-kratos-pilot"
-try {
-    ./gradlew.bat assembleDebug
-} catch {
-    Write-Error "Gradle build failed."
-} finally {
-    Pop-Location
+./gradlew.bat assembleDebug
+$GradleExitCode = $LASTEXITCODE
+Pop-Location
+
+if ($GradleExitCode -ne 0) {
+    Write-Error "Gradle build failed with exit code $GradleExitCode."
 }
 
 # Check if APK was built

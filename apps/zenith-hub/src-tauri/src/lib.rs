@@ -830,13 +830,11 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
     };
     
-    // Force connect: check if connected locally, disconnect first if so to clear stale handles
-    if let Ok(true) = peripheral.is_connected().await {
-        emit_status(&app, "Apparaat al verbonden. Verbinding resetten...", 0.38);
-        println!("[Colmi Sync] Apparaat is al verbonden. Aanroepen disconnect...");
-        let _ = peripheral.disconnect().await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-    }
+    // Force connect: altijd eerst disconnect aanroepen om Windows BLE-cache op te schonen en stale handles te voorkomen
+    emit_status(&app, "Bluetooth verbinding voorbereiden...", 0.38);
+    println!("[Colmi Sync] Altijd eerst disconnect aanroepen om Windows BLE-cache op te schonen...");
+    let _ = peripheral.disconnect().await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
 
     let mut connect_success = false;
     let mut last_error = None;
