@@ -6,7 +6,7 @@ interface ColmiRingConnectorProps {
   onClose: () => void;
   userId: string;
   onSyncComplete: () => void;
-  onPairingSuccess?: (brand: string, model: string) => void;
+  onPairingSuccess?: (brand: string, model: string, macAddress?: string) => void;
 }
 
 export default function ColmiRingConnector({ onClose, userId, onSyncComplete, onPairingSuccess }: ColmiRingConnectorProps) {
@@ -45,6 +45,23 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
     setErrorMsg('');
     addLog('Bluetooth-scan gestart...');
 
+    // Fetch paired ring settings to find target MAC address
+    let targetMac: string | null = null;
+    try {
+      const { data, error } = await supabase
+        .from('vigor_paired_devices')
+        .select('settings')
+        .eq('user_id', userId)
+        .eq('device_type', 'ring')
+        .maybeSingle();
+      if (!error && data && data.settings && (data.settings as any).mac_address) {
+        targetMac = (data.settings as any).mac_address;
+        addLog(`Opgeslagen MAC-adres gevonden: ${targetMac}. Doelgericht verbinden gestart...`);
+      }
+    } catch (err) {
+      console.error('Error fetching target MAC:', err);
+    }
+
     if (window.parent !== window) {
       // In an iframe (Desktop Hub mode)
       addLog('Verzoek versturen naar Zenith Hub voor Bluetooth-synchronisatie...');
@@ -60,61 +77,62 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
           if (event.data.type === 'colmi-sync-result') {
             window.removeEventListener('message', messageListener);
           
-          if (event.data.success) {
-            try {
-              const result = JSON.parse(event.data.data);
-              setStatus('syncing');
-              addLog(`Verbonden met apparaat: ${result.device_name}`);
-              addLog('Synchronisatie van historische stappen & slaap gestart...');
+            if (event.data.success) {
+              try {
+                const result = JSON.parse(event.data.data);
+                setStatus('syncing');
+                addLog(`Verbonden met apparaat: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
+                addLog('Synchronisatie van historische stappen & slaap gestart...');
 
-              // Process steps
-              if (result.steps && result.steps.length > 0) {
-                const dbSteps = result.steps.map((s: any) => ({
-                  user_id: userId,
-                  step_count: s.step_count,
-                  logged_at: new Date(s.timestamp * 1000).toISOString()
-                }));
-                const { error: stepsError } = await supabase.from('vigor_steps').insert(dbSteps);
-                if (stepsError) throw stepsError;
-                addLog(`Succes: ${result.steps.length} stappendata opgeslagen.`);
-              }
+                // Process steps
+                if (result.steps && result.steps.length > 0) {
+                  const dbSteps = result.steps.map((s: any) => ({
+                    user_id: userId,
+                    step_count: s.step_count,
+                    logged_at: new Date(s.timestamp * 1000).toISOString()
+                  }));
+                  const { error: stepsError } = await supabase.from('vigor_steps').insert(dbSteps);
+                  if (stepsError) throw stepsError;
+                  addLog(`Succes: ${result.steps.length} stappendata opgeslagen.`);
+                }
 
-              // Process sleep
-              if (result.sleep && result.sleep.length > 0) {
-                const dbSleep = result.sleep.map((s: any) => ({
-                  user_id: userId,
-                  duration_minutes: s.duration_minutes,
-                  quality_score: s.quality_score,
-                  logged_at: new Date(s.timestamp * 1000).toISOString()
-                }));
-                const { error: sleepError } = await supabase.from('vigor_sleep').insert(dbSleep);
-                if (sleepError) throw sleepError;
-                addLog(`Succes: ${result.sleep.length} slaapdata opgeslagen.`);
-              }
+                // Process sleep
+                if (result.sleep && result.sleep.length > 0) {
+                  const dbSleep = result.sleep.map((s: any) => ({
+                    // Note: userId is standard
+                    user_id: userId,
+                    duration_minutes: s.duration_minutes,
+                    quality_score: s.quality_score,
+                    logged_at: new Date(s.timestamp * 1000).toISOString()
+                  }));
+                  const { error: sleepError } = await supabase.from('vigor_sleep').insert(dbSleep);
+                  if (sleepError) throw sleepError;
+                  addLog(`Succes: ${result.sleep.length} slaapdata opgeslagen.`);
+                }
 
-              setStatus('completed');
-              addLog('Synchronisatie volledig voltooid!');
-              if (onPairingSuccess) {
-                onPairingSuccess('Colmi', 'R02');
+                setStatus('completed');
+                addLog('Synchronisatie volledig voltooid!');
+                if (onPairingSuccess) {
+                  onPairingSuccess('Colmi', 'R02', result.mac_address);
+                }
+                onSyncComplete();
+              } catch (err: any) {
+                console.error('Ring sync processing error:', err);
+                setStatus('error');
+                setErrorMsg(err.message || 'Fout bij verwerken van ringgegevens.');
+                addLog(`Fout: ${err.message || 'Verwerkingsfout'}`);
               }
-              onSyncComplete();
-            } catch (err: any) {
-              console.error('Ring sync processing error:', err);
+            } else {
               setStatus('error');
-              setErrorMsg(err.message || 'Fout bij verwerken van ringgegevens.');
-              addLog(`Fout: ${err.message || 'Verwerkingsfout'}`);
+              setErrorMsg(event.data.error || 'Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.');
+              addLog(`Fout: ${event.data.error || 'Verbindingsfout'}`);
             }
-          } else {
-            setStatus('error');
-            setErrorMsg(event.data.error || 'Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.');
-            addLog(`Fout: ${event.data.error || 'Verbindingsfout'}`);
-          }
           }
         }
       };
 
       window.addEventListener('message', messageListener);
-      window.parent.postMessage({ type: 'request-colmi-sync' }, '*');
+      window.parent.postMessage({ type: 'request-colmi-sync', targetMac }, '*');
       setStatus('connecting');
       addLog('Zoeken naar Colmi Smart Ring in de buurt...');
       addLog('Wachten op antwoord van Zenith Hub...');
@@ -131,11 +149,11 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
         setStatus('connecting');
         addLog('Zoeken naar Colmi Smart Ring in de buurt...');
         
-        const resultStr = await invoke<string>('sync_colmi_ring', { simulate: false });
+        const resultStr = await invoke<string>('sync_colmi_ring', { simulate: false, targetMac });
         const result = JSON.parse(resultStr);
 
         setStatus('syncing');
-        addLog(`Verbonden met apparaat: ${result.device_name}`);
+        addLog(`Verbonden met apparaat: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
         addLog('Synchronisatie van historische stappen & slaap gestart...');
 
         // Process steps
@@ -166,7 +184,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
         setStatus('completed');
         addLog('Synchronisatie volledig voltooid!');
         if (onPairingSuccess) {
-          onPairingSuccess('Colmi', 'R02');
+          onPairingSuccess('Colmi', 'R02', result.mac_address);
         }
         onSyncComplete();
       } catch (err: any) {

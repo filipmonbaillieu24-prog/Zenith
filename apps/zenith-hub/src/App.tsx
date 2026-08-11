@@ -318,10 +318,11 @@ function App() {
         }
       } else if (event.data?.type === 'request-colmi-sync') {
         console.log("Hub received request-colmi-sync from iframe");
+        const targetMac = event.data?.targetMac || null;
         const runSync = async () => {
           try {
             const { invoke } = await import('@tauri-apps/api/core');
-            const resultStr = await invoke<string>('sync_colmi_ring', { simulate: false });
+            const resultStr = await invoke<string>('sync_colmi_ring', { simulate: false, targetMac });
             const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
             if (iframe && iframe.contentWindow) {
               iframe.contentWindow.postMessage({

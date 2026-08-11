@@ -666,18 +666,18 @@ async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(), B
 }
 
 #[tauri::command]
-async fn sync_colmi_ring(app: tauri::AppHandle, simulate: bool) -> Result<String, String> {
+async fn sync_colmi_ring(app: tauri::AppHandle, simulate: bool, target_mac: Option<String>) -> Result<String, String> {
     // Guard against concurrent syncs
     if COLMI_SYNC_RUNNING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
         return Err("Er loopt al een Colmi-synchronisatie. Wacht tot deze is afgerond.".to_string());
     }
     // Auto-reset guard on all return paths via a defer-like wrapper
-    let result = sync_colmi_ring_inner(app, simulate).await;
+    let result = sync_colmi_ring_inner(app, simulate, target_mac).await;
     COLMI_SYNC_RUNNING.store(false, Ordering::SeqCst);
     result
 }
 
-async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool) -> Result<String, String> {
+async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac: Option<String>) -> Result<String, String> {
     fn bcd_to_decimal(b: u8) -> u32 {
         (((b >> 4) & 0x0F) * 10 + (b & 0x0F)) as u32
     }
@@ -725,6 +725,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool) -> Result<
         let response = serde_json::json!({
             "status": "success",
             "device_name": "Colmi R02 Ring (Simulated)",
+            "mac_address": "32:34:48:31:A8:05",
             "steps": mock_steps,
             "sleep": mock_sleep
         });
@@ -784,21 +785,27 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool) -> Result<
                     let _ = writeln!(file, "[Colmi Sync] Apparaat gescand (poging {}): Naam='{}', Adres='{}', Services={:?}", attempt, name, address, services_str);
                 }
 
-                let has_service = properties.services.iter().any(|s| {
-                    let uuid_str = s.to_string().to_lowercase();
-                    uuid_str.contains("56ff") || uuid_str.contains("6e40fff0") || uuid_str.contains("fee7")
-                });
-
                 let addr_lower = address.to_lowercase();
-                if name_lower.contains("colmi") 
-                    || name_lower.contains("r0") 
-                    || name_lower.contains("ring") 
-                    || name_lower.contains("smart")
-                    || name_lower.contains("wearable")
-                    || name_lower.contains("mouyoung")
-                    || addr_lower.contains("32:34:48:31:a8:05")
-                    || has_service 
-                {
+                let is_match = if let Some(ref target) = target_mac {
+                    let target_lower = target.to_lowercase();
+                    addr_lower == target_lower
+                } else {
+                    let has_service = properties.services.iter().any(|s| {
+                        let uuid_str = s.to_string().to_lowercase();
+                        uuid_str.contains("56ff") || uuid_str.contains("6e40fff0") || uuid_str.contains("fee7")
+                    });
+                    
+                    name_lower.contains("colmi") 
+                        || name_lower.contains("r0") 
+                        || name_lower.contains("ring") 
+                        || name_lower.contains("smart")
+                        || name_lower.contains("wearable")
+                        || name_lower.contains("mouyoung")
+                        || addr_lower.contains("32:34:48:31:a8:05")
+                        || has_service
+                };
+
+                if is_match {
                     emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", address), 0.35);
                     println!("[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
                     if let Ok(ref mut file) = log_file {
@@ -1391,6 +1398,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool) -> Result<
     let response = serde_json::json!({
         "status": "success",
         "device_name": "Colmi R02 Smart Ring",
+        "mac_address": peripheral.address().to_string(),
         "steps": steps_list,
         "sleep": sleep_list
     });

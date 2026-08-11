@@ -113,7 +113,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
   };
 
   // Save successfully paired device to Supabase
-  const saveDeviceToDatabase = async (type: 'scale' | 'ring', brand: string, model: string) => {
+  const saveDeviceToDatabase = async (type: 'scale' | 'ring', brand: string, model: string, macAddress?: string) => {
     try {
       const payload = {
         user_id: userId,
@@ -121,7 +121,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
         brand,
         model,
         auto_connect: true,
-        settings: {},
+        settings: macAddress ? { mac_address: macAddress } : {},
       };
 
       const { error } = await supabase
@@ -141,8 +141,10 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
     setView('list');
   };
 
-  const handlePairingRingSuccess = async () => {
-    await saveDeviceToDatabase('ring', 'Colmi', 'R02');
+  const handlePairingRingSuccess = async (brand?: string, model?: string, macAddress?: string) => {
+    const finalBrand = typeof brand === 'string' ? brand : 'Colmi';
+    const finalModel = typeof model === 'string' ? model : 'R02';
+    await saveDeviceToDatabase('ring', finalBrand, finalModel, macAddress);
     setView('list');
   };
 
