@@ -752,7 +752,8 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         .open("e:\\Google Antgravity\\Zenith\\ble_debug.log");
 
     // Scan with multiple retries for better device caching
-    let mut ring_peripheral = None;
+    let mut ring_id = None;
+    let mut ring_address = String::new();
     let scan_duration = tokio::time::Duration::from_secs(3);
     
     for attempt in 1..=4 {
@@ -812,19 +813,20 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     if let Ok(ref mut file) = log_file {
                         let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {} (RSSI: {})", address, rssi_str);
                     }
-                    ring_peripheral = Some(peripheral);
+                    ring_id = Some(peripheral.id());
+                    ring_address = address;
                     break;
                 }
             }
         }
         
-        if ring_peripheral.is_some() {
+        if ring_id.is_some() {
             break;
         }
     }
     
-    let peripheral = match ring_peripheral {
-        Some(p) => p,
+    let target_id = match ring_id {
+        Some(id) => id,
         None => {
             let _ = adapter.stop_scan().await;
             println!("[Colmi Sync] Fout: Geen Colmi Smart Ring gevonden in de buurt.");
@@ -834,15 +836,25 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
 
     let mut connect_success = false;
     let mut last_error = None;
+    let mut connected_peripheral = None;
+
     for conn_attempt in 1..=3 {
         emit_status(&app, &format!("Verbinden met Colmi Smart Ring (poging {}/3)...", conn_attempt), 0.40 + (conn_attempt as f32 * 0.05));
-        println!("[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, peripheral.address());
+        println!("[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, ring_address);
         if let Ok(ref mut file) = log_file {
-            let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, peripheral.address());
+            let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, ring_address);
         }
         
-        // Zorg dat de advertisement watcher actief is zodat Windows de advertentie-intervallen opvangt
-        let _ = adapter.start_scan(ScanFilter::default()).await;
+        // Vraag een verse Peripheral handle op aan de adapter voor het exacte apparaat-ID
+        let peripheral = match adapter.peripheral(&target_id).await {
+            Ok(p) => p,
+            Err(e) => {
+                println!("[Colmi Sync] Fout bij ophalen verse peripheral: {:?}", e);
+                last_error = Some(format!("{:?}", e));
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                continue;
+            }
+        };
 
         if let Ok(true) = peripheral.is_connected().await {
             let _ = peripheral.disconnect().await;
@@ -852,6 +864,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         match peripheral.connect().await {
             Ok(_) => {
                 connect_success = true;
+                connected_peripheral = Some(peripheral);
                 break;
             }
             Err(e) => {
@@ -860,7 +873,6 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     let _ = writeln!(file, "[Colmi Sync] Connect meldt: {:?}. Wachten op achtergrond-verbinding...", e);
                 }
                 
-                // Windows WinRT MaintainConnection heeft 1-2 sec nodig om de GATT handshake te voltooien. Wacht en controleer.
                 tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
                 if let Ok(true) = peripheral.is_connected().await {
                     println!("[Colmi Sync] Verbinding achteraf bevestigd via is_connected()!");
@@ -868,34 +880,36 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                         let _ = writeln!(file, "[Colmi Sync] Verbinding achteraf bevestigd via is_connected()!");
                     }
                     connect_success = true;
+                    connected_peripheral = Some(peripheral);
                     break;
                 }
                 
-                // Probeer discover_services() aan te roepen om een GATT over-the-air request te forceren
                 if peripheral.discover_services().await.is_ok() {
                     println!("[Colmi Sync] Verbinding achteraf bevestigd via discover_services()!");
                     if let Ok(ref mut file) = log_file {
                         let _ = writeln!(file, "[Colmi Sync] Verbinding achteraf bevestigd via discover_services()!");
                     }
                     connect_success = true;
+                    connected_peripheral = Some(peripheral);
                     break;
                 }
 
-                last_error = Some(e);
+                last_error = Some(format!("{:?}", e));
             }
         }
     }
 
-    // Stop de scan nadat de verbindingspoging is afgerond
     let _ = adapter.stop_scan().await;
     
-    if !connect_success {
+    if !connect_success || connected_peripheral.is_none() {
         let err_msg = match last_error {
-            Some(e) => format!("Fout bij verbinden met ring na 3 pogingen. Details: {:?}", e),
+            Some(e) => format!("Fout bij verbinden met ring na 3 pogingen. Details: {}", e),
             None => "Fout bij verbinden met ring na 3 pogingen".to_string(),
         };
         return Err(err_msg);
     }
+
+    let peripheral = connected_peripheral.unwrap();
     
     emit_status(&app, "Verbonden! Starten van service discovery...", 0.60);
     println!("[Colmi Sync] Verbonden! Start service discovery...");
