@@ -11,7 +11,9 @@ import {
   Calendar,
   Sparkles,
   X,
-  Bluetooth
+  Bluetooth,
+  Camera,
+  Trash2
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -43,7 +45,43 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   const userName = dbProfile?.name || user.user_metadata?.name || user.user_metadata?.fitness_profile?.name || 'Atleet';
 
   // Navigation tab state
-  const [currentTab, setCurrentTab] = useState<'home' | 'weight' | 'sleep' | 'steps'>('home');
+  const [currentTab, setCurrentTab] = useState<'home' | 'weight' | 'sleep' | 'steps' | 'progress'>('home');
+
+  // Progress states
+  const [measurements, setMeasurements] = useState<any[]>([]);
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [progressSubTab, setProgressSubTab] = useState<'measurements' | 'photos'>('measurements');
+  const [chartMetric, setChartMetric] = useState<string>('waist_cm');
+
+  // New Measurement form state
+  const [newMeasurement, setNewMeasurement] = useState({
+    logged_at: new Date().toISOString().split('T')[0],
+    body_fat_pct: '',
+    muscle_mass_kg: '',
+    waist_cm: '',
+    chest_cm: '',
+    shoulders_cm: '',
+    hips_cm: '',
+    biceps_l_cm: '',
+    biceps_r_cm: '',
+    thigh_l_cm: '',
+    thigh_r_cm: '',
+    calves_l_cm: '',
+    calves_r_cm: '',
+    neck_cm: ''
+  });
+
+  // Photo form states
+  const [photoAngle, setPhotoAngle] = useState<'front' | 'side' | 'back'>('front');
+  const [photoNotes, setPhotoNotes] = useState('');
+  const [photoDate, setPhotoDate] = useState(new Date().toISOString().split('T')[0]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // Compare states
+  const [compareAngle, setCompareAngle] = useState<'front' | 'side' | 'back'>('front');
+  const [comparePhoto1, setComparePhoto1] = useState<string>('');
+  const [comparePhoto2, setComparePhoto2] = useState<string>('');
 
   // Pre-received native weight/metrics to solve race conditions
   const [initialWeight, setInitialWeight] = useState<number | null>(null);
@@ -152,6 +190,24 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         .limit(30);
       if (stError) throw stError;
       setSteps(stepData || []);
+
+      // 4. Fetch Body Measurements Logs
+      const { data: measureData, error: mError } = await supabase
+        .from('vigor_body_measurements')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('logged_at', { ascending: true });
+      if (mError) throw mError;
+      setMeasurements(measureData || []);
+
+      // 5. Fetch Progress Photos Logs
+      const { data: photoData, error: pError } = await supabase
+        .from('vigor_progress_photos')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('logged_at', { ascending: true });
+      if (pError) throw pError;
+      setPhotos(photoData || []);
 
     } catch (err) {
       console.error('Error fetching logs:', err);
@@ -412,6 +468,154 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         console.error('Error deleting log:', err);
         alert('Fout bij verwijderen: ' + err.message);
       }
+    }
+  };
+
+  // Progress Handlers
+  const handleSaveMeasurement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload: any = {
+        user_id: user.id,
+        logged_at: new Date(newMeasurement.logged_at).toISOString()
+      };
+      
+      const parseVal = (val: string) => val.trim() === '' ? null : parseFloat(val);
+
+      payload.body_fat_pct = parseVal(newMeasurement.body_fat_pct);
+      payload.muscle_mass_kg = parseVal(newMeasurement.muscle_mass_kg);
+      payload.waist_cm = parseVal(newMeasurement.waist_cm);
+      payload.chest_cm = parseVal(newMeasurement.chest_cm);
+      payload.shoulders_cm = parseVal(newMeasurement.shoulders_cm);
+      payload.hips_cm = parseVal(newMeasurement.hips_cm);
+      payload.biceps_l_cm = parseVal(newMeasurement.biceps_l_cm);
+      payload.biceps_r_cm = parseVal(newMeasurement.biceps_r_cm);
+      payload.thigh_l_cm = parseVal(newMeasurement.thigh_l_cm);
+      payload.thigh_r_cm = parseVal(newMeasurement.thigh_r_cm);
+      payload.calves_l_cm = parseVal(newMeasurement.calves_l_cm);
+      payload.calves_r_cm = parseVal(newMeasurement.calves_r_cm);
+      payload.neck_cm = parseVal(newMeasurement.neck_cm);
+
+      const { data, error } = await supabase
+        .from('vigor_body_measurements')
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+      setMeasurements(prev => [...prev, data].sort((a, b) => a.logged_at.localeCompare(b.logged_at)));
+      
+      setNewMeasurement({
+        logged_at: new Date().toISOString().split('T')[0],
+        body_fat_pct: '',
+        muscle_mass_kg: '',
+        waist_cm: '',
+        chest_cm: '',
+        shoulders_cm: '',
+        hips_cm: '',
+        biceps_l_cm: '',
+        biceps_r_cm: '',
+        thigh_l_cm: '',
+        thigh_r_cm: '',
+        calves_l_cm: '',
+        calves_r_cm: '',
+        neck_cm: ''
+      });
+      
+      alert('Metingen succesvol opgeslagen!');
+    } catch (err) {
+      console.error('Fout bij opslaan metingen:', err);
+      alert('Fout bij opslaan metingen.');
+    }
+  };
+
+  const handleDeleteMeasurement = async (id: string) => {
+    if (!confirm('Weet u zeker dat u deze meting wilt verwijderen?')) return;
+    try {
+      const { error } = await supabase
+        .from('vigor_body_measurements')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setMeasurements(prev => prev.filter(m => m.id !== id));
+    } catch (err) {
+      console.error('Fout bij verwijderen meting:', err);
+    }
+  };
+
+  const handleUploadPhoto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!photoFile) {
+      alert('Selecteer eerst een foto.');
+      return;
+    }
+    
+    setUploadingPhoto(true);
+    try {
+      const fileExt = photoFile.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}_${photoAngle}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('vigor-progress-photos')
+        .upload(fileName, photoFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('vigor-progress-photos')
+        .getPublicUrl(fileName);
+
+      const { data: dbData, error: dbError } = await supabase
+        .from('vigor_progress_photos')
+        .insert({
+          user_id: user.id,
+          logged_at: new Date(photoDate).toISOString(),
+          image_url: publicUrl,
+          angle: photoAngle,
+          notes: photoNotes
+        })
+        .select()
+        .single();
+
+      if (dbError) throw dbError;
+
+      setPhotos(prev => [...prev, dbData].sort((a, b) => a.logged_at.localeCompare(b.logged_at)));
+      
+      setPhotoFile(null);
+      setPhotoNotes('');
+      alert('Progressiefoto succesvol geüpload!');
+    } catch (err) {
+      console.error('Fout bij uploaden foto:', err);
+      alert('Fout bij uploaden foto.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleDeletePhoto = async (photo: any) => {
+    if (!confirm('Weet u zeker dat u deze foto wilt verwijderen?')) return;
+    try {
+      const urlParts = photo.image_url.split('/vigor-progress-photos/');
+      if (urlParts.length > 1) {
+        const storagePath = urlParts[1];
+        await supabase.storage
+          .from('vigor-progress-photos')
+          .remove([storagePath]);
+      }
+
+      const { error } = await supabase
+        .from('vigor_progress_photos')
+        .delete()
+        .eq('id', photo.id);
+
+      if (error) throw error;
+      setPhotos(prev => prev.filter(p => p.id !== photo.id));
+    } catch (err) {
+      console.error('Fout bij verwijderen foto:', err);
     }
   };
 
@@ -950,6 +1154,574 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     );
   };
 
+  const renderProgressTab = () => {
+    const anglePhotos = photos.filter(p => p.angle === compareAngle);
+    const photo1Url = comparePhoto1 || anglePhotos[0]?.image_url || '';
+    const photo2Url = comparePhoto2 || anglePhotos[anglePhotos.length - 1]?.image_url || '';
+
+    const metricNames: { [key: string]: string } = {
+      body_fat_pct: 'Vetpercentage (%)',
+      muscle_mass_kg: 'Spiermassa (kg)',
+      waist_cm: 'Tailleomtrek (cm)',
+      chest_cm: 'Borstomtrek (cm)',
+      shoulders_cm: 'Schouderomtrek (cm)',
+      hips_cm: 'Heupomtrek (cm)',
+      biceps_l_cm: 'Biceps Links (cm)',
+      biceps_r_cm: 'Biceps Rechts (cm)',
+      thigh_l_cm: 'Bovenbeen Links (cm)',
+      thigh_r_cm: 'Bovenbeen Rechts (cm)',
+      calves_l_cm: 'Kuit Links (cm)',
+      calves_r_cm: 'Kuit Rechts (cm)',
+      neck_cm: 'Nekomtrek (cm)'
+    };
+
+    const chartData = measurements.map(m => {
+      const formattedDate = new Date(m.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' });
+      return {
+        dateStr: formattedDate,
+        value: m[chartMetric] !== null ? Number(m[chartMetric]) : null
+      };
+    }).filter(d => d.value !== null);
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} className="animate-fade-in">
+        {/* Sub-tab Navigation */}
+        <div style={{ display: 'flex', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
+          <button
+            onClick={() => setProgressSubTab('measurements')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: progressSubTab === 'measurements' ? 'var(--color-primary-dim)' : 'transparent',
+              color: progressSubTab === 'measurements' ? 'var(--color-primary)' : 'var(--text-muted)',
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Lichaamsmetingen
+          </button>
+          <button
+            onClick={() => setProgressSubTab('photos')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              background: progressSubTab === 'photos' ? 'var(--color-primary-dim)' : 'transparent',
+              color: progressSubTab === 'photos' ? 'var(--color-primary)' : 'var(--text-muted)',
+              fontWeight: 800,
+              fontSize: 12,
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            Progressiefoto's
+          </button>
+        </div>
+
+        {progressSubTab === 'measurements' ? (
+          <div className="vigor-grid">
+            {/* Quick Log Measurements Card */}
+            <div className="vigor-card col-4">
+              <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
+                Metingen Loggen
+              </h3>
+              <form onSubmit={handleSaveMeasurement} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Logdatum</label>
+                    <input 
+                      type="date" 
+                      className="form-input" 
+                      value={newMeasurement.logged_at}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, logged_at: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Vetpercentage (%)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Bijv. 12.5"
+                      className="form-input" 
+                      value={newMeasurement.body_fat_pct}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, body_fat_pct: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Taille (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Bijv. 80"
+                      className="form-input" 
+                      value={newMeasurement.waist_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, waist_cm: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Spiermassa (kg)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Bijv. 65"
+                      className="form-input" 
+                      value={newMeasurement.muscle_mass_kg}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, muscle_mass_kg: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Borst (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Borst"
+                      className="form-input" 
+                      value={newMeasurement.chest_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, chest_cm: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Schouders (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Schouders"
+                      className="form-input" 
+                      value={newMeasurement.shoulders_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, shoulders_cm: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Biceps L (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Biceps L"
+                      className="form-input" 
+                      value={newMeasurement.biceps_l_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, biceps_l_cm: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Biceps R (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Biceps R"
+                      className="form-input" 
+                      value={newMeasurement.biceps_r_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, biceps_r_cm: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Bovenbeen L (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Thigh L"
+                      className="form-input" 
+                      value={newMeasurement.thigh_l_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, thigh_l_cm: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Bovenbeen R (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Thigh R"
+                      className="form-input" 
+                      value={newMeasurement.thigh_r_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, thigh_r_cm: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Kuit L (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Calf L"
+                      className="form-input" 
+                      value={newMeasurement.calves_l_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, calves_l_cm: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Kuit R (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Calf R"
+                      className="form-input" 
+                      value={newMeasurement.calves_r_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, calves_r_cm: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Heupen (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Heupen"
+                      className="form-input" 
+                      value={newMeasurement.hips_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, hips_cm: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Nek (cm)</label>
+                    <input 
+                      type="number" 
+                      step="any"
+                      placeholder="Nek"
+                      className="form-input" 
+                      value={newMeasurement.neck_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, neck_cm: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" className="btn-primary" style={{ marginTop: 10 }}>
+                  Meting Opslaan
+                </button>
+              </form>
+            </div>
+
+            {/* Chart Card */}
+            <div className="vigor-card col-8" style={{ display: 'flex', flexDirection: 'column', minHeight: 350 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', margin: 0 }}>
+                  Metingen Verloop
+                </h3>
+                <select
+                  className="form-select"
+                  style={{ width: 'auto', padding: '6px 12px', fontSize: 11 }}
+                  value={chartMetric}
+                  onChange={e => setChartMetric(e.target.value)}
+                >
+                  {Object.entries(metricNames).map(([key, name]) => (
+                    <option key={key} value={key}>{name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ flex: 1, minHeight: 220 }}>
+                {chartData.length === 0 ? (
+                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                    Geen voldoende data voor deze metriek.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="dateStr" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} stroke="rgba(255,255,255,0.1)" />
+                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} stroke="rgba(255,255,255,0.1)" domain={['auto', 'auto']} />
+                      <Tooltip 
+                        contentStyle={{ background: '#09090b', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }}
+                        labelStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
+                        itemStyle={{ fontSize: 11, color: 'var(--color-primary)' }}
+                      />
+                      <Line type="monotone" dataKey="value" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} name={metricNames[chartMetric]} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+
+            {/* History Table */}
+            <div className="vigor-card col-12" style={{ marginTop: 12 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
+                Historische Metingen logboek
+              </h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-muted)' }}>
+                      <th style={{ padding: '10px 12px', textAlign: 'left' }}>Datum</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Vet %</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Spier (kg)</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Taille</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Borst</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Schouders</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Biceps L/R</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Bovenbeen L/R</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Kuit L/R</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Acties</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...measurements].reverse().map(m => (
+                      <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '10px 12px', color: '#cbd5e1', fontWeight: 600 }}>
+                          {new Date(m.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>{m.body_fat_pct ? `${m.body_fat_pct}%` : '—'}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>{m.muscle_mass_kg ? `${m.muscle_mass_kg} kg` : '—'}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>{m.waist_cm ? `${m.waist_cm} cm` : '—'}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>{m.chest_cm ? `${m.chest_cm} cm` : '—'}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>{m.shoulders_cm ? `${m.shoulders_cm} cm` : '—'}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>
+                          {m.biceps_l_cm || m.biceps_r_cm ? `${m.biceps_l_cm ?? '—'} / ${m.biceps_r_cm ?? '—'} cm` : '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>
+                          {m.thigh_l_cm || m.thigh_r_cm ? `${m.thigh_l_cm ?? '—'} / ${m.thigh_r_cm ?? '—'} cm` : '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>
+                          {m.calves_l_cm || m.calves_r_cm ? `${m.calves_l_cm ?? '—'} / ${m.calves_r_cm ?? '—'} cm` : '—'}
+                        </td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                          <button onClick={() => handleDeleteMeasurement(m.id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', height: 'auto' }}>
+                            Verwijder
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {measurements.length === 0 && (
+                      <tr>
+                        <td colSpan={10} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          Geen lichaamsmetingen geregistreerd.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="vigor-grid">
+            {/* Photo Uploader Card */}
+            <div className="vigor-card col-4">
+              <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
+                Foto Uploaden
+              </h3>
+              <form onSubmit={handleUploadPhoto} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Selecteer Foto</label>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={e => setPhotoFile(e.target.files ? e.target.files[0] : null)}
+                    required
+                    style={{ fontSize: 11, color: 'var(--text-muted)' }}
+                  />
+                </div>
+                
+                <div>
+                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Aanzicht / Hoek</label>
+                  <select
+                    className="form-select"
+                    value={photoAngle}
+                    onChange={e => setPhotoAngle(e.target.value as any)}
+                  >
+                    <option value="front">Voorkant (Front)</option>
+                    <option value="side">Zijkant (Side)</option>
+                    <option value="back">Achterkant (Back)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Datum van Foto</label>
+                  <input 
+                    type="date" 
+                    className="form-input" 
+                    value={photoDate}
+                    onChange={e => setPhotoDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Opmerkingen</label>
+                  <textarea 
+                    className="form-input" 
+                    placeholder="Bijv. Vrij nuchtere maag, koude pomp..."
+                    value={photoNotes}
+                    onChange={e => setPhotoNotes(e.target.value)}
+                    style={{ height: 60, resize: 'none', fontSize: 11 }}
+                  />
+                </div>
+
+                <button type="submit" className="btn-primary" disabled={uploadingPhoto}>
+                  {uploadingPhoto ? 'Uploaden...' : 'Foto Opslaan'}
+                </button>
+              </form>
+            </div>
+
+            {/* Photo Library Grid */}
+            <div className="vigor-card col-8" style={{ minHeight: 350 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
+                Foto Bibliotheek
+              </h3>
+              
+              {photos.length === 0 ? (
+                <div style={{ height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                  Nog geen progressiefoto's geüpload.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxHeight: 300, overflowY: 'auto' }}>
+                  {photos.map(p => (
+                    <div 
+                      key={p.id} 
+                      style={{ 
+                        background: 'rgba(255,255,255,0.01)', 
+                        border: '1px solid rgba(255,255,255,0.05)', 
+                        borderRadius: 10, 
+                        overflow: 'hidden',
+                        position: 'relative'
+                      }}
+                    >
+                      <img 
+                        src={p.image_url} 
+                        alt={p.angle} 
+                        style={{ width: '100%', height: 140, objectFit: 'cover' }}
+                      />
+                      <div style={{ padding: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-primary)' }}>{p.angle}</span>
+                          <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{new Date(p.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })}</span>
+                        </div>
+                        {p.notes && <p style={{ fontSize: 9, color: 'var(--text-muted)', margin: '4px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.notes}</p>}
+                        <button 
+                          onClick={() => handleDeletePhoto(p)}
+                          style={{ 
+                            position: 'absolute', 
+                            top: 6, 
+                            right: 6, 
+                            width: 24, 
+                            height: 24, 
+                            borderRadius: '50%', 
+                            background: 'rgba(0,0,0,0.6)', 
+                            border: 'none', 
+                            color: '#ef4444', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            cursor: 'pointer' 
+                          }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Side-by-Side Visual Compare Card */}
+            <div className="vigor-card col-12" style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', margin: 0 }}>
+                  Side-by-Side Progressie Vergelijker
+                </h3>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <select
+                    className="form-select"
+                    style={{ width: 'auto', padding: '6px 12px', fontSize: 11 }}
+                    value={compareAngle}
+                    onChange={e => {
+                      setCompareAngle(e.target.value as any);
+                      setComparePhoto1('');
+                      setComparePhoto2('');
+                    }}
+                  >
+                    <option value="front">Voorkant (Front)</option>
+                    <option value="side">Zijkant (Side)</option>
+                    <option value="back">Achterkant (Back)</option>
+                  </select>
+                </div>
+              </div>
+
+              {anglePhotos.length < 2 ? (
+                <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
+                  Upload minimaal twee foto's vanuit dezelfde hoek ({compareAngle}) om de vergelijker te gebruiken.
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', gap: 16, marginBottom: 16, justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Foto 1 (Oud):</span>
+                      <select 
+                        className="form-select"
+                        value={photo1Url}
+                        onChange={e => setComparePhoto1(e.target.value)}
+                        style={{ width: 'auto', padding: '6px 12px', fontSize: 11 }}
+                      >
+                        {anglePhotos.map(p => (
+                          <option key={p.id} value={p.image_url}>
+                            {new Date(p.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })} {p.notes ? `(${p.notes.substring(0,15)}...)` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Foto 2 (Nieuw):</span>
+                      <select 
+                        className="form-select"
+                        value={photo2Url}
+                        onChange={e => setComparePhoto2(e.target.value)}
+                        style={{ width: 'auto', padding: '6px 12px', fontSize: 11 }}
+                      >
+                        {anglePhotos.map(p => (
+                          <option key={p.id} value={p.image_url}>
+                            {new Date(p.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })} {p.notes ? `(${p.notes.substring(0,15)}...)` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 20, justifyContent: 'center' }}>
+                    <div style={{ flex: 1, maxWidth: 450, textAlign: 'center' }}>
+                      <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#000' }}>
+                        {photo1Url && <img src={photo1Url} alt="Foto 1 comparison" style={{ width: '100%', height: 350, objectFit: 'contain' }} />}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8 }}>
+                        Oudere status
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, maxWidth: 450, textAlign: 'center' }}>
+                      <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#000' }}>
+                        {photo2Url && <img src={photo2Url} alt="Foto 2 comparison" style={{ width: '100%', height: 350, objectFit: 'contain' }} />}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8 }}>
+                        Nieuwere status
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderSleepTab = () => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} className="animate-fade-in">
@@ -1292,6 +2064,27 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         >
           <Moon size={16} /> Slaap
         </button>
+        <button 
+          onClick={() => setCurrentTab('progress')} 
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            padding: '10px 16px',
+            borderRadius: '10px',
+            border: '1px solid ' + (currentTab === 'progress' ? 'rgba(255, 159, 67, 0.2)' : 'transparent'),
+            fontSize: '13px',
+            fontWeight: 800,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            background: currentTab === 'progress' ? 'rgba(255, 159, 67, 0.06)' : 'transparent',
+            color: currentTab === 'progress' ? '#ff9f43' : 'var(--text-muted)'
+          }}
+        >
+          <Camera size={16} /> Progressie
+        </button>
       </nav>
 
       {loading ? (
@@ -1304,6 +2097,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           {currentTab === 'weight' && renderWeightTab()}
           {currentTab === 'sleep' && renderSleepTab()}
           {currentTab === 'steps' && renderStepsTab()}
+          {currentTab === 'progress' && renderProgressTab()}
         </>
       )}
 
