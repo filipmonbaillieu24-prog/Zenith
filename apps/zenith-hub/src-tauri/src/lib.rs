@@ -752,7 +752,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         .open("e:\\Google Antgravity\\Zenith\\ble_debug.log");
 
     // Scan with multiple retries for better device caching
-    let mut ring_id = None;
+    let mut ring_peripheral = None;
     let mut ring_address = String::new();
     let scan_duration = tokio::time::Duration::from_secs(3);
     
@@ -813,20 +813,20 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     if let Ok(ref mut file) = log_file {
                         let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {} (RSSI: {})", address, rssi_str);
                     }
-                    ring_id = Some(peripheral.id());
+                    ring_peripheral = Some(peripheral);
                     ring_address = address;
                     break;
                 }
             }
         }
         
-        if ring_id.is_some() {
+        if ring_peripheral.is_some() {
             break;
         }
     }
     
-    let target_id = match ring_id {
-        Some(id) => id,
+    let peripheral = match ring_peripheral {
+        Some(p) => p,
         None => {
             let _ = adapter.stop_scan().await;
             println!("[Colmi Sync] Fout: Geen Colmi Smart Ring gevonden in de buurt.");
@@ -844,17 +844,6 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         if let Ok(ref mut file) = log_file {
             let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, ring_address);
         }
-        
-        // Vraag een verse Peripheral handle op aan de adapter voor het exacte apparaat-ID
-        let peripheral = match adapter.peripheral(&target_id).await {
-            Ok(p) => p,
-            Err(e) => {
-                println!("[Colmi Sync] Fout bij ophalen verse peripheral: {:?}", e);
-                last_error = Some(format!("{:?}", e));
-                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-                continue;
-            }
-        };
 
         if let Ok(true) = peripheral.is_connected().await {
             let _ = peripheral.disconnect().await;
