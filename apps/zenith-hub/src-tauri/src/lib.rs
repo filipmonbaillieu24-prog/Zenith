@@ -1279,11 +1279,11 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
 
         let mut sync_act_cmd = vec![0u8; 16];
         sync_act_cmd[0] = 0x43; // CMD_SYNC_ACTIVITY
-        sync_act_cmd[1] = day_offset;
-        sync_act_cmd[2] = 0x0F; // sub-command constant
-        sync_act_cmd[3] = 0x00; // start index = 0
-        sync_act_cmd[4] = 0x5F; // end index = 95
-        sync_act_cmd[5] = 0x01; // constant
+        sync_act_cmd[1] = 0x01; // Stream request flag
+        sync_act_cmd[2] = day_offset; // Exact day offset (0=today, 1=yesterday)
+        sync_act_cmd[3] = 0x00; // start slot = 0
+        sync_act_cmd[4] = 0x5F; // end slot = 95
+        sync_act_cmd[5] = 0x00;
         
         let mut sum: u32 = 0;
         for i in 0..15 {
