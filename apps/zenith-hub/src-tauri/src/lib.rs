@@ -830,11 +830,16 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
     };
     
-    // Force connect: altijd eerst disconnect aanroepen om Windows BLE-cache op te schonen en stale handles te voorkomen
-    emit_status(&app, "Bluetooth verbinding voorbereiden...", 0.38);
-    println!("[Colmi Sync] Altijd eerst disconnect aanroepen om Windows BLE-cache op te schonen...");
-    let _ = peripheral.disconnect().await;
-    tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+    // Force connect: check if connected locally, disconnect first if so to clear stale handles
+    if let Ok(true) = peripheral.is_connected().await {
+        emit_status(&app, "Bestaande verbinding verbreken...", 0.38);
+        println!("[Colmi Sync] Apparaat is al verbonden. Aanroepen disconnect...");
+        let _ = peripheral.disconnect().await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+    } else {
+        // Zelfs als er geen actieve verbinding is, geef de stack 500ms stabilisatietijd
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
 
     let mut connect_success = false;
     let mut last_error = None;
@@ -845,10 +850,15 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, peripheral.address());
         }
         
-        // If previous attempt failed, force a disconnect and wait to reset the BLE stack state
+        // Bij opeenvolgende pogingen: alleen disconnecten als Windows denkt dat we verbonden zijn
         if conn_attempt > 1 {
-            let _ = peripheral.disconnect().await;
-            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+            if let Ok(true) = peripheral.is_connected().await {
+                let _ = peripheral.disconnect().await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+            } else {
+                // Anders geven we het apparaat en de Windows BLE-stack simpelweg rust om te herstellen
+                tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+            }
         }
 
         match peripheral.connect().await {
@@ -862,7 +872,8 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     let _ = writeln!(file, "[Colmi Sync] Fout bij verbinden (poging {}): {:?}", conn_attempt, e);
                 }
                 last_error = Some(e);
-                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+                // Langere afkoeltijd (3 seconden) om de ring de kans te geven te reageren/adverteren
+                tokio::time::sleep(tokio::time::Duration::from_millis(3000)).await;
             }
         }
     }
