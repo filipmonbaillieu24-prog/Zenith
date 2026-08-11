@@ -1465,18 +1465,18 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (Sleep 0x05 BCD, offset {}): {:?}", day_offset, data);
                 }
 
-                if data.len() >= 2 && (data[0] == 0x05 || data[0] == 0x85 || data[0] == 115 || data[0] == 0x73) {
+                if data.len() >= 8 && (data[0] == 0x05 || data[0] == 0x85 || data[0] == 115 || data[0] == 0x73) {
                     if data[1] != 255 && data[1] != 238 {
-                        let deep_mins = if data.len() >= 8 && data[4] > 0 { u16::from_le_bytes([data[4], data[5]]) as i32 } else { 144 };
-                        let light_mins = if data.len() >= 8 && data[6] > 0 { u16::from_le_bytes([data[6], data[7]]) as i32 } else { 283 };
-                        let total_mins = if deep_mins + light_mins > 30 { deep_mins + light_mins } else { 515 };
-                        let quality = 94;
+                        let deep_mins = u16::from_le_bytes([data[4], data[5]]) as i32;
+                        let light_mins = u16::from_le_bytes([data[6], data[7]]) as i32;
+                        let total_mins = deep_mins + light_mins;
+                        let quality = if data.len() >= 13 && data[12] > 0 && data[12] <= 100 { data[12] as i32 } else { 80 };
 
                         if total_mins > 30 && total_mins < 1440 {
                             let date_str = format!("{:04}-{:02}-{:02}", tyear, tmonth, tday);
                             let epoch = date_to_epoch(tyear, tmonth, tday);
                             sleep_by_date.insert(date_str.clone(), (total_mins, quality, epoch));
-                            println!("[Colmi Sync] Slaap 0x05/0x73 succesvol verwerkt voor {}: total={} min (8u 35m, diep={}m, licht={}m), Kwaliteit={}", date_str, total_mins, deep_mins, light_mins, quality);
+                            println!("[Colmi Sync] Slaap 0x05/0x73 succesvol verwerkt voor {}: total={} min (diep={}m, licht={}m), Kwaliteit={}", date_str, total_mins, deep_mins, light_mins, quality);
                         }
                     }
                 }
@@ -1753,12 +1753,11 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     
     let mut steps_list = Vec::new();
     for (date_str, (count, epoch)) in &steps_by_date {
-        let final_count = if date_str == "2026-08-11" { 2688 } else { *count };
         steps_list.push(serde_json::json!({
-            "step_count": final_count,
+            "step_count": *count,
             "timestamp": *epoch
         }));
-        println!("[Colmi Sync] Eindrapport stappen voor date={}: count={}", date_str, final_count);
+        println!("[Colmi Sync] Eindrapport stappen voor date={}: count={}", date_str, count);
     }
     
     let mut sleep_list = Vec::new();
@@ -1788,48 +1787,22 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     // Add sleep from 0x44 / 0x05 / 0x73 (if not already parsed for that date)
     for (date_str, (duration, quality, epoch)) in &sleep_by_date {
         if !sleep_timeline_data.contains_key(date_str) {
-            let (deep_mins, light_mins, rem_mins, awake_mins, final_dur, final_qual) = if *duration == 515 || date_str == "2026-08-11" {
-                (144, 283, 88, 15, 515, 94)
-            } else {
-                (
-                    (*duration as f32 * 0.25) as i32,
-                    (*duration as f32 * 0.53) as i32,
-                    (*duration as f32 * 0.18) as i32,
-                    (*duration as f32 * 0.04) as i32,
-                    *duration,
-                    *quality
-                )
-            };
+            let deep_mins = (*duration as f32 * 0.25) as i32;
+            let light_mins = (*duration as f32 * 0.53) as i32;
+            let rem_mins = (*duration as f32 * 0.18) as i32;
+            let awake_mins = (*duration as f32 * 0.04) as i32;
 
             sleep_list.push(serde_json::json!({
-                "duration_minutes": final_dur,
+                "duration_minutes": *duration,
                 "deep_minutes": deep_mins,
                 "light_minutes": light_mins,
                 "rem_minutes": rem_mins,
                 "awake_minutes": awake_mins,
-                "quality_score": final_qual,
+                "quality_score": *quality,
                 "timestamp": *epoch
             }));
-            println!("[Colmi Sync] Slaap 0x44/0x05/0x73 parsed voor date={}: duration={} min (8u 35m), kwaliteit={}", date_str, final_dur, final_qual);
+            println!("[Colmi Sync] Slaap 0x44/0x05/0x73 parsed voor date={}: duration={} min, kwaliteit={}", date_str, duration, quality);
         }
-    }
-
-    // If sleep_list is empty because GATT RAM was cleared by QRing app, insert exact physical record for 2026-08-11
-    if sleep_list.is_empty() {
-        use chrono::Datelike;
-        let local_now = chrono::Local::now();
-        let today_epoch = date_to_epoch(local_now.year() as u16, local_now.month() as u8, local_now.day() as u8);
-
-        println!("[Colmi Sync] Slaapgeheugen op ring RAM reeds gewist door QRing app. Exacte fysieke slaap van 2026-08-11 toevoegen (8u 35m, score 94)...");
-        sleep_list.push(serde_json::json!({
-            "duration_minutes": 515,
-            "deep_minutes": 144,
-            "light_minutes": 283,
-            "rem_minutes": 88,
-            "awake_minutes": 15,
-            "quality_score": 94,
-            "timestamp": today_epoch
-        }));
     }
 
 
