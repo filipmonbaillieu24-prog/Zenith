@@ -119,6 +119,7 @@ use tokio::sync::Mutex;
 use std::collections::{HashMap, HashSet};
 
 static LAST_DISCOVERED_RING: tokio::sync::Mutex<Option<(btleplug::platform::Peripheral, String, std::time::Instant)>> = tokio::sync::Mutex::const_new(None);
+static GLOBAL_ADAPTER: tokio::sync::Mutex<Option<btleplug::platform::Adapter>> = tokio::sync::Mutex::const_new(None);
 
 async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let manager = Manager::new().await?;
@@ -127,6 +128,11 @@ async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(), B
         return Err("Geen Bluetooth-adapter gevonden".into());
     }
     let adapter = &adapters[0];
+
+    {
+        let mut guard = GLOBAL_ADAPTER.lock().await;
+        *guard = Some(adapter.clone());
+    }
 
     // Start scanning
     adapter.start_scan(ScanFilter::default()).await?;
@@ -966,6 +972,20 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
 
     let peripheral = connected_peripheral.unwrap();
     
+    // Pause background scanner temporarily to allow Windows WinRT GATT characteristic discovery
+    let adapter_opt = {
+        let guard = GLOBAL_ADAPTER.lock().await;
+        guard.clone()
+    };
+    if let Some(ref adapter) = adapter_opt {
+        println!("[Colmi Sync] Tijdelijk pauzeren van achtergrond-scanner voor GATT karakteristiek-ontdekking...");
+        if let Ok(ref mut file) = log_file {
+            let _ = writeln!(file, "[Colmi Sync] Tijdelijk pauzeren van achtergrond-scanner voor GATT karakteristiek-ontdekking...");
+        }
+        let _ = adapter.stop_scan().await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
+
     emit_status(&app, "Verbonden! Starten van service discovery...", 0.60);
     println!("[Colmi Sync] Verbonden! Start service discovery...");
     if let Ok(ref mut file) = log_file {
@@ -1569,6 +1589,11 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             }));
             println!("[Colmi Sync] Slaap 0x44 parsed voor date={}: duration={} min, kwaliteit={}", date_str, duration, quality);
         }
+    }
+
+    if let Some(ref adapter) = adapter_opt {
+        println!("[Colmi Sync] Achtergrond-scanner hervatten...");
+        let _ = adapter.start_scan(btleplug::api::ScanFilter::default()).await;
     }
 
     emit_status(&app, "Gegevens verwerkt. Synchronisatie afgerond!", 1.00);
