@@ -761,7 +761,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     // Scan with multiple retries for better device caching
     let mut ring_peripheral = None;
     let mut ring_address = String::new();
-    let scan_duration = tokio::time::Duration::from_secs(3);
+    let scan_duration = tokio::time::Duration::from_secs(5);
     
     for attempt in 1..=4 {
         emit_status(&app, &format!("Scannen naar Colmi Smart Ring (poging {}/4)...", attempt), 0.10 + (attempt as f32 * 0.05));
