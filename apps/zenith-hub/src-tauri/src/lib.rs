@@ -718,6 +718,11 @@ async fn sync_colmi_ring(app: tauri::AppHandle, simulate: bool, target_mac: Opti
 }
 
 async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac: Option<String>) -> Result<String, String> {
+    let target_mac = match target_mac {
+        Some(ref mac) if mac.to_lowercase().contains("10:5a:17:af:36:bf") => None,
+        other => other,
+    };
+
     fn bcd_to_decimal(b: u8) -> u32 {
         (((b >> 4) & 0x0F) * 10 + (b & 0x0F)) as u32
     }
