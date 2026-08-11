@@ -1549,6 +1549,90 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 break;
             }
         }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // 4e. Send 0x51 (CMD_GET_24H_DATA for sleep)
+        let mut sleep_cmd_51 = vec![0u8; 16];
+        sleep_cmd_51[0] = 0x51;
+        sleep_cmd_51[1] = 0x02; // Type 0x02 = sleep
+        sleep_cmd_51[2] = day_offset;
+        let mut sum: u32 = 0; for i in 0..15 { sum += sleep_cmd_51[i] as u32; }
+        sleep_cmd_51[15] = (sum & 0xFF) as u8;
+
+        let _ = peripheral.write(&w_char, &sleep_cmd_51, btleplug::api::WriteType::WithoutResponse).await;
+
+        for _ in 0..6 {
+            if let Ok(Some(notification)) = tokio::time::timeout(
+                tokio::time::Duration::from_millis(1000),
+                notification_stream.next()
+            ).await {
+                let data = notification.value;
+                println!("[Colmi Sync] Notificatie ontvangen (Sleep 0x51, offset {}): {:?}", day_offset, data);
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (Sleep 0x51, offset {}): {:?}", day_offset, data);
+                }
+
+                if data.len() >= 4 && (data[0] == 0x51 || data[0] == 0xD1) {
+                    if data[1] != 255 && data[1] != 238 {
+                        let deep_mins = if data.len() >= 6 { (data[4] as i32) * 60 + (data[5] as i32) } else { 0 };
+                        let light_mins = if data.len() >= 8 { (data[6] as i32) * 60 + (data[7] as i32) } else { 0 };
+                        let rem_mins = if data.len() >= 10 { (data[8] as i32) * 60 + (data[9] as i32) } else { 0 };
+                        let total_mins = deep_mins + light_mins + rem_mins;
+
+                        if total_mins > 30 && total_mins < 1440 {
+                            let date_str = format!("{:04}-{:02}-{:02}", tyear, tmonth, tday);
+                            let epoch = date_to_epoch(tyear, tmonth, tday);
+                            sleep_by_date.entry(date_str.clone()).or_insert((total_mins, 82, epoch));
+                            println!("[Colmi Sync] Slaap 0x51 succesvol verwerkt voor {}: total={} min", date_str, total_mins);
+                        }
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // 4f. Send 0x04 (CMD_GET_SLEEP_DETAILS)
+        let mut sleep_cmd_04 = vec![0u8; 16];
+        sleep_cmd_04[0] = 0x04;
+        sleep_cmd_04[1] = day_offset;
+        let mut sum: u32 = 0; for i in 0..15 { sum += sleep_cmd_04[i] as u32; }
+        sleep_cmd_04[15] = (sum & 0xFF) as u8;
+
+        let _ = peripheral.write(&w_char, &sleep_cmd_04, btleplug::api::WriteType::WithoutResponse).await;
+
+        for _ in 0..6 {
+            if let Ok(Some(notification)) = tokio::time::timeout(
+                tokio::time::Duration::from_millis(1000),
+                notification_stream.next()
+            ).await {
+                let data = notification.value;
+                println!("[Colmi Sync] Notificatie ontvangen (Sleep 0x04, offset {}): {:?}", day_offset, data);
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (Sleep 0x04, offset {}): {:?}", day_offset, data);
+                }
+
+                if data.len() >= 4 && (data[0] == 0x04 || data[0] == 0x84) {
+                    if data[1] != 255 && data[1] != 238 {
+                        let deep_mins = if data.len() >= 6 { (data[4] as i32) * 60 + (data[5] as i32) } else { 0 };
+                        let light_mins = if data.len() >= 8 { (data[6] as i32) * 60 + (data[7] as i32) } else { 0 };
+                        let total_mins = deep_mins + light_mins;
+
+                        if total_mins > 30 && total_mins < 1440 {
+                            let date_str = format!("{:04}-{:02}-{:02}", tyear, tmonth, tday);
+                            let epoch = date_to_epoch(tyear, tmonth, tday);
+                            sleep_by_date.entry(date_str.clone()).or_insert((total_mins, 82, epoch));
+                            println!("[Colmi Sync] Slaap 0x04 succesvol verwerkt voor {}: total={} min", date_str, total_mins);
+                        }
+                    }
+                }
+            } else {
+                break;
+            }
+        }
     }
 
     // ----------------------------------------------------
