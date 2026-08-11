@@ -39,11 +39,15 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
     };
   }, []);
 
-  const handleSync = async () => {
+  const handleSync = async (simulate: boolean = false) => {
     setStatus('scanning');
     setSyncLogs([]);
     setErrorMsg('');
-    addLog('Bluetooth-scan gestart...');
+    if (simulate) {
+      addLog('Simulatiemodus gestart...');
+    } else {
+      addLog('Bluetooth-scan gestart...');
+    }
 
     // Fetch paired ring settings to find target MAC address
     let targetMac: string | null = null;
@@ -99,7 +103,6 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
                 // Process sleep
                 if (result.sleep && result.sleep.length > 0) {
                   const dbSleep = result.sleep.map((s: any) => ({
-                    // Note: userId is standard
                     user_id: userId,
                     duration_minutes: s.duration_minutes,
                     quality_score: s.quality_score,
@@ -132,7 +135,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
       };
 
       window.addEventListener('message', messageListener);
-      window.parent.postMessage({ type: 'request-colmi-sync', targetMac }, '*');
+      window.parent.postMessage({ type: 'request-colmi-sync', simulate, targetMac }, '*');
       setStatus('connecting');
       addLog('Zoeken naar Colmi Smart Ring in de buurt...');
       addLog('Wachten op antwoord van Zenith Hub...');
@@ -149,7 +152,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
         setStatus('connecting');
         addLog('Zoeken naar Colmi Smart Ring in de buurt...');
         
-        const resultStr = await invoke<string>('sync_colmi_ring', { simulate: false, targetMac });
+        const resultStr = await invoke<string>('sync_colmi_ring', { simulate, targetMac });
         const result = JSON.parse(resultStr);
 
         setStatus('syncing');
@@ -331,27 +334,37 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               Sluiten
             </button>
           ) : (
-            <button 
-              className="btn-primary" 
-              style={{ 
-                background: status === 'scanning' || status === 'connecting' || status === 'syncing' ? 'rgba(92, 124, 250, 0.2)' : '#5c7cfa',
-                color: status === 'scanning' || status === 'connecting' || status === 'syncing' ? '#5c7cfa' : '#09090b',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                margin: 0
-              }}
-              onClick={handleSync}
-              disabled={status === 'scanning' || status === 'connecting' || status === 'syncing'}
-            >
-              {(status === 'scanning' || status === 'connecting' || status === 'syncing') ? (
-                <>
-                  <RefreshCw size={14} className="animate-spin" /> Synchroniseren...
-                </>
-              ) : (
-                'Start Synchronisatie'
-              )}
-            </button>
+            <>
+              <button 
+                className="btn-secondary" 
+                style={{ margin: 0, border: '1px solid rgba(255,255,255,0.1)' }}
+                onClick={() => handleSync(true)}
+                disabled={status === 'scanning' || status === 'connecting' || status === 'syncing'}
+              >
+                Simulatie Testen
+              </button>
+              <button 
+                className="btn-primary" 
+                style={{ 
+                  background: status === 'scanning' || status === 'connecting' || status === 'syncing' ? 'rgba(92, 124, 250, 0.2)' : '#5c7cfa',
+                  color: status === 'scanning' || status === 'connecting' || status === 'syncing' ? '#5c7cfa' : '#09090b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  margin: 0
+                }}
+                onClick={() => handleSync(false)}
+                disabled={status === 'scanning' || status === 'connecting' || status === 'syncing'}
+              >
+                {(status === 'scanning' || status === 'connecting' || status === 'syncing') ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" /> Synchroniseren...
+                  </>
+                ) : (
+                  'Start Synchronisatie'
+                )}
+              </button>
+            </>
           )}
         </div>
       </div>

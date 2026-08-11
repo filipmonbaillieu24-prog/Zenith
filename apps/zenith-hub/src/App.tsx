@@ -321,8 +321,9 @@ function App() {
         const targetMac = event.data?.targetMac || null;
         const runSync = async () => {
           try {
+            const simulate = event.data?.simulate || false;
             const { invoke } = await import('@tauri-apps/api/core');
-            const resultStr = await invoke<string>('sync_colmi_ring', { simulate: false, targetMac });
+            const resultStr = await invoke<string>('sync_colmi_ring', { simulate, targetMac });
             const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
             if (iframe && iframe.contentWindow) {
               iframe.contentWindow.postMessage({
