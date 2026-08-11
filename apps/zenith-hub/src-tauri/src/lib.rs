@@ -863,33 +863,40 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         match peripheral.connect().await {
             Ok(_) => {
                 connect_success = true;
-                connected_peripheral = Some(peripheral);
+                connected_peripheral = Some(peripheral.clone());
                 break;
             }
             Err(e) => {
-                println!("[Colmi Sync] Connect meldt: {:?}. Wachten op achtergrond-verbinding...", e);
+                println!("[Colmi Sync] Connect meldt: {:?}. Wachten (5 seconden) op achtergrond-verbinding en advertentie-intervallen van de ring...", e);
                 if let Ok(ref mut file) = log_file {
-                    let _ = writeln!(file, "[Colmi Sync] Connect meldt: {:?}. Wachten op achtergrond-verbinding...", e);
+                    let _ = writeln!(file, "[Colmi Sync] Connect meldt: {:?}. Wachten (5 seconden) op achtergrond-verbinding en advertentie-intervallen van de ring...", e);
                 }
                 
-                tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
-                if let Ok(true) = peripheral.is_connected().await {
-                    println!("[Colmi Sync] Verbinding achteraf bevestigd via is_connected()!");
-                    if let Ok(ref mut file) = log_file {
-                        let _ = writeln!(file, "[Colmi Sync] Verbinding achteraf bevestigd via is_connected()!");
+                // Geef de ring ruim de tijd (5 seconden = ~4 advertentie-intervallen van 1280ms) om het signaal op te pikken
+                let check_start = std::time::Instant::now();
+                while check_start.elapsed() < std::time::Duration::from_secs(5) {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    if let Ok(true) = peripheral.is_connected().await {
+                        println!("[Colmi Sync] Verbinding achteraf bevestigd via is_connected()!");
+                        if let Ok(ref mut file) = log_file {
+                            let _ = writeln!(file, "[Colmi Sync] Verbinding achteraf bevestigd via is_connected()!");
+                        }
+                        connect_success = true;
+                        connected_peripheral = Some(peripheral.clone());
+                        break;
                     }
-                    connect_success = true;
-                    connected_peripheral = Some(peripheral);
-                    break;
+                    if peripheral.discover_services().await.is_ok() {
+                        println!("[Colmi Sync] Verbinding achteraf bevestigd via discover_services()!");
+                        if let Ok(ref mut file) = log_file {
+                            let _ = writeln!(file, "[Colmi Sync] Verbinding achteraf bevestigd via discover_services()!");
+                        }
+                        connect_success = true;
+                        connected_peripheral = Some(peripheral.clone());
+                        break;
+                    }
                 }
-                
-                if peripheral.discover_services().await.is_ok() {
-                    println!("[Colmi Sync] Verbinding achteraf bevestigd via discover_services()!");
-                    if let Ok(ref mut file) = log_file {
-                        let _ = writeln!(file, "[Colmi Sync] Verbinding achteraf bevestigd via discover_services()!");
-                    }
-                    connect_success = true;
-                    connected_peripheral = Some(peripheral);
+
+                if connect_success {
                     break;
                 }
 
