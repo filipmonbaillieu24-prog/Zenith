@@ -979,9 +979,19 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
         
         // Wait briefly after connecting to let connection parameter update settle
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(1200)).await;
         
         let _ = peripheral.discover_services().await;
+
+        let has_chars = peripheral.services().iter().any(|s| !s.characteristics.is_empty());
+        if !has_chars {
+            println!("[Colmi Sync] Geen karakteristieken ontdekt in poging {}. Wachten (1.5s) op Windows GATT cache refresh...", discovery_attempt);
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Geen karakteristieken ontdekt in poging {}. Wachten (1.5s) op Windows GATT cache refresh...", discovery_attempt);
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+            let _ = peripheral.discover_services().await;
+        }
         
         write_char = None;
         notify_char = None;
