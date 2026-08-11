@@ -831,6 +831,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     };
     
     let mut connect_success = false;
+    let mut last_error = None;
     for conn_attempt in 1..=3 {
         emit_status(&app, &format!("Verbinden met Colmi Smart Ring (poging {}/3)...", conn_attempt), 0.40 + (conn_attempt as f32 * 0.05));
         println!("[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, peripheral.address());
@@ -848,13 +849,18 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 if let Ok(ref mut file) = log_file {
                     let _ = writeln!(file, "[Colmi Sync] Fout bij verbinden (poging {}): {:?}", conn_attempt, e);
                 }
+                last_error = Some(e);
                 tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
             }
         }
     }
     
     if !connect_success {
-        return Err("Fout bij verbinden met ring na 3 pogingen".to_string());
+        let err_msg = match last_error {
+            Some(e) => format!("Fout bij verbinden met ring na 3 pogingen. Details: {:?}", e),
+            None => "Fout bij verbinden met ring na 3 pogingen".to_string(),
+        };
+        return Err(err_msg);
     }
     
     emit_status(&app, "Verbonden! Starten van service discovery...", 0.60);
