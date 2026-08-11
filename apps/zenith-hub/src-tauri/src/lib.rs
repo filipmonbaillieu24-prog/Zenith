@@ -1319,7 +1319,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                         
                         let slot_idx = data[4];
                         let mode = data[6];
-                        let st = (data[9] as u32 | ((data[10] as u32) << 8)) as i32;
+                        let st = (data[7] as u32 | ((data[8] as u32) << 8)) as i32;
                         let date_str = format!("{:04}-{:02}-{:02}", year, month, day);
                         
                         let epoch = date_to_epoch(year as u16, month as u8, day as u8);
@@ -1328,7 +1328,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
 
                         // Parse 15-minute sleep blocks from 0x43
                         let is_nighttime = slot_idx >= 84 || slot_idx <= 36; // 21:00 PM to 09:00 AM
-                        if st < 15 && (is_nighttime || mode == 1 || mode == 2 || mode == 3 || mode == 4) {
+                        if st < 60 && (is_nighttime || mode == 1 || mode == 2 || mode == 3 || mode == 4) {
                             let s_entry = sleep_slots_by_date.entry(date_str.clone()).or_insert((0, 0, 0, epoch));
                             if mode == 2 {
                                 s_entry.0 += 15; // Deep sleep
@@ -1360,7 +1360,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     // Populate sleep_by_date from 0x43 15-min physical sleep blocks
     for (date_str, (deep, light, rem, epoch)) in &sleep_slots_by_date {
         let total_mins = deep + light + rem;
-        if total_mins >= 60 {
+        if total_mins >= 30 {
             let deep_ratio = *deep as f32 / total_mins as f32;
             let quality = (60.0 + (deep_ratio * 40.0).min(38.0)) as i32;
             sleep_by_date.insert(date_str.clone(), (total_mins, quality, *epoch));
