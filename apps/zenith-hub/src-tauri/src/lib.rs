@@ -1493,6 +1493,62 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 break;
             }
         }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // 4d. Send 0x44 (CMD_SYNC_SLEEP)
+        let mut sleep_cmd_44 = vec![0u8; 16];
+        sleep_cmd_44[0] = 0x44; // CMD_SYNC_SLEEP
+        sleep_cmd_44[1] = day_offset;
+        sleep_cmd_44[2] = 0x0F;
+        sleep_cmd_44[3] = 0x00;
+        sleep_cmd_44[4] = 0x5F;
+        sleep_cmd_44[5] = 0x01;
+        let mut sum: u32 = 0; for i in 0..15 { sum += sleep_cmd_44[i] as u32; }
+        sleep_cmd_44[15] = (sum & 0xFF) as u8;
+
+        let _ = peripheral.write(&w_char, &sleep_cmd_44, btleplug::api::WriteType::WithoutResponse).await;
+
+        for _ in 0..6 {
+            if let Ok(Some(notification)) = tokio::time::timeout(
+                tokio::time::Duration::from_millis(1000),
+                notification_stream.next()
+            ).await {
+                let data = notification.value;
+                println!("[Colmi Sync] Notificatie ontvangen (SyncSleep 0x44, offset {}): {:?}", day_offset, data);
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (SyncSleep 0x44, offset {}): {:?}", day_offset, data);
+                }
+
+                if data.len() >= 4 && (data[0] == 0x44 || data[0] == 0xC4) {
+                    if data[1] != 255 && data[1] != 238 {
+                        let has_bcd = data[1] <= 0x99 && data[2] >= 1 && data[2] <= 12 && data[3] >= 1 && data[3] <= 31;
+                        let (s_year, s_month, s_day) = if has_bcd {
+                            (bcd_to_decimal(data[1]) + 2000, bcd_to_decimal(data[2]), bcd_to_decimal(data[3]))
+                        } else {
+                            (tyear as u32, tmonth as u32, tday as u32)
+                        };
+
+                        let mut duration_mins = 0;
+                        if data.len() >= 10 {
+                            let dur_le = u16::from_le_bytes([data[9], data[10]]) as i32;
+                            if dur_le > 30 && dur_le < 1440 {
+                                duration_mins = dur_le;
+                            }
+                        }
+
+                        if duration_mins > 30 && duration_mins < 1440 {
+                            let date_str = format!("{:04}-{:02}-{:02}", s_year, s_month, s_day);
+                            let epoch = date_to_epoch(s_year as u16, s_month as u8, s_day as u8);
+                            sleep_by_date.entry(date_str.clone()).or_insert((duration_mins, 80, epoch));
+                            println!("[Colmi Sync] Slaap 0x44 succesvol verwerkt voor {}: total={} min", date_str, duration_mins);
+                        }
+                    }
+                }
+            } else {
+                break;
+            }
+        }
     }
 
     // ----------------------------------------------------
