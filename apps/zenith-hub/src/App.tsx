@@ -267,6 +267,28 @@ function App() {
 
   // Handle close-app and ready postMessages from iframe
   useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    
+    const setupTauriListener = async () => {
+      if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
+        try {
+          const { listen } = await import('@tauri-apps/api/event');
+          unlisten = await listen<string>('colmi-sync-status', (event) => {
+            const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
+            if (iframe && iframe.contentWindow) {
+              iframe.contentWindow.postMessage({
+                type: 'colmi-sync-status-update',
+                payload: event.payload
+              }, '*');
+            }
+          });
+        } catch (e) {
+          console.error("Failed to setup Tauri colmi-sync-status listener", e);
+        }
+      }
+    };
+    setupTauriListener();
+
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'close-app') {
         setActiveTab('hub');
@@ -324,7 +346,10 @@ function App() {
       }
     };
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      if (unlisten) unlisten();
+    };
   }, []);
 
   // Central profile loader from public.profiles table

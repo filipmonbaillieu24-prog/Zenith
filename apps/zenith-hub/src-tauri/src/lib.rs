@@ -1,6 +1,15 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use std::sync::atomic::{AtomicBool, Ordering};
 static COLMI_SYNC_RUNNING: AtomicBool = AtomicBool::new(false);
+use tauri::Emitter;
+
+fn emit_status(app: &tauri::AppHandle, status: &str, progress: f32) {
+    let payload = serde_json::json!({
+        "status": status,
+        "progress": progress
+    });
+    let _ = app.emit("colmi-sync-status", payload.to_string());
+}
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -657,24 +666,31 @@ async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(), B
 }
 
 #[tauri::command]
-async fn sync_colmi_ring(simulate: bool) -> Result<String, String> {
+async fn sync_colmi_ring(app: tauri::AppHandle, simulate: bool) -> Result<String, String> {
     // Guard against concurrent syncs
     if COLMI_SYNC_RUNNING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
         return Err("Er loopt al een Colmi-synchronisatie. Wacht tot deze is afgerond.".to_string());
     }
     // Auto-reset guard on all return paths via a defer-like wrapper
-    let result = sync_colmi_ring_inner(simulate).await;
+    let result = sync_colmi_ring_inner(app, simulate).await;
     COLMI_SYNC_RUNNING.store(false, Ordering::SeqCst);
     result
 }
 
-async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
+async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool) -> Result<String, String> {
     fn bcd_to_decimal(b: u8) -> u32 {
         (((b >> 4) & 0x0F) * 10 + (b & 0x0F)) as u32
     }
     if simulate {
-        // Return simulated sleep & step data for the past 7 days
-        tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
+        emit_status(&app, "Bluetooth adapter zoeken...", 0.05);
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        emit_status(&app, "Scannen naar Colmi Smart Ring (Simulated)...", 0.25);
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        emit_status(&app, "Verbinden met peripheral (Simulated)...", 0.50);
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        emit_status(&app, "Stappen en slaapdata synchroniseren...", 0.75);
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        emit_status(&app, "Synchronisatie succesvol afgerond!", 1.00);
         
         let mut mock_steps = Vec::new();
         let mut mock_sleep = Vec::new();
@@ -717,6 +733,7 @@ async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
     }
 
     // Physical BLE mode
+    emit_status(&app, "Bluetooth adapter controleren...", 0.05);
     use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter};
     use btleplug::platform::Manager;
     
@@ -738,6 +755,7 @@ async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
     let scan_duration = tokio::time::Duration::from_secs(3);
     
     for attempt in 1..=4 {
+        emit_status(&app, &format!("Scannen naar Colmi Smart Ring (poging {}/4)...", attempt), 0.10 + (attempt as f32 * 0.05));
         println!("[Colmi Sync] Scan starten (poging {}/4)...", attempt);
         if let Ok(ref mut file) = log_file {
             let _ = writeln!(file, "[Colmi Sync] Scan starten (poging {}/4)...", attempt);
@@ -781,6 +799,7 @@ async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
                     || addr_lower.contains("32:34:48:31:a8:05")
                     || has_service 
                 {
+                    emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", address), 0.35);
                     println!("[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
                     if let Ok(ref mut file) = log_file {
                         let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
@@ -806,6 +825,7 @@ async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
     
     let mut connect_success = false;
     for conn_attempt in 1..=3 {
+        emit_status(&app, &format!("Verbinden met Colmi Smart Ring (poging {}/3)...", conn_attempt), 0.40 + (conn_attempt as f32 * 0.05));
         println!("[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, peripheral.address());
         if let Ok(ref mut file) = log_file {
             let _ = writeln!(file, "[Colmi Sync] Verbinden met peripheral (poging {}/3): {}", conn_attempt, peripheral.address());
@@ -830,6 +850,7 @@ async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
         return Err("Fout bij verbinden met ring na 3 pogingen".to_string());
     }
     
+    emit_status(&app, "Verbonden! Starten van service discovery...", 0.60);
     println!("[Colmi Sync] Verbonden! Start service discovery...");
     if let Ok(ref mut file) = log_file {
         let _ = writeln!(file, "[Colmi Sync] Verbonden! Start service discovery...");
@@ -840,6 +861,7 @@ async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
     let mut notify_char = None;
     
     for discovery_attempt in 1..=3 {
+        emit_status(&app, &format!("Services en karakteristieken ontdekken (poging {}/3)...", discovery_attempt), 0.60 + (discovery_attempt as f32 * 0.05));
         println!("[Colmi Sync] Start service discovery (poging {}/3)...", discovery_attempt);
         if let Ok(ref mut file) = log_file {
             let _ = writeln!(file, "[Colmi Sync] Start service discovery (poging {}/3)...", discovery_attempt);
@@ -1114,6 +1136,7 @@ async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
     // ----------------------------------------------------
     // PHASE 3: SEND SYNC ACTIVITY LOGS (0x43) FOR PAST 7 DAYS
     // ----------------------------------------------------
+    emit_status(&app, "Stappen en activiteitsgegevens synchroniseren...", 0.70);
     for day_offset in 0..=7 {
         println!("[Colmi Sync] SyncActivity opvragen voor day_offset = {}", day_offset);
         if let Ok(ref mut file) = log_file {
@@ -1189,6 +1212,7 @@ async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
     // ----------------------------------------------------
     // PHASE 4: SEND SYNC SLEEP LOGS (0x44) FOR PAST 7 DAYS
     // ----------------------------------------------------
+    emit_status(&app, "Slaapgegevens synchroniseren...", 0.85);
     for day_offset in 0..=7 {
         println!("[Colmi Sync] SyncSleep (0x44) opvragen voor day_offset = {}", day_offset);
         if let Ok(ref mut file) = log_file {
@@ -1361,6 +1385,8 @@ async fn sync_colmi_ring_inner(simulate: bool) -> Result<String, String> {
             println!("[Colmi Sync] Slaap 0x44 parsed voor date={}: duration={} min, kwaliteit={}", date_str, duration, quality);
         }
     }
+
+    emit_status(&app, "Gegevens verwerkt. Synchronisatie afgerond!", 1.00);
 
     let response = serde_json::json!({
         "status": "success",

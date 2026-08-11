@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, RefreshCw, Radio, Check } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
 
@@ -18,6 +18,27 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
     setSyncLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   };
 
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+    async function setupDirectListener() {
+      if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
+        try {
+          const { listen } = await import('@tauri-apps/api/event');
+          unlisten = await listen<string>('colmi-sync-status', (event) => {
+            const payload = typeof event.payload === 'string' ? JSON.parse(event.payload) : event.payload;
+            addLog(payload.status);
+          });
+        } catch (e) {
+          console.error("Failed to setup direct tauri colmi-sync-status listener", e);
+        }
+      }
+    }
+    setupDirectListener();
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
+
   const handleSync = async () => {
     setStatus('scanning');
     setSyncLogs([]);
@@ -29,8 +50,15 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
       addLog('Verzoek versturen naar Zenith Hub voor Bluetooth-synchronisatie...');
       
       const messageListener = async (event: MessageEvent) => {
-        if (event.data && event.data.type === 'colmi-sync-result') {
-          window.removeEventListener('message', messageListener);
+        if (event.data) {
+          if (event.data.type === 'colmi-sync-status-update') {
+            const payload = typeof event.data.payload === 'string' ? JSON.parse(event.data.payload) : event.data.payload;
+            addLog(payload.status);
+            return;
+          }
+          
+          if (event.data.type === 'colmi-sync-result') {
+            window.removeEventListener('message', messageListener);
           
           if (event.data.success) {
             try {
@@ -80,6 +108,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
             setStatus('error');
             setErrorMsg(event.data.error || 'Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.');
             addLog(`Fout: ${event.data.error || 'Verbindingsfout'}`);
+          }
           }
         }
       };
