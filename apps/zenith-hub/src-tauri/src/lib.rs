@@ -1332,7 +1332,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     }
 
     // ----------------------------------------------------
-    // PHASE 4: SEND ALL QRING SLEEP QUERIES (0x10, 0x05, 0x08, 0x23, 0x44)
+    // PHASE 4: SEND SLEEP QUERY MATRIX (0x10 & 0x05 BCD DATES) FOR PAST 7 DAYS
     // ----------------------------------------------------
     emit_status(&app, "Slaapgegevens synchroniseren...", 0.85);
     for day_offset in 0..=7 {
@@ -1357,94 +1357,83 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         sleep_cmd_10[3] = bcd_dy;
         let mut sum: u32 = 0; for i in 0..15 { sum += sleep_cmd_10[i] as u32; }
         sleep_cmd_10[15] = (sum & 0xFF) as u8;
+
         let _ = peripheral.write(&w_char, &sleep_cmd_10, btleplug::api::WriteType::WithoutResponse).await;
 
-        // 4b. Send 0x05 (CMD_SLEEP_SUMMARY)
-        let mut sleep_sum_cmd = vec![0u8; 16];
-        sleep_sum_cmd[0] = 0x05;
-        sleep_sum_cmd[1] = day_offset;
-        let mut sum: u32 = 0; for i in 0..15 { sum += sleep_sum_cmd[i] as u32; }
-        sleep_sum_cmd[15] = (sum & 0xFF) as u8;
-        let _ = peripheral.write(&w_char, &sleep_sum_cmd, btleplug::api::WriteType::WithoutResponse).await;
-
-        // 4c. Send 0x08 (CMD_SLEEP_TOTAL)
-        let mut sleep_cmd_08 = vec![0u8; 16];
-        sleep_cmd_08[0] = 0x08;
-        sleep_cmd_08[1] = day_offset;
-        let mut sum: u32 = 0; for i in 0..15 { sum += sleep_cmd_08[i] as u32; }
-        sleep_cmd_08[15] = (sum & 0xFF) as u8;
-        let _ = peripheral.write(&w_char, &sleep_cmd_08, btleplug::api::WriteType::WithoutResponse).await;
-
-        // 4d. Send 0x23 (CMD_SLEEP_BY_DATE)
-        let mut sleep_cmd_23 = vec![0u8; 16];
-        sleep_cmd_23[0] = 0x23;
-        sleep_cmd_23[1] = bcd_yr;
-        sleep_cmd_23[2] = bcd_mo;
-        sleep_cmd_23[3] = bcd_dy;
-        let mut sum: u32 = 0; for i in 0..15 { sum += sleep_cmd_23[i] as u32; }
-        sleep_cmd_23[15] = (sum & 0xFF) as u8;
-        let _ = peripheral.write(&w_char, &sleep_cmd_23, btleplug::api::WriteType::WithoutResponse).await;
-
-        // 4e. Send 0x44 (CMD_SYNC_SLEEP)
-        let mut sleep_cmd_44 = vec![0u8; 16];
-        sleep_cmd_44[0] = 0x44;
-        sleep_cmd_44[1] = day_offset;
-        sleep_cmd_44[2] = 0x0F;
-        sleep_cmd_44[3] = 0x00;
-        sleep_cmd_44[4] = 0x5F;
-        sleep_cmd_44[5] = 0x01;
-        let mut sum: u32 = 0; for i in 0..15 { sum += sleep_cmd_44[i] as u32; }
-        sleep_cmd_44[15] = (sum & 0xFF) as u8;
-        let _ = peripheral.write(&w_char, &sleep_cmd_44, btleplug::api::WriteType::WithoutResponse).await;
-
-        // Listen for notifications for this day offset
-        for _ in 0..12 {
+        for _ in 0..6 {
             if let Ok(Some(notification)) = tokio::time::timeout(
-                tokio::time::Duration::from_millis(800),
+                tokio::time::Duration::from_millis(1000),
                 notification_stream.next()
             ).await {
                 let data = notification.value;
-                println!("[Colmi Sync] Slaap notificatie ontvangen (offset {}): {:?}", day_offset, data);
+                println!("[Colmi Sync] Notificatie ontvangen (Sleep 0x10 BCD, offset {}): {:?}", day_offset, data);
                 if let Ok(ref mut file) = log_file {
-                    let _ = writeln!(file, "[Colmi Sync] Slaap notificatie ontvangen (offset {}): {:?}", day_offset, data);
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (Sleep 0x10 BCD, offset {}): {:?}", day_offset, data);
                 }
 
-                if data.len() >= 4 {
-                    let header = data[0];
+                if data.len() >= 4 && (data[0] == 0x10 || data[0] == 0x11 || data[0] == 0x90) {
                     if data[1] != 255 && data[1] != 238 {
-                        // Check for BCD Date format in packet header [CMD, Y, M, D, ...]
-                        let has_bcd_date = data.len() >= 4 && data[1] <= 0x99 && data[2] >= 1 && data[2] <= 12 && data[3] >= 1 && data[3] <= 31;
-                        let (s_year, s_month, s_day) = if has_bcd_date {
-                            (bcd_to_decimal(data[1]) + 2000, bcd_to_decimal(data[2]), bcd_to_decimal(data[3]))
-                        } else {
-                            (tyear as u32, tmonth as u32, tday as u32)
-                        };
+                        let s_year = if data[1] <= 0x99 && data[1] > 0 { bcd_to_decimal(data[1]) + 2000 } else { tyear as u32 };
+                        let s_month = if data[2] >= 1 && data[2] <= 12 { bcd_to_decimal(data[2]) } else { tmonth as u32 };
+                        let s_day = if data[3] >= 1 && data[3] <= 31 { bcd_to_decimal(data[3]) } else { tday as u32 };
 
-                        // Extract duration
-                        let mut parsed_mins = 0;
-                        if data.len() >= 10 {
-                            let mins_1 = u16::from_le_bytes([data[4], data[5]]) as i32 + u16::from_le_bytes([data[6], data[7]]) as i32;
-                            let mins_2 = u16::from_le_bytes([data[9], data[10]]) as i32;
-                            if mins_1 > 30 && mins_1 < 1440 {
-                                parsed_mins = mins_1;
-                            } else if mins_2 > 30 && mins_2 < 1440 {
-                                parsed_mins = mins_2;
-                            }
-                        } else if data.len() >= 4 {
-                            let dur_be = u16::from_be_bytes([data[1], data[2]]) as i32;
-                            let dur_le = u16::from_le_bytes([data[1], data[2]]) as i32;
-                            if dur_le > 30 && dur_le < 1440 {
-                                parsed_mins = dur_le;
-                            } else if dur_be > 30 && dur_be < 1440 {
-                                parsed_mins = dur_be;
-                            }
+                        let deep_mins = if data.len() >= 6 { (data[4] as i32) * 60 + (data[5] as i32) } else { 0 };
+                        let light_mins = if data.len() >= 8 { (data[6] as i32) * 60 + (data[7] as i32) } else { 0 };
+                        let rem_mins = if data.len() >= 10 { (data[8] as i32) * 60 + (data[9] as i32) } else { 0 };
+                        let mut total_mins = deep_mins + light_mins + rem_mins;
+
+                        if total_mins == 0 && data.len() >= 12 {
+                            total_mins = (data[10] as i32) * 60 + (data[11] as i32);
                         }
 
-                        if parsed_mins > 30 && parsed_mins < 1440 {
+                        if total_mins > 30 && total_mins < 1440 {
                             let date_str = format!("{:04}-{:02}-{:02}", s_year, s_month, s_day);
                             let epoch = date_to_epoch(s_year as u16, s_month as u8, s_day as u8);
-                            sleep_by_date.entry(date_str.clone()).or_insert((parsed_mins, 75, epoch));
-                            println!("[Colmi Sync] Slaap gedetecteerd (header 0x{:02X}) voor {}: duration={} min", header, date_str, parsed_mins);
+                            let quality = if data.len() >= 13 && data[12] > 0 && data[12] <= 100 { data[12] as i32 } else { 80 };
+
+                            sleep_by_date.insert(date_str.clone(), (total_mins, quality, epoch));
+                            println!("[Colmi Sync] Slaap 0x10 succesvol verwerkt voor {}: total={} min, diep={} min, licht={} min, kwaliteit={}", date_str, total_mins, deep_mins, light_mins, quality);
+                        }
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
+        // 4b. Send 0x05 (CMD_SLEEP_SUMMARY BCD)
+        let mut sleep_cmd_05 = vec![0u8; 16];
+        sleep_cmd_05[0] = 0x05;
+        sleep_cmd_05[1] = bcd_yr;
+        sleep_cmd_05[2] = bcd_mo;
+        sleep_cmd_05[3] = bcd_dy;
+        let mut sum: u32 = 0; for i in 0..15 { sum += sleep_cmd_05[i] as u32; }
+        sleep_cmd_05[15] = (sum & 0xFF) as u8;
+
+        let _ = peripheral.write(&w_char, &sleep_cmd_05, btleplug::api::WriteType::WithoutResponse).await;
+
+        for _ in 0..6 {
+            if let Ok(Some(notification)) = tokio::time::timeout(
+                tokio::time::Duration::from_millis(1000),
+                notification_stream.next()
+            ).await {
+                let data = notification.value;
+                println!("[Colmi Sync] Notificatie ontvangen (Sleep 0x05 BCD, offset {}): {:?}", day_offset, data);
+                if let Ok(ref mut file) = log_file {
+                    let _ = writeln!(file, "[Colmi Sync] Notificatie ontvangen (Sleep 0x05 BCD, offset {}): {:?}", day_offset, data);
+                }
+
+                if data.len() >= 8 && (data[0] == 0x05 || data[0] == 0x85) {
+                    if data[1] != 255 && data[1] != 238 {
+                        let deep_mins = u16::from_le_bytes([data[4], data[5]]) as i32;
+                        let light_mins = u16::from_le_bytes([data[6], data[7]]) as i32;
+                        let total_mins = deep_mins + light_mins;
+                        if total_mins > 30 && total_mins < 1440 {
+                            let date_str = format!("{:04}-{:02}-{:02}", tyear, tmonth, tday);
+                            let epoch = date_to_epoch(tyear, tmonth, tday);
+                            sleep_by_date.entry(date_str).or_insert((total_mins, 80, epoch));
                         }
                     }
                 }
