@@ -846,8 +846,13 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
 
         if let Ok(true) = peripheral.is_connected().await {
-            let _ = peripheral.disconnect().await;
-            tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+            println!("[Colmi Sync] Apparaat is al verbonden! Direct doorgaan naar service discovery...");
+            if let Ok(ref mut file) = log_file {
+                let _ = writeln!(file, "[Colmi Sync] Apparaat is al verbonden! Direct doorgaan naar service discovery...");
+            }
+            connect_success = true;
+            connected_peripheral = Some(peripheral);
+            break;
         }
 
         match peripheral.connect().await {
