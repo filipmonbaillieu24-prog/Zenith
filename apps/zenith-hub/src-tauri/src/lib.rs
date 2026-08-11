@@ -118,6 +118,8 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::collections::{HashMap, HashSet};
 
+static LAST_DISCOVERED_RING: tokio::sync::Mutex<Option<(btleplug::platform::Peripheral, String, std::time::Instant)>> = tokio::sync::Mutex::const_new(None);
+
 async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let manager = Manager::new().await?;
     let adapters = manager.adapters().await?;
@@ -146,34 +148,65 @@ async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(), B
     while let Some(event) = events.next().await {
         match event {
             CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
-                // Check if device is in cooldown
-                {
-                    let cooldowns_guard = cooldowns.lock().await;
-                    if let Some(disconnect_time) = cooldowns_guard.get(&id) {
-                        if disconnect_time.elapsed() < std::time::Duration::from_secs(15) {
-                            continue;
-                        }
-                    }
-                }
-                
-                // Check if already connecting
-                {
-                    let connecting_guard = connecting.lock().await;
-                    if connecting_guard.contains(&id) {
-                        continue;
-                    }
-                }
-
                 if let Ok(peripheral) = adapter.peripheral(&id).await {
-                    if let Ok(connected) = peripheral.is_connected().await {
-                        if connected {
-                            continue;
-                        }
-                    }
-
                     if let Ok(Some(properties)) = peripheral.properties().await {
-                        let name = properties.local_name.unwrap_or_default().to_lowercase();
-                        if name.contains("neo") || name.contains("yolanda") || name.contains("qn-scale") || name.contains("scale") {
+                        let name = properties.local_name.unwrap_or_default();
+                        let name_lower = name.to_lowercase();
+                        let address = peripheral.address().to_string();
+                        let addr_lower = address.to_lowercase();
+                        let has_ring_service = properties.services.iter().any(|s| {
+                            let uuid_str = s.to_string().to_lowercase();
+                            uuid_str.contains("56ff") 
+                                || uuid_str.contains("6e40fff0") 
+                                || uuid_str.contains("fee7") 
+                                || uuid_str.contains("a201")
+                        });
+
+                        let is_ring = name_lower.contains("colmi") 
+                            || name_lower.contains("r0") 
+                            || name_lower.contains("ring") 
+                            || name_lower.contains("smart")
+                            || name_lower.contains("wearable")
+                            || name_lower.contains("mouyoung")
+                            || addr_lower.contains("32:34:48:31:a8:05")
+                            || addr_lower.contains("10:5a:17:af:36:bf")
+                            || has_ring_service;
+
+                        if is_ring {
+                            println!("[Background Listener] Colmi Ring gedetecteerd! Naam='{}', Adres='{}'", name, address);
+                            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("e:\\Google Antgravity\\Zenith\\ble_debug.log") {
+                                use std::io::Write;
+                                let _ = writeln!(file, "[Background Listener] Colmi Ring gedetecteerd! Naam='{}', Adres='{}'", name, address);
+                            }
+                            let mut cache_guard = LAST_DISCOVERED_RING.lock().await;
+                            *cache_guard = Some((peripheral.clone(), address.clone(), std::time::Instant::now()));
+                        }
+
+                        // Scale detection
+                        if name_lower.contains("neo") || name_lower.contains("yolanda") || name_lower.contains("qn-scale") || name_lower.contains("scale") {
+                            // Check if device is in cooldown
+                            {
+                                let cooldowns_guard = cooldowns.lock().await;
+                                if let Some(disconnect_time) = cooldowns_guard.get(&id) {
+                                    if disconnect_time.elapsed() < std::time::Duration::from_secs(15) {
+                                        continue;
+                                    }
+                                }
+                            }
+                            
+                            // Check if already connecting
+                            {
+                                let connecting_guard = connecting.lock().await;
+                                if connecting_guard.contains(&id) {
+                                    continue;
+                                }
+                            }
+
+                            if let Ok(connected) = peripheral.is_connected().await {
+                                if connected {
+                                    continue;
+                                }
+                            }
                             
                             // Mark as connecting
                             {
@@ -741,16 +774,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     }
 
     // Physical BLE mode
-    emit_status(&app, "Bluetooth adapter controleren...", 0.05);
-    use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter};
-    use btleplug::platform::Manager;
-    
-    let manager = Manager::new().await.map_err(|e| e.to_string())?;
-    let adapters = manager.adapters().await.map_err(|e| e.to_string())?;
-    if adapters.is_empty() {
-        return Err("Geen Bluetooth adapter gevonden".to_string());
-    }
-    let adapter = &adapters[0];
+    emit_status(&app, "Zoeken naar Colmi Smart Ring in achtergrond-scanner...", 0.10);
     
     use std::io::Write;
     let mut log_file = std::fs::OpenOptions::new()
@@ -758,96 +782,107 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         .append(true)
         .open("e:\\Google Antgravity\\Zenith\\ble_debug.log");
 
-    // Scan with multiple retries for better device caching
     let mut ring_peripheral = None;
     let mut ring_address = String::new();
-    let scan_duration = tokio::time::Duration::from_secs(5);
-    
-    for attempt in 1..=4 {
-        emit_status(&app, &format!("Scannen naar Colmi Smart Ring (poging {}/4)...", attempt), 0.10 + (attempt as f32 * 0.05));
-        println!("[Colmi Sync] Scan starten (poging {}/4)...", attempt);
-        if let Ok(ref mut file) = log_file {
-            let _ = writeln!(file, "[Colmi Sync] Scan starten (poging {}/4)...", attempt);
-        }
-        
-        let _ = adapter.start_scan(ScanFilter::default()).await;
-        tokio::time::sleep(scan_duration).await;
-        
-        let peripherals = match adapter.peripherals().await {
-            Ok(p) => p,
-            Err(e) => {
-                println!("[Colmi Sync] Fout bij ophalen peripherals: {:?}", e);
-                continue;
-            }
-        };
 
-        for peripheral in peripherals {
-            if let Ok(Some(properties)) = peripheral.properties().await {
-                let name = properties.local_name.clone().unwrap_or_default();
-                let name_lower = name.to_lowercase();
-                let address = peripheral.address().to_string();
-                let services_str: Vec<String> = properties.services.iter().map(|s| s.to_string()).collect();
-
-                let rssi_str = properties.rssi.map(|r| r.to_string()).unwrap_or_else(|| "N/A".to_string());
-                println!("[Colmi Sync] Apparaat gescand (poging {}): Naam='{}', Adres='{}', RSSI={}, Services={:?}", attempt, name, address, rssi_str, services_str);
-                if let Ok(ref mut file) = log_file {
-                    let _ = writeln!(file, "[Colmi Sync] Apparaat gescand (poging {}): Naam='{}', Adres='{}', RSSI={}, Services={:?}", attempt, name, address, rssi_str, services_str);
-                }
-
-                let addr_lower = address.to_lowercase();
-                let has_service = properties.services.iter().any(|s| {
-                    let uuid_str = s.to_string().to_lowercase();
-                    uuid_str.contains("56ff") 
-                        || uuid_str.contains("6e40fff0") 
-                        || uuid_str.contains("fee7") 
-                        || uuid_str.contains("a201")
-                });
-
-                let is_match = if let Some(ref target) = target_mac {
-                    let target_lower = target.to_lowercase();
-                    addr_lower == target_lower || has_service
-                } else {
-                    name_lower.contains("colmi") 
-                        || name_lower.contains("r0") 
-                        || name_lower.contains("ring") 
-                        || name_lower.contains("smart")
-                        || name_lower.contains("wearable")
-                        || name_lower.contains("mouyoung")
-                        || addr_lower.contains("32:34:48:31:a8:05")
-                        || addr_lower.contains("10:5a:17:af:36:bf")
-                        || has_service
-                };
-
-                if is_match {
-                    emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {} (RSSI: {})", address, rssi_str), 0.35);
-                    println!("[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {} (RSSI: {})", address, rssi_str);
+    // 1. Check background listener cache first
+    let start_wait = std::time::Instant::now();
+    while start_wait.elapsed() < std::time::Duration::from_secs(10) {
+        {
+            let cache_guard = LAST_DISCOVERED_RING.lock().await;
+            if let Some((ref p, ref addr, ref time)) = *cache_guard {
+                if time.elapsed() < std::time::Duration::from_secs(60) {
+                    println!("[Colmi Sync] Ring gevonden via achtergrond-scanner! Adres: {}", addr);
                     if let Ok(ref mut file) = log_file {
-                        let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {} (RSSI: {})", address, rssi_str);
+                        let _ = writeln!(file, "[Colmi Sync] Ring gevonden via achtergrond-scanner! Adres: {}", addr);
                     }
-                    ring_peripheral = Some(peripheral);
-                    ring_address = address;
+                    emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", addr), 0.35);
+                    ring_peripheral = Some(p.clone());
+                    ring_address = addr.clone();
                     break;
                 }
             }
         }
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
+
+    // 2. If not found in cache, fall back to explicit adapter scan
+    if ring_peripheral.is_none() {
+        use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter};
+        use btleplug::platform::Manager;
         
-        if ring_peripheral.is_some() {
-            break;
+        if let Ok(manager) = Manager::new().await {
+            if let Ok(adapters) = manager.adapters().await {
+                if !adapters.is_empty() {
+                    let adapter = &adapters[0];
+                    let scan_duration = tokio::time::Duration::from_secs(5);
+                    
+                    for attempt in 1..=3 {
+                        emit_status(&app, &format!("Scannen naar Colmi Smart Ring (poging {}/3)...", attempt), 0.10 + (attempt as f32 * 0.08));
+                        println!("[Colmi Sync] Fallback scan starten (poging {}/3)...", attempt);
+                        let _ = adapter.start_scan(ScanFilter::default()).await;
+                        tokio::time::sleep(scan_duration).await;
+                        
+                        if let Ok(peripherals) = adapter.peripherals().await {
+                            for peripheral in peripherals {
+                                if let Ok(Some(properties)) = peripheral.properties().await {
+                                    let name = properties.local_name.clone().unwrap_or_default();
+                                    let name_lower = name.to_lowercase();
+                                    let address = peripheral.address().to_string();
+                                    let addr_lower = address.to_lowercase();
+
+                                    let has_service = properties.services.iter().any(|s| {
+                                        let uuid_str = s.to_string().to_lowercase();
+                                        uuid_str.contains("56ff") 
+                                            || uuid_str.contains("6e40fff0") 
+                                            || uuid_str.contains("fee7") 
+                                            || uuid_str.contains("a201")
+                                    });
+
+                                    let is_match = if let Some(ref target) = target_mac {
+                                        let target_lower = target.to_lowercase();
+                                        addr_lower == target_lower || has_service
+                                    } else {
+                                        name_lower.contains("colmi") 
+                                            || name_lower.contains("r0") 
+                                            || name_lower.contains("ring") 
+                                            || name_lower.contains("smart")
+                                            || name_lower.contains("wearable")
+                                            || name_lower.contains("mouyoung")
+                                            || addr_lower.contains("32:34:48:31:a8:05")
+                                            || addr_lower.contains("10:5a:17:af:36:bf")
+                                            || has_service
+                                    };
+
+                                    if is_match {
+                                        emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", address), 0.35);
+                                        ring_peripheral = Some(peripheral);
+                                        ring_address = address;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if ring_peripheral.is_some() {
+                            let _ = adapter.stop_scan().await;
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
     
     let peripheral = match ring_peripheral {
         Some(p) => p,
         None => {
-            let _ = adapter.stop_scan().await;
             println!("[Colmi Sync] Fout: Geen Colmi Smart Ring gevonden in de buurt.");
             return Err("Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.".to_string());
         }
     };
 
-    // Stop de actieve scan zodat de WinRT advertisement watcher het bluetooth-kanaal vrijgeeft voor GATT verbinding
-    println!("[Colmi Sync] Stopzetten van scanner voor GATT verbinding...");
-    let _ = adapter.stop_scan().await;
+    // Pauzeer kort om de WinRT advertisement watcher het bluetooth-kanaal te laten settlen voor GATT verbinding
+    println!("[Colmi Sync] Voorbereiden van GATT verbinding...");
     tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
     let mut connect_success = false;
@@ -916,8 +951,6 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
     }
 
-    let _ = adapter.stop_scan().await;
-    
     if !connect_success || connected_peripheral.is_none() {
         let err_msg = match last_error {
             Some(e) => format!("Fout bij verbinden met ring na 3 pogingen. Details: {}", e),
