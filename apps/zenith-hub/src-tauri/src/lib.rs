@@ -780,9 +780,10 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 let address = peripheral.address().to_string();
                 let services_str: Vec<String> = properties.services.iter().map(|s| s.to_string()).collect();
 
-                println!("[Colmi Sync] Apparaat gescand (poging {}): Naam='{}', Adres='{}', Services={:?}", attempt, name, address, services_str);
+                let rssi_str = properties.rssi.map(|r| r.to_string()).unwrap_or_else(|| "N/A".to_string());
+                println!("[Colmi Sync] Apparaat gescand (poging {}): Naam='{}', Adres='{}', RSSI={}, Services={:?}", attempt, name, address, rssi_str, services_str);
                 if let Ok(ref mut file) = log_file {
-                    let _ = writeln!(file, "[Colmi Sync] Apparaat gescand (poging {}): Naam='{}', Adres='{}', Services={:?}", attempt, name, address, services_str);
+                    let _ = writeln!(file, "[Colmi Sync] Apparaat gescand (poging {}): Naam='{}', Adres='{}', RSSI={}, Services={:?}", attempt, name, address, rssi_str, services_str);
                 }
 
                 let addr_lower = address.to_lowercase();
@@ -806,10 +807,10 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 };
 
                 if is_match {
-                    emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", address), 0.35);
-                    println!("[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
+                    emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {} (RSSI: {})", address, rssi_str), 0.35);
+                    println!("[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {} (RSSI: {})", address, rssi_str);
                     if let Ok(ref mut file) = log_file {
-                        let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {}", address);
+                        let _ = writeln!(file, "[Colmi Sync] Match gevonden! Selecteren van ring peripheral: {} (RSSI: {})", address, rssi_str);
                     }
                     ring_peripheral = Some(peripheral);
                     break;
