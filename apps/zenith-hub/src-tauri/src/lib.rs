@@ -855,12 +855,33 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 break;
             }
             Err(e) => {
-                println!("[Colmi Sync] Fout bij verbinden (poging {}): {:?}", conn_attempt, e);
+                println!("[Colmi Sync] Connect meldt: {:?}. Wachten op achtergrond-verbinding...", e);
                 if let Ok(ref mut file) = log_file {
-                    let _ = writeln!(file, "[Colmi Sync] Fout bij verbinden (poging {}): {:?}", conn_attempt, e);
+                    let _ = writeln!(file, "[Colmi Sync] Connect meldt: {:?}. Wachten op achtergrond-verbinding...", e);
                 }
-                last_error = Some(e);
+                
+                // Windows WinRT MaintainConnection heeft 1-2 sec nodig om de GATT handshake te voltooien. Wacht en controleer.
                 tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+                if let Ok(true) = peripheral.is_connected().await {
+                    println!("[Colmi Sync] Verbinding achteraf bevestigd via is_connected()!");
+                    if let Ok(ref mut file) = log_file {
+                        let _ = writeln!(file, "[Colmi Sync] Verbinding achteraf bevestigd via is_connected()!");
+                    }
+                    connect_success = true;
+                    break;
+                }
+                
+                // Probeer discover_services() aan te roepen om een GATT over-the-air request te forceren
+                if peripheral.discover_services().await.is_ok() {
+                    println!("[Colmi Sync] Verbinding achteraf bevestigd via discover_services()!");
+                    if let Ok(ref mut file) = log_file {
+                        let _ = writeln!(file, "[Colmi Sync] Verbinding achteraf bevestigd via discover_services()!");
+                    }
+                    connect_success = true;
+                    break;
+                }
+
+                last_error = Some(e);
             }
         }
     }
