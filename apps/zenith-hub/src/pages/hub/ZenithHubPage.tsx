@@ -85,11 +85,11 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         .eq('user_id', userId)
         .gte('logged_at', todayStart.toISOString())
         .lte('logged_at', todayEnd.toISOString())
-        .limit(1);
+        .order('logged_at', { ascending: false });
       if (stData && stData.length > 0) {
-        setTodaySteps(stData[0].step_count || 0);
+        const maxSteps = Math.max(...stData.map((s: any) => Number(s.step_count) || 0));
+        setTodaySteps(maxSteps);
       } else {
-        // Try fallback to last log to show something, or 0
         setTodaySteps(0);
       }
 
