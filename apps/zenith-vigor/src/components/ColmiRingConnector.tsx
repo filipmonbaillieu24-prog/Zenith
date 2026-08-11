@@ -334,37 +334,27 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               Sluiten
             </button>
           ) : (
-            <>
-              <button 
-                className="btn-secondary" 
-                style={{ margin: 0, border: '1px solid rgba(255,255,255,0.1)' }}
-                onClick={() => handleSync(true)}
-                disabled={status === 'scanning' || status === 'connecting' || status === 'syncing'}
-              >
-                Simulatie Testen
-              </button>
-              <button 
-                className="btn-primary" 
-                style={{ 
-                  background: status === 'scanning' || status === 'connecting' || status === 'syncing' ? 'rgba(92, 124, 250, 0.2)' : '#5c7cfa',
-                  color: status === 'scanning' || status === 'connecting' || status === 'syncing' ? '#5c7cfa' : '#09090b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  margin: 0
-                }}
-                onClick={() => handleSync(false)}
-                disabled={status === 'scanning' || status === 'connecting' || status === 'syncing'}
-              >
-                {(status === 'scanning' || status === 'connecting' || status === 'syncing') ? (
-                  <>
-                    <RefreshCw size={14} className="animate-spin" /> Synchroniseren...
-                  </>
-                ) : (
-                  'Start Synchronisatie'
-                )}
-              </button>
-            </>
+            <button 
+              className="btn-primary" 
+              style={{ 
+                background: status === 'scanning' || status === 'connecting' || status === 'syncing' ? 'rgba(92, 124, 250, 0.2)' : '#5c7cfa',
+                color: status === 'scanning' || status === 'connecting' || status === 'syncing' ? '#5c7cfa' : '#09090b',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                margin: 0
+              }}
+              onClick={() => handleSync(false)}
+              disabled={status === 'scanning' || status === 'connecting' || status === 'syncing'}
+            >
+              {(status === 'scanning' || status === 'connecting' || status === 'syncing') ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" /> Synchroniseren...
+                </>
+              ) : (
+                'Start Synchronisatie'
+              )}
+            </button>
           )}
         </div>
       </div>
