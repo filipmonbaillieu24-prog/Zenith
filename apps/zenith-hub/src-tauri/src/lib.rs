@@ -5,7 +5,7 @@ pub mod ble;
 use commands::fs::{dir_exists, ensure_dir, save_file, save_file_dialog};
 use commands::network::{fetch_route, get_local_ip, greet};
 use ble::colmi::sync_colmi_ring;
-use ble::scale::start_native_ble_listener;
+use ble::scale::start_scale_ble_listener;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,8 +16,8 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = start_native_ble_listener(handle).await {
-                    eprintln!("Native BLE listener error: {:?}", e);
+                if let Err(e) = start_scale_ble_listener(handle).await {
+                    eprintln!("Scale BLE listener error: {:?}", e);
                 }
             });
             Ok(())

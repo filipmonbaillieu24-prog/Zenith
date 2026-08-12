@@ -5,9 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::logger::log_ble;
-use crate::ble::{GLOBAL_ADAPTER, LAST_DISCOVERED_RING};
 
-pub async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_scale_ble_listener(app_handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let manager = Manager::new().await?;
     let adapters = manager.adapters().await?;
     if adapters.is_empty() {
@@ -15,16 +14,11 @@ pub async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(
     }
     let adapter = &adapters[0];
 
-    {
-        let mut guard = GLOBAL_ADAPTER.lock().await;
-        *guard = Some(adapter.clone());
-    }
-
     // Start scanning
     adapter.start_scan(ScanFilter::default()).await?;
     let mut events = adapter.events().await?;
 
-    log_ble("[System] Tauri Native BLE Listener gestart!");
+    log_ble("[System] Tauri Native Scale BLE Listener gestart!");
 
     let cooldowns: Arc<Mutex<HashMap<btleplug::platform::PeripheralId, std::time::Instant>>> = Arc::new(Mutex::new(HashMap::new()));
     let connecting: Arc<Mutex<HashSet<btleplug::platform::PeripheralId>>> = Arc::new(Mutex::new(HashSet::new()));
@@ -36,32 +30,6 @@ pub async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(
                     if let Ok(Some(properties)) = peripheral.properties().await {
                         let name = properties.local_name.unwrap_or_default();
                         let name_lower = name.to_lowercase();
-                        let address = peripheral.address().to_string();
-                        let addr_lower = address.to_lowercase();
-
-                        // Blacklist non-ring TY devices
-                        if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") {
-                            // Skip non-ring TY device
-                        } else {
-                            let has_ring_service = properties.services.iter().any(|s| {
-                                let uuid_str = s.to_string().to_lowercase();
-                                uuid_str.contains("56ff") 
-                                    || uuid_str.contains("6e40fff0") 
-                                    || uuid_str.contains("fee7")
-                            });
-
-                            let is_ring = name_lower.contains("colmi") 
-                                || name_lower.contains("r0") 
-                                || name_lower.contains("ring") 
-                                || addr_lower.contains("32:34:48:31:a8:05")
-                                || has_ring_service;
-
-                            if is_ring {
-                                log_ble(&format!("[Background Listener] Colmi Ring gedetecteerd! Naam='{}', Adres='{}'", name, address));
-                                let mut cache_guard = LAST_DISCOVERED_RING.lock().await;
-                                *cache_guard = Some((peripheral.clone(), address.clone(), std::time::Instant::now()));
-                            }
-                        }
 
                         // Scale detection
                         let is_scale = name_lower.contains("neo") 
