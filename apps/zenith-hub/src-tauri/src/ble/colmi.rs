@@ -1,5 +1,4 @@
-use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter};
-use btleplug::platform::Manager;
+use btleplug::api::{Central, Peripheral as _, ScanFilter};
 use futures::stream::StreamExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::collections::HashMap;
@@ -391,6 +390,18 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     emit_status(&app, "Zoeken naar Colmi Smart Ring...", 0.10);
     log_ble("[Colmi Sync] Starten van Colmi Smart Ring synchronisatie...");
 
+    // Get the global adapter reference - we use this for ALL operations
+    let adapter_opt = {
+        let guard = GLOBAL_ADAPTER.lock().await;
+        guard.clone()
+    };
+    let global_adapter = match adapter_opt {
+        Some(a) => a,
+        None => {
+            return Err("Geen Bluetooth-adapter beschikbaar. Start de applicatie opnieuw op.".to_string());
+        }
+    };
+
     let mut ring_peripheral = None;
     let mut ring_address = String::new();
 
@@ -415,105 +426,92 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
 
     // Step 2: Check known peripherals from global adapter
     if ring_peripheral.is_none() {
-        let adapter_opt = {
-            let guard = GLOBAL_ADAPTER.lock().await;
-            guard.clone()
-        };
+        if let Ok(peripherals) = global_adapter.peripherals().await {
+            log_ble(&format!("[Colmi Sync] Inspecteren van {} bekende BT apparaten...", peripherals.len()));
+            for peripheral in peripherals {
+                if let Ok(Some(props)) = peripheral.properties().await {
+                    let name = props.local_name.clone().unwrap_or_default();
+                    let name_lower = name.to_lowercase();
+                    let address = peripheral.address().to_string();
+                    let addr_lower = address.to_lowercase();
 
-        if let Some(adapter) = adapter_opt {
-            if let Ok(peripherals) = adapter.peripherals().await {
-                log_ble(&format!("[Colmi Sync] Inspecteren van {} bekende BT apparaten...", peripherals.len()));
-                for peripheral in peripherals {
-                    if let Ok(Some(props)) = peripheral.properties().await {
-                        let name = props.local_name.clone().unwrap_or_default();
-                        let name_lower = name.to_lowercase();
-                        let address = peripheral.address().to_string();
-                        let addr_lower = address.to_lowercase();
+                    if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") {
+                        continue;
+                    }
 
-                        if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") {
-                            continue;
-                        }
+                    let is_target_mac = target_mac.as_ref()
+                        .map_or(false, |m| addr_lower == m.to_lowercase());
+                    if is_target_mac {
+                        log_ble(&format!("[Colmi Sync] Target MAC direct gevonden: {}", address));
+                        ring_peripheral = Some(peripheral);
+                        ring_address = address;
+                        emit_status(&app, &format!("Ring gevonden via MAC: {}", ring_address), 0.30);
+                        break;
+                    }
 
-                        let is_target_mac = target_mac.as_ref()
-                            .map_or(false, |m| addr_lower == m.to_lowercase());
-                        if is_target_mac {
-                            log_ble(&format!("[Colmi Sync] Target MAC direct gevonden: {}", address));
-                            ring_peripheral = Some(peripheral);
-                            ring_address = address;
-                            emit_status(&app, &format!("Ring gevonden via MAC: {}", ring_address), 0.30);
-                            break;
-                        }
+                    let has_colmi_service = props.services.iter().any(|s| {
+                        let u = s.to_string().to_lowercase();
+                        u.contains("6e40fff0") || u.contains("de5bf728") || u.contains("0000fee7")
+                    });
 
-                        let has_colmi_service = props.services.iter().any(|s| {
-                            let u = s.to_string().to_lowercase();
-                            u.contains("6e40fff0") || u.contains("de5bf728") || u.contains("0000fee7")
-                        });
+                    let is_colmi = name_lower.contains("colmi")
+                        || name_lower.contains("r02")
+                        || name_lower.contains("r0")
+                        || addr_lower.contains("32:34:48:31:a8:05")
+                        || has_colmi_service;
 
-                        let is_colmi = name_lower.contains("colmi")
-                            || name_lower.contains("r02")
-                            || name_lower.contains("r0")
-                            || addr_lower.contains("32:34:48:31:a8:05")
-                            || has_colmi_service;
-
-                        if is_colmi {
-                            log_ble(&format!("[Colmi Sync] Ring gevonden: Naam='{}', Adres='{}'", name, address));
-                            ring_peripheral = Some(peripheral);
-                            ring_address = address;
-                            emit_status(&app, &format!("Colmi Ring gevonden: {}", ring_address), 0.30);
-                            break;
-                        }
+                    if is_colmi {
+                        log_ble(&format!("[Colmi Sync] Ring gevonden: Naam='{}', Adres='{}'", name, address));
+                        ring_peripheral = Some(peripheral);
+                        ring_address = address;
+                        emit_status(&app, &format!("Colmi Ring gevonden: {}", ring_address), 0.30);
+                        break;
                     }
                 }
             }
         }
     }
 
-    // Step 3: Active BLE scan fallback (8 seconds)
+    // Step 3: Active BLE scan fallback (8 seconds) — uses GLOBAL_ADAPTER (NOT a new Manager)
     if ring_peripheral.is_none() {
-        if let Ok(manager) = Manager::new().await {
-            if let Ok(adapters) = manager.adapters().await {
-                if !adapters.is_empty() {
-                    let adapter = &adapters[0];
-                    emit_status(&app, "Actieve BLE scan (8s) naar Colmi Ring...", 0.20);
-                    log_ble("[Colmi Sync] Actieve BLE scan starten...");
+        emit_status(&app, "Actieve BLE scan (8s) naar Colmi Ring...", 0.20);
+        log_ble("[Colmi Sync] Actieve BLE scan starten via global adapter...");
 
-                    let _ = adapter.start_scan(ScanFilter::default()).await;
-                    tokio::time::sleep(tokio::time::Duration::from_secs(8)).await;
-                    let _ = adapter.stop_scan().await;
+        let _ = global_adapter.start_scan(ScanFilter::default()).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(8)).await;
+        // NOTE: We do NOT stop the scan here — we keep it running so the ring stays visible
+        // to the Windows BLE stack during the connection attempt
 
-                    if let Ok(peripherals) = adapter.peripherals().await {
-                        for peripheral in peripherals {
-                            if let Ok(Some(props)) = peripheral.properties().await {
-                                let name = props.local_name.clone().unwrap_or_default();
-                                let name_lower = name.to_lowercase();
-                                let address = peripheral.address().to_string();
-                                let addr_lower = address.to_lowercase();
+        if let Ok(peripherals) = global_adapter.peripherals().await {
+            for peripheral in peripherals {
+                if let Ok(Some(props)) = peripheral.properties().await {
+                    let name = props.local_name.clone().unwrap_or_default();
+                    let name_lower = name.to_lowercase();
+                    let address = peripheral.address().to_string();
+                    let addr_lower = address.to_lowercase();
 
-                                if name.is_empty() && address.is_empty() { continue; }
-                                log_ble(&format!("[Colmi Scan] -> '{}' @ '{}'", name, address));
-                                if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") { continue; }
+                    if name.is_empty() && address.is_empty() { continue; }
+                    log_ble(&format!("[Colmi Scan] -> '{}' @ '{}'", name, address));
+                    if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") { continue; }
 
-                                let is_target = target_mac.as_ref()
-                                    .map_or(false, |m| addr_lower == m.to_lowercase());
-                                let has_colmi_service = props.services.iter().any(|s| {
-                                    let u = s.to_string().to_lowercase();
-                                    u.contains("6e40fff0") || u.contains("de5bf728") || u.contains("0000fee7")
-                                });
-                                let is_colmi = is_target
-                                    || name_lower.contains("colmi")
-                                    || name_lower.contains("r02")
-                                    || addr_lower.contains("32:34:48:31:a8:05")
-                                    || has_colmi_service;
+                    let is_target = target_mac.as_ref()
+                        .map_or(false, |m| addr_lower == m.to_lowercase());
+                    let has_colmi_service = props.services.iter().any(|s| {
+                        let u = s.to_string().to_lowercase();
+                        u.contains("6e40fff0") || u.contains("de5bf728") || u.contains("0000fee7")
+                    });
+                    let is_colmi = is_target
+                        || name_lower.contains("colmi")
+                        || name_lower.contains("r02")
+                        || addr_lower.contains("32:34:48:31:a8:05")
+                        || has_colmi_service;
 
-                                if is_colmi {
-                                    log_ble(&format!("[Colmi Sync] Ring gevonden via scan: '{}'@'{}'", name, address));
-                                    ring_peripheral = Some(peripheral);
-                                    ring_address = address;
-                                    emit_status(&app, &format!("Ring gevonden: {}", ring_address), 0.30);
-                                    break;
-                                }
-                            }
-                        }
+                    if is_colmi {
+                        log_ble(&format!("[Colmi Sync] Ring gevonden via scan: '{}'@'{}'", name, address));
+                        ring_peripheral = Some(peripheral);
+                        ring_address = address;
+                        emit_status(&app, &format!("Ring gevonden: {}", ring_address), 0.30);
+                        break;
                     }
                 }
             }
@@ -527,79 +525,106 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
     };
 
-    // Pause background scanner BEFORE GATT connection attempt so Bluetooth adapter is dedicated to GATT handshake
-    let adapter_opt = {
-        let guard = GLOBAL_ADAPTER.lock().await;
-        guard.clone()
-    };
-    if let Some(ref adapter) = adapter_opt {
-        log_ble("[Colmi Sync] Achtergrond-scanner pauzeren voor GATT-verbinding...");
-        let _ = adapter.stop_scan().await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-    }
-
     // ========================================================================================
-    // GATT CONNECTION
+    // GATT CONNECTION (Windows-optimized)
     // ========================================================================================
-    log_ble(&format!("[Colmi Sync] Verbinding opzetten met Colmi Ring (MAC: {})...", ring_address));
+    // On Windows btleplug, peripheral.connect() uses WinRT BluetoothLEDevice.FromBluetoothAddressAsync
+    // which often returns NotConnected if the scan was stopped (device becomes invisible).
+    // The correct approach on Windows:
+    //   1. Keep scan running during connect attempts (device must be advertising)
+    //   2. Try discover_services() as the primary connection method (triggers actual GATT handshake)
+    //   3. Only stop scan AFTER connection is established
+    // ========================================================================================
+    log_ble(&format!("[Colmi Sync] GATT verbinding starten met Ring (MAC: {})... Scan blijft actief.", ring_address));
     emit_status(&app, "Verbinden met Colmi Ring...", 0.40);
 
     let mut connect_success = false;
-    for attempt in 1..=3 {
-        log_ble(&format!("[Colmi Sync] Verbindingspoging {}/3 naar MAC: {}", attempt, ring_address));
+    for attempt in 1..=4 {
+        log_ble(&format!("[Colmi Sync] Verbindingspoging {}/4 naar MAC: {}", attempt, ring_address));
 
+        // Check if already connected
         if let Ok(true) = peripheral.is_connected().await {
-            log_ble("[Colmi Sync] Apparaat is al verbonden!");
+            log_ble("[Colmi Sync] Ring is al verbonden!");
             connect_success = true;
             break;
         }
 
+        // Strategy A: Try connect() first (sets up WinRT device handle)
+        log_ble("[Colmi Sync] Strategie A: peripheral.connect()...");
         match tokio::time::timeout(
-            tokio::time::Duration::from_secs(8),
+            tokio::time::Duration::from_secs(6),
             peripheral.connect()
         ).await {
             Ok(Ok(_)) => {
-                log_ble("[Colmi Sync] GATT Verbinding succesvol tot stand gebracht!");
+                log_ble("[Colmi Sync] connect() succesvol!");
                 connect_success = true;
                 break;
             }
             Ok(Err(e)) => {
-                log_ble(&format!("[Colmi Sync] Connect meldt status: {:?}. Wachten op verbinding...", e));
-                // On Windows BT stack, peripheral.connect() sometimes returns NotConnected even if connection succeeds asynchronously
-                let t0 = std::time::Instant::now();
-                while t0.elapsed() < std::time::Duration::from_secs(4) {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                    if let Ok(true) = peripheral.is_connected().await {
-                        log_ble("[Colmi Sync] Achtergrond-verbinding bevestigd!");
-                        connect_success = true;
-                        break;
-                    }
-                }
-                if connect_success { break; }
-
-                // Try discover_services check as secondary verification
-                if let Ok(_) = peripheral.discover_services().await {
-                    log_ble("[Colmi Sync] Services ontdekt -> Verbinding toch actief!");
-                    connect_success = true;
-                    break;
-                }
+                log_ble(&format!("[Colmi Sync] connect() meldt: {:?} — probeer discover_services()...", e));
             }
             Err(_) => {
-                log_ble(&format!("[Colmi Sync] Verbindingstimeout op poging {}", attempt));
+                log_ble("[Colmi Sync] connect() timeout na 6s — probeer discover_services()...");
             }
         }
 
-        if attempt < 3 {
+        // Strategy B: Try discover_services() directly
+        // On Windows, this triggers the actual GATT connection even if connect() failed
+        log_ble("[Colmi Sync] Strategie B: peripheral.discover_services() (triggert GATT op Windows)...");
+        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+        match tokio::time::timeout(
+            tokio::time::Duration::from_secs(8),
+            peripheral.discover_services()
+        ).await {
+            Ok(Ok(_)) => {
+                let services = peripheral.services();
+                if !services.is_empty() {
+                    log_ble(&format!(
+                        "[Colmi Sync] discover_services() succesvol! {} services gevonden — Verbinding actief!",
+                        services.len()
+                    ));
+                    connect_success = true;
+                    break;
+                } else {
+                    log_ble("[Colmi Sync] discover_services() teruggekeerd maar 0 services gevonden.");
+                }
+            }
+            Ok(Err(e)) => {
+                log_ble(&format!("[Colmi Sync] discover_services() fout: {:?}", e));
+            }
+            Err(_) => {
+                log_ble("[Colmi Sync] discover_services() timeout na 8s");
+            }
+        }
+
+        // Strategy C: Check if connection came up asynchronously while we were waiting
+        log_ble("[Colmi Sync] Strategie C: wachten op asynchrone verbinding (3s)...");
+        let t0 = std::time::Instant::now();
+        while t0.elapsed() < std::time::Duration::from_secs(3) {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            if let Ok(true) = peripheral.is_connected().await {
+                log_ble("[Colmi Sync] Asynchrone verbinding bevestigd!");
+                connect_success = true;
+                break;
+            }
+        }
+        if connect_success { break; }
+
+        log_ble(&format!("[Colmi Sync] Poging {}/4 mislukt. Wachten 2s voor retry...", attempt));
+        if attempt < 4 {
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         }
     }
 
+    // NOW stop the background scan (connection is established or all retries exhausted)
+    log_ble("[Colmi Sync] Achtergrond-scanner pauzeren...");
+    let _ = global_adapter.stop_scan().await;
+    tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+
     if !connect_success {
         // Resume background scanner on failure
-        if let Some(ref adapter) = adapter_opt {
-            let _ = adapter.start_scan(ScanFilter::default()).await;
-        }
-        return Err("Verbinding met Colmi Ring mislukt na 3 pogingen. Controleer of de ring niet gekoppeld is aan de officiële QRing app.".to_string());
+        let _ = global_adapter.start_scan(ScanFilter::default()).await;
+        return Err("Verbinding met Colmi Ring mislukt na 4 pogingen. Zorg ervoor dat:\n• De ring niet gekoppeld is aan de QRing app (sluit deze volledig)\n• De ring dichtbij is en opgeladen\n• Bluetooth aan staat in Windows Instellingen".to_string());
     }
 
     // ========================================================================================
@@ -1005,9 +1030,9 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     }
     let _ = peripheral.disconnect().await;
 
-    if let Some(ref adapter) = adapter_opt {
+    if true {
         log_ble("[Colmi Sync] Achtergrond-scanner hervatten...");
-        let _ = adapter.start_scan(ScanFilter::default()).await;
+        let _ = global_adapter.start_scan(ScanFilter::default()).await;
     }
 
     // ========================================================================================
