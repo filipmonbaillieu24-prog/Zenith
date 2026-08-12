@@ -239,6 +239,49 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             }
         }
     }
+
+    // 4. GATT Probe Fallback: If ring wasn't recognized by name, probe candidate BLE devices for Colmi GATT UUIDs
+    if ring_peripheral.is_none() {
+        if let Ok(manager) = Manager::new().await {
+            if let Ok(adapters) = manager.adapters().await {
+                if !adapters.is_empty() {
+                    let adapter = &adapters[0];
+                    if let Ok(peripherals) = adapter.peripherals().await {
+                        log_ble("[Colmi Sync] Bezig met diepe GATT-service inspectie op nabije apparaten...");
+                        for peripheral in peripherals {
+                            if let Ok(Some(props)) = peripheral.properties().await {
+                                let name = props.local_name.unwrap_or_default();
+                                let addr = peripheral.address().to_string();
+                                if name.to_lowercase() == "ty" || addr.to_lowercase().contains("10:5a:17:af:36:bf") {
+                                    continue;
+                                }
+
+                                log_ble(&format!("[Colmi GATT Probe] Proberen te verbinden met: Naam='{}', Adres='{}'", name, addr));
+                                if let Ok(Ok(_)) = tokio::time::timeout(tokio::time::Duration::from_millis(2000), peripheral.connect()).await {
+                                    if let Ok(Ok(_)) = tokio::time::timeout(tokio::time::Duration::from_millis(1500), peripheral.discover_services()).await {
+                                        let services = peripheral.services();
+                                        let is_ring_gatt = services.iter().any(|s| {
+                                            let u = s.uuid.to_string().to_lowercase();
+                                            u.contains("56ff") || u.contains("6e40fff0") || u.contains("fee7")
+                                        });
+
+                                        if is_ring_gatt {
+                                            log_ble(&format!("[Colmi GATT Probe] SUCCES! Colmi GATT services bevestigd op: Naam='{}', Adres='{}'", name, addr));
+                                            emit_status(&app, &format!("Colmi Smart Ring GATT bevestigd op {}", addr), 0.35);
+                                            ring_peripheral = Some(peripheral);
+                                            ring_address = addr;
+                                            break;
+                                        }
+                                    }
+                                    let _ = peripheral.disconnect().await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     let peripheral = match ring_peripheral {
         Some(p) => p,

@@ -32,6 +32,7 @@ export const SystemConsolePage: React.FC = () => {
 
     // Also listen to Tauri Rust BLE log events if available
     let unlistenBle: any = null;
+    let unlistenBleLog: any = null;
     async function setupBleTauriListener() {
       if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
         try {
@@ -39,8 +40,16 @@ export const SystemConsolePage: React.FC = () => {
           unlistenBle = await listen<string>('colmi-sync-status', (event) => {
             loggerService.addLog('sync', 'Colmi', `Colmi Status: ${event.payload}`);
           });
+          unlistenBleLog = await listen<string>('ble-log-message', (event) => {
+            const text = event.payload || '';
+            let category: 'Scale' | 'Colmi' | 'BLE' = 'BLE';
+            if (text.includes('Colmi') || text.includes('Ring')) category = 'Colmi';
+            else if (text.includes('Scale') || text.includes('weight') || text.includes('Weegschaal')) category = 'Scale';
+
+            loggerService.addLog('ble', category, text);
+          });
         } catch (err) {
-          console.error("Failed to setup colmi-sync-status listener in console page:", err);
+          console.error("Failed to setup BLE listeners in console page:", err);
         }
       }
     }
@@ -49,6 +58,7 @@ export const SystemConsolePage: React.FC = () => {
     return () => {
       unsubscribe();
       if (unlistenBle) unlistenBle();
+      if (unlistenBleLog) unlistenBleLog();
     };
   }, [isPaused]);
 

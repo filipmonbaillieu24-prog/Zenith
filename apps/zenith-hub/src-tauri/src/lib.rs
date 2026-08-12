@@ -14,6 +14,8 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
+            logger::set_app_handle(app.handle().clone());
+
             let handle_scale = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = start_scale_ble_listener(handle_scale).await {

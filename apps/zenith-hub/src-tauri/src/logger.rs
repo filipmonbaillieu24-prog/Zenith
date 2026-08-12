@@ -1,6 +1,16 @@
 use std::io::Write;
+use std::sync::Mutex;
+use tauri::Emitter;
 
-/// Schrijft een log-bericht naar console en naar het tijdelijke bestand `zenith_ble.log` in de OS-temp directory.
+static APP_HANDLE: Mutex<Option<tauri::AppHandle>> = Mutex::new(None);
+
+pub fn set_app_handle(handle: tauri::AppHandle) {
+    if let Ok(mut guard) = APP_HANDLE.lock() {
+        *guard = Some(handle);
+    }
+}
+
+/// Schrijft een log-bericht naar console, het logbestand en het frontend logboek.
 pub fn log_ble(msg: &str) {
     println!("{}", msg);
     let log_path = std::env::temp_dir().join("zenith_ble.log");
@@ -10,5 +20,11 @@ pub fn log_ble(msg: &str) {
         .open(log_path)
     {
         let _ = writeln!(file, "{}", msg);
+    }
+
+    if let Ok(guard) = APP_HANDLE.lock() {
+        if let Some(ref handle) = *guard {
+            let _ = handle.emit("ble-log-message", msg);
+        }
     }
 }
