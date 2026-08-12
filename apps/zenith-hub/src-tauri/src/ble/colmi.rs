@@ -138,46 +138,6 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     };
 
     if simulate {
-        emit_status(&app, "Bluetooth adapter zoeken...", 0.05);
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        emit_status(&app, "Scannen naar Colmi Smart Ring (Simulated)...", 0.25);
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        emit_status(&app, "Verbinden met peripheral (Simulated)...", 0.50);
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        emit_status(&app, "Stappen en slaapdata synchroniseren...", 0.75);
-        tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
-        emit_status(&app, "Synchronisatie succesvol afgerond!", 1.00);
-        
-        let mut mock_steps = Vec::new();
-        let mut mock_sleep = Vec::new();
-        
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-            
-        for i in 0..7 {
-            let day_offset = (i * 24 * 3600) as u64;
-            let log_time = now - day_offset;
-            
-            let step_count = 6000 + (log_time % 8000) as i32;
-            mock_steps.push(serde_json::json!({
-                "step_count": step_count,
-                "timestamp": log_time
-            }));
-            
-            let duration_minutes = 360 + (log_time % 160) as i32;
-            let quality_score = 65 + (log_time % 30) as i32;
-            mock_sleep.push(serde_json::json!({
-                "duration_minutes": duration_minutes,
-                "quality_score": quality_score,
-                "timestamp": log_time
-            }));
-        }
-        
-        let response = serde_json::json!({
-            "status": "success",
-            "device_name": "Colmi R02 Ring (Simulated)",
         log_ble("[Colmi Sync] Simulatie modus geactiveerd.");
         emit_status(&app, "Simulatie data genereren...", 0.2);
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
@@ -185,6 +145,9 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         
         let result = serde_json::json!({
+            "status": "success",
+            "device_name": "Colmi R02 Ring (Simulated)",
+            "mac_address": "32:34:48:31:A8:05",
             "steps": 8420,
             "battery": 88,
             "sleep_duration": 465,
@@ -198,14 +161,6 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         emit_status(&app, "Simulatie voltooid!", 1.0);
         return Ok(result.to_string());
     }
-
-    if COLMI_SYNC_RUNNING.swap(true, Ordering::SeqCst) {
-        return Err("Colmi Ring synchronisatie is al bezig...".into());
-    }
-
-    let _guard = scopeguard::guard((), |_| {
-        COLMI_SYNC_RUNNING.store(false, Ordering::SeqCst);
-    });
 
     emit_status(&app, "Zoeken naar Colmi Smart Ring in achtergrond-scanner...", 0.10);
     log_ble("[Colmi Sync] Starten van Colmi Smart Ring synchronisatie...");
