@@ -29,18 +29,26 @@ fn emit_status(app: &tauri::AppHandle, status: &str, progress: f32) {
 // ========================================================================================
 
 /// Command Service (Nordic UART style) - 16-byte command/response packets
+#[allow(dead_code)]
 const CMD_SERVICE_UUID: &str = "6e40fff0-b5a3-f393-e0a9-e50e24dcca9e";
+#[allow(dead_code)]
 const CMD_WRITE_UUID: &str = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; // RX (host→ring)
+#[allow(dead_code)]
 const CMD_NOTIFY_UUID: &str = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; // TX (ring→host)
 
 /// Big Data Service - for bulk history (steps, sleep) stored multi-packet streams
+#[allow(dead_code)]
 const BIGDATA_SERVICE_UUID: &str = "de5bf728-d711-4e47-af26-65e3012a5dc7";
+#[allow(dead_code)]
 const BIGDATA_WRITE_UUID: &str = "de5bf72a-d711-4e47-af26-65e3012a5dc7"; // RX (host→ring)
+#[allow(dead_code)]
 const BIGDATA_NOTIFY_UUID: &str = "de5bf729-d711-4e47-af26-65e3012a5dc7"; // TX (ring→host)
 
 /// Command IDs (byte[0] of 16-byte command packets on Command Service)
 const CMD_SET_TIME: u8 = 0x01;
+#[allow(dead_code)]
 const CMD_GET_BATTERY: u8 = 0x03;
+#[allow(dead_code)]
 const CMD_GET_TODAY_STEPS: u8 = 0x13;
 
 /// Big Data command types (byte[0] of BigData packets on BigData Service)
@@ -164,6 +172,7 @@ fn epoch_to_date(epoch: u64) -> (u16, u8, u8) {
 ///   byte[15] = CRC
 ///
 /// Returns: Some((year, month, day, hour, steps, total_packets)) or None
+#[allow(dead_code)]
 #[derive(Debug)]
 enum SportPacket {
     Header { year: u16, month: u8, day: u8, total_packets: u8 },
