@@ -88,33 +88,67 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
                 addLog(`Verbonden met apparaat: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
                 addLog('Synchronisatie van historische stappen & slaap gestart...');
 
-                // Process steps
+                // Process steps: upsert per day (replace existing entries for that day)
                 if (result.steps && result.steps.length > 0) {
-                  const dbSteps = result.steps.map((s: any) => ({
-                    user_id: userId,
-                    step_count: s.step_count,
-                    logged_at: new Date(s.timestamp * 1000).toISOString()
-                  }));
-                  const { error: stepsError } = await supabase.from('vigor_steps').insert(dbSteps);
-                  if (stepsError) throw stepsError;
-                  addLog(`Succes: ${result.steps.length} stappendata opgeslagen.`);
+                  let stepsSaved = 0;
+                  for (const s of result.steps) {
+                    // Use the `date` field from the ring if available, else derive from timestamp
+                    const dateStr = s.date || new Date(s.timestamp * 1000).toISOString().split('T')[0];
+                    const startOfDay = `${dateStr}T00:00:00.000Z`;
+                    const endOfDay = `${dateStr}T23:59:59.999Z`;
+
+                    // Delete existing entry for this day before inserting (upsert-by-day)
+                    await supabase.from('vigor_steps')
+                      .delete()
+                      .eq('user_id', userId)
+                      .gte('logged_at', startOfDay)
+                      .lte('logged_at', endOfDay);
+
+                    const { error: stepsError } = await supabase.from('vigor_steps').insert([{
+                      user_id: userId,
+                      step_count: s.step_count,
+                      logged_at: startOfDay
+                    }]);
+                    if (stepsError) throw stepsError;
+                    stepsSaved++;
+                  }
+                  addLog(`Succes: ${stepsSaved} dagen stappen opgeslagen.`);
+                } else {
+                  addLog('Geen stappen data ontvangen van de ring.');
                 }
 
-                // Process sleep
+                // Process sleep: upsert per day with all sleep phases
                 if (result.sleep && result.sleep.length > 0) {
-                  const dbSleep = result.sleep.map((s: any) => ({
-                    user_id: userId,
-                    duration_minutes: s.duration_minutes,
-                    deep_minutes: s.deep_minutes || Math.round(s.duration_minutes * 0.25),
-                    light_minutes: s.light_minutes || Math.round(s.duration_minutes * 0.55),
-                    rem_minutes: s.rem_minutes || Math.round(s.duration_minutes * 0.18),
-                    awake_minutes: s.awake_minutes || Math.round(s.duration_minutes * 0.02),
-                    quality_score: s.quality_score,
-                    logged_at: new Date(s.timestamp * 1000).toISOString()
-                  }));
-                  const { error: sleepError } = await supabase.from('vigor_sleep').insert(dbSleep);
-                  if (sleepError) throw sleepError;
-                  addLog(`Succes: ${result.sleep.length} slaapdata met slaapfases opgeslagen.`);
+                  let sleepSaved = 0;
+                  for (const s of result.sleep) {
+                    const dateStr = s.date || new Date(s.timestamp * 1000).toISOString().split('T')[0];
+                    const startOfDay = `${dateStr}T00:00:00.000Z`;
+                    const endOfDay = `${dateStr}T23:59:59.999Z`;
+
+                    // Delete existing sleep entry for this day
+                    await supabase.from('vigor_sleep')
+                      .delete()
+                      .eq('user_id', userId)
+                      .gte('logged_at', startOfDay)
+                      .lte('logged_at', endOfDay);
+
+                    const { error: sleepError } = await supabase.from('vigor_sleep').insert([{
+                      user_id: userId,
+                      duration_minutes: s.duration_minutes,
+                      deep_minutes: s.deep_minutes,
+                      light_minutes: s.light_minutes,
+                      rem_minutes: s.rem_minutes,
+                      awake_minutes: s.awake_minutes,
+                      quality_score: s.quality_score,
+                      logged_at: startOfDay
+                    }]);
+                    if (sleepError) throw sleepError;
+                    sleepSaved++;
+                    addLog(`Slaap ${dateStr}: ${s.duration_minutes}min totaal, ${s.deep_minutes}min diep, ${s.light_minutes}min licht, ${s.rem_minutes}min REM`);
+                  }
+                  addLog(`Succes: ${sleepSaved} nachten slaapdata opgeslagen.`);
+                } else {
+                  addLog('Geen slaapdata ontvangen van de ring (ring heeft mogelijk geen slaapsessies opgeslagen).');
                 }
 
                 setStatus('completed');
@@ -336,14 +370,12 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
           )}
 
           {status === 'completed' && (
-            <div style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.15)', borderRadius: '10px', padding: '12px', textAlign: 'left', marginBottom: '20px' }}>
-              <h4 style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', marginBottom: 4 }}>Bèta Protocol Opmerking</h4>
+            <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)', borderRadius: '10px', padding: '12px', textAlign: 'left', marginBottom: '20px' }}>
+              <h4 style={{ fontSize: 12, fontWeight: 800, color: '#10b981', marginBottom: 4 }}>Synchronisatie Geslaagd!</h4>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                De fysieke Bluetooth-koppeling en tijdsynchronisatie met uw Colmi Ring zijn succesvol uitgevoerd!
+                Uw Colmi R02 ring is succesvol gesynchroniseerd. Stappen en slaapgegevens zijn opgeslagen in uw profiel.
                 <br /><br />
-                Omdat de decryptie van het binaire sportprotocol van de ring momenteel nog in actieve ontwikkeling is in deze pilotfase, zijn de ingeladen stappen en slaapuren tijdelijk <strong>demonstratie-waarden</strong>. 
-                <br /><br />
-                U kunt in de tussentijd de knop <strong>+ Log Handmatig</strong> rechtsboven op het dashboard gebruiken om uw werkelijke daggegevens in te voeren.
+                <span style={{ color: '#cbd5e1' }}>💡 Tip:</span> Synchroniseer dagelijks voor de meest nauwkeurige gegevens. De ring slaat maximaal 7 dagen op.
               </p>
             </div>
           )}

@@ -112,6 +112,8 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
   const [measuredWeight, setMeasuredWeight] = useState<number | null>(null);
   const [tempWeight, setTempWeight] = useState<number | null>(activeWeight);
   const [isSaved, setIsSaved] = useState(false);
+  // Stable weight flag: true when scale explicitly confirms a final stable measurement
+  const [isStableMeasurement, setIsStableMeasurement] = useState(false);
 
   // BLE custom metrics state
   const [bleFat, setBleFat] = useState<number | null>(
@@ -181,10 +183,11 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
         try {
           const { listen } = await import('@tauri-apps/api/event');
           unlistenWeight = await listen('native-weight-received', (event: any) => {
-            const payload = event.payload as { weight: number, raw_bytes?: number[] };
-            console.log("Modal received native weight from Tauri Rust:", payload.weight);
+            const payload = event.payload as { weight: number, raw_bytes?: number[], is_stable?: boolean };
+            console.log("Modal received native weight from Tauri Rust:", payload.weight, "stable:", payload.is_stable);
             setTempWeight(payload.weight);
             setDetectedWeight(payload.weight);
+            setIsStableMeasurement(payload.is_stable === true);
             if (payload.raw_bytes) {
               const hexStr = Array.from(payload.raw_bytes)
                 .map(b => b.toString(16).padStart(2, '0').toUpperCase())
@@ -192,7 +195,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
               setRawPacket(hexStr);
             }
             setStatus('connected');
-            setDecodingInfo("Tauri Rust Native BLE Link");
+            setDecodingInfo(payload.is_stable ? "Stabiele meting bevestigd door weegschaal" : "Tauri Rust Native BLE Link");
             if (onPairingSuccess) {
               onPairingSuccess('Neo Health', 'Onyx SE');
             }
@@ -223,9 +226,11 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
       if (event.data?.type === 'native-weight-received') {
         const weight = event.data.weight;
         const raw_bytes = event.data.raw_bytes;
-        console.log("Modal received native weight forwarded from parent Hub:", weight);
+        const is_stable = event.data.is_stable;
+        console.log("Modal received native weight forwarded from parent Hub:", weight, "stable:", is_stable);
         setTempWeight(weight);
         setDetectedWeight(weight);
+        setIsStableMeasurement(is_stable === true);
         if (raw_bytes) {
           const hexStr = Array.from(raw_bytes as number[])
             .map(b => b.toString(16).padStart(2, '0').toUpperCase())
@@ -233,7 +238,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
           setRawPacket(hexStr);
         }
         setStatus('connected');
-        setDecodingInfo("Tauri Rust Native BLE Link (Via parent)");
+        setDecodingInfo(is_stable ? "Stabiele meting bevestigd door weegschaal" : "Tauri Rust Native BLE Link (Via parent)");
         if (onPairingSuccess) {
           onPairingSuccess('Neo Health', 'Onyx SE');
         }
@@ -547,6 +552,16 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
     setIsSaved(true);
   };
 
+  const handleReject = () => {
+    // Clear current measurement and wait for next measurement
+    setTempWeight(null);
+    setDetectedWeight(null);
+    setIsStableMeasurement(false);
+    setRawPacket(null);
+    setDecodingInfo(null);
+    // Don't go back to idle - stay connected so the next measurement can come in
+  };
+
 
   return (
     <div className="modal-overlay">
@@ -610,15 +625,43 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                       </div>
                     ) : tempWeight ? (
                       <div style={{ marginTop: 12, textAlign: 'center', width: '100%' }} className="animate-fade-in">
-                        <span style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase' }}>Huidige meting:</span>
-                        <div style={{ fontSize: 32, fontWeight: 900, color: '#cbd5e1', margin: '4px 0 16px' }}>{tempWeight} kg</div>
-                        <button 
-                          onClick={() => handleSave(tempWeight)}
-                          className="btn-primary" 
-                          style={{ width: '100%', padding: '12px' }}
-                        >
-                          Sla Meting Op
-                        </button>
+                        {/* Live measurement label vs stable */}
+                        {isStableMeasurement ? (
+                          <span style={{ fontSize: 10, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, padding: '2px 10px', fontWeight: 700, textTransform: 'uppercase', display: 'inline-block', marginBottom: 8 }}>
+                            ✓ Stabiele meting — accepteer of weiger
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 20, padding: '2px 10px', fontWeight: 700, textTransform: 'uppercase', display: 'inline-block', marginBottom: 8 }}>
+                            📡 Live meting — stabilisering...
+                          </span>
+                        )}
+                        <div style={{ fontSize: 36, fontWeight: 900, color: '#cbd5e1', margin: '4px 0 16px', letterSpacing: '-1px' }}>{tempWeight} kg</div>
+                        {isStableMeasurement ? (
+                          <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                            <button
+                              onClick={() => handleReject()}
+                              className="btn-secondary"
+                              style={{ flex: 1, padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                            >
+                              <X size={14} /> Afwijzen
+                            </button>
+                            <button
+                              onClick={() => handleSave(tempWeight)}
+                              className="btn-primary"
+                              style={{ flex: 2, padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                            >
+                              ✓ Accepteren & Opslaan
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleSave(tempWeight)}
+                            className="btn-secondary"
+                            style={{ width: '100%', padding: '10px', opacity: 0.7 }}
+                          >
+                            Accepteer Huidige Waarde (Nog niet stabiel)
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 8, textAlign: 'center' }}>
