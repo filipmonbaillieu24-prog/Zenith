@@ -405,10 +405,13 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     let mut ring_peripheral = None;
     let mut ring_address = String::new();
 
-    // Step 1: Check background service cache (5-minute TTL)
+    // Step 1: Check background service cache for known MAC address (5-minute TTL)
+    // NOTE: We only use the cached ADDRESS, not the peripheral object itself.
+    // Cached peripheral objects can become stale (report connected but can't discover services).
+    let mut cached_mac: Option<String> = None;
     {
         let cache_guard = LAST_DISCOVERED_RING.lock().await;
-        if let Some((ref p, ref addr, ref time)) = *cache_guard {
+        if let Some((_, ref addr, ref time)) = *cache_guard {
             let addr_lower = addr.to_lowercase();
             let cache_valid = time.elapsed() < std::time::Duration::from_secs(300);
             let not_bad_device = !addr_lower.contains("10:5a:17:af:36:bf");
@@ -416,11 +419,34 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 .map_or(true, |m| addr_lower == m.to_lowercase());
 
             if cache_valid && not_bad_device && matches_target {
-                log_ble(&format!("[Colmi Sync] Ring gevonden in cache! Adres: {}", addr));
-                emit_status(&app, &format!("Colmi Ring gevonden in cache: {}", addr), 0.30);
-                ring_peripheral = Some(p.clone());
-                ring_address = addr.clone();
+                log_ble(&format!("[Colmi Sync] MAC uit cache: {}", addr));
+                cached_mac = Some(addr.clone());
             }
+        }
+    }
+
+    // If we have a cached MAC, look up a FRESH peripheral from the global adapter
+    if let Some(ref mac) = cached_mac {
+        if let Ok(peripherals) = global_adapter.peripherals().await {
+            for p in peripherals {
+                let addr = p.address().to_string();
+                if addr.to_lowercase() == mac.to_lowercase() {
+                    log_ble(&format!("[Colmi Sync] Vers peripheral gevonden via cached MAC: {}", addr));
+                    // Disconnect stale connection if any
+                    if let Ok(true) = p.is_connected().await {
+                        log_ble("[Colmi Sync] Stale connectie verbreken...");
+                        let _ = p.disconnect().await;
+                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                    }
+                    ring_peripheral = Some(p);
+                    ring_address = addr;
+                    emit_status(&app, &format!("Colmi Ring gevonden (cache): {}", ring_address), 0.30);
+                    break;
+                }
+            }
+        }
+        if ring_peripheral.is_none() {
+            log_ble("[Colmi Sync] Cached MAC niet gevonden in bekende peripherals. Doorgaan met scan...");
         }
     }
 
@@ -713,312 +739,329 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     };
 
     // ========================================================================================
-    // TIME SYNCHRONIZATION
+    // TIME SYNCHRONIZATION + LIVE ACTIVITY CAPTURE
     // ========================================================================================
     emit_status(&app, "Tijd synchroniseren...", 0.55);
     let time_cmd = make_time_sync_cmd();
     log_ble(&format!("[Colmi Sync] SET_TIME (0x01): {:?}", time_cmd));
     let _ = peripheral.write(&cmd_write, &time_cmd, btleplug::api::WriteType::WithoutResponse).await;
 
-    // Drain time sync response (1-2 packets, up to 2s)
-    for _ in 0..3 {
+    // Drain time sync responses and capture 0x73 0x12 live activity (today's steps)
+    let mut steps_by_date: HashMap<String, (i32, u64)> = HashMap::new();
+    let mut today_steps: u32 = 0;
+    let today_str = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    let today_epoch = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    for i in 0..8 {
         match tokio::time::timeout(tokio::time::Duration::from_millis(2000), notification_stream.next()).await {
-            Ok(Some(n)) => { log_ble(&format!("[Colmi Sync] Notificatie (TimeSync): {:?}", n.value)); }
-            _ => break,
+            Ok(Some(n)) => {
+                let data = n.value;
+                log_ble(&format!("[Colmi Sync] Post-TimeSync notificatie[{}]: {:?} (len={})", i, data, data.len()));
+
+                // Parse 0x73 0x12 = CMD_NOTIFICATION / LIVE_ACTIVITY
+                if data.len() >= 12 && data[0] == 0x73 && data[1] == 0x12 {
+                    let steps = (data[4] as u32) | ((data[5] as u32) << 8);
+                    let distance_cm = (data[6] as u32) | ((data[7] as u32) << 8);
+                    let calories = (data[10] as u32) | ((data[11] as u32) << 8);
+                    log_ble(&format!(
+                        "[Colmi Sync] ★ LIVE ACTIVITY: stappen={}, afstand={}cm, calorieën={}",
+                        steps, distance_cm, calories
+                    ));
+                    if steps > today_steps {
+                        today_steps = steps;
+                    }
+                }
+            }
+            _ => {
+                log_ble(&format!("[Colmi Sync] Post-TimeSync timeout na packet {}", i));
+                break;
+            }
         }
     }
 
+    // Store today's live steps
+    if today_steps > 0 {
+        log_ble(&format!("[Colmi Sync] Vandaag live stappen: {} ({})", today_steps, today_str));
+        steps_by_date.insert(today_str.clone(), (today_steps as i32, today_epoch));
+    }
+
     // ========================================================================================
-    // STEPS / SPORT HISTORY (via BigData Service if available, else command service)
+    // HISTORICAL STEPS (via CMD_BIG_DATA_V2 = 0xBC, sub_type = 0x01)
+    // Protocol: Write [0xBC, day_offset, 0x01, 0..0, checksum] to CMD_WRITE (6e400002)
+    // Ring replies: ACK on CMD_NOTIFY + data packets on BIGDATA_NOTIFY (de5bf729)
     // ========================================================================================
     emit_status(&app, "Stappen opvragen...", 0.60);
+    log_ble("[Colmi Sync] === HISTORISCHE STAPPEN OPHALEN (0xBC sub=0x01) ===");
 
-    // Accumulate steps per day: date_str → (total_steps, epoch)
-    let mut steps_by_date: HashMap<String, (i32, u64)> = HashMap::new();
+    for day_offset in 1u8..=7 {
+        // Build 0xBC command for historical steps
+        let mut cmd = [0u8; 16];
+        cmd[0] = 0xBC;         // CMD_BIG_DATA_V2
+        cmd[1] = day_offset;   // day offset (1 = yesterday, 7 = 7 days ago)
+        cmd[2] = 0x01;         // sub_type = sport/steps
+        // Checksum = sum of bytes[0..14] & 0xFF
+        let cksum: u16 = cmd[..15].iter().map(|&b| b as u16).sum();
+        cmd[15] = (cksum & 0xFF) as u8;
 
-    let use_bigdata = bigdata_write_char.is_some() && bigdata_notify_char.is_some();
+        log_ble(&format!("[Colmi Sync] Steps request dag_offset={}: {:?}", day_offset, cmd));
+        if let Err(e) = peripheral.write(&cmd_write, &cmd, btleplug::api::WriteType::WithoutResponse).await {
+            log_ble(&format!("[Colmi Sync] Steps write fout dag {}: {:?}", day_offset, e));
+            continue;
+        }
 
-    if use_bigdata {
-        let bd_write = bigdata_write_char.as_ref().unwrap();
+        // Wait for ACK + data packets
+        let mut day_total_steps: i32 = 0;
+        let mut day_date_str = String::new();
+        let mut day_epoch: u64 = 0;
+        let mut got_ack = false;
+        let mut data_packets_expected = 0u32;
+        let mut data_packets_received = 0u32;
 
-        // Request 7 days of sport history
-        let sport_req = make_bigdata_request(BIGDATA_SPORT, 7);
-        log_ble(&format!("[Colmi Sync] BigData SPORT request (0x27, 7 days): {:?}", sport_req));
-        let _ = peripheral.write(bd_write, &sport_req, btleplug::api::WriteType::WithoutResponse).await;
-
-        let mut current_date = String::new();
-        let mut current_epoch: u64 = 0;
-        let mut expected_packets: Option<u8> = None;
-        let mut received_packets = 0u8;
-        let mut hourly_steps: HashMap<u8, u32> = HashMap::new(); // hour → steps
-
-        // Collect packets until done or timeout
-        let timeout_start = std::time::Instant::now();
+        let day_timeout = std::time::Instant::now();
         loop {
-            if timeout_start.elapsed() > std::time::Duration::from_secs(30) {
-                log_ble("[Colmi Sync] Sport BigData timeout na 30s");
+            if day_timeout.elapsed() > std::time::Duration::from_secs(10) {
+                log_ble(&format!("[Colmi Sync] Steps timeout dag_offset={}", day_offset));
                 break;
             }
 
-            match tokio::time::timeout(tokio::time::Duration::from_millis(2000), notification_stream.next()).await {
+            match tokio::time::timeout(tokio::time::Duration::from_millis(3000), notification_stream.next()).await {
                 Ok(Some(n)) => {
                     let data = n.value;
-                    log_ble(&format!("[Colmi Sync] BigData Sport notificatie: {:?}", data));
+                    log_ble(&format!("[Colmi Sync] Steps[dag={}] notificatie: {:?} (len={})", day_offset, data, data.len()));
 
-                    // Only process BigData service notifications (0x27 opcode)
-                    if data.is_empty() || data[0] != 0x27 {
+                    // Skip live activity notifications (0x73) that may interleave
+                    if !data.is_empty() && data[0] == 0x73 {
+                        if data.len() >= 6 && data[1] == 0x12 {
+                            let steps = (data[4] as u32) | ((data[5] as u32) << 8);
+                            if steps > today_steps { today_steps = steps; }
+                        }
                         continue;
                     }
 
-                    match parse_sport_bigdata_packet(&data) {
-                        Some(SportPacket::NoData) => {
-                            log_ble("[Colmi Sync] Geen sport data voor gevraagde periode.");
+                    // ACK packet from CMD_NOTIFY: typically 7 bytes [0xBC, day, status, ...]
+                    if !got_ack && !data.is_empty() && data[0] == 0xBC {
+                        got_ack = true;
+                        let status = if data.len() > 2 { data[2] } else { 0 };
+                        log_ble(&format!("[Colmi Sync] Steps ACK dag={}: status={} (1=data, 0/FF=geen data)", day_offset, status));
+
+                        if status != 1 {
+                            log_ble(&format!("[Colmi Sync] Geen stappen data voor dag_offset={}", day_offset));
                             break;
                         }
-                        Some(SportPacket::Header { year, month, day, total_packets }) => {
-                            // Save previous day's total
-                            if !current_date.is_empty() {
-                                let total: i32 = hourly_steps.values().map(|&s| s as i32).sum();
-                                if total > 0 {
-                                    steps_by_date.insert(current_date.clone(), (total, current_epoch));
-                                }
-                            }
 
-                            current_date = format!("{:04}-{:02}-{:02}", year, month, day);
-                            current_epoch = date_to_epoch(year, month, day);
-                            expected_packets = Some(total_packets);
-                            received_packets = 0;
-                            hourly_steps.clear();
+                        // Extract expected packet count if available
+                        if data.len() >= 6 {
+                            data_packets_expected = (data[4] as u32) | ((data[5] as u32) << 8);
+                            log_ble(&format!("[Colmi Sync] Verwacht {} data pakketten", data_packets_expected));
                         }
-                        Some(SportPacket::Data { packet_index, hour, steps, .. }) => {
-                            hourly_steps.insert(hour, steps);
-                            received_packets = received_packets.max(packet_index + 1);
 
-                            // All packets received for this day?
-                            if let Some(expected) = expected_packets {
-                                if received_packets >= expected && expected > 0 {
-                                    let total: i32 = hourly_steps.values().map(|&s| s as i32).sum();
-                                    if total > 0 {
-                                        log_ble(&format!("[Colmi Sync] Stappen voor {}: {} totaal", current_date, total));
-                                        steps_by_date.insert(current_date.clone(), (total, current_epoch));
-                                    }
-                                    current_date.clear();
-                                    expected_packets = None;
-                                    received_packets = 0;
-                                    hourly_steps.clear();
-                                }
+                        // Calculate date for this day_offset
+                        let offset_secs = day_offset as u64 * 86400;
+                        day_epoch = today_epoch.saturating_sub(offset_secs);
+                        let dt = chrono::DateTime::from_timestamp(day_epoch as i64, 0)
+                            .unwrap_or_else(|| chrono::DateTime::from_timestamp(0, 0).unwrap());
+                        day_date_str = dt.format("%Y-%m-%d").to_string();
+                        continue;
+                    }
+
+                    // Data packet from BIGDATA_NOTIFY (format varies)
+                    if got_ack && !data.is_empty() {
+                        data_packets_received += 1;
+
+                        // Try to extract step counts from data packet
+                        // Common BigData sport format: each packet may contain hourly step data
+                        if data.len() >= 8 {
+                            // Try parsing as hourly sport data:
+                            // Bytes may contain: [header, hour, steps_lo, steps_hi, cal_lo, cal_hi, dist_lo, dist_hi, ...]
+                            let potential_steps = (data[2] as i32) | ((data[3] as i32) << 8);
+                            if potential_steps > 0 && potential_steps < 50000 {
+                                log_ble(&format!("[Colmi Sync] Steps data pakket {}: potentiële stappen={}", data_packets_received, potential_steps));
+                                day_total_steps += potential_steps;
                             }
                         }
-                        None => {}
+
+                        // Check if we've received all expected packets
+                        if data_packets_expected > 0 && data_packets_received >= data_packets_expected {
+                            log_ble(&format!("[Colmi Sync] Alle {} pakketten ontvangen voor dag {}", data_packets_expected, day_offset));
+                            break;
+                        }
                     }
                 }
                 _ => {
-                    // Timeout - save any remaining data
-                    if !current_date.is_empty() {
-                        let total: i32 = hourly_steps.values().map(|&s| s as i32).sum();
-                        if total > 0 {
-                            steps_by_date.insert(current_date.clone(), (total, current_epoch));
-                        }
-                    }
+                    log_ble(&format!("[Colmi Sync] Steps timeout wachten op packet dag_offset={}", day_offset));
                     break;
                 }
             }
         }
-    } else {
-        // Fallback: use command service, query per-day (old approach with corrected command bytes)
-        log_ble("[Colmi Sync] BigData service niet beschikbaar. Fallback naar command service (0x43)...");
 
-        for day_offset in 0u8..=7 {
-            // Correct command per tahnok/colmi_r02_client:
-            // [0x43, day_offset, 0x0F, 0x00, 0x5F, 0x01, 0x00..., CRC]
-            let steps_cmd = make_cmd_packet(0x43, &[day_offset, 0x0F, 0x00, 0x5F, 0x01]);
-            log_ble(&format!("[Colmi Sync] CMD steps dag_offset={}: {:?}", day_offset, steps_cmd));
-            let _ = peripheral.write(&cmd_write, &steps_cmd, btleplug::api::WriteType::WithoutResponse).await;
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-            let mut day_steps: i32 = 0;
-            let mut day_date = String::new();
-            let mut day_epoch: u64 = 0;
-            let mut pkt_count = 0u32;
-
-            loop {
-                match tokio::time::timeout(tokio::time::Duration::from_millis(2000), notification_stream.next()).await {
-                    Ok(Some(n)) => {
-                        let data = n.value;
-                        log_ble(&format!("[Colmi Sync] CMD Steps notificatie (offset {}): {:?}", day_offset, data));
-                        pkt_count += 1;
-
-                        if data.len() < 16 || (data[0] != 0x43 && data[0] != 0xC3) { continue; }
-
-                        // "no data" response
-                        if data[1] == 0xFF { break; }
-                        // Header packet (byte[1] = 0xF0)
-                        if data[1] == 0xF0 { continue; }
-
-                        // Data packet: BCD date in bytes[1..3], time_index in byte[4]
-                        // steps at bytes[8..9] (16-bit BE per colmi_r02_client SportDetail)
-                        let year_bcd = data[1];
-                        let month_bcd = data[2];
-                        let day_bcd = data[3];
-
-                        // Convert BCD to decimal
-                        let yr = ((year_bcd >> 4) * 10 + (year_bcd & 0x0F)) as u16 + 2000;
-                        let mo = (month_bcd >> 4) * 10 + (month_bcd & 0x0F);
-                        let dy = (day_bcd >> 4) * 10 + (day_bcd & 0x0F);
-
-                        if yr >= 2020 && yr <= 2050 && mo >= 1 && mo <= 12 && dy >= 1 && dy <= 31 {
-                            if day_date.is_empty() {
-                                day_date = format!("{:04}-{:02}-{:02}", yr, mo, dy);
-                                day_epoch = date_to_epoch(yr, mo, dy);
-                            }
-                            // Steps at bytes[8..9] big-endian (confirmed from log captures)
-                            let steps = ((data[8] as i32) << 8) | (data[9] as i32);
-                            day_steps += steps;
-                        }
-
-                        // 0xC3 = end-of-day marker
-                        if data[0] == 0xC3 { break; }
-                        if pkt_count > 100 { break; }
-                    }
-                    _ => break,
-                }
-            }
-
-            if day_steps > 0 && !day_date.is_empty() {
-                log_ble(&format!("[Colmi Sync] Stappen voor {}: {}", day_date, day_steps));
-                steps_by_date.entry(day_date).or_insert((day_steps, day_epoch));
-            }
+        if day_total_steps > 0 && !day_date_str.is_empty() {
+            log_ble(&format!("[Colmi Sync] ★ Stappen voor {}: {}", day_date_str, day_total_steps));
+            steps_by_date.entry(day_date_str).or_insert((day_total_steps, day_epoch));
         }
+
+        // Small delay between day requests
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+    }
+
+    // Update today's steps if we got more live updates during history fetch
+    if today_steps > 0 {
+        steps_by_date.insert(today_str.clone(), (today_steps as i32, today_epoch));
     }
 
     // ========================================================================================
-    // SLEEP HISTORY (via BigData Service if available)
+    // HISTORICAL SLEEP (via CMD_BIG_DATA_V2 = 0xBC, sub_type = 0x00)
+    // Protocol: Write [0xBC, day_offset, 0x00, 0..0, checksum] to CMD_WRITE (6e400002)
+    // Ring replies: ACK on CMD_NOTIFY + sleep phase data on BIGDATA_NOTIFY (de5bf729)
     // ========================================================================================
     emit_status(&app, "Slaapgegevens opvragen...", 0.75);
+    log_ble("[Colmi Sync] === HISTORISCHE SLAAP OPHALEN (0xBC sub=0x00) ===");
 
     // date_str → (total_min, deep_min, light_min, rem_min, awake_min, quality, epoch)
     let mut sleep_by_date: HashMap<String, (i32, i32, i32, i32, i32, i32, u64)> = HashMap::new();
 
-    if use_bigdata {
-        let bd_write = bigdata_write_char.as_ref().unwrap();
+    for day_offset in 1u8..=7 {
+        // Build 0xBC command for historical sleep
+        let mut cmd = [0u8; 16];
+        cmd[0] = 0xBC;         // CMD_BIG_DATA_V2
+        cmd[1] = day_offset;   // day offset
+        cmd[2] = 0x00;         // sub_type = sleep
+        let cksum: u16 = cmd[..15].iter().map(|&b| b as u16).sum();
+        cmd[15] = (cksum & 0xFF) as u8;
 
-        // Request 7 days of sleep history
-        let sleep_req = make_bigdata_request(BIGDATA_SLEEP, 7);
-        log_ble(&format!("[Colmi Sync] BigData SLEEP request (0xBC, 7 days): {:?}", sleep_req));
-        let _ = peripheral.write(bd_write, &sleep_req, btleplug::api::WriteType::WithoutResponse).await;
+        log_ble(&format!("[Colmi Sync] Sleep request dag_offset={}: {:?}", day_offset, cmd));
+        if let Err(e) = peripheral.write(&cmd_write, &cmd, btleplug::api::WriteType::WithoutResponse).await {
+            log_ble(&format!("[Colmi Sync] Sleep write fout dag {}: {:?}", day_offset, e));
+            continue;
+        }
 
-        let mut current_sleep_date = String::new();
-        let mut current_sleep_epoch: u64 = 0;
-        let mut current_sleep_start_min: u16 = 0;
-        let mut current_sleep_end_min: u16 = 0;
-        let mut expected_sleep_packets: Option<u8> = None;
-        let mut received_sleep_packets = 0u8;
+        let mut got_ack = false;
+        let mut data_packets_expected = 0u32;
+        let mut data_packets_received = 0u32;
+        let mut sleep_date_str = String::new();
+        let mut sleep_epoch: u64 = 0;
+        let mut sleep_start_min: u16 = 0;
+        let mut sleep_end_min: u16 = 0;
         let mut phase_deep_min = 0i32;
         let mut phase_light_min = 0i32;
         let mut phase_rem_min = 0i32;
         let mut phase_awake_min = 0i32;
 
-        let timeout_start = std::time::Instant::now();
+        let day_timeout = std::time::Instant::now();
         loop {
-            if timeout_start.elapsed() > std::time::Duration::from_secs(30) {
-                log_ble("[Colmi Sync] Sleep BigData timeout na 30s");
+            if day_timeout.elapsed() > std::time::Duration::from_secs(10) {
+                log_ble(&format!("[Colmi Sync] Sleep timeout dag_offset={}", day_offset));
                 break;
             }
 
-            match tokio::time::timeout(tokio::time::Duration::from_millis(2000), notification_stream.next()).await {
+            match tokio::time::timeout(tokio::time::Duration::from_millis(3000), notification_stream.next()).await {
                 Ok(Some(n)) => {
                     let data = n.value;
-                    log_ble(&format!("[Colmi Sync] BigData Sleep notificatie: {:?}", data));
+                    log_ble(&format!("[Colmi Sync] Sleep[dag={}] notificatie: {:?} (len={})", day_offset, data, data.len()));
 
-                    if data.is_empty() || data[0] != 0xBC {
+                    // Skip live activity notifications
+                    if !data.is_empty() && data[0] == 0x73 { continue; }
+
+                    // ACK packet from CMD_NOTIFY
+                    if !got_ack && !data.is_empty() && data[0] == 0xBC {
+                        got_ack = true;
+                        let status = if data.len() > 2 { data[2] } else { 0 };
+                        log_ble(&format!("[Colmi Sync] Sleep ACK dag={}: status={}", day_offset, status));
+
+                        if status != 1 {
+                            log_ble(&format!("[Colmi Sync] Geen slaap data voor dag_offset={}", day_offset));
+                            break;
+                        }
+
+                        // Calculate date
+                        let offset_secs = day_offset as u64 * 86400;
+                        sleep_epoch = today_epoch.saturating_sub(offset_secs);
+                        let dt = chrono::DateTime::from_timestamp(sleep_epoch as i64, 0)
+                            .unwrap_or_else(|| chrono::DateTime::from_timestamp(0, 0).unwrap());
+                        sleep_date_str = dt.format("%Y-%m-%d").to_string();
+
+                        // Try to extract sleep timing from ACK if available
+                        if data.len() >= 7 {
+                            sleep_start_min = (data[3] as u16) | ((data[4] as u16) << 8);
+                            sleep_end_min = (data[5] as u16) | ((data[6] as u16) << 8);
+                            log_ble(&format!("[Colmi Sync] Sleep timing: start={}min end={}min", sleep_start_min, sleep_end_min));
+                            if data.len() >= 8 {
+                                data_packets_expected = data[7] as u32;
+                                log_ble(&format!("[Colmi Sync] Verwacht {} slaap data pakketten", data_packets_expected));
+                            }
+                        }
                         continue;
                     }
 
-                    match parse_sleep_bigdata_packet(&data) {
-                        Some(SleepPacket::NoData) => {
-                            log_ble("[Colmi Sync] Geen slaapdata voor gevraagde periode.");
+                    // Data packets from BIGDATA_NOTIFY with sleep phase data
+                    if got_ack && !data.is_empty() {
+                        data_packets_received += 1;
+
+                        // Try to parse sleep phase data
+                        // Expected format on BigData Notify: pairs of (phase_type, duration_minutes)
+                        // phase_type: 0x02=Light, 0x03=Deep, 0x04=REM, 0x05=Awake
+                        // OR:         0x00=Awake, 0x01=Light, 0x02=Deep, 0x03=REM
+                        let mut i = 0usize;
+                        // Skip first byte if it looks like a header/index
+                        if data.len() >= 3 && data[0] < 100 {
+                            i = 1; // skip packet index byte
+                        }
+
+                        while i + 1 < data.len() {
+                            let phase_type = data[i];
+                            let duration = data[i + 1];
+
+                            if duration == 0 || phase_type == 0xFF || duration == 0xFF {
+                                break;
+                            }
+
+                            // Try both possible phase type encodings
+                            match phase_type {
+                                // Encoding A: 0x02=Light, 0x03=Deep, 0x04=REM, 0x05=Awake
+                                0x02 => { phase_light_min += duration as i32; log_ble(&format!("[Colmi Sleep] Lichte slaap: {}min", duration)); }
+                                0x03 => { phase_deep_min += duration as i32; log_ble(&format!("[Colmi Sleep] Diepe slaap: {}min", duration)); }
+                                0x04 => { phase_rem_min += duration as i32; log_ble(&format!("[Colmi Sleep] REM slaap: {}min", duration)); }
+                                0x05 => { phase_awake_min += duration as i32; log_ble(&format!("[Colmi Sleep] Wakker: {}min", duration)); }
+                                // Encoding B: 0x00=Awake, 0x01=Light, 0x02=Deep, 0x03=REM (handled by 0x02/0x03 above)
+                                0x00 => { phase_awake_min += duration as i32; log_ble(&format!("[Colmi Sleep] Wakker(B): {}min", duration)); }
+                                0x01 => { phase_light_min += duration as i32; log_ble(&format!("[Colmi Sleep] Lichte slaap(B): {}min", duration)); }
+                                _ => {
+                                    log_ble(&format!("[Colmi Sleep] Onbekend fase type: 0x{:02X} duur={}min", phase_type, duration));
+                                }
+                            }
+                            i += 2;
+                        }
+
+                        if data_packets_expected > 0 && data_packets_received >= data_packets_expected {
+                            log_ble(&format!("[Colmi Sync] Alle {} slaap pakketten ontvangen voor dag {}", data_packets_expected, day_offset));
                             break;
                         }
-                        Some(SleepPacket::Header {
-                            year, month, day,
-                            sleep_start_min, sleep_end_min, total_packets
-                        }) => {
-                            // Save previous night's data
-                            if !current_sleep_date.is_empty() {
-                                save_sleep_record(
-                                    &mut sleep_by_date,
-                                    &current_sleep_date,
-                                    current_sleep_epoch,
-                                    current_sleep_start_min,
-                                    current_sleep_end_min,
-                                    phase_deep_min, phase_light_min, phase_rem_min, phase_awake_min,
-                                );
-                            }
-
-                            // Start new sleep session
-                            // Sleep spanning midnight: start > end in minutes → crosses midnight
-                            // The date stored is the morning date (wake-up date)
-                            current_sleep_date = format!("{:04}-{:02}-{:02}", year, month, day);
-                            current_sleep_epoch = date_to_epoch(year, month, day);
-                            current_sleep_start_min = sleep_start_min;
-                            current_sleep_end_min = sleep_end_min;
-                            expected_sleep_packets = Some(total_packets);
-                            received_sleep_packets = 0;
-                            phase_deep_min = 0;
-                            phase_light_min = 0;
-                            phase_rem_min = 0;
-                            phase_awake_min = 0;
-                        }
-                        Some(SleepPacket::PhaseData { packet_index, phases }) => {
-                            for (phase_type, duration_min) in phases {
-                                match phase_type {
-                                    SLEEP_PHASE_AWAKE => { phase_awake_min += duration_min as i32; }
-                                    SLEEP_PHASE_LIGHT => { phase_light_min += duration_min as i32; }
-                                    SLEEP_PHASE_DEEP  => { phase_deep_min += duration_min as i32; }
-                                    SLEEP_PHASE_REM   => { phase_rem_min += duration_min as i32; }
-                                    _ => {}
-                                }
-                            }
-                            received_sleep_packets = received_sleep_packets.max(packet_index + 1);
-
-                            // All packets for this night received?
-                            if let Some(expected) = expected_sleep_packets {
-                                if received_sleep_packets >= expected && expected > 0 {
-                                    save_sleep_record(
-                                        &mut sleep_by_date,
-                                        &current_sleep_date,
-                                        current_sleep_epoch,
-                                        current_sleep_start_min,
-                                        current_sleep_end_min,
-                                        phase_deep_min, phase_light_min, phase_rem_min, phase_awake_min,
-                                    );
-                                    current_sleep_date.clear();
-                                    expected_sleep_packets = None;
-                                    received_sleep_packets = 0;
-                                }
-                            }
-                        }
-                        None => {}
                     }
                 }
                 _ => {
-                    // Timeout - save last pending sleep record
-                    if !current_sleep_date.is_empty() && (phase_deep_min + phase_light_min + phase_rem_min + phase_awake_min) > 0 {
-                        save_sleep_record(
-                            &mut sleep_by_date,
-                            &current_sleep_date,
-                            current_sleep_epoch,
-                            current_sleep_start_min,
-                            current_sleep_end_min,
-                            phase_deep_min, phase_light_min, phase_rem_min, phase_awake_min,
-                        );
-                    }
+                    log_ble(&format!("[Colmi Sync] Sleep timeout wachten op packet dag_offset={}", day_offset));
                     break;
                 }
             }
         }
-    } else {
-        log_ble("[Colmi Sync] BigData service niet beschikbaar voor slaap. Geen historische slaapdata.");
+
+        // Save sleep record for this day
+        let phase_total = phase_deep_min + phase_light_min + phase_rem_min + phase_awake_min;
+        if phase_total > 0 && !sleep_date_str.is_empty() {
+            save_sleep_record(
+                &mut sleep_by_date,
+                &sleep_date_str,
+                sleep_epoch,
+                sleep_start_min,
+                sleep_end_min,
+                phase_deep_min, phase_light_min, phase_rem_min, phase_awake_min,
+            );
+        }
+
+        // Small delay between day requests
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
     }
 
     // ========================================================================================
