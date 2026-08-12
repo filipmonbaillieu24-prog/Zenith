@@ -13,10 +13,12 @@ class LoggerService {
   private logs: LogEntry[] = [];
   private listeners: Set<LogListener> = new Set();
   private maxLogs = 1000;
+  private tauriInitialized = false;
 
   constructor() {
     this.initConsoleInterceptors();
     this.initWindowPostMessageListener();
+    this.initTauriGlobalListeners();
   }
 
   private initConsoleInterceptors() {
@@ -45,16 +47,64 @@ class LoggerService {
       if (event.data && typeof event.data === 'object') {
         const { type } = event.data;
         if (type === 'native-weight-received') {
-          this.addLog('ble', 'Scale', `Weegschaal gewicht ontvangen: ${event.data.weight} kg`, event.data);
+          this.addLog('ble', 'Scale', `[Weegschaal] Gewicht ontvangen: ${event.data.weight} kg (Stabiel: ${event.data.is_stable ? 'Ja' : 'Nee'})`, event.data);
         } else if (type === 'native-metrics-received') {
-          this.addLog('ble', 'Scale', `Weegschaal lichaamsstatistieken ontvangen`, event.data);
+          this.addLog('ble', 'Scale', `[Weegschaal] Lichaamsanalyse metrics ontvangen`, event.data);
         } else if (type === 'colmi-sync-status-update') {
-          this.addLog('sync', 'Colmi', `Colmi Ring Status: ${event.data.status || ''}`, event.data);
+          this.addLog('sync', 'Colmi', `[Colmi] Status Update: ${event.data.status || ''}`, event.data);
         } else if (type === 'colmi-sync-result') {
-          this.addLog('sync', 'Colmi', `Colmi Ring Synchronisatie Resultaat`, event.data);
+          if (event.data.success) {
+            this.addLog('sync', 'Colmi', `[Colmi] Synchronisatie succesvol afgerond`, event.data);
+          } else {
+            this.addLog('error', 'Colmi', `[Colmi] Synchronisatie fout: ${event.data.error || 'Onbekend'}`, event.data);
+          }
         }
       }
     });
+  }
+
+  private initTauriGlobalListeners() {
+    if (this.tauriInitialized) return;
+    if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
+      this.tauriInitialized = true;
+      import('@tauri-apps/api/event').then(({ listen }) => {
+        // Global listener for Rust log_ble messages
+        listen<string>('ble-log-message', (event) => {
+          const text = event.payload || '';
+          let category: LogEntry['category'] = 'BLE';
+          if (text.includes('Colmi') || text.includes('Ring') || text.includes('0x43') || text.includes('0x44') || text.includes('0x27') || text.includes('0xBC')) {
+            category = 'Colmi';
+          } else if (text.includes('Scale') || text.includes('weight') || text.includes('Weegschaal') || text.includes('Neo') || text.includes('Onyx') || text.includes('Yolanda')) {
+            category = 'Scale';
+          }
+
+          this.addLog('ble', category, text);
+        });
+
+        // Global listener for Colmi status updates
+        listen<string>('colmi-sync-status', (event) => {
+          this.addLog('sync', 'Colmi', `[Colmi Status] ${event.payload}`);
+        });
+
+        // Global listener for Native Weight events
+        listen<any>('native-weight-received', (event) => {
+          const payload = event.payload;
+          if (payload && payload.weight) {
+            this.addLog('ble', 'Scale', `[Weegschaal] Native BLE Gewichtsmeting: ${payload.weight} kg (Stabiel: ${payload.is_stable ? 'JA' : 'Nee'})`, payload);
+          }
+        });
+
+        // Global listener for Native Metrics events
+        listen<any>('native-metrics-received', (event) => {
+          const payload = event.payload;
+          if (payload) {
+            this.addLog('ble', 'Scale', `[Weegschaal] Lichaamssamenstelling metrics ontvangen`, payload);
+          }
+        });
+      }).catch((err) => {
+        console.error("Fout bij registreren van globale Tauri event listeners in LoggerService:", err);
+      });
+    }
   }
 
   private captureConsole(level: 'info' | 'warn' | 'error', args: any[]) {
@@ -62,12 +112,18 @@ class LoggerService {
       .map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)))
       .join(' ');
 
+    // Avoid duplicate logging if message comes from LoggerService itself
+    if (textMessage.includes('[Colmi]') || textMessage.includes('[Weegschaal]') || textMessage.includes('[BLE]')) {
+      // Handled via explicit addLog
+      return;
+    }
+
     let category: LogEntry['category'] = 'System';
     let logMsg = textMessage;
 
-    if (textMessage.includes('BLE') || textMessage.includes('scale') || textMessage.includes('weegschaal')) {
+    if (textMessage.includes('BLE') || textMessage.includes('scale') || textMessage.includes('weegschaal') || textMessage.includes('Neo') || textMessage.includes('Onyx')) {
       category = 'Scale';
-    } else if (textMessage.includes('Colmi') || textMessage.includes('ring')) {
+    } else if (textMessage.includes('Colmi') || textMessage.includes('ring') || textMessage.includes('Q-Ring')) {
       category = 'Colmi';
     } else if (textMessage.includes('Supabase') || textMessage.includes('vigor_') || textMessage.includes('kratos_')) {
       category = 'Supabase';

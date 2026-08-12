@@ -527,17 +527,29 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
     };
 
+    // Pause background scanner BEFORE GATT connection attempt so Bluetooth adapter is dedicated to GATT handshake
+    let adapter_opt = {
+        let guard = GLOBAL_ADAPTER.lock().await;
+        guard.clone()
+    };
+    if let Some(ref adapter) = adapter_opt {
+        log_ble("[Colmi Sync] Achtergrond-scanner pauzeren voor GATT-verbinding...");
+        let _ = adapter.stop_scan().await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+    }
+
     // ========================================================================================
     // GATT CONNECTION
     // ========================================================================================
-    log_ble("[Colmi Sync] Verbinding opzetten...");
+    log_ble(&format!("[Colmi Sync] Verbinding opzetten met Colmi Ring (MAC: {})...", ring_address));
     emit_status(&app, "Verbinden met Colmi Ring...", 0.40);
 
     let mut connect_success = false;
     for attempt in 1..=3 {
-        log_ble(&format!("[Colmi Sync] Verbindingspoging {}/3: {}", attempt, ring_address));
+        log_ble(&format!("[Colmi Sync] Verbindingspoging {}/3 naar MAC: {}", attempt, ring_address));
 
         if let Ok(true) = peripheral.is_connected().await {
+            log_ble("[Colmi Sync] Apparaat is al verbonden!");
             connect_success = true;
             break;
         }
@@ -547,15 +559,15 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             peripheral.connect()
         ).await {
             Ok(Ok(_)) => {
-                log_ble("[Colmi Sync] Verbonden!");
+                log_ble("[Colmi Sync] GATT Verbinding succesvol tot stand gebracht!");
                 connect_success = true;
                 break;
             }
             Ok(Err(e)) => {
-                log_ble(&format!("[Colmi Sync] Connect fout: {:?}. Wachten...", e));
-                // Wait up to 5s for spontaneous connection (ring may connect asynchronously on Windows BT stack)
+                log_ble(&format!("[Colmi Sync] Connect meldt status: {:?}. Wachten op verbinding...", e));
+                // On Windows BT stack, peripheral.connect() sometimes returns NotConnected even if connection succeeds asynchronously
                 let t0 = std::time::Instant::now();
-                while t0.elapsed() < std::time::Duration::from_secs(5) {
+                while t0.elapsed() < std::time::Duration::from_secs(4) {
                     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                     if let Ok(true) = peripheral.is_connected().await {
                         log_ble("[Colmi Sync] Achtergrond-verbinding bevestigd!");
@@ -564,6 +576,13 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     }
                 }
                 if connect_success { break; }
+
+                // Try discover_services check as secondary verification
+                if let Ok(_) = peripheral.discover_services().await {
+                    log_ble("[Colmi Sync] Services ontdekt -> Verbinding toch actief!");
+                    connect_success = true;
+                    break;
+                }
             }
             Err(_) => {
                 log_ble(&format!("[Colmi Sync] Verbindingstimeout op poging {}", attempt));
@@ -576,17 +595,11 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     }
 
     if !connect_success {
-        return Err("Verbinding met Colmi Ring mislukt na 3 pogingen.".to_string());
-    }
-
-    // Pause background scanner during GATT operations
-    let adapter_opt = {
-        let guard = GLOBAL_ADAPTER.lock().await;
-        guard.clone()
-    };
-    if let Some(ref adapter) = adapter_opt {
-        let _ = adapter.stop_scan().await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        // Resume background scanner on failure
+        if let Some(ref adapter) = adapter_opt {
+            let _ = adapter.start_scan(ScanFilter::default()).await;
+        }
+        return Err("Verbinding met Colmi Ring mislukt na 3 pogingen. Controleer of de ring niet gekoppeld is aan de officiële QRing app.".to_string());
     }
 
     // ========================================================================================
