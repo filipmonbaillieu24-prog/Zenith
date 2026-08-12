@@ -5,6 +5,7 @@ import { ZenithHubPage } from './pages/hub/ZenithHubPage';
 import { CalendarPage } from './pages/hub/CalendarPage';
 import { PilotPanel } from './pages/hub/PilotPanel';
 import { ProfilePage } from './pages/hub/ProfilePage';
+import { SystemConsolePage } from './pages/hub/SystemConsolePage';
 import { Sidebar, TabKey } from './components/Sidebar';
 import { computePMC } from './utils/pmc';
 import { recoveryModel } from '../../../shared/ml/RecoveryScore';
@@ -772,6 +773,9 @@ ${imagesMarkdown}
               onBack={() => setActiveTab('hub')}
               onSave={handleSaveProfile}
             />
+          )}
+          {activeTab === 'logs' && (
+            <SystemConsolePage />
           )}
           {activeTab === 'aero' && (
             <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>

@@ -11,10 +11,11 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Bug
+  Bug,
+  Terminal
 } from 'lucide-react';
 
-export type TabKey = 'hub' | 'calendar' | 'aero' | 'vigor' | 'kratos' | 'fuel' | 'mobiel' | 'profile';
+export type TabKey = 'hub' | 'calendar' | 'aero' | 'vigor' | 'kratos' | 'fuel' | 'mobiel' | 'profile' | 'logs';
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -72,9 +73,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      title: 'Mobiel',
+      title: 'Systeem & Tools',
       items: [
         { key: 'mobiel' as TabKey, label: 'Download Center', icon: Smartphone },
+        { key: 'logs' as TabKey, label: 'Console Logs', icon: Terminal },
       ],
     },
   ];
