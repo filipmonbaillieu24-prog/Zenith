@@ -172,6 +172,8 @@ pub async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(
                                 let start_time = std::time::Instant::now();
                                 let mut last_emitted_weight = 0.0;
                                 let mut last_emitted_impedance = 0.0;
+                                let mut candidate_weight = 0.0;
+                                let mut consecutive_count = 0;
                                 let mut measurement_done = false;
                                 let dev_id = id_clone.clone();
 
@@ -260,20 +262,36 @@ pub async fn start_native_ble_listener(app_handle: tauri::AppHandle) -> Result<(
                                         }
                                     }
 
-                                    // Emit weight
+                                    // Check if this packet is an explicit stabilized/final measurement from scale hardware
+                                    let is_explicit_final = opcode == 0xCE || opcode == 0x10 || opcode == 0x23 
+                                        || (bytes.len() >= 6 && (bytes[1] & 0x20 != 0 || bytes[1] & 0x01 != 0));
+
+                                    // Emit ONLY stabilized / final weight
                                     if let Some(weight) = decoded_weight {
                                         let rounded = (weight * 100.0).round() / 100.0;
-                                        let should_emit = last_emitted_weight == 0.0 || (rounded - last_emitted_weight).abs() > 0.01;
-                                        log_ble(&format!("[EMIT] Gewicht: {:.2} kg  should_emit={} (vorig={:.2})", rounded, should_emit, last_emitted_weight));
 
-                                        if should_emit {
-                                            last_emitted_weight = rounded;
-                                            #[derive(Clone, serde::Serialize)]
-                                            struct WeightPayload { weight: f64, raw_bytes: Vec<u8> }
-                                            use tauri::Emitter;
-                                            let _ = handle_clone.emit("native-weight-received", WeightPayload { weight: rounded, raw_bytes: bytes.clone() });
+                                        if (rounded - candidate_weight).abs() < 0.05 {
+                                            consecutive_count += 1;
+                                        } else {
+                                            candidate_weight = rounded;
+                                            consecutive_count = 1;
+                                        }
 
-                                            if opcode == 0x23 || opcode == 0x10 || notification.uuid.to_string().to_lowercase().contains("2a9d") {
+                                        let is_stabilized_final = is_explicit_final || consecutive_count >= 3;
+
+                                        log_ble(&format!("[SCALE-STABILITY] Weight: {:.2} kg  explicit_final={}  consecutive={}/3  is_stabilized={}", rounded, is_explicit_final, consecutive_count, is_stabilized_final));
+
+                                        if is_stabilized_final {
+                                            let should_emit = (rounded - last_emitted_weight).abs() > 0.01;
+                                            if should_emit {
+                                                last_emitted_weight = rounded;
+                                                log_ble(&format!("[EMIT-FINAL-WEIGHT] Definitief gewicht geregistreerd: {:.2} kg", rounded));
+
+                                                #[derive(Clone, serde::Serialize)]
+                                                struct WeightPayload { weight: f64, raw_bytes: Vec<u8> }
+                                                use tauri::Emitter;
+                                                let _ = handle_clone.emit("native-weight-received", WeightPayload { weight: rounded, raw_bytes: bytes.clone() });
+
                                                 measurement_done = true;
                                             }
                                         }
