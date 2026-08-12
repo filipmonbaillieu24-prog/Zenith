@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -68,8 +70,6 @@ jobs:
           try {
             $Response = Invoke-RestMethod -Uri $Url -Headers @{ "User-Agent" = "PowerShell" }
             $UpdaterJson = $Response | ConvertTo-Json -Depth 4
-            Set-Content -Path "./updater.json" -Value $UpdaterJson -NoNewline
-            Write-Host "Generated updater.json successfully from downloaded release asset"
           } catch {
             Write-Warning "Could not download latest.json from $Url. Skipping updater.json generation. Error: $_"
             exit 0
@@ -80,6 +80,10 @@ jobs:
           git config http.sslVerify false
           git fetch origin main
           git checkout -B main origin/main
+
+          Set-Content -Path "./updater.json" -Value $UpdaterJson -NoNewline
+          Write-Host "Generated updater.json successfully from downloaded release asset"
+          
           git add updater.json
           git commit -m "chore: update updater.json to version $Version [skip ci]"
           git push origin main
