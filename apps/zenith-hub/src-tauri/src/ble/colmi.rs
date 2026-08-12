@@ -11,7 +11,7 @@ static COLMI_SYNC_RUNNING: AtomicBool = AtomicBool::new(false);
 
 /// Continuous background BLE scanner specifically for Colmi Smart Ring.
 /// Spawns on Zenith launch to detect and cache the ring in background.
-pub async fn start_colmi_ble_listener(app_handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_colmi_ble_listener(_app_handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let manager = Manager::new().await?;
     let adapters = manager.adapters().await?;
     if adapters.is_empty() {
