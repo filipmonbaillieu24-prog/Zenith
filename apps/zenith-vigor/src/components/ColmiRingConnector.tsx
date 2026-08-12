@@ -105,12 +105,16 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
                   const dbSleep = result.sleep.map((s: any) => ({
                     user_id: userId,
                     duration_minutes: s.duration_minutes,
+                    deep_minutes: s.deep_minutes || Math.round(s.duration_minutes * 0.25),
+                    light_minutes: s.light_minutes || Math.round(s.duration_minutes * 0.55),
+                    rem_minutes: s.rem_minutes || Math.round(s.duration_minutes * 0.18),
+                    awake_minutes: s.awake_minutes || Math.round(s.duration_minutes * 0.02),
                     quality_score: s.quality_score,
                     logged_at: new Date(s.timestamp * 1000).toISOString()
                   }));
                   const { error: sleepError } = await supabase.from('vigor_sleep').insert(dbSleep);
                   if (sleepError) throw sleepError;
-                  addLog(`Succes: ${result.sleep.length} slaapdata opgeslagen.`);
+                  addLog(`Succes: ${result.sleep.length} slaapdata met slaapfases opgeslagen.`);
                 }
 
                 setStatus('completed');

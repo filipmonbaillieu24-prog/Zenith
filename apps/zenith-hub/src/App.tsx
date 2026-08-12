@@ -211,10 +211,18 @@ function App() {
             const payload = event.payload as { weight: number, raw_bytes?: number[] };
             console.log("Hub received native weight from Tauri Rust:", payload.weight);
             
-            // Auto-register scale in DB if not already done
+            // Auto-register scale in DB & log weight if not already done
             const currentUserId = sessionRef.current?.user?.id;
-            if (currentUserId) {
+            if (currentUserId && payload.weight > 10.0) {
               autoRegisterScale(currentUserId);
+              supabase.from('vigor_weight').insert({
+                user_id: currentUserId,
+                weight: payload.weight,
+                logged_at: new Date().toISOString()
+              }).then(({ error }) => {
+                if (error) console.error("Error auto-logging native weight in Hub:", error);
+                else console.log("Successfully auto-logged native weight in Supabase:", payload.weight);
+              });
             }
             
             pendingWeight.current = payload.weight;
@@ -742,7 +750,7 @@ ${imagesMarkdown}
             setIsBugReportOpen(true);
           }}
         />
-        <div style={{ flex: 1, height: 'calc(100vh - 32px)', marginTop: '32px', overflow: 'hidden', position: 'relative' }}>
+        <div style={{ flex: 1, height: 'calc(100vh - 32px)', marginTop: '32px', overflowY: 'auto', position: 'relative' }}>
           {activeTab === 'hub' && (
             <ZenithHubPage
               fitnessProfile={fitnessProfile}

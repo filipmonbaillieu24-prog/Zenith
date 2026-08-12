@@ -14,6 +14,7 @@ import {
   CartesianGrid,
   ReferenceLine
 } from 'recharts';
+import { AnatomicalMuscleHeatmap } from '../../components/AnatomicalMuscleHeatmap';
 import './ZenithHub.css';
 
 interface ZenithHubPageProps {
@@ -36,6 +37,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   const [plannedWorkouts, setPlannedWorkouts] = useState<PlannedWorkoutItem[]>([]);
   const [allRides, setAllRides] = useState<any[]>([]);
   const [allKratos, setAllKratos] = useState<any[]>([]);
+  const [kratosExercises, setKratosExercises] = useState<any[]>([]);
   const [latestWeight, setLatestWeight] = useState<any | null>(null);
   const [latestSleep, setLatestSleep] = useState<any | null>(null);
   const [todaySteps, setTodaySteps] = useState<number>(0);
@@ -150,28 +152,38 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         })));
       }
 
-      // 8. Fetch completed rides for PMC simulation
+      // 8. Fetch completed rides for PMC simulation & Muscle Heatmap
       const { data: ridesData } = await supabase
         .from('rides')
-        .select('date, metadata')
+        .select('date, distance, metadata')
         .eq('user_id', userId);
       if (ridesData) {
         setAllRides(ridesData.map((r: any) => {
           const meta = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata || {};
           return {
             date: Number(r.date),
+            distance: Number(r.distance || 0),
             tss: meta?.tss ?? meta?.hrTSS ?? 0
           };
         }));
       }
 
-      // 9. Fetch Kratos workouts for PMC simulation
+      // 9. Fetch Kratos workouts for PMC simulation & Muscle Heatmap
       const { data: allKData } = await supabase
         .from('kratos_workouts')
-        .select('completed_at, volume')
+        .select('id, name, completed_at, sets, volume')
         .eq('user_id', userId);
       if (allKData) {
         setAllKratos(allKData);
+      }
+
+      // 10. Fetch Kratos exercises catalog to map exercise IDs -> Categories, Primary & Secondary Muscles
+      const { data: exCatalog } = await supabase
+        .from('kratos_exercises')
+        .select('id, name, category, primary_muscle, secondary_muscles')
+        .eq('user_id', userId);
+      if (exCatalog) {
+        setKratosExercises(exCatalog);
       }
 
     } catch (err) {
@@ -236,6 +248,262 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       isSimulated: pt.isSimulated,
     }));
   }, [simPMC]);
+
+  // Dynamic Muscle Fatigue & Recovery Algorithm from actual Rides & Kratos Workouts
+  const calculatedMuscleDataMap = useMemo(() => {
+    const nowMs = Date.now();
+    const decayPerHour = 0.035; // Exponential recovery rate
+
+    const exerciseMap = new Map<string, any>();
+    if (Array.isArray(kratosExercises)) {
+      kratosExercises.forEach(e => {
+        if (e && e.id) exerciseMap.set(e.id, e);
+      });
+    }
+
+    const map: Record<string, {
+      name: string;
+      fatigueRaw: number;
+      lastTrainedMs: number;
+      primaryExercises: Set<string>;
+    }> = {
+      chest: { name: 'Borstspieren (Pectoralis Major)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      deltoids: { name: 'Schouders (Deltoideus)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      biceps: { name: 'Biceps (Biceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      triceps: { name: 'Triceps (Triceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      abs: { name: 'Buikspieren (Rectus Abdominis)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      obliques: { name: 'Schuine Buikspieren (Obliques)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      quadriceps: { name: 'Dijspieren (Quadriceps Femoris)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      upperBack: { name: 'Bovenrug (Rhomboids & Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      lowerBack: { name: 'Lendenrug (Erector Spinae)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      gluteal: { name: 'Zitvlakspieren (Gluteus Maximus)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      hamstring: { name: 'Achterdijbeen (Hamstrings)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      calves: { name: 'Kuitspieren (Gastrocnemius & Soleus)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      forearm: { name: 'Onderarmen (Forearms)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
+      trapezius: { name: 'Monnikskapspier (Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() }
+    };
+
+    const addImpact = (slug: string, fatigueImpact: number, dateMs: number, exerciseName: string) => {
+      if (!map[slug]) return;
+      const hoursAgo = Math.max(0, (nowMs - dateMs) / (1000 * 60 * 60));
+      if (hoursAgo > 168) return; // 7 days window
+      const currentImpact = fatigueImpact * Math.exp(-decayPerHour * hoursAgo);
+      map[slug].fatigueRaw += currentImpact;
+      if (dateMs > map[slug].lastTrainedMs) {
+        map[slug].lastTrainedMs = dateMs;
+      }
+      map[slug].primaryExercises.add(exerciseName);
+    };
+
+    // Process Kratos workouts
+    allKratos.forEach((k: any) => {
+      if (!k.completed_at) return;
+      const dateMs = new Date(k.completed_at).getTime();
+      const workoutName = k.name || 'Kratos Training';
+      const sets = Array.isArray(k.sets) ? k.sets : [];
+
+      if (sets.length === 0) {
+        const nameLower = workoutName.toLowerCase();
+        if (nameLower.includes('schouder') || nameLower.includes('shoulder') || nameLower.includes('deltoid')) {
+          addImpact('deltoids', 55, dateMs, workoutName);
+        } else {
+          addImpact('chest', 20, dateMs, workoutName);
+          addImpact('quadriceps', 20, dateMs, workoutName);
+        }
+        return;
+      }
+
+      sets.forEach((exLog: any) => {
+        const exMeta = exLog.exercise_id ? exerciseMap.get(exLog.exercise_id) : null;
+        const exName = exLog.name || exMeta?.name || exLog.exercise_name || workoutName;
+        const exCategory = (exLog.category || exMeta?.category || '').toLowerCase();
+        const nameLower = exName.toLowerCase();
+
+        const workingSets = Array.isArray(exLog.sets)
+          ? exLog.sets.filter((s: any) => s.type === 'working' || !s.type).length
+          : 3;
+        const baseFatigue = Math.min(65, Math.max(20, workingSets * 14));
+
+        // 1. Direct explicit primary & secondary muscle mapping from Kratos DB
+        if (exMeta?.primary_muscle) {
+          addImpact(exMeta.primary_muscle, baseFatigue, dateMs, exName);
+          if (Array.isArray(exMeta.secondary_muscles)) {
+            exMeta.secondary_muscles.forEach((secSlug: string) => {
+              addImpact(secSlug, baseFatigue * 0.5, dateMs, `${exName} (Secundair)`);
+            });
+          }
+        } else if (
+          exCategory === 'shoulders' ||
+          exCategory === 'schouders' ||
+          nameLower.includes('shoulder') ||
+          nameLower.includes('schouder') ||
+          nameLower.includes('deltoid') ||
+          nameLower.includes('arnold') ||
+          nameLower.includes('lateral raise') ||
+          nameLower.includes('military') ||
+          nameLower.includes('overhead press') ||
+          nameLower.includes('face pull') ||
+          nameLower.includes('upright row') ||
+          nameLower.includes('rear delt')
+        ) {
+          addImpact('deltoids', baseFatigue, dateMs, exName);
+          addImpact('triceps', baseFatigue * 0.4, dateMs, exName);
+          addImpact('trapezius', baseFatigue * 0.3, dateMs, exName);
+        } else if (
+          exCategory === 'chest' ||
+          exCategory === 'borst' ||
+          nameLower.includes('chest') ||
+          nameLower.includes('bench') ||
+          nameLower.includes('pushup') ||
+          nameLower.includes('pec deck') ||
+          nameLower.includes('fly')
+        ) {
+          addImpact('chest', baseFatigue, dateMs, exName);
+          addImpact('deltoids', baseFatigue * 0.55, dateMs, exName);
+          addImpact('triceps', baseFatigue * 0.5, dateMs, exName);
+        } else if (
+          exCategory === 'triceps' ||
+          nameLower.includes('tricep') ||
+          nameLower.includes('triceps') ||
+          nameLower.includes('pushdown') ||
+          nameLower.includes('dip') ||
+          nameLower.includes('skullcrusher')
+        ) {
+          addImpact('triceps', baseFatigue, dateMs, exName);
+        } else if (
+          nameLower.includes('back extension') ||
+          nameLower.includes('hyperextension')
+        ) {
+          addImpact('lowerBack', baseFatigue, dateMs, exName);
+          addImpact('upperBack', baseFatigue * 0.5, dateMs, exName);
+          addImpact('gluteal', baseFatigue * 0.4, dateMs, exName);
+        } else if (
+          exCategory === 'quads' ||
+          exCategory === 'dijen' ||
+          nameLower.includes('quad') ||
+          nameLower.includes('squat') ||
+          nameLower.includes('leg press') ||
+          nameLower.includes('lunge') ||
+          nameLower.includes('leg extension')
+        ) {
+          addImpact('quadriceps', baseFatigue, dateMs, exName);
+          addImpact('gluteal', baseFatigue * 0.6, dateMs, exName);
+          addImpact('lowerBack', baseFatigue * 0.3, dateMs, exName);
+        } else if (
+          exCategory === 'hamstrings' ||
+          nameLower.includes('hamstring') ||
+          nameLower.includes('rdl') ||
+          nameLower.includes('deadlift') ||
+          nameLower.includes('leg curl') ||
+          nameLower.includes('romanian')
+        ) {
+          addImpact('hamstring', baseFatigue, dateMs, exName);
+          addImpact('gluteal', baseFatigue * 0.7, dateMs, exName);
+          addImpact('lowerBack', baseFatigue * 0.6, dateMs, exName);
+          addImpact('trapezius', baseFatigue * 0.4, dateMs, exName);
+        } else if (
+          exCategory === 'lats' ||
+          exCategory === 'upper back' ||
+          exCategory === 'rug' ||
+          nameLower.includes('lat') ||
+          nameLower.includes('pull') ||
+          nameLower.includes('row') ||
+          nameLower.includes('chin')
+        ) {
+          addImpact('upperBack', baseFatigue, dateMs, exName);
+          addImpact('trapezius', baseFatigue * 0.5, dateMs, exName);
+          addImpact('biceps', baseFatigue * 0.5, dateMs, exName);
+        } else if (
+          exCategory === 'biceps' ||
+          nameLower.includes('bicep') ||
+          nameLower.includes('curl')
+        ) {
+          addImpact('biceps', baseFatigue, dateMs, exName);
+          addImpact('forearm', baseFatigue * 0.4, dateMs, exName);
+        } else if (
+          exCategory === 'abs' ||
+          exCategory === 'buik' ||
+          nameLower.includes('abs') ||
+          nameLower.includes('crunch') ||
+          nameLower.includes('plank') ||
+          nameLower.includes('leg raise')
+        ) {
+          addImpact('abs', baseFatigue, dateMs, exName);
+          addImpact('obliques', baseFatigue * 0.5, dateMs, exName);
+        } else if (
+          exCategory === 'calves' ||
+          exCategory === 'kuiten' ||
+          nameLower.includes('calf') ||
+          nameLower.includes('kuit')
+        ) {
+          addImpact('calves', baseFatigue, dateMs, exName);
+        } else {
+          if (nameLower.includes('shoulder') || nameLower.includes('schouder') || nameLower.includes('deltoid')) {
+            addImpact('deltoids', baseFatigue, dateMs, exName);
+          } else {
+            addImpact('chest', 20, dateMs, exName);
+            addImpact('quadriceps', 20, dateMs, exName);
+          }
+        }
+      });
+    });
+
+    // Process Aero cycling rides
+    allRides.forEach((r: any) => {
+      if (!r.date) return;
+      const dateMs = Number(r.date);
+      const distKm = Number(r.distance || 0);
+      const tss = Number(r.tss || 0);
+      const impactScale = distKm > 0 ? distKm : (tss > 0 ? tss * 0.5 : 20);
+
+      const quadImpact = Math.min(85, Math.round(impactScale * 1.3));
+      const calfImpact = Math.min(60, Math.round(impactScale * 0.8));
+      const gluteImpact = Math.min(50, Math.round(impactScale * 0.6));
+      const hamstringImpact = Math.min(45, Math.round(impactScale * 0.5));
+
+      const rideTitle = distKm > 0 ? `Wielrenrit (${distKm.toFixed(1)} km)` : 'Fietsrit';
+
+      addImpact('quadriceps', quadImpact, dateMs, rideTitle);
+      addImpact('calves', calfImpact, dateMs, rideTitle);
+      addImpact('gluteal', gluteImpact, dateMs, rideTitle);
+      addImpact('hamstring', hamstringImpact, dateMs, rideTitle);
+    });
+
+    const finalMap: Record<string, any> = {};
+
+    Object.keys(map).forEach(key => {
+      const item = map[key];
+      const fatiguePercent = Math.min(100, Math.round(item.fatigueRaw));
+      
+      let lastTrainedStr = 'Volledig hersteld';
+      if (item.lastTrainedMs > 0) {
+        const hoursAgo = Math.round((nowMs - item.lastTrainedMs) / (1000 * 60 * 60));
+        if (hoursAgo < 1) {
+          lastTrainedStr = 'Zojuist belast';
+        } else if (hoursAgo < 24) {
+          lastTrainedStr = `Vandaag (${hoursAgo}u geleden)`;
+        } else if (hoursAgo < 48) {
+          lastTrainedStr = 'Gisteren';
+        } else {
+          const daysAgo = Math.floor(hoursAgo / 24);
+          lastTrainedStr = `${daysAgo} dagen geleden`;
+        }
+      }
+
+      const primaryExercisesArr = item.primaryExercises.size > 0
+        ? Array.from(item.primaryExercises)
+        : ['Geen recente belasting'];
+
+      finalMap[key] = {
+        name: item.name,
+        fatiguePercent,
+        lastTrained: lastTrainedStr,
+        primaryExercises: primaryExercisesArr
+      };
+    });
+
+    return finalMap;
+  }, [allRides, allKratos, kratosExercises]);
 
   const ctl = Math.round(todayPoint.ctl);
   const atl = Math.round(todayPoint.atl);
@@ -531,6 +799,11 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
               )}
             </div>
           </div>
+        </div>
+
+        {/* Anatomical Human Muscle Heatmap */}
+        <div style={{ marginTop: '24px' }}>
+          <AnatomicalMuscleHeatmap customFatigueData={calculatedMuscleDataMap} />
         </div>
     </div>
   );

@@ -36,6 +36,8 @@ interface Exercise {
   user_id: string;
   name: string;
   category: 'Quads' | 'Hamstrings' | 'Calves' | 'Chest' | 'Lats' | 'Upper Back' | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs';
+  primary_muscle?: string;
+  secondary_muscles?: string[];
   notes?: string;
   increment_weight: number;
   increment_per_side: boolean;
@@ -557,6 +559,8 @@ export default function App() {
     const payload = {
       name: exerciseForm.name,
       category: exerciseForm.category,
+      primary_muscle: exerciseForm.primary_muscle || (exerciseForm.category === 'Shoulders' ? 'deltoids' : exerciseForm.category === 'Chest' ? 'chest' : exerciseForm.category === 'Quads' ? 'quadriceps' : exerciseForm.category === 'Hamstrings' ? 'hamstring' : exerciseForm.category === 'Biceps' ? 'biceps' : exerciseForm.category === 'Triceps' ? 'triceps' : exerciseForm.category === 'Abs' ? 'abs' : exerciseForm.category === 'Calves' ? 'calves' : 'upperBack'),
+      secondary_muscles: exerciseForm.secondary_muscles || [],
       notes: exerciseForm.notes,
       increment_weight: Number(exerciseForm.increment_weight || 2.5),
       increment_per_side: !!exerciseForm.increment_per_side,
@@ -577,6 +581,8 @@ export default function App() {
         setEditingExercise(null);
         setIsExerciseModalOpen(false);
         fetchData();
+      } else {
+        alert("Fout bij opslaan van oefening: " + error.message);
       }
     } else {
       // Create
@@ -587,13 +593,18 @@ export default function App() {
       if (!error) {
         setIsExerciseModalOpen(false);
         fetchData();
+      } else {
+        alert("Fout bij aanmaken van oefening: " + error.message);
       }
     }
   };
 
   const handleEditExerciseClick = (ex: Exercise) => {
     setEditingExercise(ex);
-    setExerciseForm(ex);
+    setExerciseForm({
+      ...ex,
+      secondary_muscles: Array.isArray(ex.secondary_muscles) ? ex.secondary_muscles : []
+    });
     setIsExerciseModalOpen(true);
   };
 
@@ -1772,7 +1783,7 @@ export default function App() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     <div className="kratos-input-group">
-                      <label className="kratos-label">Spiergroep / Categorie</label>
+                      <label className="kratos-label">Spiergroep / Categorie (Primaire Spier)</label>
                       <select 
                         className="kratos-select" 
                         value={exerciseForm.category} 
@@ -1805,6 +1816,57 @@ export default function App() {
                         </label>
                         <span style={{ fontSize: 11, fontWeight: 700, color: exerciseForm.weight_unit === 'lbs' ? '#fff' : 'var(--text-secondary)' }}>LBS</span>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="kratos-input-group" style={{ marginBottom: 16 }}>
+                    <label className="kratos-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Secundaire Spiergroepen (Optioneel)</span>
+                      <span style={{ color: 'var(--accent-neon)', fontSize: 10 }}>Koppeling Heatmap (50% impact)</span>
+                    </label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                      {[
+                        { key: 'chest', label: 'Borst' },
+                        { key: 'deltoids', label: 'Schouders' },
+                        { key: 'biceps', label: 'Biceps' },
+                        { key: 'triceps', label: 'Triceps' },
+                        { key: 'upperBack', label: 'Bovenrug / Lats' },
+                        { key: 'trapezius', label: 'Monnikskap' },
+                        { key: 'lowerBack', label: 'Lendenrug' },
+                        { key: 'quadriceps', label: 'Quads' },
+                        { key: 'hamstring', label: 'Hamstrings' },
+                        { key: 'gluteal', label: 'Zitvlak' },
+                        { key: 'calves', label: 'Kuiten' },
+                        { key: 'abs', label: 'Buikspieren' },
+                        { key: 'obliques', label: 'Schuine Buik' },
+                        { key: 'forearm', label: 'Onderarmen' }
+                      ].map(m => {
+                        const isSelected = (exerciseForm.secondary_muscles || []).includes(m.key as any);
+                        return (
+                          <button
+                            key={m.key}
+                            type="button"
+                            onClick={() => {
+                              const curr: string[] = exerciseForm.secondary_muscles || [];
+                              const updated: string[] = isSelected ? curr.filter((x: string) => x !== m.key) : [...curr, m.key];
+                              setExerciseForm(prev => ({ ...prev, secondary_muscles: updated }));
+                            }}
+                            style={{
+                              padding: '4px 9px',
+                              borderRadius: 6,
+                              border: isSelected ? '1px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)',
+                              background: isSelected ? 'rgba(59, 130, 246, 0.25)' : 'rgba(255,255,255,0.03)',
+                              color: isSelected ? '#60a5fa' : 'rgba(255,255,255,0.6)',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            {isSelected ? '✓ ' : '+ '}{m.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 

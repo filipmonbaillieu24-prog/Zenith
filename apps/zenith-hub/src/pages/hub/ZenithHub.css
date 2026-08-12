@@ -4,7 +4,7 @@
   min-height: 100%;
   background-color: var(--bg-dark, #09090b);
   color: #f8fafc;
-  padding: 24px 32px;
+  padding: 24px 32px 48px 32px;
   box-sizing: border-box;
   font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
   overflow-y: auto;
