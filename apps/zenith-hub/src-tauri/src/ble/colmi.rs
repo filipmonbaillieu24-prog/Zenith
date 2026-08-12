@@ -9,59 +9,9 @@ use btleplug::api::CentralEvent;
 
 static COLMI_SYNC_RUNNING: AtomicBool = AtomicBool::new(false);
 
-/// Continuous background BLE scanner specifically for Colmi Smart Ring.
-/// Spawns on Zenith launch to detect and cache the ring in background.
+/// Continuous background BLE scanner status helper for Colmi Smart Ring.
 pub async fn start_colmi_ble_listener(_app_handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let manager = Manager::new().await?;
-    let adapters = manager.adapters().await?;
-    if adapters.is_empty() {
-        return Err("Geen Bluetooth-adapter gevonden voor Colmi Ring scanner".into());
-    }
-    let adapter = &adapters[0];
-
-    adapter.start_scan(ScanFilter::default()).await?;
-    let mut events = adapter.events().await?;
-
-    log_ble("[System] Colmi Smart Ring Achtergrond-Scanner gestart!");
-
-    while let Some(event) = events.next().await {
-        match event {
-            CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
-                if let Ok(peripheral) = adapter.peripheral(&id).await {
-                    if let Ok(Some(properties)) = peripheral.properties().await {
-                        let name = properties.local_name.unwrap_or_default();
-                        let name_lower = name.to_lowercase();
-                        let address = peripheral.address().to_string();
-                        let addr_lower = address.to_lowercase();
-
-                        if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") {
-                            continue;
-                        }
-
-                        let has_ring_service = properties.services.iter().any(|s| {
-                            let uuid_str = s.to_string().to_lowercase();
-                            uuid_str.contains("56ff") 
-                                || uuid_str.contains("6e40fff0") 
-                                || uuid_str.contains("fee7")
-                        });
-
-                        let is_ring = name_lower.contains("colmi") 
-                            || name_lower.contains("r0") 
-                            || name_lower.contains("ring") 
-                            || addr_lower.contains("32:34:48:31:a8:05")
-                            || has_ring_service;
-
-                        if is_ring {
-                            log_ble(&format!("[Colmi Background Service] Colmi Ring gedetecteerd! Naam='{}', Adres='{}'", name, address));
-                            let mut cache_guard = LAST_DISCOVERED_RING.lock().await;
-                            *cache_guard = Some((peripheral.clone(), address.clone(), std::time::Instant::now()));
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
+    log_ble("[System] Colmi Smart Ring Achtergrond-Service actief & gekoppeld aan Master BLE Listener!");
     Ok(())
 }
 
@@ -172,7 +122,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     {
         let cache_guard = LAST_DISCOVERED_RING.lock().await;
         if let Some((ref p, ref addr, ref time)) = *cache_guard {
-            if time.elapsed() < std::time::Duration::from_secs(120) {
+            if time.elapsed() < std::time::Duration::from_secs(300) {
                 log_ble(&format!("[Colmi Sync] Colmi Ring direct gevonden in achtergrond-service cache! Adres: {}", addr));
                 emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", addr), 0.35);
                 ring_peripheral = Some(p.clone());
@@ -181,49 +131,83 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         }
     }
 
-    // 2. Perform direct Bluetooth scan if not found in cache
+    // 2. Inspect active peripherals from Master BLE Adapter (without restarting scan!)
+    if ring_peripheral.is_none() {
+        let adapter_opt = {
+            let guard = GLOBAL_ADAPTER.lock().await;
+            guard.clone()
+        };
+
+        if let Some(adapter) = adapter_opt {
+            if let Ok(peripherals) = adapter.peripherals().await {
+                log_ble(&format!("[Colmi Sync] Master scanner omvat {} actieve apparaten. Inspecteren...", peripherals.len()));
+                for peripheral in peripherals {
+                    if let Ok(Some(properties)) = peripheral.properties().await {
+                        let name = properties.local_name.clone().unwrap_or_default();
+                        let name_lower = name.to_lowercase();
+                        let address = peripheral.address().to_string();
+                        let addr_lower = address.to_lowercase();
+
+                        if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") {
+                            continue;
+                        }
+
+                        let has_ring_service = properties.services.iter().any(|s| {
+                            let uuid_str = s.to_string().to_lowercase();
+                            uuid_str.contains("56ff") 
+                                || uuid_str.contains("6e40fff0") 
+                                || uuid_str.contains("fee7")
+                        });
+
+                        let is_match = name_lower.contains("colmi") 
+                            || name_lower.contains("r0") 
+                            || name_lower.contains("ring")
+                            || addr_lower.contains("32:34:48:31:a8:05")
+                            || has_ring_service;
+
+                        if is_match {
+                            log_ble(&format!("[Colmi Sync] Colmi Smart Ring gevonden via Master Adapter! Adres: {}", address));
+                            emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", address), 0.35);
+                            ring_peripheral = Some(peripheral);
+                            ring_address = address;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Fallback: query system adapter directly if not found
     if ring_peripheral.is_none() {
         if let Ok(manager) = Manager::new().await {
             if let Ok(adapters) = manager.adapters().await {
                 if !adapters.is_empty() {
                     let adapter = &adapters[0];
-                    let scan_duration = tokio::time::Duration::from_secs(5);
-                    
-                    for attempt in 1..=3 {
-                        emit_status(&app, &format!("Scannen naar Colmi Smart Ring (poging {}/3)...", attempt), 0.10 + (attempt as f32 * 0.08));
-                        log_ble(&format!("[Colmi Sync] BLE Scan starten (poging {}/3)...", attempt));
-                        let _ = adapter.start_scan(ScanFilter::default()).await;
-                        tokio::time::sleep(scan_duration).await;
-                        
-                        if let Ok(peripherals) = adapter.peripherals().await {
-                            for peripheral in peripherals {
-                                if let Ok(Some(properties)) = peripheral.properties().await {
-                                    let name = properties.local_name.clone().unwrap_or_default();
-                                    let name_lower = name.to_lowercase();
-                                    let address = peripheral.address().to_string();
-                                    let addr_lower = address.to_lowercase();
+                    if let Ok(peripherals) = adapter.peripherals().await {
+                        for peripheral in peripherals {
+                            if let Ok(Some(properties)) = peripheral.properties().await {
+                                let name = properties.local_name.clone().unwrap_or_default();
+                                let name_lower = name.to_lowercase();
+                                let address = peripheral.address().to_string();
+                                let addr_lower = address.to_lowercase();
 
-                                    if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") {
-                                        continue;
-                                    }
+                                if name_lower == "ty" || addr_lower.contains("10:5a:17:af:36:bf") {
+                                    continue;
+                                }
 
-                                    let is_match = name_lower.contains("colmi") 
-                                        || name_lower.contains("r0") 
-                                        || name_lower.contains("ring")
-                                        || addr_lower.contains("32:34:48:31:a8:05");
+                                let is_match = name_lower.contains("colmi") 
+                                    || name_lower.contains("r0") 
+                                    || name_lower.contains("ring")
+                                    || addr_lower.contains("32:34:48:31:a8:05");
 
-                                    if is_match {
-                                        emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", address), 0.35);
-                                        ring_peripheral = Some(peripheral);
-                                        ring_address = address;
-                                        break;
-                                    }
+                                if is_match {
+                                    emit_status(&app, &format!("Colmi Smart Ring gevonden! Adres: {}", address), 0.35);
+                                    ring_peripheral = Some(peripheral);
+                                    ring_address = address;
+                                    break;
                                 }
                             }
-                        }
-                        if ring_peripheral.is_some() {
-                            let _ = adapter.stop_scan().await;
-                            break;
                         }
                     }
                 }
