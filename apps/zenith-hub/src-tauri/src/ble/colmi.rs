@@ -187,6 +187,7 @@ enum SportPacket {
     NoData,
 }
 
+#[allow(dead_code)]
 fn parse_sport_bigdata_packet(data: &[u8]) -> Option<SportPacket> {
     if data.len() < 16 || data[0] != 0x27 {
         return None;
