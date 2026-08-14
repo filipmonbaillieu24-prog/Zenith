@@ -151,8 +151,33 @@ pub async fn start_scale_ble_listener(app_handle: tauri::AppHandle) -> Result<()
             _ => {}
         }
     }
-
     Ok(())
+}
+
+fn decode_bcd_weight(b_int: u8, b_frac: u8) -> Option<f64> {
+    let high_int = b_int >> 4;
+    let low_int = b_int & 0x0F;
+    if high_int > 9 || low_int > 9 {
+        return None;
+    }
+    let int_part = (high_int * 10 + low_int) as f64;
+    if int_part < 20.0 || int_part > 250.0 {
+        return None;
+    }
+
+    // b_frac contains decimal part and flags
+    // Mask off bit 7 (0x80 = stable) and bit 5 (0x20 = imp)
+    let clean = b_frac & 0x1F;
+    let high_f = clean >> 4;
+    let low_f = clean & 0x0F;
+
+    let frac_part = if high_f <= 9 && low_f <= 9 {
+        (high_f * 10 + low_f) as f64 / 100.0
+    } else {
+        (clean as f64) / 100.0
+    };
+
+    Some(((int_part + frac_part) * 100.0).round() / 100.0)
 }
 
 async fn handle_scale_connection(
@@ -281,37 +306,26 @@ async fn handle_scale_connection(
         }
 
         // =====================================================
-        // 2. Yolanda/Neo Health custom protocol (FFF0 service)
-        //    Opcode 0xCF = live weight (user standing, weight fluctuating)
-        //    Opcode 0xCE = stable/final weight measurement
-        //    Opcode 0xCF with flags byte indicating stable
+        // 2b. Neo Health Onyx / BCD scale protocol (Opcode 0x12 / 0x11)
+        //     Packet format: [ 12 11 FF 86 B0 ... ]
+        //     Byte 0-1: 0x12 0x11 (Header / Opcode)
+        //     Byte 3: BCD weight integer kg (0x86 -> 86 kg)
+        //     Byte 4: BCD weight fraction + flags (0xB0 -> 0.10 kg)
         // =====================================================
-        if decoded_weight.is_none() && bytes.len() >= 4 {
-            match opcode {
-                0xCF | 0xCE => {
-                    // bytes[1..2] = weight in 0.01 kg units, big-endian
-                    let raw_weight = ((bytes[1] as u16) << 8) | (bytes[2] as u16);
-                    let w = raw_weight as f64 / 100.0;
-                    if w > 10.0 && w < 300.0 {
-                        decoded_weight = Some(w);
-                        log_ble(&format!("[DBG-YOLANDA] opcode=0x{:02X} raw={} -> {:.2} kg", opcode, raw_weight, w));
+        if decoded_weight.is_none() && bytes.len() >= 5 && (opcode == 0x12 || opcode == 0x11) {
+            let b3 = bytes[3];
+            let b4 = bytes[4];
+            if let Some(w) = decode_bcd_weight(b3, b4) {
+                decoded_weight = Some(w);
+                let is_stable = (b4 & 0x80) != 0 || (bytes[2] == 0xFF);
+                log_ble(&format!(
+                    "[DBG-NEO-HEALTH 0x12] BCD weight={:.2} kg (b3=0x{:02X}, b4=0x{:02X}, is_stable={})",
+                    w, b3, b4, is_stable
+                ));
 
-                        // 0xCE = explicit stable/final measurement
-                        if opcode == 0xCE {
-                            consecutive_count = 3; // Force as stable
-                        }
-
-                        // Check impedance in bytes[3..4] if present
-                        if bytes.len() >= 6 {
-                            let raw_imp = ((bytes[3] as u16) << 8) | (bytes[4] as u16);
-                            if raw_imp > 100 && raw_imp < 2000 {
-                                decoded_impedance = Some(raw_imp as f64);
-                                log_ble(&format!("[DBG-YOLANDA] impedance={} Ohm", raw_imp));
-                            }
-                        }
-                    }
+                if is_stable {
+                    consecutive_count = 3;
                 }
-                _ => {}
             }
         }
 
@@ -319,7 +333,7 @@ async fn handle_scale_connection(
         // 3. Generic Yolanda multi-format (bytes 2-3 or 3-4 decode)
         //    Handles various Neo Health / Yolanda packet variants
         // =====================================================
-        if decoded_weight.is_none() && bytes.len() >= 4 && opcode != 0xCF && opcode != 0xCE {
+        if decoded_weight.is_none() && bytes.len() >= 4 && opcode != 0xCF && opcode != 0xCE && opcode != 0x12 {
             // Try bytes[2..3] big-endian / 100
             let raw_w23 = ((bytes[2] as u16) << 8) | (bytes[3] as u16);
             let w23 = raw_w23 as f64 / 100.0;
@@ -347,7 +361,26 @@ async fn handle_scale_connection(
         // 4. Universal fallback: scan all adjacent byte pairs
         // =====================================================
         if decoded_weight.is_none() && bytes.len() >= 3 {
-            'outer: for i in 0..(bytes.len() - 1) {
+            // Skip offset 0 if opcode is a known header byte (0x12, 0x11, 0xCF, 0xCE, 0x02, 0xFF)
+            let start_idx = if opcode == 0x12 || opcode == 0x11 || opcode == 0xCF || opcode == 0xCE || opcode == 0x02 || opcode == 0xFF {
+                1
+            } else {
+                0
+            };
+
+            'outer: for i in start_idx..(bytes.len() - 1) {
+                // Check BCD decode on bytes[i..i+1] first
+                if let Some(bcd_w) = decode_bcd_weight(bytes[i], bytes[i + 1]) {
+                    if bcd_w >= 30.0 && bcd_w <= 220.0 {
+                        decoded_weight = Some(bcd_w);
+                        log_ble(&format!(
+                            "[UNIVERSAL-FALLBACK BCD] Parsed BCD weight {:.2} kg at byte offset {}",
+                            bcd_w, i
+                        ));
+                        break 'outer;
+                    }
+                }
+
                 let be100 = ((bytes[i] as u16) << 8 | bytes[i + 1] as u16) as f64 / 100.0;
                 let le100 = ((bytes[i + 1] as u16) << 8 | bytes[i] as u16) as f64 / 100.0;
                 let be10 = ((bytes[i] as u16) << 8 | bytes[i + 1] as u16) as f64 / 10.0;
