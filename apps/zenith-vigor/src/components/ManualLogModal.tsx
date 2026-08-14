@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Moon, Footprints, Scale } from 'lucide-react';
+import { X, Moon, Footprints, Scale, SlidersHorizontal } from 'lucide-react';
 
 interface ManualLogModalProps {
   onClose: () => void;
@@ -17,10 +17,31 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
   // Steps state
   const [stepsCount, setStepsCount] = useState<number>(10000);
 
-  // Sleep state
-  const [sleepHours, setSleepHours] = useState<number>(8);
-  const [sleepMinutes, setSleepMinutes] = useState<number>(0);
+  // Sleep mode & basic state
+  const [useDetailedPhases, setUseDetailedPhases] = useState<boolean>(true);
+  const [sleepHours, setSleepHours] = useState<number>(7);
+  const [sleepMinutes, setSleepMinutes] = useState<number>(30);
   const [sleepQuality, setSleepQuality] = useState<number>(80);
+
+  // Detailed sleep phases state
+  const [deepHours, setDeepHours] = useState<number>(1);
+  const [deepMinutes, setDeepMinutes] = useState<number>(45);
+  const [lightHours, setLightHours] = useState<number>(4);
+  const [lightMinutes, setLightMinutes] = useState<number>(15);
+  const [remHours, setRemHours] = useState<number>(1);
+  const [remMinutes, setRemMinutes] = useState<number>(30);
+  const [awakeHours, setAwakeHours] = useState<number>(0);
+  const [awakeMinutes, setAwakeMinutes] = useState<number>(15);
+
+  // Calculate sum of detailed phases
+  const totalPhaseMinutes = 
+    (deepHours * 60 + deepMinutes) +
+    (lightHours * 60 + lightMinutes) +
+    (remHours * 60 + remMinutes) +
+    (awakeHours * 60 + awakeMinutes);
+
+  const calcHours = Math.floor(totalPhaseMinutes / 60);
+  const calcMins = totalPhaseMinutes % 60;
 
   // Weight state
   const [weightKg, setWeightKg] = useState<number>(75.0);
@@ -37,9 +58,33 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
           logged_at: loggedAt,
         });
       } else if (activeTab === 'sleep') {
-        const totalMinutes = sleepHours * 60 + sleepMinutes;
+        let totalMins = 0;
+        let deepMins = 0;
+        let lightMins = 0;
+        let remMins = 0;
+        let awakeMins = 0;
+
+        if (useDetailedPhases) {
+          deepMins = deepHours * 60 + deepMinutes;
+          lightMins = lightHours * 60 + lightMinutes;
+          remMins = remHours * 60 + remMinutes;
+          awakeMins = awakeHours * 60 + awakeMinutes;
+          totalMins = deepMins + lightMins + remMins + awakeMins;
+        } else {
+          totalMins = sleepHours * 60 + sleepMinutes;
+          // Approximate default phases if detailed not specified
+          deepMins = Math.round(totalMins * 0.25);
+          lightMins = Math.round(totalMins * 0.55);
+          remMins = Math.round(totalMins * 0.18);
+          awakeMins = Math.max(0, totalMins - (deepMins + lightMins + remMins));
+        }
+
         await onSave('sleep', {
-          duration_minutes: totalMinutes,
+          duration_minutes: totalMins,
+          deep_minutes: deepMins,
+          light_minutes: lightMins,
+          rem_minutes: remMins,
+          awake_minutes: awakeMins,
           quality_score: sleepQuality,
           logged_at: loggedAt,
         });
@@ -61,7 +106,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content animate-slide-up" style={{ maxWidth: '450px' }}>
+      <div className="modal-content animate-slide-up" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
           <h2 className="modal-title">Handmatig Loggen</h2>
           <button className="modal-close" onClick={onClose}>
@@ -114,16 +159,16 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
               gap: 8,
               padding: '10px 16px',
               borderRadius: '10px',
-              border: '1px solid ' + (activeTab === 'sleep' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
+              border: '1px solid ' + (activeTab === 'sleep' ? 'rgba(168, 85, 247, 0.3)' : 'transparent'),
               fontSize: '13px',
               fontWeight: 800,
               cursor: 'pointer',
               transition: 'all 0.2s',
-              background: activeTab === 'sleep' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
-              color: activeTab === 'sleep' ? '#fff' : 'var(--text-muted)'
+              background: activeTab === 'sleep' ? 'rgba(168, 85, 247, 0.12)' : 'transparent',
+              color: activeTab === 'sleep' ? '#a855f7' : 'var(--text-muted)'
             }}
           >
-            <Moon size={14} style={{ color: activeTab === 'sleep' ? '#cbd5e1' : 'inherit' }} /> Slaap
+            <Moon size={14} style={{ color: activeTab === 'sleep' ? '#a855f7' : 'inherit' }} /> Slaap
           </button>
           <button
             type="button"
@@ -179,37 +224,232 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
 
           {/* Sleep Form */}
           {activeTab === 'sleep' && (
-            <div className="animate-fade-in">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div className="form-group">
-                  <label className="form-label">Duur (Uren)</label>
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={sleepHours}
-                    onChange={(e) => setSleepHours(parseInt(e.target.value) || 0)}
-                    min="0"
-                    max="24"
-                    required
-                  />
+            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              
+              {/* Detailed vs Quick Mode Toggle */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'rgba(168, 85, 247, 0.06)',
+                border: '1px solid rgba(168, 85, 247, 0.15)',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                marginBottom: 4
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <SlidersHorizontal size={15} style={{ color: '#a855f7' }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#e9d5ff' }}>
+                    Slaapfases per type specificeren
+                  </span>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Duur (Minuten)</label>
+                <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 22, cursor: 'pointer' }}>
                   <input
-                    type="number"
-                    className="form-input"
-                    value={sleepMinutes}
-                    onChange={(e) => setSleepMinutes(parseInt(e.target.value) || 0)}
-                    min="0"
-                    max="59"
-                    required
+                    type="checkbox"
+                    checked={useDetailedPhases}
+                    onChange={(e) => setUseDetailedPhases(e.target.checked)}
+                    style={{ opacity: 0, width: 0, height: 0 }}
                   />
-                </div>
+                  <span style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: useDetailedPhases ? '#a855f7' : '#3f3f46',
+                    transition: '0.3s',
+                    borderRadius: 22
+                  }}>
+                    <span style={{
+                      position: 'absolute',
+                      content: '""',
+                      height: 16, width: 16,
+                      left: useDetailedPhases ? 21 : 3,
+                      bottom: 3,
+                      backgroundColor: 'white',
+                      transition: '0.3s',
+                      borderRadius: '50%'
+                    }} />
+                  </span>
+                </label>
               </div>
+
+              {/* DETAILED PHASES INPUT MODE */}
+              {useDetailedPhases ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {/* Total Sleep Summary Banner */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)',
+                    border: '1px solid rgba(168, 85, 247, 0.25)',
+                    borderRadius: 12,
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Totale Berekende Slaap:</span>
+                    <span style={{ fontSize: 16, fontWeight: 900, color: '#a855f7' }}>
+                      {calcHours}u {calcMins}m <span style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1' }}>({totalPhaseMinutes} min)</span>
+                    </span>
+                  </div>
+
+                  {/* 4 Phase Rows */}
+                  {/* 1. Diepe Slaap */}
+                  <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: 12, borderRadius: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      🟣 Diepe Slaap <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Fysiek & spierherstel)</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={deepHours}
+                          onChange={(e) => setDeepHours(Math.max(0, parseInt(e.target.value) || 0))}
+                          min="0"
+                          max="24"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={deepMinutes}
+                          onChange={(e) => setDeepMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                          min="0"
+                          max="59"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Lichte Slaap */}
+                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: 12, borderRadius: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      🔵 Lichte Slaap <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Geheugenverwerking)</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={lightHours}
+                          onChange={(e) => setLightHours(Math.max(0, parseInt(e.target.value) || 0))}
+                          min="0"
+                          max="24"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={lightMinutes}
+                          onChange={(e) => setLightMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                          min="0"
+                          max="59"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. REM Slaap */}
+                  <div style={{ background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', padding: 12, borderRadius: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      💖 REM Slaap <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Mentale energie & dromen)</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={remHours}
+                          onChange={(e) => setRemHours(Math.max(0, parseInt(e.target.value) || 0))}
+                          min="0"
+                          max="24"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={remMinutes}
+                          onChange={(e) => setRemMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                          min="0"
+                          max="59"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Wakker */}
+                  <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: 12, borderRadius: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      🟡 Wakker <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Micro-ontwakingen)</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={awakeHours}
+                          onChange={(e) => setAwakeHours(Math.max(0, parseInt(e.target.value) || 0))}
+                          min="0"
+                          max="24"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={awakeMinutes}
+                          onChange={(e) => setAwakeMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                          min="0"
+                          max="59"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* SIMPLE TOTAL SLEEP DURATION MODE */
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <div className="form-group">
+                    <label className="form-label">Totale Duur (Uren)</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={sleepHours}
+                      onChange={(e) => setSleepHours(parseInt(e.target.value) || 0)}
+                      min="0"
+                      max="24"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Totale Duur (Minuten)</label>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={sleepMinutes}
+                      onChange={(e) => setSleepMinutes(parseInt(e.target.value) || 0)}
+                      min="0"
+                      max="59"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Quality Slider */}
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <label className="form-label">Slaapkwaliteit Score</label>
-                  <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 700 }}>{sleepQuality}/100</span>
+                  <span style={{ fontSize: 11, color: '#a855f7', fontWeight: 800 }}>{sleepQuality}/100</span>
                 </div>
                 <input
                   type="range"
@@ -218,7 +458,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                   step="1"
                   value={sleepQuality}
                   onChange={(e) => setSleepQuality(parseInt(e.target.value) || 0)}
-                  style={{ width: '100%', accentColor: '#cbd5e1' }}
+                  style={{ width: '100%', accentColor: '#a855f7' }}
                 />
               </div>
             </div>
@@ -269,3 +509,4 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
     </div>
   );
 };
+

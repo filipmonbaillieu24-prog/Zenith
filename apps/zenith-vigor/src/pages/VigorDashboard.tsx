@@ -127,6 +127,15 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   const [editSleepMinutes, setEditSleepMinutes] = useState('');
   const [editSleepQuality, setEditSleepQuality] = useState('');
 
+  const [editDeepHours, setEditDeepHours] = useState('');
+  const [editDeepMinutes, setEditDeepMinutes] = useState('');
+  const [editLightHours, setEditLightHours] = useState('');
+  const [editLightMinutes, setEditLightMinutes] = useState('');
+  const [editRemHours, setEditRemHours] = useState('');
+  const [editRemMinutes, setEditRemMinutes] = useState('');
+  const [editAwakeHours, setEditAwakeHours] = useState('');
+  const [editAwakeMinutes, setEditAwakeMinutes] = useState('');
+
   const fetchProfile = useCallback(async () => {
     try {
       // Fetch public.profiles (SSOT)
@@ -424,9 +433,24 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     } else if (type === 'steps') {
       setEditSteps(item.step_count.toString());
     } else if (type === 'sleep') {
-      setEditSleepHours(Math.floor(item.duration_minutes / 60).toString());
-      setEditSleepMinutes((item.duration_minutes % 60).toString());
-      setEditSleepQuality(item.quality_score ? item.quality_score.toString() : '75');
+      const dur = item.duration_minutes || 450;
+      const deep = (item.deep_minutes !== undefined && item.deep_minutes !== null) ? item.deep_minutes : Math.round(dur * 0.25);
+      const light = (item.light_minutes !== undefined && item.light_minutes !== null) ? item.light_minutes : Math.round(dur * 0.55);
+      const rem = (item.rem_minutes !== undefined && item.rem_minutes !== null) ? item.rem_minutes : Math.round(dur * 0.18);
+      const awake = (item.awake_minutes !== undefined && item.awake_minutes !== null) ? item.awake_minutes : Math.max(0, dur - (deep + light + rem));
+
+      setEditSleepHours(Math.floor(dur / 60).toString());
+      setEditSleepMinutes((dur % 60).toString());
+      setEditSleepQuality(item.quality_score ? item.quality_score.toString() : '80');
+
+      setEditDeepHours(Math.floor(deep / 60).toString());
+      setEditDeepMinutes((deep % 60).toString());
+      setEditLightHours(Math.floor(light / 60).toString());
+      setEditLightMinutes((light % 60).toString());
+      setEditRemHours(Math.floor(rem / 60).toString());
+      setEditRemMinutes((rem % 60).toString());
+      setEditAwakeHours(Math.floor(awake / 60).toString());
+      setEditAwakeMinutes((awake % 60).toString());
     }
   };
 
@@ -447,7 +471,17 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     } else if (type === 'steps') {
       payload.step_count = parseInt(editSteps);
     } else if (type === 'sleep') {
-      payload.duration_minutes = parseInt(editSleepHours) * 60 + parseInt(editSleepMinutes);
+      const deepMins = (parseInt(editDeepHours) || 0) * 60 + (parseInt(editDeepMinutes) || 0);
+      const lightMins = (parseInt(editLightHours) || 0) * 60 + (parseInt(editLightMinutes) || 0);
+      const remMins = (parseInt(editRemHours) || 0) * 60 + (parseInt(editRemMinutes) || 0);
+      const awakeMins = (parseInt(editAwakeHours) || 0) * 60 + (parseInt(editAwakeMinutes) || 0);
+      const totalMins = (deepMins + lightMins + remMins + awakeMins) || (parseInt(editSleepHours) * 60 + parseInt(editSleepMinutes));
+
+      payload.duration_minutes = totalMins;
+      payload.deep_minutes = deepMins;
+      payload.light_minutes = lightMins;
+      payload.rem_minutes = remMins;
+      payload.awake_minutes = awakeMins;
       payload.quality_score = parseInt(editSleepQuality);
     }
 
@@ -2262,33 +2296,127 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               )}
 
               {editingLog.type === 'sleep' && (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    <div className="form-group">
-                      <label className="form-label">Uren Slaap</label>
-                      <input
-                        type="number"
-                        className="form-input"
-                        value={editSleepHours}
-                        onChange={(e) => setEditSleepHours(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Minuten Slaap</label>
-                      <input
-                        type="number"
-                        className="form-input"
-                        value={editSleepMinutes}
-                        onChange={(e) => setEditSleepMinutes(e.target.value)}
-                        required
-                      />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase' }}>
+                    Slaapfases per type aanpassen
+                  </div>
+
+                  {/* 1. Diepe Slaap */}
+                  <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: 10, borderRadius: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase', marginBottom: 6 }}>🟣 Diepe Slaap</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={editDeepHours}
+                          onChange={(e) => setEditDeepHours(e.target.value)}
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={editDeepMinutes}
+                          onChange={(e) => setEditDeepMinutes(e.target.value)}
+                          min="0"
+                          max="59"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="form-group">
+
+                  {/* 2. Lichte Slaap */}
+                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: 10, borderRadius: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 6 }}>🔵 Lichte Slaap</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={editLightHours}
+                          onChange={(e) => setEditLightHours(e.target.value)}
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={editLightMinutes}
+                          onChange={(e) => setEditLightMinutes(e.target.value)}
+                          min="0"
+                          max="59"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. REM Slaap */}
+                  <div style={{ background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', padding: 10, borderRadius: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', marginBottom: 6 }}>💖 REM Slaap</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={editRemHours}
+                          onChange={(e) => setEditRemHours(e.target.value)}
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={editRemMinutes}
+                          onChange={(e) => setEditRemMinutes(e.target.value)}
+                          min="0"
+                          max="59"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Wakker */}
+                  <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: 10, borderRadius: 10 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', marginBottom: 6 }}>🟡 Wakker</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={editAwakeHours}
+                          onChange={(e) => setEditAwakeHours(e.target.value)}
+                          min="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <input
+                          type="number"
+                          className="form-input"
+                          value={editAwakeMinutes}
+                          onChange={(e) => setEditAwakeMinutes(e.target.value)}
+                          min="0"
+                          max="59"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginTop: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                       <label className="form-label">Slaapkwaliteit Score</label>
-                      <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 700 }}>{editSleepQuality}/100</span>
+                      <span style={{ fontSize: 11, color: '#a855f7', fontWeight: 800 }}>{editSleepQuality}/100</span>
                     </div>
                     <input
                       type="range"
@@ -2296,10 +2424,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                       max="100"
                       value={editSleepQuality}
                       onChange={(e) => setEditSleepQuality(e.target.value)}
-                      style={{ width: '100%', accentColor: '#cbd5e1' }}
+                      style={{ width: '100%', accentColor: '#a855f7' }}
                     />
                   </div>
-                </>
+                </div>
               )}
 
               <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
