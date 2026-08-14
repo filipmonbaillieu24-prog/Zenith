@@ -51,13 +51,19 @@ const CMD_GET_BATTERY: u8 = 0x03;
 const CMD_GET_TODAY_STEPS: u8 = 0x13;
 
 /// Big Data command types (byte[0] of BigData packets on BigData Service)
+#[allow(dead_code)]
 const BIGDATA_SPORT: u8 = 0x27;   // Sport/steps history (multi-day)
+#[allow(dead_code)]
 const BIGDATA_SLEEP: u8 = 0xBC;   // Sleep history (multi-day)
 
 /// Sleep phase type codes from BigData sleep response packets
+#[allow(dead_code)]
 const SLEEP_PHASE_AWAKE: u8 = 0x00;
+#[allow(dead_code)]
 const SLEEP_PHASE_LIGHT: u8 = 0x01;
+#[allow(dead_code)]
 const SLEEP_PHASE_DEEP: u8 = 0x02;
+#[allow(dead_code)]
 const SLEEP_PHASE_REM: u8 = 0x03;  // Only on newer firmware
 
 // ========================================================================================
@@ -109,6 +115,7 @@ fn make_time_sync_cmd() -> Vec<u8> {
 /// Build a BigData request packet (16 bytes) for sport or sleep history.
 /// `cmd` = BIGDATA_SPORT (0x27) or BIGDATA_SLEEP (0xBC)
 /// `days` = number of days of history to fetch (1-7)
+#[allow(dead_code)]
 fn make_bigdata_request(cmd: u8, days: u8) -> Vec<u8> {
     make_cmd_packet(cmd, &[days])
 }
@@ -117,6 +124,7 @@ fn make_bigdata_request(cmd: u8, days: u8) -> Vec<u8> {
 // DATE UTILITIES
 // ========================================================================================
 
+#[allow(dead_code)]
 fn date_to_epoch(year: u16, month: u8, day: u8) -> u64 {
     let y = year as i32;
     let m = month as i32;
@@ -249,6 +257,7 @@ fn parse_sport_bigdata_packet(data: &[u8]) -> Option<SportPacket> {
 ///   byte[5]  = next phase_duration_minutes
 ///   ... (up to ~4 phases per packet, pairs of type+duration)
 ///   byte[15] = CRC
+#[allow(dead_code)]
 #[derive(Debug)]
 enum SleepPacket {
     Header {
@@ -266,6 +275,7 @@ enum SleepPacket {
     NoData,
 }
 
+#[allow(dead_code)]
 fn parse_sleep_bigdata_packet(data: &[u8]) -> Option<SleepPacket> {
     if data.len() < 16 || data[0] != 0xBC {
         return None;
@@ -659,7 +669,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     emit_status(&app, "Services ontdekken...", 0.50);
     let mut cmd_write_char = None;
     let mut cmd_notify_char = None;
-    let mut bigdata_write_char = None;
+    let mut _bigdata_write_char = None;
     let mut bigdata_notify_char = None;
 
     for attempt in 1..=3 {
@@ -697,7 +707,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     log_ble(&format!("[Colmi Sync] Notify characteristic gekozen: {}", uuid_str));
                 }
                 if uuid_str.contains("de5bf72a") {
-                    bigdata_write_char = Some(charac.clone());
+                    _bigdata_write_char = Some(charac.clone());
                     log_ble(&format!("[Colmi Sync] BigData Write characteristic gekozen: {}", uuid_str));
                 }
                 if uuid_str.contains("de5bf729") {
