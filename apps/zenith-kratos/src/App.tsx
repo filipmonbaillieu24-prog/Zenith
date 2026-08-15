@@ -612,6 +612,32 @@ export default function App() {
     };
   }, [todaySleepQuality, session?.user?.id]);
 
+  // Unified fatigue detection & rest extension computation for Cross-Talk and PMC widget
+  const isSleepFatigued = !!(todaySleepQuality && todaySleepQuality < 75);
+  const isStepsFatigued = !!(todaySteps && todaySteps > 12000);
+  const isCardioFatigued = !!(currentPMC && currentPMC.tsb < -10);
+  const isZScoreFatigued = !!(aiStressConfig && aiStressConfig.factor > 1.0);
+
+  const isAnyFatigueDetected = isSleepFatigued || isStepsFatigued || isCardioFatigued || isZScoreFatigued;
+
+  const fatigueSummaryText = useMemo(() => {
+    const parts: string[] = [];
+    if (isSleepFatigued) parts.push(`Slaap: ${todaySleepQuality}%`);
+    if (isStepsFatigued) parts.push(`Stappen: ${todaySteps?.toLocaleString()}`);
+    if (isCardioFatigued) parts.push(`TSB: ${currentPMC.tsb}`);
+    if (isZScoreFatigued && !isCardioFatigued) parts.push(`Z-Score: +${aiStressConfig.zScore}`);
+    return parts.join(', ');
+  }, [isSleepFatigued, isStepsFatigued, isCardioFatigued, isZScoreFatigued, todaySleepQuality, todaySteps, currentPMC, aiStressConfig]);
+
+  const restTimerExtensionPct = useMemo(() => {
+    let extra = 0;
+    if (isSleepFatigued) extra += Math.round((75 - (todaySleepQuality || 75)) * 1.5);
+    if (isStepsFatigued) extra += 10;
+    if (isCardioFatigued) extra += Math.min(25, Math.abs((currentPMC?.tsb || 0) + 10));
+    if (isZScoreFatigued) extra += Math.round((aiStressConfig.factor - 1) * 100);
+    return Math.max(15, extra);
+  }, [isSleepFatigued, isStepsFatigued, isCardioFatigued, isZScoreFatigued, todaySleepQuality, currentPMC, aiStressConfig]);
+
   // Helper for exercise name resolution
   const exerciseMap = useMemo(() => {
     return new Map(exercises.map(e => [e.id, e]));
@@ -1331,7 +1357,7 @@ export default function App() {
       </nav>      {/* Content */}
       <main className="kratos-content animate-fade-in">
         {/* Dynamic Wearable & Cardio Fatigue Warning Banner */}
-        {((todaySleepQuality && todaySleepQuality < 75) || (todaySteps && todaySteps > 12000) || (currentPMC && currentPMC.tsb < -10)) && (
+        {isAnyFatigueDetected && (
           <div style={{
             background: 'rgba(236, 203, 104, 0.1)',
             border: '1px solid rgba(236, 203, 104, 0.25)',
@@ -1348,10 +1374,11 @@ export default function App() {
                 Fysiologische Vermoeidheid Gedetecteerd (Cross-talk)
               </span>
               <span style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.4 }}>
-                {todaySleepQuality && todaySleepQuality < 75 ? `Slechte slaapkwaliteit (${todaySleepQuality}%). ` : ''}
-                {todaySteps && todaySteps > 12000 ? `Hoge stappenactiviteit (${todaySteps.toLocaleString()} stappen). ` : ''}
-                {currentPMC && currentPMC.tsb < -10 ? `Negatieve cardio-vorm (TSB: ${currentPMC.tsb}). ` : ''}
-                Rusttimers worden automatisch verlengd en de intensiteit is conservatief aangepast om overbelasting te voorkomen.
+                {isSleepFatigued ? `Slechte slaapkwaliteit (${todaySleepQuality}%). ` : ''}
+                {isStepsFatigued ? `Hoge stappenactiviteit (${todaySteps?.toLocaleString()} stappen). ` : ''}
+                {isCardioFatigued ? `Negatieve cardio-vorm (TSB: ${currentPMC.tsb}). ` : ''}
+                {isZScoreFatigued && !isCardioFatigued ? `Cardio herstel Z-score (+${aiStressConfig.zScore}). ` : ''}
+                Rusttimers zijn met +{restTimerExtensionPct}% verlengd en de intensiteit is conservatief aangepast om overbelasting te voorkomen.
               </span>
             </div>
           </div>
@@ -1381,10 +1408,10 @@ export default function App() {
                   <Activity size={16} />
                 </div>
                 <div className="kratos-pmc-ai-info">
-                  <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.5px' }}>AI Cardio Stress Link</span>
-                  <span style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                    {aiStressConfig.factor > 1.0 
-                      ? `Z-Score: +${aiStressConfig.zScore}. Rusttimer is met ${Math.round((aiStressConfig.factor - 1) * 100)}% verlengd.`
+                  <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.5px' }}>AI Cardio & Recovery Link</span>
+                  <span style={{ fontSize: 11, color: isAnyFatigueDetected ? '#eccc68' : '#94a3b8', lineHeight: 1.4 }}>
+                    {isAnyFatigueDetected
+                      ? `Herstel-impact gedetecteerd (${fatigueSummaryText}). Rusttimer met +${restTimerExtensionPct}% verlengd.`
                       : 'Herstelstatus is optimaal. Standaard rusttijden van kracht.'}
                   </span>
                 </div>
