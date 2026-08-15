@@ -1,15 +1,15 @@
 {
-  "version": "0.1.74",
+  "version": "0.1.77",
   "notes": "",
-  "pub_date": "2026-08-15T10:35:32.042Z",
+  "pub_date": "2026-08-15T11:24:45.887Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVDI5MUJUVmRMbDNaNHVSN05OSEdsUjZaVmh6TU1tRUZCUWJwVm5DckpBbnREMld3Y0lYZ0FFVUhUSW03NFQ3VzBNSGhwUG9EYzRhejhaRkNDcTFoMFZmZzVMR3E3Vnc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2NzkwMTI4CWZpbGU6WmVuaXRoXzAuMS43NF94NjQtc2V0dXAuZXhlCnJjU0RIM01XSDhER01Ncy9oUVpKOUE5K3NQSmlzKzJuSUVMWlg3L2dLa005Z0ltZGZSMDhrZG5WWnlORXZQT1YxNWZRM0Z4N3JsTEJuYkRDTTN1K0RRPT0K",
-      "url": "https://github.com/filipmonbaillieu24-prog/Zenith/releases/download/v0.1.74/Zenith_0.1.74_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVDI5MUJUVmRMbHllOFNXalZjeXd5WFZLM0EycTBneEVzUWlBcnplWjhmZFdDd3ZxM2picCtzekhVTFZqN3VuRTVkWWdhcyt3TUw1TzlCalZnWE5FN1J0REJ5RkRIVkFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2NzkzMDgyCWZpbGU6WmVuaXRoXzAuMS43N194NjQtc2V0dXAuZXhlCkJOTFY4VU5sTGFwSDZGYXRsRmxnRlI0WjNRSW94SEVRYlFqa0FBQWFlUVYrNHdkaUQ2WSsrT1ZYeUJsT0RnTmtqMUN2R2pnNjNRS3doL2tQYzVEREFBPT0K",
+      "url": "https://github.com/filipmonbaillieu24-prog/Zenith/releases/download/v0.1.77/Zenith_0.1.77_x64-setup.exe"
     },
     "windows-x86_64-nsis": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVDI5MUJUVmRMbDNaNHVSN05OSEdsUjZaVmh6TU1tRUZCUWJwVm5DckpBbnREMld3Y0lYZ0FFVUhUSW03NFQ3VzBNSGhwUG9EYzRhejhaRkNDcTFoMFZmZzVMR3E3Vnc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2NzkwMTI4CWZpbGU6WmVuaXRoXzAuMS43NF94NjQtc2V0dXAuZXhlCnJjU0RIM01XSDhER01Ncy9oUVpKOUE5K3NQSmlzKzJuSUVMWlg3L2dLa005Z0ltZGZSMDhrZG5WWnlORXZQT1YxNWZRM0Z4N3JsTEJuYkRDTTN1K0RRPT0K",
-      "url": "https://github.com/filipmonbaillieu24-prog/Zenith/releases/download/v0.1.74/Zenith_0.1.74_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUVDI5MUJUVmRMbHllOFNXalZjeXd5WFZLM0EycTBneEVzUWlBcnplWjhmZFdDd3ZxM2picCtzekhVTFZqN3VuRTVkWWdhcyt3TUw1TzlCalZnWE5FN1J0REJ5RkRIVkFzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg2NzkzMDgyCWZpbGU6WmVuaXRoXzAuMS43N194NjQtc2V0dXAuZXhlCkJOTFY4VU5sTGFwSDZGYXRsRmxnRlI0WjNRSW94SEVRYlFqa0FBQWFlUVYrNHdkaUQ2WSsrT1ZYeUJsT0RnTmtqMUN2R2pnNjNRS3doL2tQYzVEREFBPT0K",
+      "url": "https://github.com/filipmonbaillieu24-prog/Zenith/releases/download/v0.1.77/Zenith_0.1.77_x64-setup.exe"
     }
   }
 }
