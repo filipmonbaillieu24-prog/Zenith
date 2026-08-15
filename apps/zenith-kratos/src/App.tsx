@@ -1356,34 +1356,6 @@ export default function App() {
         </button>
       </nav>      {/* Content */}
       <main className="kratos-content animate-fade-in">
-        {/* Dynamic Wearable & Cardio Fatigue Warning Banner */}
-        {isAnyFatigueDetected && (
-          <div style={{
-            background: 'rgba(236, 203, 104, 0.1)',
-            border: '1px solid rgba(236, 203, 104, 0.25)',
-            borderRadius: 12,
-            padding: '12px 16px',
-            marginBottom: 20,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12
-          }} className="animate-slide-up">
-            <Info size={18} style={{ color: '#eccc68', flexShrink: 0 }} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#eccc68', letterSpacing: '0.5px' }}>
-                Fysiologische Vermoeidheid Gedetecteerd (Cross-talk)
-              </span>
-              <span style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.4 }}>
-                {isSleepFatigued ? `Slechte slaapkwaliteit (${todaySleepQuality}%). ` : ''}
-                {isStepsFatigued ? `Hoge stappenactiviteit (${todaySteps?.toLocaleString()} stappen). ` : ''}
-                {isCardioFatigued ? `Negatieve cardio-vorm (TSB: ${currentPMC.tsb}). ` : ''}
-                {isZScoreFatigued && !isCardioFatigued ? `Cardio herstel Z-score (+${aiStressConfig.zScore}). ` : ''}
-                Rusttimers zijn met +{restTimerExtensionPct}% verlengd en de intensiteit is conservatief aangepast om overbelasting te voorkomen.
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* ----------------- DASHBOARD TAB ----------------- */}
         {activeTab === 'dashboard' && (
           <div className="animate-slide-up">
