@@ -192,7 +192,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       // Deduplicate sleeps by date (keep latest per calendar date)
       const uniqueSleepsMap = new Map<string, any>();
       (sleepData || []).forEach((item: any) => {
-        const dateKey = item.logged_at ? item.logged_at.split('T')[0] : '';
+        const dateKey = item.logged_at ? item.logged_at.substring(0, 10) : '';
         if (dateKey) uniqueSleepsMap.set(dateKey, item);
       });
       setSleeps(Array.from(uniqueSleepsMap.values()));
@@ -209,7 +209,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       // Deduplicate steps by date (keep latest per calendar date)
       const uniqueStepsMap = new Map<string, any>();
       (stepData || []).forEach((item: any) => {
-        const dateKey = item.logged_at ? item.logged_at.split('T')[0] : '';
+        const dateKey = item.logged_at ? item.logged_at.substring(0, 10) : '';
         if (dateKey) uniqueStepsMap.set(dateKey, item);
       });
       setSteps(Array.from(uniqueStepsMap.values()));
@@ -745,10 +745,30 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     return sleeps[sleeps.length - 1];
   }, [sleeps]);
 
-  const latestSteps = useMemo(() => {
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const todayStepsItem = useMemo(() => {
+    return steps.find(s => {
+      if (!s.logged_at) return false;
+      const dateKey = typeof s.logged_at === 'string' ? s.logged_at.substring(0, 10) : '';
+      return dateKey === todayStr;
+    }) || null;
+  }, [steps, todayStr]);
+
+  const latestStepsItem = useMemo(() => {
     if (steps.length === 0) return null;
     return steps[steps.length - 1];
   }, [steps]);
+
+  // Determine current daily steps for today
+  const currentDailySteps = todayStepsItem ? todayStepsItem.step_count : 0;
+  const isTodayStepsPresent = todayStepsItem !== null;
 
   // Formatted chart data
   const chartWeightData = useMemo(() => {
@@ -827,12 +847,11 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     }
   };
 
-  // Steps goal progress percentage
+  // Steps goal progress percentage based on today's steps
   const stepsProgress = useMemo(() => {
-    if (!latestSteps) return 0;
     const target = profile.target_steps || 10000;
-    return Math.min(Math.round((latestSteps.step_count / target) * 100), 100);
-  }, [latestSteps, profile.target_steps]);
+    return Math.min(Math.round((currentDailySteps / target) * 100), 100);
+  }, [currentDailySteps, profile.target_steps]);
 
   // RENDER TABS
   const renderHomeTab = () => {
@@ -890,23 +909,25 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </div>
             </div>
             <div className="metric-value-container">
-              <span className="metric-value">{latestSteps ? latestSteps.step_count.toLocaleString() : '0'}</span>
+              <span className="metric-value">{currentDailySteps.toLocaleString()}</span>
               <span className="metric-unit">/ {profile.target_steps?.toLocaleString() || '10.000'}</span>
             </div>
-            {latestSteps && (
-              <div style={{ margin: '8px 0 12px' }}>
-                <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
-                  <div style={{ width: `${stepsProgress}%`, height: '100%', background: '#5c7cfa', borderRadius: 2 }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-muted)', marginTop: 4 }}>
-                  <span>Progressie</span>
-                  <span>{stepsProgress}%</span>
-                </div>
+            <div style={{ margin: '8px 0 12px' }}>
+              <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ width: `${stepsProgress}%`, height: '100%', background: '#5c7cfa', borderRadius: 2 }} />
               </div>
-            )}
-            <div className="metric-footer" style={{ marginTop: latestSteps ? 0 : 26 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-muted)', marginTop: 4 }}>
+                <span>Progressie</span>
+                <span>{stepsProgress}%</span>
+              </div>
+            </div>
+            <div className="metric-footer" style={{ marginTop: 0 }}>
               <Sparkles size={12} style={{ color: '#5c7cfa' }} />
-              <span>Doel: {profile.target_steps ? profile.target_steps.toLocaleString() : '10.000'} stappen</span>
+              <span style={{ fontSize: 10 }}>
+                {isTodayStepsPresent 
+                  ? `Vandaag (${new Date().toLocaleDateString('nl-NL')})`
+                  : `Vandaag: 0 stappen ${latestStepsItem ? `(Laatste: ${latestStepsItem.step_count.toLocaleString()} op ${new Date(latestStepsItem.logged_at).toLocaleDateString('nl-NL')})` : ''}`}
+              </span>
             </div>
           </div>
 
