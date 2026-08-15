@@ -1863,27 +1863,43 @@ function App() {
                 </div>
                 <div className="zane-stat-item">
                   <span className="zane-stat-lbl">Slaap Kwaliteit</span>
-                  <div className="zane-stat-val">
-                    {zaneResult.isCalibrated ? `${zaneResult.sleepQualityCoeff} kcal` : '--'}
+                  <div className="zane-stat-val" style={{ color: '#a855f7' }}>
+                    {zaneResult.isCalibrated 
+                      ? `${zaneResult.sleepQualityCoeff >= 0 ? '+' : ''}${zaneResult.sleepQualityCoeff} kcal/%` 
+                      : (todaySleepQuality !== null ? `${todaySleepQuality}%` : `${Math.round(sleepQualityAvg)}%`)}
                   </div>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
+                    {zaneResult.isCalibrated ? 'Coëfficiënt' : 'Actuele meting'}
+                  </span>
                 </div>
                 <div className="zane-stat-item">
                   <span className="zane-stat-lbl">Slaap Duur</span>
-                  <div className="zane-stat-val">
-                    {zaneResult.isCalibrated ? `${zaneResult.sleepDurationCoeff} kcal` : '--'}
+                  <div className="zane-stat-val" style={{ color: '#a855f7' }}>
+                    {zaneResult.isCalibrated 
+                      ? `${zaneResult.sleepDurationCoeff >= 0 ? '+' : ''}${zaneResult.sleepDurationCoeff} kcal/u` 
+                      : (todaySleepDuration !== null ? `${Math.floor(todaySleepDuration)}u ${Math.round((todaySleepDuration % 1) * 60)}m` : `${Math.floor(sleepDurationAvg)}u`)}
                   </div>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
+                    {zaneResult.isCalibrated ? 'Coëfficiënt' : 'Actuele meting'}
+                  </span>
                 </div>
                 <div className="zane-stat-item">
                   <span className="zane-stat-lbl">Gym Coëff</span>
                   <div className="zane-stat-val" style={{ color: 'var(--color-protein)' }}>
                     {zaneResult.isCalibrated ? `${zaneResult.gymVolumeCoeff.toFixed(3)}` : '0.150'}
                   </div>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
+                    {zaneResult.isCalibrated ? 'Geleerd' : 'Prior baseline'}
+                  </span>
                 </div>
                 <div className="zane-stat-item">
                   <span className="zane-stat-lbl">Cafeïne Coëff</span>
                   <div className="zane-stat-val" style={{ color: 'var(--color-carb)' }}>
                     {zaneResult.isCalibrated ? `${zaneResult.caffeineCoeff.toFixed(3)}` : '0.150'}
                   </div>
+                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
+                    {zaneResult.isCalibrated ? 'Geleerd' : 'Prior baseline'}
+                  </span>
                 </div>
               </div>
 
@@ -1896,7 +1912,7 @@ function App() {
                 ) : (
                   <>
                     Kalibratie status: <strong>{zaneResult.calibrationDays}/14 dagen</strong> compleet gelogd. 
-                    Zenith gebruikt momenteel standaard sportwetenschappelijke fallbacks en prior-factoren tot er voldoende data is voor de regressie-regels.
+                    Slaapkwaliteit en -duur wegen nu al actief mee via sportwetenschappelijke herstelmatrices. Na 14 dagen schakelt Zenith over op uw unieke gepersonaliseerde slaapcoëfficiënten.
                   </>
                 )}
               </div>
