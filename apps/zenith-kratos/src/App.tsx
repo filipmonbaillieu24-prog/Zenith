@@ -1720,7 +1720,7 @@ export default function App() {
                     </thead>
                     <tbody>
                        {exercises.map(ex => {
-                        const step = ex.increment_weight;
+                        const step = ex.increment_weight || 1;
                         const rawAiIncrement = predictProgressiveOverload(
                           1500, // baseline session volume
                           0,    // weight progression baseline
@@ -1728,16 +1728,34 @@ export default function App() {
                           currentPMC?.tsb || 0,
                           10    // standard target reps
                         );
-                        const targetRaw = ex.increment_per_side ? (rawAiIncrement / 2) : rawAiIncrement;
-                        const multiplier = Math.round(targetRaw / step);
-                        const aiIncrement = Math.max(step, multiplier * step);
+
+                        let aiIncrementText = '';
+                        if (ex.increment_per_side) {
+                          // Per-side hardware increment: raw AI total increment divided by 2
+                          const targetPerSideRaw = rawAiIncrement / 2;
+                          // Round to nearest valid hardware step per side (minimum 1 step)
+                          const multiplier = Math.max(1, Math.round(targetPerSideRaw / step));
+                          const aiIncrementPerSide = multiplier * step;
+                          aiIncrementText = `[AI: +${aiIncrementPerSide} ${ex.weight_unit} per kant]`;
+                        } else {
+                          // Total increment: round raw AI total increment to valid hardware step
+                          const multiplier = Math.max(1, Math.round(rawAiIncrement / step));
+                          const aiIncrementTotal = multiplier * step;
+                          aiIncrementText = `[AI: +${aiIncrementTotal} ${ex.weight_unit} totaal]`;
+                        }
+
                         return (
                           <tr key={ex.id}>
                             <td style={{ fontWeight: 700, color: '#fff' }}>{ex.name}</td>
                             <td>
                               <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: 4 }}>{ex.category}</span>
                             </td>
-                            <td>+{ex.increment_weight} {ex.increment_per_side ? '(per kant)' : '(totaal)'} <span style={{ color: 'var(--accent-neon)', fontSize: 11, marginLeft: 4 }}>[AI: +{aiIncrement} {ex.weight_unit}]</span></td>
+                            <td>
+                              +{ex.increment_weight} {ex.increment_per_side ? '(per kant)' : '(totaal)'}{' '}
+                              <span style={{ color: 'var(--accent-neon)', fontSize: 11, marginLeft: 4 }}>
+                                {aiIncrementText}
+                              </span>
+                            </td>
                             <td style={{ textTransform: 'uppercase', fontWeight: 700 }}>{ex.weight_unit}</td>
                             <td>RIR {ex.default_rir}</td>
                             <td style={{ color: 'var(--text-secondary)', fontSize: 11, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
