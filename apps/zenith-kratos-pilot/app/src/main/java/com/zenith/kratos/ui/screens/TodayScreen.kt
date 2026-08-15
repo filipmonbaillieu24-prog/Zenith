@@ -269,39 +269,44 @@ fun TodayScreen(
                                         for (ae in active) {
                                             val log = prevWorkout.sets.find { it.exerciseId == ae.exerciseId }
                                             if (log != null && log.sets.isNotEmpty()) {
-                                                val workingSets = log.sets.filter { it.type == "working" }
-                                                val allSuccess = workingSets.isNotEmpty() && workingSets.all { s ->
-                                                    val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }
+                                                val workingSetsInLog = log.sets.filter { it.type == "working" }
+                                                val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }
+                                                val allSuccess = workingSetsInLog.isNotEmpty() && workingSetsInLog.all { s ->
                                                     val maxReps = tempEx?.sets?.filter { it.type == "working" }?.firstOrNull()?.maxReps ?: 10
                                                     val targetRir = tempEx?.sets?.filter { it.type == "working" }?.firstOrNull()?.targetRir ?: 2
                                                     
                                                     s.reps >= maxReps && s.rir <= targetRir
                                                 }
 
+                                                var workIdx = 0
                                                 for (i in ae.sets.indices) {
                                                     val setType = ae.sets[i].type
-                                                    val prevSet = log.sets.getOrNull(i) ?: log.sets.last()
-                                                    val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }
-                                                    val minReps = tempEx?.sets?.getOrNull(i)?.minReps ?: 8
-                                                    val maxReps = tempEx?.sets?.getOrNull(i)?.maxReps ?: 12
-
                                                     if (setType == "working") {
-                                                        if (allSuccess) {
-                                                            val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
-                                                            val nextW = prevSet.weight + step
-                                                            ae.sets[i].targetWeight = nextW
-                                                            ae.sets[i].targetReps = minReps
-                                                        } else {
-                                                            val targetRir = tempEx?.sets?.getOrNull(i)?.targetRir ?: 2
-                                                            val prevSuccessful = prevSet.rir <= targetRir
-                                                            if (prevSuccessful && prevSet.reps < maxReps) {
-                                                                ae.sets[i].targetWeight = prevSet.weight
-                                                                ae.sets[i].targetReps = prevSet.reps + 1
+                                                        val prevSet = workingSetsInLog.getOrNull(workIdx) ?: workingSetsInLog.lastOrNull()
+                                                        if (prevSet != null) {
+                                                            val minReps = tempEx?.sets?.filter { it.type == "working" }?.getOrNull(workIdx)?.minReps ?: 8
+                                                            val maxReps = tempEx?.sets?.filter { it.type == "working" }?.getOrNull(workIdx)?.maxReps ?: 12
+                                                            val targetRir = tempEx?.sets?.filter { it.type == "working" }?.getOrNull(workIdx)?.targetRir ?: 2
+
+                                                            if (allSuccess) {
+                                                                val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
+                                                                val nextW = prevSet.weight + step
+                                                                ae.sets[i].targetWeight = snapToHardwareStep(nextW, ae.incrementWeight, ae.incrementPerSide)
+                                                                ae.sets[i].targetReps = minReps
                                                             } else {
-                                                                ae.sets[i].targetWeight = prevSet.weight
-                                                                ae.sets[i].targetReps = prevSet.reps
+                                                                val prevSuccessful = prevSet.rir <= targetRir
+                                                                val targetW = snapToHardwareStep(prevSet.weight, ae.incrementWeight, ae.incrementPerSide)
+                                                                ae.sets[i].targetWeight = targetW
+                                                                if (prevSuccessful && prevSet.reps < maxReps) {
+                                                                    ae.sets[i].targetReps = prevSet.reps + 1
+                                                                } else {
+                                                                    ae.sets[i].targetReps = prevSet.reps
+                                                                }
                                                             }
+                                                        } else {
+                                                            ae.sets[i].targetWeight = 20.0
                                                         }
+                                                        workIdx++
                                                     }
                                                 }
                                             } else {
@@ -310,7 +315,7 @@ fun TodayScreen(
                                                 }
                                             }
                                             val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                                            recalculateWarmupTargets(ae.sets, workWeight)
+                                            recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide)
                                         }
                                     } else {
                                         for (ae in active) {
@@ -318,7 +323,7 @@ fun TodayScreen(
                                                 ae.sets[i].targetWeight = 20.0
                                             }
                                             val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                                            recalculateWarmupTargets(ae.sets, workWeight)
+                                            recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide)
                                         }
                                     }
 
@@ -443,36 +448,4 @@ fun TodayScreen(
 @Composable
 fun safeDrawingPadding(): Modifier {
     return Modifier.systemBarsPadding()
-}
-
-fun recalculateWarmupTargets(sets: List<ActiveSetState>, workingWeight: Double) {
-    val warmupSets = sets.filter { it.type == "warmup" }
-    val count = warmupSets.size
-    var warmupIndex = 0
-    for (i in 0 until sets.size) {
-        if (sets[i].type == "warmup") {
-            // progressive scale
-            if (count <= 1) {
-                sets[i].targetWeight = Math.round(workingWeight * 0.6 * 2) / 2.0
-                sets[i].targetReps = 6
-            } else {
-                if (warmupIndex == 0) {
-                    sets[i].targetWeight = Math.round(workingWeight * 0.5 * 2) / 2.0
-                    sets[i].targetReps = 10
-                } else if (warmupIndex == count - 1) {
-                    sets[i].targetWeight = Math.round(workingWeight * 0.75 * 2) / 2.0
-                    sets[i].targetReps = 2
-                } else {
-                    val fraction = 0.5 + (0.4 * warmupIndex.toDouble() / (count - 1).coerceAtLeast(1).toDouble())
-                    sets[i].targetWeight = Math.round(workingWeight * fraction * 2) / 2.0
-                    sets[i].targetReps = when {
-                        warmupIndex == 0 -> 10
-                        warmupIndex == count - 1 -> 2
-                        else -> 5
-                    }
-                }
-            }
-            warmupIndex++
-        }
-    }
 }

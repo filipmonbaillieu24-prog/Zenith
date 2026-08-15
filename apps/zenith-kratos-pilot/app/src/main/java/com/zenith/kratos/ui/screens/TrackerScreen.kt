@@ -250,41 +250,11 @@ fun TrackerScreen(
         return String.format("%02d:%02d", m, s)
     }
 
-    // Progressive Warmup Scale recalculation
-    fun recalculateWarmupTargets(sets: MutableList<ActiveSetState>, workingWeight: Double) {
-        val warmupSets = sets.filter { it.type == "warmup" }
-        val count = warmupSets.size
-        var warmupIndex = 0
-        for (i in sets.indices) {
-            if (sets[i].type == "warmup") {
-                val set = sets[i]
-                when (count) {
-                    1 -> {
-                        set.targetWeight = Math.round(workingWeight * 0.6 * 2) / 2.0
-                        set.targetReps = 8
-                    }
-                    2 -> {
-                        if (warmupIndex == 0) {
-                            set.targetWeight = Math.round(workingWeight * 0.5 * 2) / 2.0
-                            set.targetReps = 10
-                        } else {
-                            set.targetWeight = Math.round(workingWeight * 0.75 * 2) / 2.0
-                            set.targetReps = 5
-                        }
-                    }
-                    else -> {
-                        val fraction = 0.5 + (0.4 * warmupIndex.toDouble() / (count - 1).coerceAtLeast(1).toDouble())
-                        val reps = when {
-                            warmupIndex == 0 -> 10
-                            warmupIndex == count - 1 -> 2
-                            else -> 5
-                        }
-                        set.targetWeight = Math.round(workingWeight * fraction * 2) / 2.0
-                        set.targetReps = reps
-                    }
-                }
-                warmupIndex++
-            }
+    // Auto-dismiss PR Celebration Toast after 4 seconds
+    LaunchedEffect(showPRToast) {
+        if (showPRToast) {
+            delay(4000)
+            showPRToast = false
         }
     }
 
@@ -514,7 +484,7 @@ fun TrackerScreen(
                                                 val nextType = if (setVal.type == "warmup") "working" else "warmup"
                                                 setVal.type = nextType
                                                 val workWeight = exState.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                                                recalculateWarmupTargets(exState.sets, workWeight)
+                                                recalculateWarmupTargets(exState.sets, workWeight, exState.incrementWeight, exState.incrementPerSide)
                                                 triggerSave()
                                             },
                                         contentAlignment = Alignment.Center
@@ -720,7 +690,7 @@ fun TrackerScreen(
 
                                                     // If this is the first working set, update warmup targets
                                                     if (setVal.type == "working" && exState.sets.firstOrNull { it.type == "working" } == setVal) {
-                                                        recalculateWarmupTargets(exState.sets, w)
+                                                        recalculateWarmupTargets(exState.sets, w, exState.incrementWeight, exState.incrementPerSide)
                                                     }
 
                                                     // Dismiss keyboard if open on this set
@@ -871,7 +841,7 @@ fun TrackerScreen(
                                                     targetRir = lastRir
                                                 )
                                             )
-                                            recalculateWarmupTargets(exState.sets, lastWeight)
+                                            recalculateWarmupTargets(exState.sets, lastWeight, exState.incrementWeight, exState.incrementPerSide)
                                             triggerSave()
                                         }
                                         .padding(vertical = 4.dp)
@@ -887,7 +857,7 @@ fun TrackerScreen(
                                             if (exState.sets.size > 1) {
                                                 exState.sets.removeAt(exState.sets.size - 1)
                                                 val workWeight = exState.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                                                recalculateWarmupTargets(exState.sets, workWeight)
+                                                recalculateWarmupTargets(exState.sets, workWeight, exState.incrementWeight, exState.incrementPerSide)
                                                 triggerSave()
                                             }
                                         }
@@ -1064,7 +1034,7 @@ fun TrackerScreen(
                                                         activeSet.weightInput = newText
                                                         val newW = newText.toDoubleOrNull()
                                                         if (newW != null && activeSet.type == "working" && activeEx.sets.firstOrNull { it.type == "working" } == activeSet) {
-                                                            recalculateWarmupTargets(activeEx.sets, newW)
+                                                            recalculateWarmupTargets(activeEx.sets, newW, activeEx.incrementWeight, activeEx.incrementPerSide)
                                                         }
                                                     } else {
                                                         activeSet.repsInput = newText
@@ -1135,7 +1105,7 @@ fun TrackerScreen(
 
                                                 // Update warmup sets if first working set is edited
                                                 if (activeSet.type == "working" && activeEx.sets.firstOrNull { it.type == "working" } == activeSet) {
-                                                    recalculateWarmupTargets(activeEx.sets, w)
+                                                    recalculateWarmupTargets(activeEx.sets, w, activeEx.incrementWeight, activeEx.incrementPerSide)
                                                 }
 
                                                 activeFocusField = null
@@ -1333,21 +1303,22 @@ fun TrackerScreen(
                     .padding(24.dp)
                     .fillMaxWidth()
                     .border(1.dp, ZenithPrimary, RoundedCornerShape(8.dp))
+                    .clickable { showPRToast = false }
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(text = "PR GEBROKEN! 🔥", color = ZenithPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black)
                         Text(text = "$prExerciseName geschat 1RM: $prValue $prUnit", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                     IconButton(onClick = { showPRToast = false }) {
                         Text(
-                            text = "✓",
+                            text = "✕",
                             color = Color.White,
-                            fontSize = 18.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
