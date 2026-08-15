@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { predictProgressiveOverload, kratosAutoregModel } from '../../../shared/ml/SharedModels';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel } from '../../../shared/ml/SharedModels';
 import { supabase } from './utils/supabaseClient';
 import { 
   Dumbbell, 
@@ -545,6 +545,72 @@ export default function App() {
       }
     }
   };
+
+  // Autoregulation 2.0 helper
+  const computeAutoregRecommendation = (
+    setIndex: number,
+    prevWeight: number,
+    prevReps: number,
+    prevRir: number,
+    targetReps: number,
+    targetRir: number,
+    stepWeight: number,
+    isPerSide: boolean,
+    restSeconds: number = 120,
+    recommendedRestSeconds: number = 120
+  ) => {
+    return predictAutoregWeight(
+      setIndex,
+      prevWeight,
+      prevReps,
+      prevRir,
+      restSeconds,
+      targetReps,
+      targetRir,
+      stepWeight,
+      isPerSide,
+      recommendedRestSeconds,
+      todaySleepQuality || 80
+    );
+  };
+
+  // Autoregulation 2.0 online training helper
+  const trainAutoreg = async (
+    setIndex: number,
+    prevWeight: number,
+    prevReps: number,
+    prevRir: number,
+    targetRir: number,
+    restSeconds: number,
+    recommendedRestSeconds: number,
+    actualNextWeight: number,
+    actualNextReps: number,
+    actualNextRir: number
+  ) => {
+    if (!session?.user?.id) return;
+    await trainAutoregModel(
+      supabase,
+      session.user.id,
+      setIndex,
+      prevWeight,
+      prevReps,
+      prevRir,
+      targetRir,
+      restSeconds,
+      recommendedRestSeconds,
+      actualNextWeight,
+      actualNextReps,
+      actualNextRir,
+      todaySleepQuality || 80
+    );
+  };
+
+  useEffect(() => {
+    (window as any).kratosAutoreg2 = {
+      compute: computeAutoregRecommendation,
+      train: trainAutoreg
+    };
+  }, [todaySleepQuality, session?.user?.id]);
 
   // Helper for exercise name resolution
   const exerciseMap = useMemo(() => {
