@@ -1,11 +1,11 @@
 package com.zenith.daily
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -35,9 +35,34 @@ class MainActivity : ComponentActivity() {
             repository.seedDefaultFoodItemsIfEmpty()
         }
 
+        val prefs = applicationContext.getSharedPreferences("zenith_daily_auth", Context.MODE_PRIVATE)
+        val savedEmail = prefs.getString("user_email", null)
+
         setContent {
             ZenithDailyTheme {
-                MainAppScreen(repository)
+                var currentUserEmail by remember { mutableStateOf(savedEmail) }
+
+                if (currentUserEmail == null) {
+                    LoginScreen(
+                        onLoginSuccess = { email ->
+                            prefs.edit().putString("user_email", email).apply()
+                            currentUserEmail = email
+                        },
+                        onSkipLogin = {
+                            prefs.edit().putString("user_email", "gast@zenith.app").apply()
+                            currentUserEmail = "gast@zenith.app"
+                        }
+                    )
+                } else {
+                    MainAppScreen(
+                        repository = repository,
+                        userEmail = currentUserEmail!!,
+                        onLogout = {
+                            prefs.edit().remove("user_email").apply()
+                            currentUserEmail = null
+                        }
+                    )
+                }
             }
         }
     }
@@ -45,7 +70,11 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainAppScreen(repository: DailyRepository) {
+fun MainAppScreen(
+    repository: DailyRepository,
+    userEmail: String,
+    onLogout: () -> Unit
+) {
     val scope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf(0) } // 0: Vandaag, 1: Voeding, 2: Gezondheid
 
@@ -57,7 +86,6 @@ fun MainAppScreen(repository: DailyRepository) {
     var healthSnapshot by remember { mutableStateOf(HealthConnectSnapshot(stepsCount = 8420, activeCaloriesBurned = 420, isConnected = true)) }
 
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
-    var updateProgress by remember { mutableStateOf<Float?>(null) }
 
     // Quick Action Modals
     var showGlobalWeightModal by remember { mutableStateOf(false) }
@@ -75,15 +103,29 @@ fun MainAppScreen(repository: DailyRepository) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(
-                        text = "ZENITH DAILY",
-                        style = LocalTextStyle.current.copy(
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 2.sp,
-                            fontSize = 17.sp,
-                            color = ZenithTextPrimary
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "ZENITH DAILY",
+                            style = LocalTextStyle.current.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 2.sp,
+                                fontSize = 16.sp,
+                                color = ZenithTextPrimary
+                            )
                         )
-                    )
+                        Text(
+                            text = userEmail,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ZenithPrimary,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                },
+                actions = {
+                    TextButton(onClick = onLogout) {
+                        Text("UITLOGGEN", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = ZenithSecondary)
+                    }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = ZenithBackground
