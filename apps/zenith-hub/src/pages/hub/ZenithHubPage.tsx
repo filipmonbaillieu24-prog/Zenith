@@ -36,6 +36,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   // Dashboard Stats States
   const [plannedWorkouts, setPlannedWorkouts] = useState<PlannedWorkoutItem[]>([]);
   const [allRides, setAllRides] = useState<any[]>([]);
+  const [allStride, setAllStride] = useState<any[]>([]);
   const [allKratos, setAllKratos] = useState<any[]>([]);
   const [kratosExercises, setKratosExercises] = useState<any[]>([]);
   const [latestWeight, setLatestWeight] = useState<any | null>(null);
@@ -168,7 +169,16 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         }));
       }
 
-      // 9. Fetch Kratos workouts for PMC simulation & Muscle Heatmap
+      // 9. Fetch Stride running activities for PMC simulation & Cardio Volume
+      const { data: strideData } = await supabase
+        .from('stride_activities')
+        .select('*')
+        .eq('user_id', userId);
+      if (strideData) {
+        setAllStride(strideData);
+      }
+
+      // 10. Fetch Kratos workouts for PMC simulation & Muscle Heatmap
       const { data: allKData } = await supabase
         .from('kratos_workouts')
         .select('id, name, completed_at, sets, volume')
@@ -177,7 +187,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         setAllKratos(allKData);
       }
 
-      // 10. Fetch Kratos exercises catalog to map exercise IDs -> Categories, Primary & Secondary Muscles
+      // 11. Fetch Kratos exercises catalog to map exercise IDs -> Categories, Primary & Secondary Muscles
       const { data: exCatalog } = await supabase
         .from('kratos_exercises')
         .select('id, name, category, primary_muscle, secondary_muscles')
@@ -206,6 +216,16 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     allRides.forEach(r => {
       if (r.tss > 0) {
         tssList.push({ date: r.date, tss: r.tss });
+      }
+    });
+
+    allStride.forEach(s => {
+      const dateMs = new Date(s.date).getTime();
+      const durMins = (s.duration_sec || 1200) / 60;
+      const hrRatio = (s.avg_heart_rate || 147) / 150;
+      const rss = Math.round(durMins * hrRatio * 1.1);
+      if (rss > 0) {
+        tssList.push({ date: dateMs, tss: rss });
       }
     });
 
@@ -265,22 +285,22 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       name: string;
       fatigueRaw: number;
       lastTrainedMs: number;
-      primaryExercises: Set<string>;
+      exercisesWithDates: { name: string; dateMs: number }[];
     }> = {
-      chest: { name: 'Borstspieren (Pectoralis Major)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      deltoids: { name: 'Schouders (Deltoideus)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      biceps: { name: 'Biceps (Biceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      triceps: { name: 'Triceps (Triceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      abs: { name: 'Buikspieren (Rectus Abdominis)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      obliques: { name: 'Schuine Buikspieren (Obliques)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      quadriceps: { name: 'Dijspieren (Quadriceps Femoris)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      upperBack: { name: 'Bovenrug (Rhomboids & Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      lowerBack: { name: 'Lendenrug (Erector Spinae)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      gluteal: { name: 'Zitvlakspieren (Gluteus Maximus)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      hamstring: { name: 'Achterdijbeen (Hamstrings)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      calves: { name: 'Kuitspieren (Gastrocnemius & Soleus)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      forearm: { name: 'Onderarmen (Forearms)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() },
-      trapezius: { name: 'Monnikskapspier (Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, primaryExercises: new Set() }
+      chest: { name: 'Borstspieren (Pectoralis Major)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      deltoids: { name: 'Schouders (Deltoideus)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      biceps: { name: 'Biceps (Biceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      triceps: { name: 'Triceps (Triceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      abs: { name: 'Buikspieren (Rectus Abdominis)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      obliques: { name: 'Schuine Buikspieren (Obliques)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      quadriceps: { name: 'Dijspieren (Quadriceps Femoris)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      upperBack: { name: 'Bovenrug (Rhomboids & Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      lowerBack: { name: 'Lendenrug (Erector Spinae)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      gluteal: { name: 'Zitvlakspieren (Gluteus Maximus)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      hamstring: { name: 'Achterdijbeen (Hamstrings)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      calves: { name: 'Kuitspieren (Gastrocnemius & Soleus)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      forearm: { name: 'Onderarmen (Forearms)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      trapezius: { name: 'Monnikskapspier (Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] }
     };
 
     const addImpact = (slug: string, fatigueImpact: number, dateMs: number, exerciseName: string) => {
@@ -292,7 +312,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       if (dateMs > map[slug].lastTrainedMs) {
         map[slug].lastTrainedMs = dateMs;
       }
-      map[slug].primaryExercises.add(exerciseName);
+      map[slug].exercisesWithDates.push({ name: exerciseName, dateMs });
     };
 
     // Process Kratos workouts
@@ -302,16 +322,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       const workoutName = k.name || 'Kratos Training';
       const sets = Array.isArray(k.sets) ? k.sets : [];
 
-      if (sets.length === 0) {
-        const nameLower = workoutName.toLowerCase();
-        if (nameLower.includes('schouder') || nameLower.includes('shoulder') || nameLower.includes('deltoid')) {
-          addImpact('deltoids', 55, dateMs, workoutName);
-        } else {
-          addImpact('chest', 20, dateMs, workoutName);
-          addImpact('quadriceps', 20, dateMs, workoutName);
-        }
-        return;
-      }
+      if (sets.length === 0) return;
 
       sets.forEach((exLog: any) => {
         const exMeta = exLog.exercise_id ? exerciseMap.get(exLog.exercise_id) : null;
@@ -333,34 +344,44 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
             });
           }
         } else if (
+          nameLower.includes('lateral raise') ||
+          nameLower.includes('rear delt') ||
+          nameLower.includes('reverse fly') ||
+          nameLower.includes('face pull')
+        ) {
+          addImpact('deltoids', baseFatigue, dateMs, exName);
+          if (nameLower.includes('rear delt') || nameLower.includes('face pull')) {
+            addImpact('trapezius', baseFatigue * 0.5, dateMs, exName);
+            addImpact('upperBack', baseFatigue * 0.4, dateMs, exName);
+          }
+        } else if (
           exCategory === 'shoulders' ||
           exCategory === 'schouders' ||
           nameLower.includes('shoulder') ||
           nameLower.includes('schouder') ||
           nameLower.includes('deltoid') ||
           nameLower.includes('arnold') ||
-          nameLower.includes('lateral raise') ||
           nameLower.includes('military') ||
-          nameLower.includes('overhead press') ||
-          nameLower.includes('face pull') ||
-          nameLower.includes('upright row') ||
-          nameLower.includes('rear delt')
+          nameLower.includes('overhead press')
         ) {
           addImpact('deltoids', baseFatigue, dateMs, exName);
           addImpact('triceps', baseFatigue * 0.4, dateMs, exName);
-          addImpact('trapezius', baseFatigue * 0.3, dateMs, exName);
+        } else if (
+          nameLower.includes('fly') ||
+          nameLower.includes('pec deck')
+        ) {
+          addImpact('chest', baseFatigue, dateMs, exName);
+          addImpact('deltoids', baseFatigue * 0.4, dateMs, exName);
         } else if (
           exCategory === 'chest' ||
           exCategory === 'borst' ||
           nameLower.includes('chest') ||
           nameLower.includes('bench') ||
-          nameLower.includes('pushup') ||
-          nameLower.includes('pec deck') ||
-          nameLower.includes('fly')
+          nameLower.includes('pushup')
         ) {
           addImpact('chest', baseFatigue, dateMs, exName);
-          addImpact('deltoids', baseFatigue * 0.55, dateMs, exName);
-          addImpact('triceps', baseFatigue * 0.5, dateMs, exName);
+          addImpact('deltoids', baseFatigue * 0.4, dateMs, exName);
+          addImpact('triceps', baseFatigue * 0.4, dateMs, `${exName} (Secundair)`);
         } else if (
           exCategory === 'triceps' ||
           nameLower.includes('tricep') ||
@@ -387,7 +408,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
           nameLower.includes('leg extension')
         ) {
           addImpact('quadriceps', baseFatigue, dateMs, exName);
-          addImpact('gluteal', baseFatigue * 0.6, dateMs, exName);
+          addImpact('gluteal', baseFatigue * 0.5, dateMs, exName);
           addImpact('lowerBack', baseFatigue * 0.3, dateMs, exName);
         } else if (
           exCategory === 'hamstrings' ||
@@ -398,8 +419,8 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
           nameLower.includes('romanian')
         ) {
           addImpact('hamstring', baseFatigue, dateMs, exName);
-          addImpact('gluteal', baseFatigue * 0.7, dateMs, exName);
-          addImpact('lowerBack', baseFatigue * 0.6, dateMs, exName);
+          addImpact('gluteal', baseFatigue * 0.6, dateMs, exName);
+          addImpact('lowerBack', baseFatigue * 0.5, dateMs, exName);
           addImpact('trapezius', baseFatigue * 0.4, dateMs, exName);
         } else if (
           exCategory === 'lats' ||
@@ -437,13 +458,6 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
           nameLower.includes('kuit')
         ) {
           addImpact('calves', baseFatigue, dateMs, exName);
-        } else {
-          if (nameLower.includes('shoulder') || nameLower.includes('schouder') || nameLower.includes('deltoid')) {
-            addImpact('deltoids', baseFatigue, dateMs, exName);
-          } else {
-            addImpact('chest', 20, dateMs, exName);
-            addImpact('quadriceps', 20, dateMs, exName);
-          }
         }
       });
     });
@@ -469,6 +483,32 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       addImpact('hamstring', hamstringImpact, dateMs, rideTitle);
     });
 
+    // Process Stride running activities
+    allStride.forEach((s: any) => {
+      if (!s.date && !s.created_at) return;
+      const dateMs = s.date ? new Date(s.date).getTime() : new Date(s.created_at).getTime();
+      const distKm = Number(s.distance_km || s.distance || 0);
+      const durationMin = Number(s.duration_sec || 0) / 60;
+      const rpe = Number(s.rpe || 5);
+      
+      const impactScale = distKm > 0 ? distKm : (durationMin > 0 ? durationMin * 0.15 : 15);
+      const intensityFactor = Math.max(0.8, rpe / 5.0);
+
+      const calfImpact = Math.min(90, Math.round(impactScale * 1.6 * intensityFactor));
+      const quadImpact = Math.min(85, Math.round(impactScale * 1.4 * intensityFactor));
+      const hamstringImpact = Math.min(75, Math.round(impactScale * 1.1 * intensityFactor));
+      const gluteImpact = Math.min(65, Math.round(impactScale * 0.9 * intensityFactor));
+      const absImpact = Math.min(40, Math.round(impactScale * 0.4 * intensityFactor));
+
+      const runTitle = s.title || (distKm > 0 ? `Hardloopsessie (${distKm.toFixed(1)} km)` : 'Hardloopsessie');
+
+      addImpact('calves', calfImpact, dateMs, runTitle);
+      addImpact('quadriceps', quadImpact, dateMs, runTitle);
+      addImpact('hamstring', hamstringImpact, dateMs, runTitle);
+      addImpact('gluteal', gluteImpact, dateMs, runTitle);
+      addImpact('abs', absImpact, dateMs, runTitle);
+    });
+
     const finalMap: Record<string, any> = {};
 
     Object.keys(map).forEach(key => {
@@ -476,6 +516,8 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       const fatiguePercent = Math.min(100, Math.round(item.fatigueRaw));
       
       let lastTrainedStr = 'Volledig hersteld';
+      let primaryExercisesArr: string[] = ['Geen recente belasting'];
+
       if (item.lastTrainedMs > 0) {
         const hoursAgo = Math.round((nowMs - item.lastTrainedMs) / (1000 * 60 * 60));
         if (hoursAgo < 1) {
@@ -488,11 +530,19 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
           const daysAgo = Math.floor(hoursAgo / 24);
           lastTrainedStr = `${daysAgo} dagen geleden`;
         }
-      }
 
-      const primaryExercisesArr = item.primaryExercises.size > 0
-        ? Array.from(item.primaryExercises)
-        : ['Geen recente belasting'];
+        // Only include exercises performed within the latest training session (12h cutoff around lastTrainedMs)
+        const sessionCutoffMs = item.lastTrainedMs - (12 * 60 * 60 * 1000);
+        const latestSet = new Set<string>();
+        item.exercisesWithDates.forEach(ex => {
+          if (ex.dateMs >= sessionCutoffMs) {
+            latestSet.add(ex.name);
+          }
+        });
+        if (latestSet.size > 0) {
+          primaryExercisesArr = Array.from(latestSet);
+        }
+      }
 
       finalMap[key] = {
         name: item.name,

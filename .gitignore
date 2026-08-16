@@ -14,13 +14,12 @@ apps/zenith-hub/.env
 apps/zenith-hub/src-tauri/target/
 
 # Android build and local files
-apps/zenith-pilot/.gradle/
-apps/zenith-pilot/build/
-apps/zenith-pilot/app/build/
-apps/zenith-pilot/local.properties
-apps/zenith-pilot/.idea/
-apps/zenith-pilot/*.iml
-apps/zenith-pilot/app/*.iml
+apps/**/.gradle/
+apps/**/build/
+apps/**/app/build/
+apps/**/local.properties
+apps/**/.idea/
+apps/**/*.iml
 
 # System/IDE files
 .DS_Store
