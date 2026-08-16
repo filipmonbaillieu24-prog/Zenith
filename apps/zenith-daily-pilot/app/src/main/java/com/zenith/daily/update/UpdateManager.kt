@@ -22,6 +22,7 @@ object UpdateManager {
             val url = URL(VERSION_URL)
             connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
+            connection.instanceFollowRedirects = true
             connection.connectTimeout = 8000
             connection.readTimeout = 8000
             connection.connect()
@@ -34,7 +35,7 @@ object UpdateManager {
                 val downloadUrl = json.getString("apkUrl")
 
                 if (remoteVersionCode > currentVersionCode) {
-                    return@withContext UpdateInfo(remoteVersionName, downloadUrl)
+                    return@withContext UpdateInfo(remoteVersionCode, remoteVersionName, downloadUrl)
                 }
             }
         } catch (e: Exception) {
@@ -53,14 +54,34 @@ object UpdateManager {
     ) = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
-            val url = URL(downloadUrl)
-            connection = url.openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
-            connection.connect()
+            var currentUrl = downloadUrl
+            var redirectCount = 0
+            var responseCode: Int
 
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                withContext(Dispatchers.Main) { onError("Download mislukt: ${connection.responseCode}") }
+            do {
+                val url = URL(currentUrl)
+                connection = url.openConnection() as HttpURLConnection
+                connection.instanceFollowRedirects = true
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
+                connection.connect()
+
+                responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_MOVED_PERM || 
+                    responseCode == HttpURLConnection.HTTP_MOVED_TEMP || 
+                    responseCode == 307 || 
+                    responseCode == 308) {
+                    val location = connection.getHeaderField("Location")
+                    connection.disconnect()
+                    currentUrl = location
+                    redirectCount++
+                } else {
+                    break
+                }
+            } while (redirectCount < 5)
+
+            if (responseCode != HttpURLConnection.HTTP_OK) {
+                withContext(Dispatchers.Main) { onError("Download mislukt met statuscode: $responseCode") }
                 return@withContext
             }
 
@@ -90,7 +111,7 @@ object UpdateManager {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            withContext(Dispatchers.Main) { onError(e.message ?: "Download fout.") }
+            withContext(Dispatchers.Main) { onError(e.message ?: "Fout bij downloaden van update.") }
         } finally {
             connection?.disconnect()
         }
@@ -117,6 +138,7 @@ object UpdateManager {
 }
 
 data class UpdateInfo(
+    val versionCode: Int,
     val versionName: String,
     val downloadUrl: String
 )

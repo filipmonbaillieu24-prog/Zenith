@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,30 +39,142 @@ class MainActivity : ComponentActivity() {
         val prefs = applicationContext.getSharedPreferences("zenith_daily_auth", Context.MODE_PRIVATE)
         val savedEmail = prefs.getString("user_email", null)
 
+        val currentVersionCode = try {
+            val pInfo = applicationContext.packageManager.getPackageInfo(applicationContext.packageName, 0)
+            pInfo.versionCode
+        } catch (e: Exception) {
+            1
+        }
+
         setContent {
             ZenithDailyTheme {
                 var currentUserEmail by remember { mutableStateOf(savedEmail) }
 
-                if (currentUserEmail == null) {
-                    LoginScreen(
-                        onLoginSuccess = { email ->
-                            prefs.edit().putString("user_email", email).apply()
-                            currentUserEmail = email
-                        },
-                        onSkipLogin = {
-                            prefs.edit().putString("user_email", "gast@zenith.app").apply()
-                            currentUserEmail = "gast@zenith.app"
-                        }
-                    )
-                } else {
-                    MainAppScreen(
-                        repository = repository,
-                        userEmail = currentUserEmail!!,
-                        onLogout = {
-                            prefs.edit().remove("user_email").apply()
-                            currentUserEmail = null
-                        }
-                    )
+                // Auto-Update State
+                var availableUpdate by remember { mutableStateOf<UpdateInfo?>(null) }
+                var downloadProgress by remember { mutableStateOf<Float?>(null) }
+                var isDownloading by remember { mutableStateOf(false) }
+                var updateError by remember { mutableStateOf<String?>(null) }
+                val scope = rememberCoroutineScope()
+                val context = LocalContext.current
+
+                // Automatic Update Check on App Startup
+                LaunchedEffect(Unit) {
+                    val info = UpdateManager.checkForUpdates(currentVersionCode)
+                    if (info != null) {
+                        availableUpdate = info
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (currentUserEmail == null) {
+                        LoginScreen(
+                            onLoginSuccess = { email ->
+                                prefs.edit().putString("user_email", email).apply()
+                                currentUserEmail = email
+                            },
+                            onSkipLogin = {
+                                prefs.edit().putString("user_email", "gast@zenith.app").apply()
+                                currentUserEmail = "gast@zenith.app"
+                            }
+                        )
+                    } else {
+                        MainAppScreen(
+                            repository = repository,
+                            userEmail = currentUserEmail!!,
+                            onLogout = {
+                                prefs.edit().remove("user_email").apply()
+                                currentUserEmail = null
+                            }
+                        )
+                    }
+
+                    // Auto-Update Modal Dialog
+                    availableUpdate?.let { info ->
+                        AlertDialog(
+                            onDismissRequest = { /* Require update action */ },
+                            containerColor = ZenithCardBg,
+                            title = {
+                                Text(
+                                    text = "🚀 NIEUWE UPDATE BESCHIKBAAR",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = ZenithTextPrimary
+                                )
+                            },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text(
+                                        text = "Er is een nieuwe versie van Zenith Daily beschikbaar (v${info.versionName}).",
+                                        fontSize = 12.sp,
+                                        color = ZenithSecondary,
+                                        lineHeight = 16.sp
+                                    )
+
+                                    if (isDownloading) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Text(
+                                                text = "Update downloaden... ${((downloadProgress ?: 0f) * 100).toInt()}%",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = ZenithPrimary
+                                            )
+                                            LinearProgressIndicator(
+                                                progress = { downloadProgress ?: 0f },
+                                                color = ZenithPrimary,
+                                                trackColor = ZenithSurface,
+                                                modifier = Modifier.fillMaxWidth().height(8.dp)
+                                            )
+                                        }
+                                    }
+
+                                    updateError?.let { err ->
+                                        Text(
+                                            text = err,
+                                            fontSize = 11.sp,
+                                            color = ZenithError,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = {
+                                        isDownloading = true
+                                        updateError = null
+                                        scope.launch {
+                                            UpdateManager.downloadAndInstallApk(
+                                                context = context,
+                                                downloadUrl = info.downloadUrl,
+                                                onProgress = { p -> downloadProgress = p },
+                                                onError = { err ->
+                                                    isDownloading = false
+                                                    updateError = err
+                                                }
+                                            )
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = ZenithPrimary, contentColor = ZenithBackground),
+                                    enabled = !isDownloading,
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text(
+                                        text = if (isDownloading) "BEZIG MET DOWNLOADEN..." else "NU AUTOMATISCH UPDATEN",
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            },
+                            dismissButton = {
+                                if (!isDownloading) {
+                                    TextButton(onClick = { availableUpdate = null }) {
+                                        Text("LATER", color = ZenithSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -85,19 +198,8 @@ fun MainAppScreen(
     val macroGoals = remember { MacroGoals(dailyCalorieTarget = 2400, proteinTargetG = 180.0, carbsTargetG = 250.0, fatTargetG = 70.0) }
     var healthSnapshot by remember { mutableStateOf(HealthConnectSnapshot(stepsCount = 8420, activeCaloriesBurned = 420, isConnected = true)) }
 
-    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
-
     // Quick Action Modals
     var showGlobalWeightModal by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        scope.launch {
-            val info = UpdateManager.checkForUpdates(currentVersionCode = 1)
-            if (info != null) {
-                updateInfo = info
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
