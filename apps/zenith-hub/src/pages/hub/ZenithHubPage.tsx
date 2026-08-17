@@ -46,6 +46,8 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   const [todaySteps, setTodaySteps] = useState<number>(0);
   const [weeklyRidesCount, setWeeklyRidesCount] = useState<number>(0);
   const [weeklyRidesDistance, setWeeklyRidesDistance] = useState<number>(0);
+  const [weeklyStrideCount, setWeeklyStrideCount] = useState<number>(0);
+  const [weeklyStrideDistance, setWeeklyStrideDistance] = useState<number>(0);
   const [weeklyKratosCount, setWeeklyKratosCount] = useState<number>(0);
   const [weeklyGymVolume, setWeeklyGymVolume] = useState<number>(0);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
@@ -120,6 +122,26 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       } else {
         setWeeklyRidesCount(0);
         setWeeklyRidesDistance(0);
+      }
+
+      // 5b. Fetch weekly Stride runs count & distance
+      const { data: stRunData } = await supabase
+        .from('stride_activities')
+        .select('distance_km, date, created_at')
+        .eq('user_id', userId);
+      
+      if (stRunData) {
+        const startOfWeekMs = startOfWeek.getTime();
+        const thisWeekRuns = stRunData.filter(s => {
+          const t = s.date ? new Date(s.date).getTime() : new Date(s.created_at).getTime();
+          return t >= startOfWeekMs;
+        });
+        setWeeklyStrideCount(thisWeekRuns.length);
+        const totalDist = thisWeekRuns.reduce((sum, r) => sum + Number(r.distance_km || 0), 0);
+        setWeeklyStrideDistance(totalDist);
+      } else {
+        setWeeklyStrideCount(0);
+        setWeeklyStrideDistance(0);
       }
 
       // 6. Fetch weekly Kratos workouts count and volume
@@ -635,19 +657,19 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
 
   const recoveryNote = useMemo(() => {
     if (recoveryScore === null) {
-      return 'Herstel berekenen...';
+      return 'Calculating recovery...';
     }
     
     if (tsb < -25) {
-      return `⚠️ Overtrainingsrisico gesignaleerd door PMC (Vorm: ${tsb}). Pas belasting aan ondanks eventuele herstelscore.`;
+      return `⚠️ Overtraining risk flagged by PMC (Form: ${tsb}). Adjust workload despite recovery score.`;
     }
     
     if (recoveryScore >= 80) {
-      return '🏆 Uitstekend hersteld. Klaar voor intensieve training!';
+      return '🏆 Excellent recovery. Ready for high-intensity training!';
     } else if (recoveryScore >= 50) {
-      return '💪 Goed hersteld. Normale belasting is prima.';
+      return '💪 Well recovered. Normal training workload is optimal.';
     } else {
-      return '⚠️ Vermoeidheid gedetecteerd. Focus op actieve recuperatie of rust.';
+      return '⚠️ Fatigue detected. Focus on active recovery or rest.';
     }
   }, [recoveryScore, tsb]);
 
@@ -672,7 +694,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                 </h3>
               </div>
               <p style={{ margin: '0 0 16px', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-                Calculated from your logged training workload across linked Aero & Kratos extensions.
+                Calculated from your logged training workload across linked Aero, Kratos & Stride extensions.
               </p>
               <div className="zh-stats-grid">
                 <div className="zh-stat-item">
@@ -829,15 +851,15 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                   Loading performance...
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 14, flex: 1 }}>
                   {/* Aero Cardio summary */}
-                  <div style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.02)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.02)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Bike size={18} style={{ color: '#cbd5e1' }} />
                       <span style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Cardio (Aero)</span>
                     </div>
                     <div>
-                      <strong style={{ fontSize: 24, display: 'block', fontWeight: 900, color: '#f8fafc' }}>
+                      <strong style={{ fontSize: 22, display: 'block', fontWeight: 900, color: '#f8fafc' }}>
                         {weeklyRidesDistance.toFixed(0)} <span style={{ fontSize: 13, fontWeight: 500, color: '#cbd5e1' }}>km</span>
                       </strong>
                       <span style={{ fontSize: 11, color: '#cbd5e1' }}>
@@ -846,14 +868,30 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                     </div>
                   </div>
 
+                  {/* Stride Running summary */}
+                  <div style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.02)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Footprints size={18} style={{ color: '#38bdf8' }} />
+                      <span style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Running (Stride)</span>
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: 22, display: 'block', fontWeight: 900, color: '#f8fafc' }}>
+                        {weeklyStrideDistance.toFixed(1)} <span style={{ fontSize: 13, fontWeight: 500, color: '#cbd5e1' }}>km</span>
+                      </strong>
+                      <span style={{ fontSize: 11, color: '#cbd5e1' }}>
+                        {weeklyStrideCount} {weeklyStrideCount === 1 ? 'run session' : 'run sessions'}
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Kratos Strength summary */}
-                  <div style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.02)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.02)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Dumbbell size={18} style={{ color: '#c084fc' }} />
                       <span style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Strength (Kratos)</span>
                     </div>
                     <div>
-                      <strong style={{ fontSize: 24, display: 'block', fontWeight: 900, color: '#f8fafc' }}>
+                      <strong style={{ fontSize: 22, display: 'block', fontWeight: 900, color: '#f8fafc' }}>
                         {weeklyKratosCount} <span style={{ fontSize: 13, fontWeight: 500, color: '#cbd5e1' }}>sessions</span>
                       </strong>
                       <span style={{ fontSize: 11, color: '#cbd5e1' }}>

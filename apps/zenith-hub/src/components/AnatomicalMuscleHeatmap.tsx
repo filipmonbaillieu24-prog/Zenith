@@ -200,7 +200,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
         <div>
           <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 12px #ef4444' }} />
-            Anatomische Muscle Heatmap
+            Anatomical Muscle Heatmap
           </h3>
           <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
             Visual breakdown of muscle fatigue and recovery status per muscle group.
@@ -223,7 +223,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
                 cursor: 'pointer'
               }}
             >
-              Man
+              Male
             </button>
             <button
               onClick={() => setGender('female')}
@@ -238,7 +238,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
                 cursor: 'pointer'
               }}
             >
-              Vrouw
+              Female
             </button>
           </div>
 
@@ -272,7 +272,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
                 cursor: 'pointer'
               }}
             >
-              Voorzijde
+              Front
             </button>
             <button
               onClick={() => setActiveView('back')}
@@ -287,7 +287,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
                 cursor: 'pointer'
               }}
             >
-              Achterzijde
+              Back
             </button>
           </div>
         </div>
