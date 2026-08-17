@@ -1896,7 +1896,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   </h3>
                 </div>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Geregistreerd op {new Date(latestSleep.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })}
+                  Recorded on {new Date(latestSleep.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
               </div>
               
@@ -1912,7 +1912,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             {/* AI Recommendation Alert Box */}
             <div style={{ background: 'rgba(168, 85, 247, 0.06)', borderRadius: 12, padding: '14px 16px', border: '1px solid rgba(168, 85, 247, 0.15)', marginBottom: 20 }}>
               <div style={{ fontSize: 12, fontWeight: 800, color: '#a855f7', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Sparkles size={14} /> AI Herstel & Slaapadvies
+                <Sparkles size={14} /> AI Recovery & Sleep Guidance
               </div>
               <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', lineHeight: 1.5 }}>
                 {sleepAnalysis.recommendation}
@@ -1921,13 +1921,13 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               {/* Debt & Z-Score Badges */}
               <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 11, color: '#94a3b8', background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)' }}>
-                  Slaapschuld (7d): <strong style={{ color: sleepAnalysis.sleepDebtHours > 2 ? '#fb923c' : '#4ade80' }}>{sleepAnalysis.sleepDebtHours} uur</strong>
+                  Sleep Debt (7d): <strong style={{ color: sleepAnalysis.sleepDebtHours > 2 ? '#fb923c' : '#38bdf8' }}>{sleepAnalysis.sleepDebtHours} hrs</strong>
                 </div>
                 <div style={{ fontSize: 11, color: '#94a3b8', background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)' }}>
-                  Persoonlijke Baseline: <strong style={{ color: '#fff' }}>{sleepAnalysis.personalBaselineHours}u / nacht</strong>
+                  Personal Baseline: <strong style={{ color: '#fff' }}>{sleepAnalysis.personalBaselineHours} hrs / night</strong>
                 </div>
                 <div style={{ fontSize: 11, color: '#94a3b8', background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)' }}>
-                  Efficiëntie: <strong style={{ color: '#38bdf8' }}>{sleepAnalysis.metrics.efficiencyPct}%</strong>
+                  Efficiency: <strong style={{ color: '#38bdf8' }}>{sleepAnalysis.metrics.efficiencyPct}%</strong>
                 </div>
               </div>
             </div>

@@ -182,7 +182,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
           margin: '0 auto 40px',
           lineHeight: 1.6
         }}>
-          Het centrale atletische ecosysteem dat Wielrennen, Krachttraining, Hardlopen, Voeding en Health Connect herstel verbindt in één gestroomlijnde omgeving.
+          The central athletic ecosystem connecting Cycling, Strength Training, Running, Nutrition, and Health Connect recovery into one unified platform.
         </p>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -204,7 +204,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               fontFamily: 'inherit'
             }}
           >
-            Start Gratis Account <ArrowRight size={18} />
+            Start Free Account <ArrowRight size={18} />
           </button>
 
           <button 
@@ -221,7 +221,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               fontFamily: 'inherit'
             }}
           >
-            Bekijk Pricing & Pro
+            View Pricing & Pro
           </button>
         </div>
       </section>
@@ -234,10 +234,10 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
       }}>
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
           <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 12 }}>
-            Vijf Krachtige Extensies. Één Centraal Dashboard.
+            Five Powerful Extensions. One Central Dashboard.
           </h2>
           <p style={{ fontSize: 14, color: '#94a3b8', margin: 0 }}>
-            Elke Zenith extensie is speciaal ontwikkeld voor een essentieel onderdeel van jouw atletische prestaties.
+            Every Zenith extension is specifically tailored for an essential component of your athletic journey.
           </p>
         </div>
 
@@ -259,13 +259,13 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Aero</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Wielren-extensie met AI-route generator op basis van wind & hoogtemeters en live in-ear audio coach.
+                Cycling extension featuring AI route generation based on wind & elevation profiles plus live in-ear audio coaching.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
                 <li>AI Route Generator & GPX/TCX Export</li>
                 <li>PMC Fitness Chart (CTL / ATL / TSB)</li>
-                <li>FIT & GPX Ritanalyse met Vermogen & Cadans</li>
-                <li>Geografische Ritten Heatmap & Climbs</li>
+                <li>FIT & GPX Ride Analysis with Power & Cadence</li>
+                <li>Geographic Heatmap & Climbs Tracker</li>
               </ul>
             </div>
           </div>
@@ -287,13 +287,13 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Vigor</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Gezondheids- & hersteltracker voor lichaamsgewicht, vet %, omtrekken en ML Slaapscore.
+                Health & recovery tracker for body weight, body composition, circumferences, and ML Sleep Score.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
-                <li>Slimme Weegschaal BLE Auto-Sync</li>
-                <li>Lichaamsomtrekken (8 zones) & Voortgangsfoto's</li>
-                <li>Zenith Sleep & Recovery Engine (ML Slaapscore)</li>
-                <li>Health Connect Stappen & Energie Sync</li>
+                <li>Smart Scale BLE Auto-Sync</li>
+                <li>Body Circumferences (8 zones) & Progress Photos</li>
+                <li>Zenith Sleep & Recovery Engine (ML Sleep Score)</li>
+                <li>Health Connect Steps & Energy Sync</li>
               </ul>
             </div>
           </div>
@@ -315,13 +315,13 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Kratos</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Krachttraining & spieropbouw tracker met anatomische spierbelastingskaart.
+                Strength training & muscle building tracker with interactive anatomical muscle load heatmap.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
-                <li>Workout Logging & Oefeningen Catalogus</li>
-                <li>Anatomische Spierbelasting Heatmap</li>
-                <li>1RM Repetition Max & Autoregulatie (RIR)</li>
-                <li>Ingebouwde Rusttimer met Audio-Focus</li>
+                <li>Workout Logging & Exercise Library</li>
+                <li>Anatomical Muscle Load Heatmap</li>
+                <li>1RM Repetition Max & Autoregulation (RIR)</li>
+                <li>Built-in Rest Timer with Audio Focus</li>
               </ul>
             </div>
           </div>
@@ -343,12 +343,12 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Fuel</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Voedingsinname, macronutriënten en hydratatietracker afgestemd op jouw workout-belasting.
+                Nutrition intake, macronutrients, and hydration tracker tailored to your workout workload.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
-                <li>Calorieën & Macro's (Eiwitten, Koolhydraten, Vetten)</li>
-                <li>Hydratatie & Vloeistofbalans logging</li>
-                <li>Energiebehoefte op basis van Aero/Kratos workouts</li>
+                <li>Calories & Macros (Protein, Carbs, Fats)</li>
+                <li>Hydration & Fluid Balance Logging</li>
+                <li>Dynamic Energy Targets based on Aero/Kratos Workouts</li>
                 <li>OpenFoodFacts Barcode Scanner Support</li>
               </ul>
             </div>
@@ -371,13 +371,13 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Stride</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Hardloop-extensie met pace-analyse, schoenenteller en integratie met de Muscle Heatmap.
+                Running extension featuring pace analysis, shoe tracking, and muscle heatmap recovery integration.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
-                <li>Hardloopsessies & Intervallen Loggen</li>
-                <li>Pace (min/km), Cadans & Elevatie Analyse</li>
-                <li>Hardloopschoenen Kilometerteller</li>
-                <li>Directe koppeling met Spierherstel Heatmap</li>
+                <li>Run Session & Interval Logging</li>
+                <li>Pace (min/km), Cadence & Elevation Breakdown</li>
+                <li>Running Shoe Mileage Tracker</li>
+                <li>Direct Integration with Muscle Fatigue Heatmap</li>
               </ul>
             </div>
           </div>
@@ -399,12 +399,12 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Android Mobile Pilots</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Speciale Android companion apps voor onderweg op de fiets, in de gym of dagelijks herstel.
+                Dedicated Android companion apps for cycling, gym workouts, or daily health tracking.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
                 <li>Zenith Aero Pilot (Live In-Ear Audio Coach)</li>
                 <li>Zenith Kratos Pilot (Set & Rep Rest Timer)</li>
-                <li>Automatische Health Connect Sync</li>
+                <li>Automatic Health Connect Sync</li>
                 <li>In-App Auto-Updates via QR Download Center</li>
               </ul>
             </div>
@@ -420,10 +420,10 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
         background: '#0c0d12'
       }}>
         <h3 style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginBottom: 12 }}>
-          Klaar om je atletische prestaties te transformeren?
+          Ready to elevate your athletic performance?
         </h3>
         <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 24 }}>
-          Meld je gratis aan en ervaar het complete atletische ecosysteem op de web & mobiel.
+          Sign up for free and experience the complete athletic ecosystem on web & mobile.
         </p>
         <button 
           onClick={onRegister}
@@ -440,10 +440,10 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
             fontFamily: 'inherit'
           }}
         >
-          Maak Gratis Account Aan
+          Create Free Account
         </button>
         <div style={{ marginTop: 40, fontSize: 11, color: '#64748b' }}>
-          © 2026 Zenith Ecosystem. Gehost op Vercel.
+          © 2026 Zenith Ecosystem. Hosted on Vercel.
         </div>
       </footer>
     </div>

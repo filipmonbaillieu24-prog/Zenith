@@ -188,11 +188,11 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
   const getStatusBadge = (status: FeatureRequestItem['status']) => {
     switch (status) {
       case 'completed':
-        return <span style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid #34d399', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>✓ COMPLETED</span>;
+        return <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid #38bdf8', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>✓ COMPLETED</span>;
       case 'in_progress':
-        return <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid #38bdf8', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>⚡ IN DEVELOPMENT</span>;
+        return <span style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: '1px solid #a855f7', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>⚡ IN DEVELOPMENT</span>;
       case 'planned':
-        return <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid #10b981', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>📌 PLANNED</span>;
+        return <span style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid #34d399', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>📌 PLANNED</span>;
       default:
         return <span style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>UNDER REVIEW</span>;
     }
@@ -237,10 +237,10 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             onClick={handleOpenSubmitModal}
             style={{
               background: isAuthenticated 
-                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                ? 'linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%)' 
                 : 'rgba(255, 255, 255, 0.08)',
               border: isAuthenticated ? 'none' : '1px solid rgba(255, 255, 255, 0.15)',
-              color: '#fff',
+              color: isAuthenticated ? '#09090b' : '#fff',
               fontWeight: 900,
               fontSize: 13,
               padding: '9px 18px',
@@ -249,7 +249,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              boxShadow: isAuthenticated ? '0 4px 15px rgba(16, 185, 129, 0.3)' : 'none',
+              boxShadow: isAuthenticated ? '0 4px 15px rgba(56, 189, 248, 0.35)' : 'none',
               fontFamily: 'inherit'
             }}
           >
@@ -272,16 +272,16 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             gap: 16
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#cbd5e1' }}>
-              <Lock size={16} color="#34d399" />
+              <Lock size={16} color="#38bdf8" />
               <span>Only registered Zenith athletes can submit new feature requests and upvote ideas.</span>
             </div>
             {onRequireLogin && (
               <button
                 onClick={onRequireLogin}
                 style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  background: 'linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%)',
                   border: 'none',
-                  color: '#fff',
+                  color: '#09090b',
                   fontWeight: 800,
                   fontSize: 12,
                   padding: '6px 14px',
@@ -303,11 +303,11 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            background: 'rgba(16, 185, 129, 0.12)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            background: 'rgba(56, 189, 248, 0.12)',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
             padding: '4px 14px',
             borderRadius: 20,
-            color: '#34d399',
+            color: '#38bdf8',
             fontSize: 11,
             fontWeight: 800,
             marginBottom: 12
@@ -318,7 +318,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             Your Voice Shapes the Future of Zenith
           </h1>
           <p style={{ fontSize: 14, color: '#94a3b8', margin: 0 }}>
-            Upvote your favorite features or submit new ideas for Aero, Vigor, Kratos, or Fuel.
+            Upvote your favorite features or submit new ideas for Aero, Vigor, Kratos, Fuel, or Stride.
           </p>
         </div>
 
@@ -335,9 +335,9 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
               key={tab.id}
               onClick={() => setFilterCategory(tab.id)}
               style={{
-                background: filterCategory === tab.id ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                border: filterCategory === tab.id ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.08)',
-                color: filterCategory === tab.id ? '#34d399' : '#94a3b8',
+                background: filterCategory === tab.id ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                border: filterCategory === tab.id ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+                color: filterCategory === tab.id ? '#38bdf8' : '#94a3b8',
                 fontWeight: 800,
                 fontSize: 12,
                 padding: '8px 16px',
@@ -366,9 +366,9 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             <button
               onClick={handleOpenSubmitModal}
               style={{
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid #10b981',
-                color: '#34d399',
+                background: 'rgba(56, 189, 248, 0.15)',
+                border: '1px solid #38bdf8',
+                color: '#38bdf8',
                 fontWeight: 800,
                 fontSize: 12,
                 padding: '8px 18px',
@@ -405,7 +405,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                 >
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                      <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#34d399', letterSpacing: '0.8px', background: 'rgba(16, 185, 129, 0.12)', padding: '2px 8px', borderRadius: 6 }}>
+                      <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#38bdf8', letterSpacing: '0.8px', background: 'rgba(56, 189, 248, 0.12)', padding: '2px 8px', borderRadius: 6 }}>
                         {req.category}
                       </span>
                       {getStatusBadge(req.status)}
@@ -420,11 +420,11 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                     {/* Author & Upvoters Details */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 11, color: '#64748b', flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <User size={12} color="#10b981" />
+                        <User size={12} color="#38bdf8" />
                         <span>Submitted by <strong style={{ color: '#cbd5e1' }}>{req.author_name || 'Athlete'}</strong></span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <Users size={12} color="#38bdf8" />
+                        <Users size={12} color="#a855f7" />
                         <span>Upvoted by <strong style={{ color: '#cbd5e1' }}>{votersText}</strong></span>
                       </div>
                     </div>
@@ -434,9 +434,9 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                   <button
                     onClick={() => handleVote(req.id)}
                     style={{
-                      background: req.user_voted ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                      border: req.user_voted ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
-                      color: req.user_voted ? '#34d399' : '#cbd5e1',
+                      background: req.user_voted ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                      border: req.user_voted ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: req.user_voted ? '#38bdf8' : '#cbd5e1',
                       padding: '10px 16px',
                       borderRadius: 12,
                       cursor: 'pointer',
@@ -449,7 +449,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                       fontFamily: 'inherit'
                     }}
                   >
-                    <ThumbsUp size={16} color={req.user_voted ? '#34d399' : '#cbd5e1'} />
+                    <ThumbsUp size={16} color={req.user_voted ? '#38bdf8' : '#cbd5e1'} />
                     <span style={{ fontSize: 13, fontWeight: 900, marginTop: 4 }}>{req.upvotes}</span>
                   </button>
                 </div>
@@ -481,7 +481,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             maxWidth: '460px',
             width: '90%',
             background: 'linear-gradient(145deg, #121218 0%, #1a1a26 100%)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
             borderRadius: '20px',
             padding: '28px',
             position: 'relative'
@@ -497,7 +497,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
               Submit New Feature Idea
             </h3>
             <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>
-              Submitting as <strong style={{ color: '#34d399' }}>{currentAuthorName}</strong>
+              Submitting as <strong style={{ color: '#38bdf8' }}>{currentAuthorName}</strong>
             </p>
 
             <form onSubmit={handleSubmitNewRequest} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -556,9 +556,9 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{ flex: 1, padding: 12, borderRadius: 10, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: '#fff', fontWeight: 900, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
+                  style={{ flex: 1, padding: 12, borderRadius: 10, background: 'linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%)', border: 'none', color: '#09090b', fontWeight: 900, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
                 >
-                  {submitting ? 'Submitting...' : 'Submit'}
+                  {submitting ? 'Submitting...' : 'Submit Idea'}
                 </button>
               </div>
             </form>

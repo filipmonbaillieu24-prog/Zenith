@@ -65,7 +65,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
-            <ShieldCheck size={14} style={{ color: '#10b981' }} />
+            <ShieldCheck size={14} style={{ color: '#38bdf8' }} />
             <span>PayPal Secure Subscription</span>
           </div>
         </div>
@@ -76,11 +76,11 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            background: 'rgba(16, 185, 129, 0.12)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            background: 'rgba(56, 189, 248, 0.12)',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
             padding: '4px 16px',
             borderRadius: 20,
-            color: '#34d399',
+            color: '#38bdf8',
             fontSize: 11,
             fontWeight: 800,
             marginBottom: 16
@@ -121,16 +121,16 @@ export const PricingPage: React.FC<PricingPageProps> = ({
 
               <ul style={{ padding: 0, listStyle: 'none', fontSize: 12, color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: 10, margin: 0 }}>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#10b981" /> Weight (kg) & Steps tracking
+                  <CheckCircle2 size={16} color="#38bdf8" /> Weight (kg) & Steps tracking
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#10b981" /> Basic Cycling Rides & Calendar overview
+                  <CheckCircle2 size={16} color="#38bdf8" /> Basic Cycling Rides & Calendar overview
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#10b981" /> Kratos Strength Training Workouts
+                  <CheckCircle2 size={16} color="#38bdf8" /> Kratos Strength Training Workouts
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#10b981" /> Fuel Nutrition & Hydration logger
+                  <CheckCircle2 size={16} color="#38bdf8" /> Fuel Nutrition & Hydration logger
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
                   <XCircle size={16} color="#ef4444" /> Aero AI Route Generator (GPX/TCX Export)
@@ -164,28 +164,28 @@ export const PricingPage: React.FC<PricingPageProps> = ({
 
           {/* Pro Plan */}
           <div style={{
-            background: 'linear-gradient(145deg, rgba(16, 185, 129, 0.1) 0%, rgba(18, 18, 24, 0.95) 100%)',
-            border: '2px solid #10b981',
+            background: 'linear-gradient(145deg, rgba(56, 189, 248, 0.1) 0%, rgba(18, 18, 24, 0.95) 100%)',
+            border: '2px solid #38bdf8',
             borderRadius: '20px',
             padding: '32px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             position: 'relative',
-            boxShadow: '0 15px 40px rgba(16, 185, 129, 0.2)'
+            boxShadow: '0 15px 40px rgba(56, 189, 248, 0.2)'
           }}>
-            <div style={{ position: 'absolute', top: -12, right: 24, background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', fontSize: 10, fontWeight: 900, padding: '3px 12px', borderRadius: 12 }}>
+            <div style={{ position: 'absolute', top: -12, right: 24, background: 'linear-gradient(135deg, #38bdf8, #3b82f6)', color: '#09090b', fontSize: 10, fontWeight: 900, padding: '3px 12px', borderRadius: 12 }}>
               MOST POPULAR
             </div>
 
             <div>
-              <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: '#34d399', letterSpacing: '0.8px' }}>
+              <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: '#38bdf8', letterSpacing: '0.8px' }}>
                 ZENITH PRO
               </div>
               <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: '8px 0 4px' }}>
                 €9.99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ month</span>
               </div>
-              <div style={{ fontSize: 11, color: '#34d399', fontWeight: 800, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: '#38bdf8', fontWeight: 800, marginBottom: 16 }}>
                 14-day free trial • Cancel anytime via PayPal
               </div>
               <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 24, lineHeight: 1.5 }}>
@@ -194,22 +194,22 @@ export const PricingPage: React.FC<PricingPageProps> = ({
 
               <ul style={{ padding: 0, listStyle: 'none', fontSize: 12, color: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 10, margin: 0 }}>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> 🚴 Aero AI Route Generator & GPX/TCX Export
+                  <CheckCircle2 size={16} color="#38bdf8" /> 🚴 Aero AI Route Generator & GPX/TCX Export
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> 📸 Vigor Progress Photos & Side-by-Side Comparator
+                  <CheckCircle2 size={16} color="#38bdf8" /> 📸 Vigor Progress Photos & Side-by-Side Comparator
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> 📏 Vigor Body Circumferences (8 Zones)
+                  <CheckCircle2 size={16} color="#38bdf8" /> 📏 Vigor Body Circumferences (8 Zones)
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> ⚖️ Body Fat & Muscle Mass Breakdown
+                  <CheckCircle2 size={16} color="#38bdf8" /> ⚖️ Body Fat & Muscle Mass Breakdown
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> 🌙 Colmi Smart Ring Deep & REM Sleep Stages
+                  <CheckCircle2 size={16} color="#38bdf8" /> 🌙 Zenith ML Sleep & Recovery Score Engine
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> 🔥 Kratos Muscle Heatmap & Rep Max Sync
+                  <CheckCircle2 size={16} color="#38bdf8" /> 🔥 Kratos Muscle Heatmap & Rep Max Sync
                 </li>
               </ul>
             </div>
@@ -217,9 +217,9 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             <div style={{ marginTop: 32 }}>
               {isPro ? (
                 <div style={{
-                  background: 'rgba(52, 211, 153, 0.15)',
-                  border: '1px solid #34d399',
-                  color: '#34d399',
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  border: '1px solid #38bdf8',
+                  color: '#38bdf8',
                   fontWeight: 900,
                   fontSize: 13,
                   padding: '12px',
@@ -233,8 +233,8 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                   onClick={() => setShowPayPalModal(true)}
                   style={{
                     width: '100%',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: '#fff',
+                    background: 'linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%)',
+                    color: '#09090b',
                     fontWeight: 900,
                     fontSize: 14,
                     padding: '14px',
@@ -245,7 +245,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.4)',
+                    boxShadow: '0 8px 20px rgba(56, 189, 248, 0.35)',
                     fontFamily: 'inherit'
                   }}
                 >
@@ -265,7 +265,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
           marginBottom: 40
         }}>
           <h3 style={{ fontSize: 20, fontWeight: 900, color: '#fff', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <HelpCircle size={20} color="#10b981" /> Frequently Asked Questions (FAQ)
+            <HelpCircle size={20} color="#38bdf8" /> Frequently Asked Questions (FAQ)
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>

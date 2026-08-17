@@ -20,7 +20,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
         const ip = await invoke<string>('get_local_ip');
         setLocalIp(ip);
       } catch (err) {
-        console.error('Kon lokale IP niet ophalen:', err);
+        console.error('Could not fetch local IP:', err);
       }
     };
     fetchIp();
@@ -46,9 +46,9 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
   };
 
   const getAppVersion = () => {
-    if (selectedApp === 'pilot') return 'Versie 1.0.0-alpha • 14.8 MB';
-    if (selectedApp === 'kratos') return 'Versie 1.36 • 15.8 MB';
-    return 'Versie 1.0.0 • 41.6 MB';
+    if (selectedApp === 'pilot') return 'Version 1.0.0-alpha • 14.8 MB';
+    if (selectedApp === 'kratos') return 'Version 1.36 • 15.8 MB';
+    return 'Version 1.0.0 • 41.6 MB';
   };
 
   return (
@@ -82,17 +82,17 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
             </h1>
             <p className="zh-hub-subtitle" style={{ fontSize: '9px', color: 'var(--text-muted)', margin: '4px 0 0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
               {selectedApp === 'pilot' 
-                ? `Android Audio Companion voor ${userName}`
+                ? `Android Audio Companion for ${userName}`
                 : selectedApp === 'kratos'
-                ? `Android Krachttraining Tracker voor ${userName}`
-                : `Android Voeding & Gezondheid Tracker voor ${userName}`}
+                ? `Android Strength Training Tracker for ${userName}`
+                : `Android Nutrition & Health Tracker for ${userName}`}
             </p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#64748b' }}>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--color-primary)', display: 'inline-block' }} />
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#38bdf8', display: 'inline-block' }} />
           <span style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            {useLocalDevLink ? 'Lokale dev build' : 'Production APK build'} beschikbaar
+            {useLocalDevLink ? 'Local dev build' : 'Production APK build'} available
           </span>
         </div>
       </header>
@@ -116,9 +116,9 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
             <button 
               onClick={() => setSelectedApp('daily')}
               style={{
-                background: selectedApp === 'daily' ? 'rgba(74, 222, 128, 0.15)' : 'transparent',
-                border: selectedApp === 'daily' ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid transparent',
-                color: selectedApp === 'daily' ? '#4ade80' : '#94a3b8',
+                background: selectedApp === 'daily' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                border: selectedApp === 'daily' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent',
+                color: selectedApp === 'daily' ? '#38bdf8' : '#94a3b8',
                 padding: '6px 14px',
                 borderRadius: 6,
                 fontSize: 11,
@@ -137,7 +137,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
               style={{
                 background: selectedApp === 'kratos' ? 'rgba(255,255,255,0.08)' : 'transparent',
                 border: '1px solid transparent',
-                color: selectedApp === 'kratos' ? '#39ff14' : '#94a3b8',
+                color: selectedApp === 'kratos' ? '#38bdf8' : '#94a3b8',
                 padding: '6px 14px',
                 borderRadius: 6,
                 fontSize: 11,
@@ -156,7 +156,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
               style={{
                 background: selectedApp === 'pilot' ? 'rgba(255,255,255,0.08)' : 'transparent',
                 border: '1px solid transparent',
-                color: selectedApp === 'pilot' ? '#39ff14' : '#94a3b8',
+                color: selectedApp === 'pilot' ? '#38bdf8' : '#94a3b8',
                 padding: '6px 14px',
                 borderRadius: 6,
                 fontSize: 11,
@@ -195,8 +195,8 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
           </h2>
           <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 24px', maxWidth: 280, lineHeight: 1.5 }}>
             {useLocalDevLink 
-              ? `Scan de QR-code met uw Android-telefoon op hetzelfde wifi-netwerk om uw zojuist gebouwde lokale ${getAppName()} APK direct te downloaden.`
-              : `Scan de QR-code met de camera van uw Android-telefoon om de ${getAppName()} app direct te downloaden en te installeren.`}
+              ? `Scan the QR code with your Android phone on the same Wi-Fi network to download your local ${getAppName()} APK.`
+              : `Scan the QR code with your Android camera to download and install the ${getAppName()} app.`}
           </p>
 
           <a 
@@ -206,7 +206,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              background: selectedApp === 'daily' ? '#4ade80' : '#cbd5e1',
+              background: '#38bdf8',
               color: '#09090b',
               textDecoration: 'none',
               padding: '12px 24px',
@@ -217,7 +217,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
               maxWidth: 240,
               boxSizing: 'border-box',
               transition: 'all 0.2s',
-              boxShadow: '0 4px 12px rgba(74, 222, 128, 0.2)'
+              boxShadow: '0 4px 12px rgba(56, 189, 248, 0.25)'
             }}
             onClick={async (e) => {
               e.preventDefault();
@@ -228,7 +228,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
               }
             }}
           >
-            <Download size={16} /> Directe Download (.apk)
+            <Download size={16} /> Direct Download (.apk)
           </a>
           
           {isDev && localIp && (
@@ -238,7 +238,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
                 marginTop: 14,
                 background: 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: useLocalDevLink ? '#39ff14' : '#94a3b8',
+                color: useLocalDevLink ? '#38bdf8' : '#94a3b8',
                 borderRadius: 8,
                 padding: '6px 12px',
                 fontSize: 10,
@@ -248,7 +248,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
                 transition: 'all 0.2s'
               }}
             >
-              {useLocalDevLink ? '✓ Gekoppeld aan Lokale PC' : 'Koppel aan Lokale PC (Dev)'}
+              {useLocalDevLink ? '✓ Connected to Local PC' : 'Connect to Local PC (Dev)'}
             </button>
           )}
           
@@ -263,27 +263,27 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
             {selectedApp === 'daily' ? (
               <>
                 <h3 className="zh-pilot-card-title" style={{ fontSize: 14, marginBottom: 12 }}>
-                  <Smartphone size={16} /> Mobiele Calorie & Gewicht Tracker
+                  <Smartphone size={16} /> Mobile Nutrition & Weight Tracker
                 </h3>
                 <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.6 }}>
-                  Dagelijkse voeding (Fuel) loggen met barcode scanner en automatische Health Connect stappen- & gewichts-sync.
+                  Log daily nutrition (Fuel) with barcode scanning and automatic Health Connect step & weight synchronization.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <Apple size={16} style={{ color: '#4ade80', flexShrink: 0, marginTop: 2 }} />
+                    <Apple size={16} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 2 }} />
                     <div>
                       <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Barcode & Fuel Tracker</h4>
                       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                        Scan verpakkingen met je camera of zoek in de database om calorieën en macro's binnen seconden te loggen.
+                        Scan product barcodes with your camera or search the database to log calories and macros in seconds.
                       </p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <ShieldCheck size={16} style={{ color: '#4ade80', flexShrink: 0, marginTop: 2 }} />
+                    <ShieldCheck size={16} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Health Connect & Gewichtslog</h4>
+                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Health Connect & Weight Log</h4>
                       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                        Voer je gewicht snel in en synchroniseer automatisch stappen en verbrande energie via Android Health Connect.
+                        Quickly enter body weight and automatically sync steps and active energy via Android Health Connect.
                       </p>
                     </div>
                   </div>
@@ -292,10 +292,10 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
             ) : selectedApp === 'kratos' ? (
               <>
                 <h3 className="zh-pilot-card-title" style={{ fontSize: 14, marginBottom: 12 }}>
-                  <Smartphone size={16} /> Mobiele Krachttraining Tracker
+                  <Smartphone size={16} /> Mobile Strength Training Companion
                 </h3>
                 <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.6 }}>
-                  Mobiele companion voor krachttraining met ingebouwde rusttimer en autoregulatie.
+                  On-the-go companion for strength workouts with built-in rest timer and autoregulation.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'flex', gap: 10 }}>
@@ -303,16 +303,16 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
                     <div>
                       <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Set & Rep Logging</h4>
                       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                        Log uw sets, reps en RIR eenvoudig vanaf de trainingsvloer. Werkt volledig offline-first.
+                        Log your sets, reps, and RIR easily from the gym floor. Fully offline-first.
                       </p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <ShieldCheck size={16} style={{ color: '#cbd5e1', flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Rust & Herstel</h4>
+                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Rest & Recovery Timer</h4>
                       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                        Ingebouwde rusttimer die automatisch schaalt en met de nieuwe luide audio-focus meldingen herinneringen geeft.
+                        Built-in rest timer that scales automatically and alerts you with audio-focus notifications.
                       </p>
                     </div>
                   </div>
@@ -324,24 +324,24 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
                   <Smartphone size={16} /> Live In-Ear Audio Coach
                 </h3>
                 <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.6 }}>
-                  Live fietscoach die verbinding maakt met uw sensoren en u audio-instructies geeft tijdens uw rit.
+                  Live cycling coach that connects directly to your sensors and delivers audio instructions during your ride.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <Wifi size={16} style={{ color: '#cbd5e1', flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Sensor Integratie</h4>
+                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Sensor Integration</h4>
                       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                        Maakt rechtstreeks verbinding met uw Bluetooth (BLE) hartslag-, cadans- en vermogensmeters.
+                        Connects directly with Bluetooth (BLE) heart rate, cadence, and power meters.
                       </p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <ShieldCheck size={16} style={{ color: '#cbd5e1', flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Audio Begeleiding</h4>
+                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Audio Guidance</h4>
                       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                        Ontvang directe in-ear audio-feedback over uw trainingszones en schema-instructies tijdens het rijden.
+                        Receive real-time in-ear audio feedback regarding target training zones and workout intervals.
                       </p>
                     </div>
                   </div>
@@ -353,20 +353,20 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
           {/* Installation steps */}
           <div className="zh-pilot-card" style={{ padding: '24px 28px' }}>
             <h3 className="zh-pilot-card-title" style={{ fontSize: 14, marginBottom: 12 }}>
-              Installatie-instructies
+              Installation Instructions
             </h3>
             <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: '#94a3b8', display: 'flex', flexDirection: 'column', gap: 8, lineHeight: 1.5 }}>
               <li>
-                <strong style={{ color: '#f1f5f9' }}>Download de APK:</strong> Scan de QR-code met de camera van uw telefoon of druk op de downloadknop.
+                <strong style={{ color: '#f1f5f9' }}>Download APK:</strong> Scan the QR code with your phone camera or click the download button.
               </li>
               <li>
-                <strong style={{ color: '#f1f5f9' }}>Sta onbekende bronnen toe:</strong> Tik op de gedownloade melding en sta in de browserinstellingen toe om bestanden van deze bron te installeren indien gevraagd.
+                <strong style={{ color: '#f1f5f9' }}>Allow Unknown Sources:</strong> Tap the download notification and enable installation from your browser settings if prompted.
               </li>
               <li>
-                <strong style={{ color: '#f1f5f9' }}>Installeer & Start:</strong> Volg de prompts om de installatie te voltooien en open de <strong style={{ color: '#cbd5e1' }}>{getAppName()}</strong> app.
+                <strong style={{ color: '#f1f5f9' }}>Install & Launch:</strong> Follow the prompts to complete installation and open the <strong style={{ color: '#cbd5e1' }}>{getAppName()}</strong> app.
               </li>
               <li>
-                <strong style={{ color: '#f1f5f9' }}>Log in met Zenith:</strong> Gebruik uw Zenith inloggegevens om verbinding te maken met uw profiel en uw gegevens te synchroniseren.
+                <strong style={{ color: '#f1f5f9' }}>Sign In with Zenith:</strong> Use your Zenith credentials to connect your profile and sync data live.
               </li>
             </ol>
           </div>

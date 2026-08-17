@@ -82,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       title: 'System & Community',
       items: [
-        { key: 'integrations' as TabKey, label: 'Integraties', icon: Link2 },
+        { key: 'integrations' as TabKey, label: 'Integrations', icon: Link2 },
         { key: 'prijzen' as TabKey, label: 'Pricing & Pro', icon: Zap },
         { key: 'roadmap' as TabKey, label: 'Feature Requests', icon: MessageSquare },
         { key: 'mobiel' as TabKey, label: 'Download Center', icon: Smartphone },

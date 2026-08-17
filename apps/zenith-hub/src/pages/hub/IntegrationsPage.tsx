@@ -59,12 +59,12 @@ export const IntegrationsPage: React.FC = () => {
               icon: 'https://www.onelap.com/favicon.ico',
               accentColor: '#00A3FF',
               connected: true,
-              lastSync: 'Vandaag om 15:40',
+              lastSync: 'Today at 15:40',
               clientId: 'onelap_user_992',
               clientSecret: '••••••••••••••••',
               autoSync: true,
-              description: 'Synchroniseer je Onelap indoor ritten en Magene fietstecomputer data direct via Strava Auto-Bridge of FIT-bestand import naar Zenith Aero.',
-              features: ['Onelap FIT-Bestanden & Vermogen', 'Magene Smart Trainer Sync', 'Strava Auto-Bridge Ingestie', 'TSS & Vermogenscurves naar Aero']
+              description: 'Sync your Onelap indoor rides and Magene bike computer data directly via Strava Auto-Bridge or FIT file import into Zenith Aero.',
+              features: ['Onelap FIT Files & Power', 'Magene Smart Trainer Sync', 'Strava Auto-Bridge Ingestion', 'TSS & Power Curves to Aero']
             });
           }
           return filtered;
@@ -81,12 +81,12 @@ export const IntegrationsPage: React.FC = () => {
         icon: 'https://upload.wikimedia.org/wikipedia/commons/3/3b/Strava_Logo.svg',
         accentColor: '#FC4C02',
         connected: true,
-        lastSync: 'Vandaag om 14:15',
+        lastSync: 'Today at 14:15',
         clientId: '109823',
         clientSecret: '••••••••••••••••',
         autoSync: true,
-        description: 'Automatische synchronisatie van hardloop- en wielrensessies, inclusief GPS tracks, segmenten en vermogen.',
-        features: ['GPS Tracks & Elevation', 'TSS & GAP Berekening', 'Segment Synchronisatie', 'Automatische Import naar Aero & Stride']
+        description: 'Automatic synchronization of running and cycling workouts, including GPS tracks, elevation, segments, and power data.',
+        features: ['GPS Tracks & Elevation', 'TSS & GAP Calculation', 'Segment Sync', 'Automatic Import to Aero & Stride']
       },
       {
         id: 'onelapfit',
@@ -95,48 +95,48 @@ export const IntegrationsPage: React.FC = () => {
         icon: 'https://www.onelap.com/favicon.ico',
         accentColor: '#00A3FF',
         connected: true,
-        lastSync: 'Vandaag om 15:40',
+        lastSync: 'Today at 15:40',
         clientId: 'onelap_user_992',
         clientSecret: '••••••••••••••••',
         autoSync: true,
-        description: 'Synchroniseer je Onelap indoor ritten en Magene fietstecomputer data direct via Strava Auto-Bridge of FIT-bestand import naar Zenith Aero.',
-        features: ['Onelap FIT-Bestanden & Vermogen', 'Magene Smart Trainer Sync', 'Strava Auto-Bridge Ingestie', 'TSS & Vermogenscurves naar Aero']
+        description: 'Sync your Onelap indoor rides and Magene bike computer data directly via Strava Auto-Bridge or FIT file import into Zenith Aero.',
+        features: ['Onelap FIT Files & Power', 'Magene Smart Trainer Sync', 'Strava Auto-Bridge Ingestion', 'TSS & Power Curves to Aero']
       },
       {
         id: 'polar',
         name: 'Polar Flow',
-        category: 'Hartslag & Herstel',
+        category: 'Heart Rate & Recovery',
         icon: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Polar_Electro_logo.svg',
         accentColor: '#E2001A',
         connected: true,
-        lastSync: 'Gisteren om 22:30',
+        lastSync: 'Yesterday at 22:30',
         clientId: 'polar_app_88412',
         clientSecret: '••••••••••••••••',
         autoSync: true,
-        description: 'Haal trainingen, Nightly Recharge™ herstelscores, slaapanalyse en continue hartslaggegevens op uit Polar Accesslink API.',
-        features: ['Polar Running Index', 'Nightly Recharge™ Data', '24/7 Hartslag & Slaap', 'Directe GPX / TCX Import']
+        description: 'Fetch workouts, Nightly Recharge™ recovery scores, sleep analysis, and 24/7 heart rate data from Polar Accesslink API.',
+        features: ['Polar Running Index', 'Nightly Recharge™ Data', '24/7 Heart Rate & Sleep', 'Direct GPX / TCX Import']
       },
       {
         id: 'garmin',
         name: 'Garmin Connect',
-        category: 'Hardware & Sensoren',
+        category: 'Hardware & Sensors',
         icon: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Garmin_logo.svg',
         accentColor: '#007CC3',
         connected: false,
         autoSync: false,
-        description: 'Koppel je Garmin Edge of Forerunner sporthorloge voor directe sync via Garmin Health API.',
-        features: ['Body Battery Integration', 'Respiratiesnelheid', 'Vo2Max Analytics', 'Binnenkort beschikbaar']
+        description: 'Connect your Garmin Edge or Forerunner smartwatch for direct sync via Garmin Health API.',
+        features: ['Body Battery Integration', 'Respiration Rate', 'VO2Max Analytics', 'Coming Soon']
       },
       {
         id: 'wahoo',
         name: 'Wahoo Fitness',
-        category: 'Fietstrainers & Sensoren',
+        category: 'Bike Trainers & Sensors',
         icon: 'https://upload.wikimedia.org/wikipedia/commons/9/91/Wahoo_Fitness_Logo.svg',
         accentColor: '#00A8FF',
         connected: false,
         autoSync: false,
-        description: 'Synchroniseer je Wahoo ELEMNT fietstecomputers en Kickr smart trainers direct met Zenith.',
-        features: ['KICKR Erg Modus', 'ELEMNT Auto-sync', 'Directe ERG bestanden', 'Binnenkort beschikbaar']
+        description: 'Sync your Wahoo ELEMNT bike computers and KICKR smart trainers directly with Zenith.',
+        features: ['KICKR Erg Mode', 'ELEMNT Auto-sync', 'Direct ERG Files', 'Coming Soon']
       }
     ];
   });
@@ -171,26 +171,26 @@ export const IntegrationsPage: React.FC = () => {
     setIsTestingPhone(false);
 
     if (status.online) {
-      setSyncMessage(` Telefoon lokaal bereikbaar op ${phoneIp}:${phonePort}! (Versie ${status.appVersion})`);
+      setSyncMessage(`Phone locally reachable at ${phoneIp}:${phonePort}! (Version ${status.appVersion})`);
     } else {
-      setSyncMessage(`⚠️ Kon geen verbinding maken met http://${phoneIp}:${phonePort}/ping. Zorg dat Local HTTP Server aan staat in de telefoon-app.`);
+      setSyncMessage(`⚠️ Could not connect to http://${phoneIp}:${phonePort}/ping. Make sure Local HTTP Server is enabled in the mobile app.`);
     }
     setTimeout(() => setSyncMessage(null), 5000);
   };
 
   const handlePullFromPhone = async () => {
     setIsSyncing('phone_local');
-    setSyncMessage(`Gezondheidsdata live ophalen van telefoon (http://${phoneIp}:${phonePort})...`);
+    setSyncMessage(`Fetching health data live from phone (http://${phoneIp}:${phonePort})...`);
     
     const result = await syncPhoneDataToEcosystem();
     setIsSyncing(null);
 
     if (result.success) {
-      const nowStr = `Vandaag om ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      const nowStr = `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
       setServices(prev => prev.map(s => s.id === 'health_connect' ? { ...s, lastSync: `${nowStr} via Local HTTP Server (${phoneIp}:${phonePort})` } : s));
-      setSyncMessage(`✅ Telefoondata Succesvol Geïmporteerd! ${result.stepsCount} stappen & ${result.exerciseCount} workouts overgezet naar Vigor & Stride.`);
+      setSyncMessage(`✅ Phone Data Successfully Imported! ${result.stepsCount} steps & ${result.exerciseCount} workouts synced to Vigor & Stride.`);
     } else {
-      setSyncMessage(`⚠️ Importeren mislukt. Controleer of de telefoon verbonden is met Wi-Fi op http://${phoneIp}:${phonePort}.`);
+      setSyncMessage(`⚠️ Import failed. Ensure your phone is connected to Wi-Fi at http://${phoneIp}:${phonePort}.`);
     }
     setTimeout(() => setSyncMessage(null), 6000);
   };
@@ -202,7 +202,7 @@ export const IntegrationsPage: React.FC = () => {
         return {
           ...s,
           connected: nextConnected,
-          lastSync: nextConnected ? 'Zojuist gekoppeld' : undefined
+          lastSync: nextConnected ? 'Just Connected' : undefined
         };
       }
       return s;
@@ -225,13 +225,13 @@ export const IntegrationsPage: React.FC = () => {
     }
 
     setIsSyncing(service.id);
-    setSyncMessage(`Synchroniseren met ${service.name}...`);
+    setSyncMessage(`Syncing with ${service.name}...`);
 
     setTimeout(() => {
       setIsSyncing(null);
-      const nowStr = `Vandaag om ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      const nowStr = `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
       setServices(prev => prev.map(s => s.id === service.id ? { ...s, lastSync: nowStr } : s));
-      setSyncMessage(`✅ Succesvol gesynchroniseerd met ${service.name}! Gegevens bijgewerkt in Zenith.`);
+      setSyncMessage(`✅ Successfully synced with ${service.name}! Data updated in Zenith.`);
       setTimeout(() => setSyncMessage(null), 4000);
     }, 1800);
   };
@@ -251,7 +251,7 @@ export const IntegrationsPage: React.FC = () => {
           clientId: editClientId,
           clientSecret: editClientSecret,
           connected: true,
-          lastSync: 'Instellingen opgeslagen'
+          lastSync: 'Settings saved'
         };
       }
       return s;
@@ -266,11 +266,11 @@ export const IntegrationsPage: React.FC = () => {
   };
 
   const mockLogs = [
-    { time: '16:16:21', service: 'Local Phone HTTP Server', type: 'Live Wi-Fi Sync', name: '1.032 stappen + 4 slaapsessies + Running Workout', status: 'Succes' },
-    { time: '16:12:01', service: 'Health Connect Webhook', type: 'Test & Sync', name: '8.432 stappen + Slaap 7u 30m + Hardlopen 5,4km', status: 'Succes' },
-    { time: '14:15:02', service: 'Strava', type: 'Hardlopen', name: 'Zondagse Drempeltraining (12.4 km)', status: 'Succes' },
-    { time: '12:04:18', service: 'Polar Flow', type: 'Nightly Recharge', name: 'Herstel Score: 88% (Goed)', status: 'Succes' },
-    { time: 'Gisteren', service: 'Strava', type: 'Wielrennen', name: 'Aerobe Duurrit (64.2 km)', status: 'Succes' },
+    { time: '16:16:21', service: 'Local Phone HTTP Server', type: 'Live Wi-Fi Sync', name: '1,032 steps + 4 sleep sessions + Running Workout', status: 'Success' },
+    { time: '16:12:01', service: 'Health Connect Webhook', type: 'Test & Sync', name: '8,432 steps + Sleep 7h 30m + Run 5.4km', status: 'Success' },
+    { time: '14:15:02', service: 'Strava', type: 'Running', name: 'Sunday Threshold Session (12.4 km)', status: 'Success' },
+    { time: '12:04:18', service: 'Polar Flow', type: 'Nightly Recharge', name: 'Recovery Score: 88% (Good)', status: 'Success' },
+    { time: 'Yesterday', service: 'Strava', type: 'Cycling', name: 'Aerobic Endurance Ride (64.2 km)', status: 'Success' },
   ];
 
   return (
@@ -279,21 +279,21 @@ export const IntegrationsPage: React.FC = () => {
       <div className="integrations-header">
         <div>
           <div className="integrations-badge">
-            <Zap size={14} style={{ marginRight: 6, color: '#3b82f6' }} />
+            <Zap size={14} style={{ marginRight: 6, color: '#38bdf8' }} />
             API & Ecosystem Hub
           </div>
-          <h1>Integraties & Platform Connectoren</h1>
-          <p>Koppel je favoriete sport- en gezondheidsplatformen zoals Google Health Connect (Wi-Fi Local HTTP Server), Strava en Polar voor automatische synchronisatie naar Zenith.</p>
+          <h1>Integrations & Platform Connectors</h1>
+          <p>Connect your favorite fitness and health platforms like Google Health Connect (Wi-Fi Local HTTP Server), Strava, and Polar for automatic sync to Zenith.</p>
         </div>
         <button className="integrations-global-sync-btn" onClick={() => services.filter(s => s.connected).forEach(handleManualSync)}>
           <RefreshCw size={16} className={isSyncing ? 'spin' : ''} />
-          <span>Alles Synchroniseren</span>
+          <span>Sync All Services</span>
         </button>
       </div>
 
       {syncMessage && (
         <div className="integrations-toast animate-fade-in">
-          <CheckCircle2 size={18} style={{ color: '#10b981', flexShrink: 0 }} />
+          <CheckCircle2 size={18} style={{ color: '#38bdf8', flexShrink: 0 }} />
           <span>{syncMessage}</span>
         </div>
       )}
@@ -303,21 +303,21 @@ export const IntegrationsPage: React.FC = () => {
         <div className="local-phone-header">
           <div className="phone-brand-title">
             <div className={`phone-status-dot ${phoneStatus?.online ? 'online' : 'offline'}`}></div>
-            <Smartphone size={20} style={{ color: '#34A853' }} />
+            <Smartphone size={20} style={{ color: '#38bdf8' }} />
             <div>
-              <h3>Lokale Telefoon HTTP Server Sync (Wi-Fi)</h3>
-              <span className="phone-sub">Directe draadloze verbinding met je Android smartphone</span>
+              <h3>Local Phone HTTP Server Sync (Wi-Fi)</h3>
+              <span className="phone-sub">Direct wireless connection to your Android smartphone</span>
             </div>
           </div>
 
           <div className="phone-actions-row">
             <button className="btn-phone-test" onClick={handleTestPhoneConnection} disabled={isTestingPhone}>
               <Wifi size={14} className={isTestingPhone ? 'spin' : ''} />
-              <span>{isTestingPhone ? 'Testen...' : 'Verbinding Testen'}</span>
+              <span>{isTestingPhone ? 'Testing...' : 'Test Connection'}</span>
             </button>
             <button className="btn-phone-pull" onClick={handlePullFromPhone} disabled={isSyncing === 'phone_local'}>
               <RefreshCw size={14} className={isSyncing === 'phone_local' ? 'spin' : ''} />
-              <span>Nu Data Ophalen & Verdelen</span>
+              <span>Fetch & Distribute Data Now</span>
             </button>
           </div>
         </div>
@@ -325,7 +325,7 @@ export const IntegrationsPage: React.FC = () => {
         <div className="local-phone-body">
           <div className="phone-config-inputs">
             <div className="phone-input-group">
-              <label>Telefoon IP-Adres op Wi-Fi</label>
+              <label>Phone IP Address on Wi-Fi</label>
               <input 
                 type="text" 
                 value={phoneIp} 
@@ -334,7 +334,7 @@ export const IntegrationsPage: React.FC = () => {
               />
             </div>
             <div className="phone-input-group small">
-              <label>Poort</label>
+              <label>Port</label>
               <input 
                 type="number" 
                 value={phonePort} 
@@ -348,7 +348,7 @@ export const IntegrationsPage: React.FC = () => {
             <div className="phone-stat">
               <span className="label">Status:</span>
               <span className={`val ${phoneStatus?.online ? 'success' : 'warning'}`}>
-                {phoneStatus?.online ? `Online (v${phoneStatus.appVersion})` : 'Niet bereikbaar'}
+                {phoneStatus?.online ? `Online (v${phoneStatus.appVersion})` : 'Unreachable'}
               </span>
             </div>
             <div className="phone-stat">
@@ -356,8 +356,8 @@ export const IntegrationsPage: React.FC = () => {
               <span className="val code">http://{phoneIp}:{phonePort}/latest</span>
             </div>
             <div className="phone-stat">
-              <span className="label">Extensies:</span>
-              <span className="val highlight">Vigor (Stappen & Slaap) + Stride (Workouts)</span>
+              <span className="label">Extensions:</span>
+              <span className="val highlight">Vigor (Steps & Sleep) + Stride (Workouts)</span>
             </div>
           </div>
         </div>
@@ -386,12 +386,12 @@ export const IntegrationsPage: React.FC = () => {
                   {service.connected ? (
                     <>
                       <CheckCircle2 size={13} />
-                      <span>Gekoppeld</span>
+                      <span>Connected</span>
                     </>
                   ) : (
                     <>
                       <XCircle size={13} />
-                      <span>Niet Actief</span>
+                      <span>Inactive</span>
                     </>
                   )}
                 </div>
@@ -412,9 +412,9 @@ export const IntegrationsPage: React.FC = () => {
                 <div className="integration-meta-box">
                   <div className="integration-meta-row">
                     <span className="meta-label">
-                      <Clock size={12} /> Laatste Sync:
+                      <Clock size={12} /> Last Sync:
                     </span>
-                    <span className="meta-value">{service.lastSync || 'Nog niet gesynchroniseerd'}</span>
+                    <span className="meta-value">{service.lastSync || 'Not synced yet'}</span>
                   </div>
                   <div className="integration-meta-row">
                     <span className="meta-label">
@@ -441,19 +441,19 @@ export const IntegrationsPage: React.FC = () => {
                       disabled={isCurrentSyncing}
                     >
                       <RefreshCw size={14} className={isCurrentSyncing ? 'spin' : ''} />
-                      <span>{isCurrentSyncing ? 'Syncing...' : 'Nu Synchroniseren'}</span>
+                      <span>{isCurrentSyncing ? 'Syncing...' : 'Sync Now'}</span>
                     </button>
-                    <button className="btn-icon" onClick={() => openConfigModal(service)} title="Webhook & API Configuraties">
+                    <button className="btn-icon" onClick={() => openConfigModal(service)} title="Webhook & API Configurations">
                       <Settings size={15} />
                     </button>
                     <button className="btn-disconnect" onClick={() => handleToggleConnect(service.id)}>
-                      Ontkoppelen
+                      Disconnect
                     </button>
                   </>
                 ) : (
                   <button className="btn-connect" onClick={() => openConfigModal(service)}>
                     <Zap size={15} />
-                    <span>Koppelen via Webhook / API</span>
+                    <span>Connect via Webhook / API</span>
                   </button>
                 )}
               </div>
@@ -465,15 +465,15 @@ export const IntegrationsPage: React.FC = () => {
       {/* Sync Log Section */}
       <div className="integrations-logs-section">
         <div className="section-title">
-          <Database size={18} style={{ color: '#3b82f6' }} />
-          <h2>Synchronisatie Historie & Activiteiten Log</h2>
+          <Database size={18} style={{ color: '#38bdf8' }} />
+          <h2>Sync History & Activity Log</h2>
         </div>
         <div className="sync-logs-table">
           <div className="table-header">
-            <span>Tijdstip</span>
+            <span>Timestamp</span>
             <span>Platform</span>
             <span>Type</span>
-            <span>Activiteit / Gegevens</span>
+            <span>Activity / Payload</span>
             <span>Status</span>
           </div>
           {mockLogs.map((log, idx) => (
@@ -495,21 +495,21 @@ export const IntegrationsPage: React.FC = () => {
         <div className="modal-backdrop" onClick={() => setSelectedService(null)}>
           <div className="modal-container" style={{ width: selectedService.id === 'health_connect' ? 640 : 480 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{selectedService.name} Integratie</h3>
+              <h3>{selectedService.name} Integration</h3>
               <button className="close-btn" onClick={() => setSelectedService(null)}>✕</button>
             </div>
             <div className="modal-body">
               {selectedService.id === 'health_connect' ? (
                 <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
                   <p style={{ marginTop: 0 }}>
-                    Gebruik de open-source Android app <strong style={{ color: '#34A853' }}>mcnaveen/health-connect-webhook</strong> om Google Fit, Samsung Health, Fitbit en Garmin data via Health Connect rechtstreeks naar Zenith te pushen.
+                    Use the open-source Android app <strong style={{ color: '#38bdf8' }}>mcnaveen/health-connect-webhook</strong> to push Google Fit, Samsung Health, Fitbit, and Garmin data via Health Connect directly to Zenith.
                   </p>
 
                   {/* Plug and Play Webhook URL */}
-                  <div style={{ background: 'rgba(52, 168, 83, 0.12)', border: '1px solid rgba(52, 168, 83, 0.3)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
-                    <div style={{ fontWeight: 700, color: '#34A853', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+                    <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Globe size={16} />
-                      Plug-and-Play Webhook RPC URL (Kopieer naar Android App):
+                      Plug-and-Play Webhook RPC URL (Copy into Android App):
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <input 
@@ -520,54 +520,54 @@ export const IntegrationsPage: React.FC = () => {
                       />
                       <button 
                         onClick={() => copyToClipboard(selectedService.webhookUrl || defaultWebhookUrl)}
-                        style={{ background: '#34A853', border: 'none', color: 'white', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}
+                        style={{ background: '#38bdf8', border: 'none', color: '#09090b', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}
                       >
                         {copiedUrl ? <Check size={14} /> : <Copy size={14} />}
-                        {copiedUrl ? 'Gekopieerd!' : 'URL Kopiëren'}
+                        {copiedUrl ? 'Copied!' : 'Copy URL'}
                       </button>
                     </div>
                   </div>
 
                   <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 12, fontSize: 12 }}>
-                    <strong style={{ color: 'white', display: 'block', marginBottom: 4 }}>Hoe in te stellen:</strong>
+                    <strong style={{ color: 'white', display: 'block', marginBottom: 4 }}>Setup Instructions:</strong>
                     <ol style={{ margin: 0, paddingLeft: 18, color: '#94a3b8' }}>
-                      <li>Open <a href="https://github.com/mcnaveen/health-connect-webhook" target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>health-connect-webhook</a> op je Android smartphone.</li>
-                      <li>Plak de gekopieerde RPC URL in het <strong>URL / Endpoint</strong> veld van de app.</li>
-                      <li>Druk op **Test** of **Sync**. De Android app ontvangt direct <code>{"{\"success\": true}"}</code> en <code>HTTP 200 OK</code>!</li>
+                      <li>Open <a href="https://github.com/mcnaveen/health-connect-webhook" target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>health-connect-webhook</a> on your Android smartphone.</li>
+                      <li>Paste the copied RPC URL into the <strong>URL / Endpoint</strong> field in the app.</li>
+                      <li>Tap **Test** or **Sync**. The Android app will receive <code>{"{\"success\": true}"}</code> and <code>HTTP 200 OK</code> immediately!</li>
                     </ol>
                   </div>
                 </div>
               ) : selectedService.id === 'onelapfit' ? (
                 <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
                   <p style={{ marginTop: 0 }}>
-                    <strong>Onelapfit (Magene)</strong> heeft geen openbare ontwikkelaarskeys voor individuele gebruikers. Je kunt je ritten op 2 eenvoudige manieren automatisch binnenhalen in Zenith:
+                    <strong>Onelapfit (Magene)</strong> does not issue public API keys for individual accounts. You can automatically ingest your workouts into Zenith in 2 easy ways:
                   </p>
 
                   <div style={{ background: 'rgba(0, 163, 255, 0.1)', border: '1px solid rgba(0, 163, 255, 0.3)', borderRadius: 12, padding: 14, marginBottom: 14 }}>
                     <strong style={{ color: '#00A3FF', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      1. Strava Auto-Bridge (Automatisch - Aanbevolen)
+                      1. Strava Auto-Bridge (Automatic - Recommended)
                     </strong>
                     <ol style={{ margin: 0, paddingLeft: 18, color: '#cbd5e1', fontSize: 12 }}>
-                      <li>Open de <strong>Onelapfit app</strong> op je telefoon of ga naar <a href="https://www.onelapfit.com" target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>onelapfit.com</a>.</li>
-                      <li>Ga naar <strong>Instellingen ➔ Derden Koppelingen (Third-Party Apps)</strong>.</li>
-                      <li>Selecteer <strong>Strava</strong> en machtig de verbinding.</li>
-                      <li>Zodra je indoor rit stopt, stuurt Onelapfit de rit naar Strava. Zenith haalt het direct op in <strong>Zenith Aero</strong> met al je vermogensdata!</li>
+                      <li>Open the <strong>Onelapfit app</strong> on your phone or visit <a href="https://www.onelapfit.com" target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>onelapfit.com</a>.</li>
+                      <li>Go to <strong>Settings ➔ Third-Party Apps</strong>.</li>
+                      <li>Select <strong>Strava</strong> and authorize the link.</li>
+                      <li>When your indoor workout finishes, Onelapfit syncs to Strava, and Zenith ingests it into <strong>Zenith Aero</strong> with all power metrics!</li>
                     </ol>
                   </div>
 
                   <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: 12, padding: 14 }}>
                     <strong style={{ color: '#fff', display: 'block', marginBottom: 4 }}>
-                      2. Directe FIT Bestand Import
+                      2. Direct FIT File Import
                     </strong>
                     <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>
-                      Download het <code>.FIT</code> bestand uit Onelapfit en sleep het rechtstreeks in <strong>Zenith Aero ➔ FIT Importeren</strong>.
+                      Download the <code>.FIT</code> file from Onelapfit and drag-and-drop it directly into <strong>Zenith Aero ➔ Import FIT</strong>.
                     </p>
                   </div>
                 </div>
               ) : (
                 <>
                   <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>
-                    Voer je Client Credentials in voor <strong>{selectedService.name}</strong>. Hiermee haalt Zenith automatisch je trainingsgegevens en herstelmetrieken op.
+                    Enter your Client Credentials for <strong>{selectedService.name}</strong>. Zenith will automatically fetch your workout data and recovery metrics.
                   </p>
 
                   <div className="form-group">
@@ -576,7 +576,7 @@ export const IntegrationsPage: React.FC = () => {
                       type="text" 
                       value={editClientId} 
                       onChange={(e) => setEditClientId(e.target.value)} 
-                      placeholder="Bijv. 109823 of polar_client_id"
+                      placeholder="e.g. 109823 or polar_client_id"
                     />
                   </div>
 
@@ -593,15 +593,15 @@ export const IntegrationsPage: React.FC = () => {
               )}
 
               <div className="info-box" style={{ marginTop: 16 }}>
-                <ShieldCheck size={16} style={{ color: '#10b981', flexShrink: 0 }} />
-                <span>Gegevens worden veilig gesynchroniseerd en uitsluitend gebruikt voor jouw persoonlijke Zenith herstel- en trainingsanalytics.</span>
+                <ShieldCheck size={16} style={{ color: '#38bdf8', flexShrink: 0 }} />
+                <span>Data is securely synchronized and exclusively used for your personal Zenith recovery and training analytics.</span>
               </div>
             </div>
 
             <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setSelectedService(null)}>Annuleren</button>
+              <button className="btn-secondary" onClick={() => setSelectedService(null)}>Cancel</button>
               <button className="btn-primary" onClick={saveConfigModal}>
-                Opslaan & Verbinden
+                Save & Connect
                 <ArrowRight size={14} style={{ marginLeft: 6 }} />
               </button>
             </div>

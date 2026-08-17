@@ -18,7 +18,7 @@ export interface SleepLogItem {
 
 export interface SleepAnalysisResult {
   score: number; // 0 - 100
-  rating: 'Uitstekend' | 'Goed' | 'Voldoende' | 'Matig' | 'Onvoldoende';
+  rating: 'Excellent' | 'Good' | 'Optimal' | 'Fair' | 'Poor';
   ratingColor: string;
   breakdown: {
     durationScore: number; // Max 35
@@ -56,7 +56,7 @@ export function calculateZenithSleepScore(
   if (!currentSleep || currentSleep.duration_minutes <= 0) {
     return {
       score: 0,
-      rating: 'Onvoldoende',
+      rating: 'Poor',
       ratingColor: '#ef4444',
       breakdown: { durationScore: 0, deepSleepScore: 0, remSleepScore: 0, efficiencyScore: 0 },
       metrics: {
@@ -66,7 +66,7 @@ export function calculateZenithSleepScore(
       sleepDebtHours: 0,
       personalBaselineHours: targetSleepHours,
       zScore: 0,
-      recommendation: 'Geen recente slaapdata beschikbaar. Synchroniseer met Health Connect of voer je slaap handmatig in.'
+      recommendation: 'No recent sleep data available. Sync with Health Connect or manually record your sleep session.'
     };
   }
 
@@ -75,7 +75,6 @@ export function calculateZenithSleepScore(
   const targetMins = targetSleepHours * 60;
 
   // 1. Duration Score (Max 35 points)
-  // Optimal range: 95% - 110% of target
   let durationScore = 0;
   const durRatio = durationMins / targetMins;
   if (durRatio >= 0.95 && durRatio <= 1.15) {
@@ -83,7 +82,6 @@ export function calculateZenithSleepScore(
   } else if (durRatio < 0.95) {
     durationScore = Math.max(0, Math.round(35 * (durRatio / 0.95)));
   } else {
-    // Over-sleeping penalty
     durationScore = Math.max(20, Math.round(35 - (durRatio - 1.15) * 20));
   }
 
@@ -93,7 +91,6 @@ export function calculateZenithSleepScore(
   let lightMins = currentSleep.light_minutes ?? 0;
   let awakeMins = currentSleep.awake_minutes ?? 0;
 
-  // If no detailed breakdown, apply default physiological distribution estimates
   const totalStageSum = deepMins + remMins + lightMins + awakeMins;
   if (totalStageSum === 0) {
     deepMins = Math.round(durationMins * 0.22);
@@ -109,8 +106,7 @@ export function calculateZenithSleepScore(
   const timeInBedMins = durationMins + awakeMins;
   const efficiencyPct = timeInBedMins > 0 ? Math.round((durationMins / timeInBedMins) * 100) : 100;
 
-  // 3. Deep Sleep Score (Max 25 points - Physical / HGH recovery)
-  // Target: 15% - 25% of total sleep (or >= 90 mins)
+  // 3. Deep Sleep Score (Max 25 points - Physical recovery)
   let deepSleepScore = 0;
   if (deepMins >= 100 || deepPct >= 20) {
     deepSleepScore = 25;
@@ -118,8 +114,7 @@ export function calculateZenithSleepScore(
     deepSleepScore = Math.max(0, Math.round((deepMins / 100) * 25));
   }
 
-  // 4. REM Sleep Score (Max 25 points - Mental / Nervous system recovery)
-  // Target: 20% - 25% of total sleep (or >= 90 mins)
+  // 4. REM Sleep Score (Max 25 points - Mental recovery)
   let remSleepScore = 0;
   if (remMins >= 95 || remPct >= 20) {
     remSleepScore = 25;
@@ -140,24 +135,24 @@ export function calculateZenithSleepScore(
   const score = Math.min(100, Math.max(20, rawScore));
 
   // Rating & Accent Color
-  let rating: 'Uitstekend' | 'Goed' | 'Voldoende' | 'Matig' | 'Onvoldoende' = 'Voldoende';
+  let rating: 'Excellent' | 'Good' | 'Optimal' | 'Fair' | 'Poor' = 'Optimal';
   let ratingColor = '#38bdf8'; // Cyan default
 
   if (score >= 88) {
-    rating = 'Uitstekend';
-    ratingColor = '#4ade80'; // Emerald Green
+    rating = 'Excellent';
+    ratingColor = '#4ade80';
   } else if (score >= 75) {
-    rating = 'Goed';
-    ratingColor = '#38bdf8'; // Cyan Blue
+    rating = 'Good';
+    ratingColor = '#38bdf8';
   } else if (score >= 60) {
-    rating = 'Voldoende';
-    ratingColor = '#fbbf24'; // Amber Yellow
+    rating = 'Optimal';
+    ratingColor = '#fbbf24';
   } else if (score >= 45) {
-    rating = 'Matig';
-    ratingColor = '#fb923c'; // Orange
+    rating = 'Fair';
+    ratingColor = '#fb923c';
   } else {
-    rating = 'Onvoldoende';
-    ratingColor = '#ef4444'; // Red
+    rating = 'Poor';
+    ratingColor = '#ef4444';
   }
 
   // 6. ML Personal Baseline & Sleep Debt Analysis (7-14 days)
@@ -169,7 +164,6 @@ export function calculateZenithSleepScore(
     const recent7 = historicalSleeps.slice(0, 7);
     const recent14 = historicalSleeps.slice(0, 14);
 
-    // Cumulative sleep debt over last 7 days
     let debtMins = 0;
     recent7.forEach(s => {
       const diff = targetMins - s.duration_minutes;
@@ -177,11 +171,9 @@ export function calculateZenithSleepScore(
     });
     sleepDebtHours = Math.round((debtMins / 60) * 10) / 10;
 
-    // 14-day rolling average
     const sumMins = recent14.reduce((acc, s) => acc + s.duration_minutes, 0);
     personalBaselineHours = Math.round((sumMins / recent14.length / 60) * 10) / 10;
 
-    // Standard deviation for Z-score
     const meanMins = sumMins / recent14.length;
     const variance = recent14.reduce((acc, s) => acc + Math.pow(s.duration_minutes - meanMins, 2), 0) / recent14.length;
     const stdDevMins = Math.sqrt(variance);
@@ -194,17 +186,17 @@ export function calculateZenithSleepScore(
   // Actionable AI Recommendation
   let recommendation = '';
   if (score >= 88) {
-    recommendation = `Uitstekende nachtrust! Je hebt ${deepMins}m diepe slaap en ${remMins}m REM-slaap behaald. Je zenuwstelsel en spieren zijn optimaal hersteld voor een intensieve Kratos- of Aero-training.`;
+    recommendation = `Excellent sleep quality! You achieved ${deepMins}m deep sleep and ${remMins}m REM sleep. Your nervous system and muscles are fully primed for an intensive Kratos or Aero training.`;
   } else if (score >= 75) {
-    recommendation = `Goede slaapkwaliteit (${totalHours}u geslapen). Je fysieke herstel is solide. Blijf gefocust op een eenvormige bedtijd.`;
+    recommendation = `Solid sleep quality (${totalHours}h slept). Physical recovery is strong. Maintain a consistent bedtime schedule.`;
   } else if (sleepDebtHours >= 2.5) {
-    recommendation = `⚠️ Opgebouwde slaapschuld van ${sleepDebtHours} uur gedurende de afgelopen 7 dagen. Probeer vanavond 30-45 minuten eerder naar bed te gaan om een dip in je prestaties te voorkomen.`;
+    recommendation = `⚠️ Accumulated sleep debt of ${sleepDebtHours} hours over the last 7 days. Consider going to bed 30-45 minutes earlier tonight to prevent a dip in performance.`;
   } else if (deepPct < 15) {
-    recommendation = `Lage diepe slaap (${deepPct}% van totaal). Beperk zware maaltijden, cafeïne en telefoonschermen kort voor het slapengaan om de afgifte van herstelhormoon (HGH) te maximaliseren.`;
+    recommendation = `Low deep sleep (${deepPct}% of total). Limit heavy meals, caffeine, and screen time before sleep to maximize growth hormone (HGH) release.`;
   } else if (remPct < 15) {
-    recommendation = `Lage REM-slaap (${remPct}%). REM-slaap is cruciaal voor mentaal herstel en motorisch geheugen. Vermijd alcohol en zorg voor een koele slaapkamer.`;
+    recommendation = `Low REM sleep (${remPct}%). REM sleep is crucial for cognitive recovery and motor memory. Avoid alcohol and keep your bedroom cool.`;
   } else {
-    recommendation = `Suboptimale slaapkwaliteit. Zorg voor voldoende verduistering en rust voor het slapengaan om je herstelscore te verhogen.`;
+    recommendation = `Suboptimal sleep quality. Ensure adequate darkness and relaxation before sleep to improve your recovery score.`;
   }
 
   return {

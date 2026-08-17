@@ -479,7 +479,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       const gluteImpact = Math.min(50, Math.round(impactScale * 0.6));
       const hamstringImpact = Math.min(45, Math.round(impactScale * 0.5));
 
-      const rideTitle = distKm > 0 ? `Wielrenrit (${distKm.toFixed(1)} km)` : 'Fietsrit';
+      const rideTitle = distKm > 0 ? `Cycling Ride (${distKm.toFixed(1)} km)` : 'Cycling Ride';
 
       addImpact('quadriceps', quadImpact, dateMs, rideTitle);
       addImpact('calves', calfImpact, dateMs, rideTitle);
@@ -504,7 +504,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       const gluteImpact = Math.min(65, Math.round(impactScale * 0.9 * intensityFactor));
       const absImpact = Math.min(40, Math.round(impactScale * 0.4 * intensityFactor));
 
-      const runTitle = s.title || (distKm > 0 ? `Hardloopsessie (${distKm.toFixed(1)} km)` : 'Hardloopsessie');
+      const runTitle = s.title || (distKm > 0 ? `Run Session (${distKm.toFixed(1)} km)` : 'Run Session');
 
       addImpact('calves', calfImpact, dateMs, runTitle);
       addImpact('quadriceps', quadImpact, dateMs, runTitle);
@@ -519,20 +519,20 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       const item = map[key];
       const fatiguePercent = Math.min(100, Math.round(item.fatigueRaw));
       
-      let lastTrainedStr = 'Volledig hersteld';
-      let primaryExercisesArr: string[] = ['Geen recente belasting'];
+      let lastTrainedStr = 'Fully Recovered';
+      let primaryExercisesArr: string[] = ['No recent load'];
 
       if (item.lastTrainedMs > 0) {
         const hoursAgo = Math.round((nowMs - item.lastTrainedMs) / (1000 * 60 * 60));
         if (hoursAgo < 1) {
-          lastTrainedStr = 'Zojuist belast';
+          lastTrainedStr = 'Just trained';
         } else if (hoursAgo < 24) {
-          lastTrainedStr = `Vandaag (${hoursAgo}u geleden)`;
+          lastTrainedStr = `Today (${hoursAgo}h ago)`;
         } else if (hoursAgo < 48) {
-          lastTrainedStr = 'Gisteren';
+          lastTrainedStr = 'Yesterday';
         } else {
           const daysAgo = Math.floor(hoursAgo / 24);
-          lastTrainedStr = `${daysAgo} dagen geleden`;
+          lastTrainedStr = `${daysAgo} days ago`;
         }
 
         // Only include exercises performed within the latest training session (12h cutoff around lastTrainedMs)
@@ -789,7 +789,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {sleepAnalysis.sleepDebtHours > 2 && (
                           <span style={{ fontSize: 9, fontWeight: 800, color: '#fb923c', background: 'rgba(251, 146, 60, 0.12)', padding: '2px 6px', borderRadius: 4 }}>
-                            -{sleepAnalysis.sleepDebtHours}u schuld
+                            -{sleepAnalysis.sleepDebtHours}h debt
                           </span>
                         )}
                         <span style={{ fontSize: 11, fontWeight: 800, color: sleepAnalysis.ratingColor, background: `${sleepAnalysis.ratingColor}15`, padding: '3px 8px', borderRadius: 6, border: `1px solid ${sleepAnalysis.ratingColor}40` }}>
