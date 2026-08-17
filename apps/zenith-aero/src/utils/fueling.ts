@@ -50,7 +50,7 @@ export function calculateFuel(
   const totalFluid = Math.round(fluidPerHour * durationHours);
   
   // 5. Natriumbehoefte (mg/h)
-  // We adviseren natrium aan te vullen als de rit > 1.5 uur is.
+  // We adviseren natrium aan te vullen als de ride > 1.5 uur is.
   const sodiumPerHour = durationHours > 1.5 ? Math.round((fluidPerHour / 1000) * 600) : 0;
   const totalSodium = Math.round(sodiumPerHour * durationHours);
   

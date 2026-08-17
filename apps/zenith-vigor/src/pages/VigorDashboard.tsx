@@ -535,7 +535,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
   const handleDeleteLog = async (type: 'weight' | 'sleep' | 'steps', id: string) => {
     const typeNames = { weight: 'gewichtsmeting', sleep: 'slaapmeting', steps: 'stappenmeting' };
-    if (window.confirm(`Weet u zeker dat u deze ${typeNames[type]} wilt verwijderen?`)) {
+    if (window.confirm(`Weet u zeker dat u deze ${typeNames[type]} wilt delete?`)) {
       const table = `vigor_${type}`;
       try {
         const { error } = await supabase
@@ -547,7 +547,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         fetchLogs();
       } catch (err: any) {
         console.error('Error deleting log:', err);
-        alert('Fout bij verwijderen: ' + err.message);
+        alert('Error deleting: ' + err.message);
       }
     }
   };
@@ -605,13 +605,13 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       
       alert('Metingen succesvol opgeslagen!');
     } catch (err) {
-      console.error('Fout bij opslaan metingen:', err);
-      alert('Fout bij opslaan metingen.');
+      console.error('Error saving metingen:', err);
+      alert('Error saving metingen.');
     }
   };
 
   const handleDeleteMeasurement = async (id: string) => {
-    if (!confirm('Weet u zeker dat u deze meting wilt verwijderen?')) return;
+    if (!confirm('Weet u zeker dat u deze meting wilt delete?')) return;
     try {
       const { error } = await supabase
         .from('vigor_body_measurements')
@@ -621,7 +621,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       if (error) throw error;
       setMeasurements(prev => prev.filter(m => m.id !== id));
     } catch (err) {
-      console.error('Fout bij verwijderen meting:', err);
+      console.error('Error deleting meting:', err);
     }
   };
 
@@ -678,7 +678,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   };
 
   const handleDeletePhoto = async (photo: any) => {
-    if (!confirm('Weet u zeker dat u deze foto wilt verwijderen?')) return;
+    if (!confirm('Weet u zeker dat u deze foto wilt delete?')) return;
     try {
       const urlParts = photo.image_url.split('/vigor-progress-photos/');
       if (urlParts.length > 1) {
@@ -696,7 +696,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       if (error) throw error;
       setPhotos(prev => prev.filter(p => p.id !== photo.id));
     } catch (err) {
-      console.error('Fout bij verwijderen foto:', err);
+      console.error('Error deleting foto:', err);
     }
   };
 
@@ -919,7 +919,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               <span>
                 {latestWeight 
                   ? `Gemeten op ${new Date(latestWeight.logged_at).toLocaleDateString('nl-NL')}`
-                  : 'Nog geen meting'}
+                  : 'No meting'}
               </span>
             </div>
           </div>
@@ -1171,9 +1171,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(168, 85, 247, 0.04)', borderRadius: 12, border: '1px solid rgba(168, 85, 247, 0.15)', textAlign: 'center', padding: 20, boxSizing: 'border-box' }}>
                   <Sparkles size={24} color="#a855f7" style={{ marginBottom: 8 }} />
                   <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 4 }}>Lichaamssamenstelling is Pro</div>
-                  <p style={{ fontSize: 10, color: '#94a3b8', margin: '0 0 12px', maxWidth: 280, lineHeight: 1.4 }}>Ontgrendel vetpercentage (%), spiermassa (kg) en vochtgehalte uit je slimme weegschaal.</p>
-                  <button onClick={() => handleRequestProModal('Lichaamssamenstelling', 'Ontgrendel vetpercentage (%), spiermassa (kg) en vochtgehalte uit je slimme weegschaal.')} className="btn-primary" style={{ padding: '6px 14px', fontSize: 10, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}>
-                    🔒 Ontgrendel Zenith Pro
+                  <p style={{ fontSize: 10, color: '#94a3b8', margin: '0 0 12px', maxWidth: 280, lineHeight: 1.4 }}>Unlock vetpercentage (%), spiermassa (kg) en vochtgehalte uit je slimme weegschaal.</p>
+                  <button onClick={() => handleRequestProModal('Lichaamssamenstelling', 'Unlock vetpercentage (%), spiermassa (kg) en vochtgehalte uit je slimme weegschaal.')} className="btn-primary" style={{ padding: '6px 14px', fontSize: 10, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}>
+                    🔒 Unlock Zenith Pro
                   </button>
                 </div>
               ) : weights.length === 0 ? (
@@ -1249,7 +1249,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 ))}
                 {weights.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Nog geen gewichtsmetingen geregistreerd.</td>
+                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No gewichtsmetingen geregistreerd.</td>
                   </tr>
                 )}
               </tbody>
@@ -1268,7 +1268,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
     const metricNames: { [key: string]: string } = {
       body_fat_pct: 'Vetpercentage (%)',
-      muscle_mass_kg: 'Spiermassa (kg)',
+      muscle_mass_kg: 'Muscle Mass (kg)',
       waist_cm: 'Tailleomtrek (cm)',
       chest_cm: 'Borstomtrek (cm)',
       shoulders_cm: 'Schouderomtrek (cm)',
@@ -1343,7 +1343,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 className="btn-primary" 
                 style={{ padding: '10px 24px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}
               >
-                🔒 Ontgrendel Lichaamsomtrekken (PRO)
+                🔒 Unlock Lichaamsomtrekken (PRO)
               </button>
             </div>
           ) : (
@@ -1391,7 +1391,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Spiermassa (kg)</label>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Muscle Mass (kg)</label>
                     <input 
                       type="number" 
                       step="any"
@@ -1529,7 +1529,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 </div>
 
                 <button type="submit" className="btn-primary" style={{ marginTop: 10 }}>
-                  Meting Opslaan
+                  Meting Save
                 </button>
               </form>
             </div>
@@ -1651,7 +1651,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 className="btn-primary" 
                 style={{ padding: '10px 24px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}
               >
-                🔒 Ontgrendel Voortgangsfoto's (PRO)
+                🔒 Unlock Voortgangsfoto's (PRO)
               </button>
             </div>
           ) : (
@@ -1709,7 +1709,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 </div>
 
                 <button type="submit" className="btn-primary" disabled={uploadingPhoto}>
-                  {uploadingPhoto ? 'Uploaden...' : 'Foto Opslaan'}
+                  {uploadingPhoto ? 'Uploaden...' : 'Foto Save'}
                 </button>
               </form>
             </div>
@@ -1722,7 +1722,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               
               {photos.length === 0 ? (
                 <div style={{ height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-                  Nog geen progressiefoto's geüpload.
+                  No progressiefoto's geüpload.
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxHeight: 300, overflowY: 'auto' }}>
@@ -1937,14 +1937,14 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               <div style={{ padding: '16px', background: 'rgba(168, 85, 247, 0.06)', borderRadius: 12, border: '1px solid rgba(168, 85, 247, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 2 }}>Totale Nachtrust: {Math.floor(durMins / 60)}u {durMins % 60}m</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Sluit je Colmi Smart Ring aan en ontgrendel je Diepe Slaap, REM & Herstelscores (PRO).</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Sluit je Colmi Smart Ring aan en ontgrendel je Deep Sleep, REM & Recovery Scores (PRO).</div>
                 </div>
                 <button 
                   onClick={() => handleRequestProModal('Slaapfases Breakdown', 'Bekijk je exacte diepe slaap, REM-slaap en lichte slaap percentages uit je Colmi Smart Ring.')} 
                   className="btn-primary" 
                   style={{ padding: '8px 16px', fontSize: 11, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900, flexShrink: 0 }}
                 >
-                  🔒 Ontgrendel Slaapfases (PRO)
+                  🔒 Unlock Slaapfases (PRO)
                 </button>
               </div>
             ) : (
@@ -1965,19 +1965,19 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 {/* 4 Phase Cards Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
                   <div style={{ background: 'rgba(139, 92, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#a855f7', marginBottom: 4 }}>🟣 Diepe Slaap</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#a855f7', marginBottom: 4 }}>🟣 Deep Sleep</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(deepMins / 60)}u {deepMins % 60}m</div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{deepPct}% (Spierherstel)</div>
                   </div>
 
                   <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4 }}>🔵 Lichte Slaap</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4 }}>🔵 Light Sleep</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(lightMins / 60)}u {lightMins % 60}m</div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{lightPct}% (Geheugen)</div>
                   </div>
 
                   <div style={{ background: 'rgba(236, 72, 153, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(236, 72, 153, 0.2)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#f472b6', marginBottom: 4 }}>💖 REM Slaap</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#f472b6', marginBottom: 4 }}>💖 REM Sleep</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(remMins / 60)}u {remMins % 60}m</div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{remPct}% (Mentale Energie)</div>
                   </div>
@@ -2073,7 +2073,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 })}
                 {sleeps.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Nog geen slaapmetingen geregistreerd.</td>
+                    <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No slaapmetingen geregistreerd.</td>
                   </tr>
                 )}
               </tbody>
@@ -2157,7 +2157,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 ))}
                 {steps.length === 0 && (
                   <tr>
-                    <td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Nog geen stappenlogs geregistreerd.</td>
+                    <td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No stappenlogs geregistreerd.</td>
                   </tr>
                 )}
               </tbody>
@@ -2329,7 +2329,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
       {loading ? (
         <div style={{ padding: '100px 0', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Outfit' }}>
-          Gezondheidsgegevens synchroniseren...
+          Health data synchroniseren...
         </div>
       ) : (
         <>
@@ -2367,7 +2367,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               {editingLog.type === 'weight' && (
                 <>
                   <div className="form-group">
-                    <label className="form-label">Gewicht (kg)</label>
+                    <label className="form-label">Weight (kg)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -2409,9 +2409,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     Slaapfases per type aanpassen
                   </div>
 
-                  {/* 1. Diepe Slaap */}
+                  {/* 1. Deep Sleep */}
                   <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: 10, borderRadius: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase', marginBottom: 6 }}>🟣 Diepe Slaap</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase', marginBottom: 6 }}>🟣 Deep Sleep</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
                         <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
@@ -2437,9 +2437,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     </div>
                   </div>
 
-                  {/* 2. Lichte Slaap */}
+                  {/* 2. Light Sleep */}
                   <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: 10, borderRadius: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 6 }}>🔵 Lichte Slaap</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 6 }}>🔵 Light Sleep</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
                         <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
@@ -2465,9 +2465,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     </div>
                   </div>
 
-                  {/* 3. REM Slaap */}
+                  {/* 3. REM Sleep */}
                   <div style={{ background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', padding: 10, borderRadius: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', marginBottom: 6 }}>💖 REM Slaap</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', marginBottom: 6 }}>💖 REM Sleep</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
                         <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
@@ -2523,7 +2523,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
                   <div className="form-group" style={{ marginTop: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <label className="form-label">Slaapkwaliteit Score</label>
+                      <label className="form-label">Sleep Quality Score</label>
                       <span style={{ fontSize: 11, color: '#a855f7', fontWeight: 800 }}>{editSleepQuality}/100</span>
                     </div>
                     <input
@@ -2540,10 +2540,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
               <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
                 <button type="button" className="btn-secondary" onClick={() => setEditingLog(null)} style={{ flex: 1 }}>
-                  Annuleren
+                  Cancel
                 </button>
                 <button type="submit" className="btn-primary" style={{ flex: 1 }}>
-                  Wijzigingen Opslaan
+                  Wijzigingen Save
                 </button>
               </div>
             </form>

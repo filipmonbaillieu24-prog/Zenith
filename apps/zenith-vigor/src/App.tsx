@@ -57,7 +57,7 @@ function App() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#09090b', color: '#fff', padding: 24 }}>
         <h1 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 900, marginBottom: 12, letterSpacing: '2px' }}>ZENITH <span style={{ fontWeight: 400, color: '#64748b' }}>VIGOR</span></h1>
         <p style={{ color: '#94a3b8', marginBottom: 24, textAlign: 'center', maxWidth: 400, fontSize: 13, lineHeight: 1.5 }}>
-          Geen actieve sessie gevonden. Start Zenith Vigor vanuit de Zenith Hub.
+          No active session found. Launch Zenith Vigor from Zenith Hub.
         </p>
         <button 
           onClick={() => {
@@ -79,7 +79,7 @@ function App() {
             cursor: 'pointer'
           }}
         >
-          Naar Zenith Hub
+          To Zenith Hub
         </button>
       </div>
     );

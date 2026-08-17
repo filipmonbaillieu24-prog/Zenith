@@ -94,13 +94,13 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
       icon = "⚡";
       desc = "Jouw fysiologie is gebouwd op pure snelheid en explosiviteit. Je beschikt over een uitstekende spiermassa met snelle spiervezels.";
       strength = "Explosieve eindsprint en korte demarrages.";
-      weaknessTip = "Rijd langere ritten op een rustig tempo om je aerobe motor te vergroten, zodat je fris aan de eindsprint begint.";
+      weaknessTip = "Rijd langere rideten op een rustig tempo om je aerobe motor te vergroten, zodat je fris aan de eindsprint begint.";
     } else if (maxIdx === anaerobicIdx && anaerobicIdx > ftpIdx + 10) {
       type = "Puncheur";
       icon = "⛰️";
       desc = "Korte, steile hellingen zijn jouw absolute favoriet. Je kunt extreem diep gaan in het anaerobe gebied (1 tot 2 minuten voluit).";
       strength = "Demarrages op heuvels en korte, intensieve inspanningen.";
-      weaknessTip = "Train je vetverbranding met rustige duurritten om je herstel tussen opeenvolgende heuvels te versnellen.";
+      weaknessTip = "Train je vetverbranding met rustige duurrideten om je herstel tussen opeenvolgende heuvels te versnellen.";
     } else if (maxIdx === vo2maxIdx && vo2maxIdx > sprintIdx + 10) {
       type = "Klimmer";
       icon = "🧗";
@@ -108,10 +108,10 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
       strength = "Langere beklimmingen en opeenvolgende tempoversnellingen.";
       weaknessTip = "Doe krachttraining op de fiets (lage cadans, hoog vermogen) om meer spierkracht te ontwikkelen voor vlakkere stukken.";
     } else if (maxIdx === ftpIdx && ftpIdx > sprintIdx + 10) {
-      type = "Tijdritspecialist";
+      type = "Tijdridespecialist";
       icon = "⏱️";
       desc = "Jij bent een dieselmotor. Je kunt een hoog vermogen urenlang vasthouden en bent perfect in staat om een strak tempo te pacen.";
-      strength = "Lange soloritten, hard rijden op het vlakke en tempohardheid.";
+      strength = "Lange solorideten, hard rijden op het vlakke en tempohardheid.";
       weaknessTip = "Voeg korte, explosieve sprintjes toe aan je trainingen om je spieren te leren reageren op abrupte tempowisselingen.";
     }
 
@@ -128,9 +128,9 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
       weaknessTip,
       scores: [
         { label: 'Sprint (5s)', val: wkg.s5.toFixed(1), unit: 'W/kg', pct: sprintIdx, category: catSprint.label, catColor: catSprint.color },
-        { label: 'Anaeroob (1m)', val: wkg.m1.toFixed(1), unit: 'W/kg', pct: anaerobicIdx, category: catAnaerobic.label, catColor: catAnaerobic.color },
+        { label: 'Anaerobic (1m)', val: wkg.m1.toFixed(1), unit: 'W/kg', pct: anaerobicIdx, category: catAnaerobic.label, catColor: catAnaerobic.color },
         { label: 'VO2max (5m)', val: wkg.m5.toFixed(1), unit: 'W/kg', pct: vo2maxIdx, category: catVo2max.label, catColor: catVo2max.color },
-        { label: 'Drempel (20m)', val: wkg.m20.toFixed(1), unit: 'W/kg', pct: ftpIdx, category: catFtp.label, catColor: catFtp.color }
+        { label: 'Threshold (20m)', val: wkg.m20.toFixed(1), unit: 'W/kg', pct: ftpIdx, category: catFtp.label, catColor: catFtp.color }
       ]
     };
   }, [rides, weight, gender]);
@@ -138,7 +138,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
   if (!profile) {
     return (
       <div className="pp-pheno-card">
-        <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center' }}>Upload ritten met vermogen om je fenotype te berekenen.</p>
+        <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center' }}>Upload rideten met vermogen om je fenotype te berekenen.</p>
       </div>
     );
   }

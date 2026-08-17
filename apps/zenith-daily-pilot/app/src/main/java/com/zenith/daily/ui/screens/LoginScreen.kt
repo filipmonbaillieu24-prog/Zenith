@@ -80,7 +80,7 @@ fun LoginScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Log in met hetzelfde account als op je desktop Zenith Hub om je gegevens live te synchroniseren.",
+                        text = "Sign in with the same account as Zenith Hub on desktop to sync data live.",
                         color = ZenithSecondary,
                         fontSize = 11.sp,
                         lineHeight = 15.sp
@@ -130,7 +130,7 @@ fun LoginScreen(
                     Button(
                         onClick = {
                             if (emailInput.isBlank() || passwordInput.isBlank()) {
-                                errorMessage = "Vul zowel je e-mailadres als wachtwoord in."
+                                errorMessage = "Please enter both your email address and password."
                                 return@Button
                             }
                             isLoggingIn = true
@@ -163,7 +163,7 @@ fun LoginScreen(
                             )
                         } else {
                             Text(
-                                text = "LOG IN MET ZENITH",
+                                text = "SIGN IN WITH ZENITH",
                                 color = ZenithBackground,
                                 fontWeight = FontWeight.Black,
                                 fontSize = 13.sp,
@@ -177,7 +177,7 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "OFFLINE / ALS GAST GEBRUIKEN",
+                            text = "USE OFFLINE / GUEST MODE",
                             color = ZenithSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,

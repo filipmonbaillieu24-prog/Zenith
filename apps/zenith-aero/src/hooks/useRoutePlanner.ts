@@ -61,7 +61,7 @@ export function useRoutePlanner(onSwitchToRoute?: () => void) {
         const data = await fetchWindData(startPoint[0], startPoint[1], windSlot);
         if (!cancelled) setWindData(data);
       } catch (err) {
-        console.error('Wind fetch mislukt:', err);
+        console.error('Wind fetch failed:', err);
       } finally {
         if (!cancelled) setIsFetchingWind(false);
       }

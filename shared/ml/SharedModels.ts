@@ -131,7 +131,7 @@ export const kratosAutoregModel = new SimpleMLP(
 
 /**
  * Predicts the optimal weight (in kg) for the next set based on the previous set's parameters,
- * RIR Delta matrix, rest time, and hardware step limits (Autoregulatie 2.0).
+ * RIR Delta matrix, rest time, and hardware step limits (Autoregulation 2.0).
  */
 export function predictAutoregWeight(
   setIndex: number,

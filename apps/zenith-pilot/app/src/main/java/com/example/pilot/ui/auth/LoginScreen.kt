@@ -55,7 +55,7 @@ fun LoginScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Log in met uw Zenith account",
+                    text = "Sign in with your Zenith account",
                     fontSize = 11.sp,
                     color = Color(0xFF94A3B8),
                     letterSpacing = 1.sp

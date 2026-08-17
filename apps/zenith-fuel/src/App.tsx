@@ -87,7 +87,7 @@ function App() {
   // Auth & Session
   const [loadingSession, setLoadingSession] = useState(true);
   const [userId, setUserId] = useState<string>('');
-  const [userName, setUserName] = useState<string>('Atleet');
+  const [userName, setUserName] = useState<string>('Athlete');
 
   // Active Tab: dashboard, logbook, ingredients, recipes, supplements
   const [activeTab, setActiveTab] = useState<'dashboard' | 'logbook' | 'ingredients' | 'recipes' | 'supplements'>('dashboard');
@@ -255,7 +255,7 @@ function App() {
       if (!userId) return;
       try {
         const { data: userDetails } = await supabase.auth.getUser();
-        const name = userDetails?.user?.user_metadata?.name || userDetails?.user?.user_metadata?.fitness_profile?.name || 'Atleet';
+        const name = userDetails?.user?.user_metadata?.name || userDetails?.user?.user_metadata?.fitness_profile?.name || 'Athlete';
         setUserName(name);
       } catch (e) {
         console.error(e);
@@ -473,7 +473,7 @@ function App() {
       // Parameter history is now calculated dynamically in fetchCalibrationLogs client-side.
 
     } catch (err) {
-      console.error("Fout bij ophalen van gegevens:", err);
+      console.error("Error fetching data:", err);
     }
   }, [userId, currentWeekMonday]);
 
@@ -673,7 +673,7 @@ function App() {
         const offset = subOutput.bmrOffset;
         
         formattedHist.push({
-          date: new Date(targetDateStr + 'T12:00:00').toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' }),
+          date: new Date(targetDateStr + 'T12:00:00').toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
           offset: offset,
           offsetRange: [offset - margin, offset + margin],
           quality: subOutput.sleepQualityCoeff,
@@ -728,7 +728,7 @@ function App() {
           });
       }
     } catch (err) {
-      console.error("ZANE status opslaan mislukt:", err);
+      console.error("Failed to save ZANE status:", err);
     }
   };
 
@@ -751,7 +751,7 @@ function App() {
         }, { onConflict: 'user_id,date' });
 
       if (error) throw error;
-      triggerNotification(newIsCompleteStatus ? "Dagregistratie gemarkeerd als compleet!" : "Dag gemarkeerd als onvolledig (uitgesloten van Zenith).");
+      triggerNotification(newIsCompleteStatus ? "Daily log marked as complete!" : "Dag gemarkeerd als onvolledig (uitgesloten van Zenith).");
     } catch (err) {
       console.error("Incompleetheid toggle mislukt:", err);
       setWeeklyDayStates(weeklyDayStates);
@@ -775,7 +775,7 @@ function App() {
   // Barcode Lookup via Open Food Facts API
   const handleBarcodeLookup = async () => {
     if (!ingBarcode.trim()) {
-      triggerNotification("Voer eerst een streepjescode in.", true);
+      triggerNotification("Please enter a barcode first.", true);
       return;
     }
 
@@ -814,11 +814,11 @@ function App() {
         }
         triggerNotification("Product gevonden en geladen!");
       } else {
-        triggerNotification("Product niet gevonden op Open Food Facts.", true);
+        triggerNotification("Product not found on Open Food Facts.", true);
       }
     } catch (err) {
       console.error("EAN lookup mislukt:", err);
-      triggerNotification("Fout bij barcode netwerkverzoek.", true);
+      triggerNotification("Error in barcode network request.", true);
     } finally {
       setBarcodeSearching(false);
     }
@@ -870,8 +870,8 @@ function App() {
       setShowIngredientModal(false);
       resetIngredientForm();
     } catch (err) {
-      console.error("Fout bij opslaan ingrediënt:", err);
-      triggerNotification("Fout bij opslaan ingrediënt.", true);
+      console.error("Error saving ingredient:", err);
+      triggerNotification("Error saving ingredient.", true);
     }
   };
 
@@ -893,7 +893,7 @@ function App() {
 
   // Delete Ingredient
   const handleDeleteIngredient = async (id: string) => {
-    if (!confirm("Weet u zeker dat u dit ingrediënt wilt verwijderen? Dit heeft geen invloed op reeds gelogde maaltijden.")) return;
+    if (!confirm("Are you sure you want to delete this ingredient? This will not affect existing logged meals.")) return;
     try {
       const { error } = await supabase
         .from('fuel_ingredients')
@@ -904,8 +904,8 @@ function App() {
       setIngredients(ingredients.filter(i => i.id !== id));
       triggerNotification("Ingrediënt verwijderd.");
     } catch (err) {
-      console.error("Fout bij verwijderen ingrediënt:", err);
-      triggerNotification("Verwijderen mislukt.", true);
+      console.error("Error deleting ingredient:", err);
+      triggerNotification("Delete mislukt.", true);
     }
   };
 
@@ -964,7 +964,7 @@ function App() {
   const handleSaveRecipe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recName.trim() || recIngredients.length === 0) {
-      triggerNotification("Vul een naam in en voeg tenminste één ingrediënt toe.", true);
+      triggerNotification("Please enter a name and add at least one ingredient.", true);
       return;
     }
 
@@ -1010,14 +1010,14 @@ function App() {
 
         if (error) throw error;
         setRecipes([...recipes, data].sort((a, b) => a.name.localeCompare(b.name)));
-        triggerNotification("Recept opgeslagen!");
+        triggerNotification("Recipe saved!");
       }
 
       setShowRecipeModal(false);
       resetRecipeForm();
     } catch (err) {
-      console.error("Recept opslaan mislukt:", err);
-      triggerNotification("Fout bij opslaan recept.", true);
+      console.error("Failed to save recipe:", err);
+      triggerNotification("Error saving recipe.", true);
     }
   };
 
@@ -1035,7 +1035,7 @@ function App() {
 
   // Delete Recipe
   const handleDeleteRecipe = async (id: string) => {
-    if (!confirm("Weet u zeker dat u dit recept wilt verwijderen?")) return;
+    if (!confirm("Are you sure you want to delete this recipe?")) return;
     try {
       const { error } = await supabase
         .from('fuel_recipes')
@@ -1046,8 +1046,8 @@ function App() {
       setRecipes(recipes.filter(r => r.id !== id));
       triggerNotification("Recept verwijderd.");
     } catch (err) {
-      console.error("Fout bij verwijderen recept:", err);
-      triggerNotification("Verwijderen mislukt.", true);
+      console.error("Error deleting recipe:", err);
+      triggerNotification("Delete mislukt.", true);
     }
   };
 
@@ -1066,11 +1066,11 @@ function App() {
   const handleCopyDay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (filteredFoodLogs.length === 0) {
-      triggerNotification("Geen maaltijden om te kopiëren.", true);
+      triggerNotification("No meals to copy.", true);
       return;
     }
     if (!copyTargetDate) {
-      triggerNotification("Kies een doeldatum.", true);
+      triggerNotification("Please select a target date.", true);
       return;
     }
 
@@ -1109,9 +1109,9 @@ function App() {
       }
 
       setShowCopyDayModal(false);
-      triggerNotification(`${newLogs.length} maaltijden gekopieerd naar ${new Date(copyTargetDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}!`);
+      triggerNotification(`${newLogs.length} meals copied to ${new Date(copyTargetDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}!`);
     } catch (err) {
-      console.error("Fout bij kopiëren van dag:", err);
+      console.error("Error copying day:", err);
       triggerNotification("Kopiëren mislukt. Probeer opnieuw.", true);
     }
   };
@@ -1199,7 +1199,7 @@ function App() {
       }
     } catch (err) {
       console.error("Loggen mislukt:", err);
-      triggerNotification("Fout bij opslaan log.", true);
+      triggerNotification("Error saving log.", true);
     }
   };
 
@@ -1229,7 +1229,7 @@ function App() {
       setWeeklyFoodLogs(weeklyFoodLogs.filter(f => f.id !== id));
       triggerNotification("Log verwijderd.");
     } catch (err) {
-      console.error("Fout bij verwijderen:", err);
+      console.error("Error deleting:", err);
       triggerNotification("Actie mislukt.", true);
     }
   };
@@ -1282,7 +1282,7 @@ function App() {
       // Reset form default based on type
       setLogSuppAmount(logSuppType === 'creatine' ? '5' : '80');
     } catch (err) {
-      console.error("Fout bij opslaan supplement log:", err);
+      console.error("Error saving supplement log:", err);
       triggerNotification("Actie mislukt.", true);
     }
   };
@@ -1298,7 +1298,7 @@ function App() {
       setSupplementsLogs(prev => prev.filter(s => s.id !== id));
       triggerNotification("Log verwijderd.");
     } catch (err) {
-      console.error("Fout bij verwijderen:", err);
+      console.error("Error deleting:", err);
       triggerNotification("Actie mislukt.", true);
     }
   };
@@ -1334,7 +1334,7 @@ function App() {
       const intake = intakeMap[date] || 0;
       currentSat = Math.min(1.0, (currentSat * 0.92) + (intake / 15));
       chartData.push({
-        dateStr: new Date(date + 'T12:00:00').toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' }),
+        dateStr: new Date(date + 'T12:00:00').toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
         intake: intake,
         saturation: Math.round(currentSat * 100),
         waterWeight: Math.round(currentSat * 1.2 * 100) / 100
@@ -1391,7 +1391,7 @@ function App() {
       const heartRate = Math.round(58 + caffeineEffect + sleepEffect);
 
       return {
-        dateStr: new Date(date + 'T12:00:00').toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' }),
+        dateStr: new Date(date + 'T12:00:00').toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
         caffeine: caffeine,
         heartRate: heartRate
       };
@@ -1485,7 +1485,7 @@ function App() {
   // Build the list of 7 days in the viewed week
   const weekDays = useMemo(() => {
     const days = [];
-    const weekdaysLong = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+    const weekdaysLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const weekdaysShort = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
     
     for (let i = 0; i < 7; i++) {
@@ -1646,15 +1646,15 @@ function App() {
   }, [weekDays, weeklyFoodLogs, supplementsLogs, profile, weightLogs, sleepLogs, gymLogs, activeCaloriesMap, gymVolumeMap]);
 
   const formattedWeekRange = useMemo(() => {
-    const mondayStr = currentWeekMonday.toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' });
-    const sundayStr = addDays(currentWeekMonday, 6).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' });
-    return `Week van ${mondayStr} t/m ${sundayStr}`;
+    const mondayStr = currentWeekMonday.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+    const sundayStr = addDays(currentWeekMonday, 6).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+    return `Week of ${mondayStr} to ${sundayStr}`;
   }, [currentWeekMonday]);
 
   const selectedDateLongName = useMemo(() => {
     const match = weekDays.find(d => d.dateStr === selectedDateStr);
     if (!match) return '';
-    return `${match.dayLongName} ${new Date(selectedDateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}`;
+    return `${match.dayLongName} ${new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}`;
   }, [weekDays, selectedDateStr]);
 
   if (loadingSession) {
@@ -1691,7 +1691,7 @@ function App() {
               ZENITH <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '16px' }}>FUEL</span>
             </h1>
             <p className="zh-hub-subtitle" style={{ fontSize: '9px', color: 'var(--text-muted)', margin: '4px 0 0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-              Voedingsdagboek & Energiebalans voor {userName}
+              Food Diary & Energy Balance for {userName}
             </p>
           </div>
         </div>
@@ -1713,9 +1713,9 @@ function App() {
         {[
           { id: 'dashboard', label: 'Dashboard', icon: <Sparkles size={14} /> },
           { id: 'logbook', label: 'Logboek', icon: <BookOpen size={14} /> },
-          { id: 'ingredients', label: 'Ingrediënten', icon: <Barcode size={14} /> },
-          { id: 'recipes', label: 'Recepten', icon: <ChefHat size={14} /> },
-          { id: 'supplements', label: 'Supplementen', icon: <Activity size={14} /> }
+          { id: 'ingredients', label: 'Ingredients', icon: <Barcode size={14} /> },
+          { id: 'recipes', label: 'Recipes', icon: <ChefHat size={14} /> },
+          { id: 'supplements', label: 'Supplements', icon: <Activity size={14} /> }
         ].map(tab => (
           <button
             key={tab.id}
@@ -1745,7 +1745,7 @@ function App() {
           {/* Main Calorie Ring */}
           <div className="fuel-card col-6">
             <h3 className="fuel-card-title">
-              <Activity size={14} style={{ color: 'var(--color-primary)' }} /> Caloriebalans ({new Date(selectedDateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })})
+              <Activity size={14} style={{ color: 'var(--color-primary)' }} /> Caloriebalans ({new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })})
             </h3>
             <div className="cal-balance-wrap">
               <div className="cal-circle-container">
@@ -1780,7 +1780,7 @@ function App() {
 
               <div className="cal-details">
                 <div className="cal-detail-row">
-                  <span style={{ color: 'var(--text-muted)' }}>Zenith Calorie Doel</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Zenith Calorie Goal</span>
                   <span className="cal-detail-val">{zaneResult.dailyCalorieTarget} kcal</span>
                 </div>
                 <div className="cal-detail-row">
@@ -1788,7 +1788,7 @@ function App() {
                   <span className="cal-detail-val">{intakeCalories} kcal</span>
                 </div>
                 <div className="cal-detail-row">
-                  <span style={{ color: 'var(--text-muted)' }}>Resterend</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Remaining</span>
                   <span className="cal-detail-val" style={{ color: 'var(--color-primary)' }}>
                     {zaneResult.dailyCalorieTarget - intakeCalories} kcal
                   </span>
@@ -1856,8 +1856,8 @@ function App() {
               <div className="integration-card">
                 <Activity className="integration-icon" size={18} />
                 <div className="integration-text">
-                  Ecosystem-synchronisatie: we hebben actieve trainingen gedetecteerd voor deze datum uit Aero/Kratos. 
-                  De baseline-energiebehoefte is automatisch met <strong>+{selectedDateActiveCalories} kcal</strong> verhoogd.
+                  Ecosystem Sync: active workouts detected for this date from Aero/Kratos. 
+                  Baseline energy target has been automatically increased by <strong>+{selectedDateActiveCalories} kcal</strong>.
                 </div>
               </div>
             </div>
@@ -1921,13 +1921,13 @@ function App() {
               <div className="zane-feedback-text">
                 {zaneResult.isCalibrated ? (
                   <>
-                    Zenith is volledig gekalibreerd op basis van <strong>{zaneResult.calibrationDays} dagen</strong> aan data. 
-                    Het algoritme past uw energiebehoefte direct aan op uw werkelijke metabolisme-afwijking en de kwaliteit van uw slaap.
+                    Zenith is fully calibrated based on <strong>{zaneResult.calibrationDays} days</strong> of data. 
+                    The algorithm directly adjusts your energy needs based on your actual metabolic variance and sleep quality.
                   </>
                 ) : (
                   <>
-                    Kalibratie status: <strong>{zaneResult.calibrationDays}/14 dagen</strong> compleet gelogd. 
-                    Slaapkwaliteit en -duur wegen nu al actief mee via sportwetenschappelijke herstelmatrices. Na 14 dagen schakelt Zenith over op uw unieke gepersonaliseerde slaapcoëfficiënten.
+                    Kalibratie status: <strong>{zaneResult.calibrationDays}/14 days</strong> compleet logged. 
+                    Sleep Quality en -duur wegen nu al actief mee via sportwetenschappelijke herstelmatrices. Na 14 days schakelt Zenith over op uw unieke gepersonaliseerde slaapcoëfficiënten.
                   </>
                 )}
               </div>
@@ -1941,7 +1941,7 @@ function App() {
                   style={{ width: 18, height: 18, accentColor: 'var(--color-primary)', cursor: 'pointer' }}
                 />
                 <label htmlFor="dayIncompleteCheck" style={{ fontSize: 12, fontWeight: 700, cursor: 'pointer', color: !selectedDateComplete ? '#ff9f43' : 'var(--text-muted)' }}>
-                  Markeer deze dag als ONVOLLEDIG (sluit uit van Zenith regressie)
+                  Mark this day as INCOMPLETE (exclude from Zenith regression)
                 </label>
               </div>
             </div>
@@ -1954,7 +1954,7 @@ function App() {
             </h3>
             {zaneHistory.length === 0 ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12, minHeight: 180, textAlign: 'center' }}>
-                Begin met het invoeren van logs om de Zenith evolutiegrafiek te tonen.
+                Start logging meals to display the Zenith evolution chart.
               </div>
             ) : (
               <div style={{ width: '100%', height: 210 }}>
@@ -2035,13 +2035,13 @@ function App() {
           {/* Card 2: Weight Prediction Forecaster */}
           <div className="fuel-card col-4 animate-fade-in">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Gewichtsvoorspeller (4 weken)
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Weightsvoorspeller (4 weken)
             </h3>
             <div className="zane-insights-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Huidige Balans:</span>
                 <span style={{ fontWeight: 700, color: netDailyBalance <= 0 ? '#55efc4' : '#ff7675' }}>
-                  {netDailyBalance > 0 ? `+${netDailyBalance}` : netDailyBalance} kcal/dag
+                  {netDailyBalance > 0 ? `+${netDailyBalance}` : netDailyBalance} kcal/day
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
@@ -2051,18 +2051,18 @@ function App() {
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Huidig Gewicht:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Huidig Weight:</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>{latestWeight} kg</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Verwacht Gewicht (28d):</span>
+                <span style={{ color: 'var(--text-muted)' }}>Verwacht Weight (28d):</span>
                 <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{projectedWeight} kg</span>
               </div>
               <div className="zane-feedback-text" style={{ fontSize: '11px', marginTop: '4px', lineHeight: '1.4' }}>
                 {netDailyBalance <= -100 ? (
-                  <>Je zit in een energie-tekort van {Math.abs(netDailyBalance)} kcal. Dit stimuleert vetverbranding met een gezonde, duurzame snelheid.</>
+                  <>You are in an energy deficit of {Math.abs(netDailyBalance)} kcal. Dit stimuleert vetverbranding met een gezonde, duurzame snelheid.</>
                 ) : netDailyBalance >= 100 ? (
-                  <>Je zit in een energie-overschot van {netDailyBalance} kcal. Dit ondersteunt spieropbouw of herstel na zware trainingen.</>
+                  <>You are in an energy surplus of {netDailyBalance} kcal. This supports muscle growth and recovery after heavy training.</>
                 ) : (
                   <>Je energiebalans is stabiel. Je gewicht zal naar verwachting op onderhoudsniveau blijven schommelen.</>
                 )}
@@ -2078,11 +2078,11 @@ function App() {
             <div className="zane-insights-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Gemiddelde inname:</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>{weeklyStats.averageIntakeCal} kcal/dag</span>
+                <span style={{ fontWeight: 700, color: '#fff' }}>{weeklyStats.averageIntakeCal} kcal/day</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Gemiddeld doel:</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>{weeklyStats.averageTargetCal} kcal/dag</span>
+                <span style={{ fontWeight: 700, color: '#fff' }}>{weeklyStats.averageTargetCal} kcal/day</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Consistentie Score:</span>
@@ -2181,7 +2181,7 @@ function App() {
                   <Clock size={14} style={{ color: 'var(--color-primary)' }} /> {selectedDateLongName}
                 </h3>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>
-                  Geselecteerde dag intake: <strong>{intakeCalories} kcal</strong>
+                  Geselecteerde day intake: <strong>{intakeCalories} kcal</strong>
                   {!selectedDateComplete && <span style={{ color: '#ff9f43', marginLeft: 8 }}>⚠️ Zenith Uitgesloten (Onvolledig)</span>}
                 </span>
               </div>
@@ -2204,7 +2204,7 @@ function App() {
                       setShowCopyDayModal(true);
                     }}
                   >
-                    Kopieer dag
+                    Kopieer day
                   </button>
                 )}
                 <button className="btn-submit" style={{ padding: '6px 12px', fontSize: 11, margin: 0 }} onClick={() => { setEditingLogEntry(null); resetLogForm(); setLogSource('quick'); setShowLogModal(true); }}>
@@ -2220,7 +2220,7 @@ function App() {
             ) : (
               <div className="timeline">
                 {filteredFoodLogs.map(log => {
-                  const timeStr = new Date(log.logged_at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                  const timeStr = new Date(log.logged_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                   return (
                     <div key={log.id} className="timeline-item">
                       <div className="timeline-time">{timeStr}</div>
@@ -2260,7 +2260,7 @@ function App() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', margin: 0 }}>
-                  Ingrediënten Database
+                  Ingredients Database
                 </h2>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>
                   Beheer uw eigen voedingsmiddelen en portiegroottes
@@ -2283,7 +2283,7 @@ function App() {
 
             {ingredients.length === 0 ? (
               <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                Geen ingrediënten gevonden. Maak ingrediënten aan om uw database op te bouwen.
+                No ingredients found. Maak ingrediënten aan om uw database op te bouwen.
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
@@ -2509,7 +2509,7 @@ function App() {
           {/* QUICK LOG SUPPLEMENTS */}
           <div className="fuel-card col-4">
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', marginBottom: 20 }}>
-              Snel Loggen ({new Date(selectedDateStr).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })})
+              Snel Loggen ({new Date(selectedDateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })})
             </h2>
             <form onSubmit={handleAddSupplementLog}>
               <div className="form-group">
@@ -2617,7 +2617,7 @@ function App() {
             </h2>
             <div style={{ padding: '10px 0' }}>
               <div style={{ background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '10px', marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Vandaag ingenomen:</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Today ingenomen:</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', margin: '4px 0' }}>
                   {caffeineStats.activeDateCaffeine} mg
                 </div>
@@ -2687,7 +2687,7 @@ function App() {
           {/* SUPPLEMENTS LOG HISTORY */}
           <div className="fuel-card col-12">
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', marginBottom: 20 }}>
-              Geregistreerde Supplementen op {new Date(selectedDateStr).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })}
+              Geregistreerde Supplements op {new Date(selectedDateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })}
             </h2>
             {supplementsLogs.filter(s => toYYYYMMDD(s.logged_at) === selectedDateStr).length === 0 ? (
               <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
@@ -2696,7 +2696,7 @@ function App() {
             ) : (
               <div className="timeline">
                 {supplementsLogs.filter(s => toYYYYMMDD(s.logged_at) === selectedDateStr).map(s => {
-                  const timeStr = new Date(s.logged_at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+                  const timeStr = new Date(s.logged_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                   return (
                     <div key={s.id} className="timeline-item">
                       <div className="timeline-time">{timeStr}</div>
@@ -2741,7 +2741,7 @@ function App() {
                     value={logMealType} 
                     onChange={e => setLogMealType(e.target.value)}
                   >
-                    <option value="breakfast">Ontbijt</option>
+                    <option value="breakfast">Breakfast</option>
                     <option value="lunch">Lunch</option>
                     <option value="dinner">Avondeten</option>
                     <option value="snack">Tussendoortje</option>
@@ -2809,7 +2809,7 @@ function App() {
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">Calorieën (kcal)</label>
+                        <label className="form-label">Calories (kcal)</label>
                         <input 
                           type="number" 
                           className="form-input" 
@@ -2820,7 +2820,7 @@ function App() {
                         />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Koolhydraten (g)</label>
+                        <label className="form-label">Carbs (g)</label>
                         <input 
                           type="number" 
                           className="form-input" 
@@ -2833,7 +2833,7 @@ function App() {
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">Eiwitten (g)</label>
+                        <label className="form-label">Proteinten (g)</label>
                         <input 
                           type="number" 
                           className="form-input" 
@@ -2843,7 +2843,7 @@ function App() {
                         />
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Vetten (g)</label>
+                        <label className="form-label">Fats (g)</label>
                         <input 
                           type="number" 
                           className="form-input" 
@@ -2877,7 +2877,7 @@ function App() {
                         {showLogIngDropdown && (
                           <div className="search-dropdown-list">
                             {ingredients.filter(i => i.name.toLowerCase().includes(logIngredientSearch.toLowerCase())).length === 0 ? (
-                              <div className="search-dropdown-item disabled">Geen ingrediënten gevonden</div>
+                              <div className="search-dropdown-item disabled">No ingredients found</div>
                             ) : (
                               ingredients.filter(i => i.name.toLowerCase().includes(logIngredientSearch.toLowerCase())).map(i => (
                                 <div 
@@ -2952,7 +2952,7 @@ function App() {
                         {showLogRecDropdown && (
                           <div className="search-dropdown-list">
                             {recipes.filter(r => r.name.toLowerCase().includes(logRecipeSearch.toLowerCase())).length === 0 ? (
-                              <div className="search-dropdown-item disabled">Geen recepten gevonden</div>
+                              <div className="search-dropdown-item disabled">No recipes found</div>
                             ) : (
                               recipes.filter(r => r.name.toLowerCase().includes(logRecipeSearch.toLowerCase())).map(r => (
                                 <div 
@@ -2991,7 +2991,7 @@ function App() {
               </div>
               <div style={{ padding: '0 24px 24px' }}>
                 <button type="submit" className="btn-submit" style={{ width: '100%' }}>
-                  {editingLogEntry ? 'Wijziging Opslaan' : 'Voeg toe aan Logboek'}
+                  {editingLogEntry ? 'Wijziging Save' : 'Voeg toe aan Logboek'}
                 </button>
               </div>
             </form>
@@ -3005,7 +3005,7 @@ function App() {
           <div className="modal-content animate-slide-up">
             <div className="modal-header">
               <h3 className="modal-title">
-                <Barcode size={16} /> {editingIngredientId ? 'Ingrediënt Bewerken' : 'Nieuw Ingrediënt Aanmaken'}
+                <Barcode size={16} /> {editingIngredientId ? 'Ingrediënt Edit' : 'Nieuw Ingrediënt Aanmaken'}
               </h3>
               <button className="modal-close" onClick={() => setShowIngredientModal(false)}>Close</button>
             </div>
@@ -3061,7 +3061,7 @@ function App() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Koolhydraten (g)</label>
+                    <label className="form-label">Carbs (g)</label>
                     <input 
                       type="number" 
                       step="any"
@@ -3076,7 +3076,7 @@ function App() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Eiwitten (g)</label>
+                    <label className="form-label">Proteinten (g)</label>
                     <input 
                       type="number" 
                       step="any"
@@ -3088,7 +3088,7 @@ function App() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Vetten (g)</label>
+                    <label className="form-label">Fats (g)</label>
                     <input 
                       type="number" 
                       step="any"
@@ -3102,7 +3102,7 @@ function App() {
                 </div>
 
                 <h4 style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: 'var(--color-primary)', letterSpacing: '0.5px', marginTop: 10 }}>
-                  Portiegroottes & Verpakking (Optioneel)
+                  Portion sizes & Verpakking (Optioneel)
                 </h4>
 
                 <div className="form-row">
@@ -3166,7 +3166,7 @@ function App() {
           <div className="modal-content animate-slide-up" style={{ maxWidth: 660 }}>
             <div className="modal-header">
               <h3 className="modal-title">
-                <ChefHat size={16} /> {editingRecipeId ? 'Recept Bewerken' : 'Nieuw Sportrecept Aanmaken'}
+                <ChefHat size={16} /> {editingRecipeId ? 'Recept Edit' : 'Nieuw Sportrecept Aanmaken'}
               </h3>
               <button className="modal-close" onClick={() => setShowRecipeModal(false)}>Close</button>
             </div>
@@ -3185,7 +3185,7 @@ function App() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Beschrijving / Notities</label>
+                  <label className="form-label">Description / Notities</label>
                   <textarea 
                     className="form-textarea" 
                     placeholder="Korte beschrijving..." 
@@ -3196,7 +3196,7 @@ function App() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Categorie</label>
+                    <label className="form-label">Category</label>
                     <select 
                       className="form-select"
                       value={recCategory}
@@ -3209,7 +3209,7 @@ function App() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Portiegrootte (tekstueel)</label>
+                    <label className="form-label">Portion size (tekstueel)</label>
                     <input 
                       type="text" 
                       className="form-input" 
@@ -3222,7 +3222,7 @@ function App() {
                 </div>
 
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16, marginTop: 10 }}>
-                  <h4 className="form-label" style={{ marginBottom: 10 }}>Ingrediënten toevoegen</h4>
+                  <h4 className="form-label" style={{ marginBottom: 10 }}>Ingredients toevoegen</h4>
                   
                   {recIngredients.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
@@ -3245,7 +3245,7 @@ function App() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 10, alignItems: 'flex-end' }}>
                     <div className="form-group" style={{ position: 'relative' }}>
-                      <label className="form-label" style={{ fontSize: 9 }}>Zoek ingrediënt</label>
+                      <label className="form-label" style={{ fontSize: 9 }}>Search ingredient</label>
                       <div className="search-dropdown-wrap">
                         <input 
                           type="text" 
@@ -3263,7 +3263,7 @@ function App() {
                         {showRecipeIngDropdown && (
                           <div className="search-dropdown-list" style={{ zIndex: 110 }}>
                             {ingredients.filter(i => i.name.toLowerCase().includes(recipeIngSearch.toLowerCase())).length === 0 ? (
-                              <div className="search-dropdown-item disabled">Geen ingrediënten gevonden</div>
+                              <div className="search-dropdown-item disabled">No ingredients found</div>
                             ) : (
                               ingredients.filter(i => i.name.toLowerCase().includes(recipeIngSearch.toLowerCase())).map(i => (
                                 <div 
@@ -3391,10 +3391,10 @@ function App() {
             <form onSubmit={handleCopyDay}>
               <div className="modal-body">
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, lineHeight: '1.4' }}>
-                  Kopieer alle <strong>{filteredFoodLogs.length}</strong> maaltijden van <strong>{new Date(selectedDateStr).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}</strong> naar een andere datum. De tijdstippen van nuttigen blijven behouden.
+                  Kopieer alle <strong>{filteredFoodLogs.length}</strong> maaltijden van <strong>{new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</strong> naar een andere datum. De tijdstippen van nuttigen blijven behouden.
                 </p>
                 <div className="form-group">
-                  <label className="form-label">Kies Doeldatum</label>
+                  <label className="form-label">Kies Goaldatum</label>
                   <input 
                     type="date" 
                     className="form-input" 

@@ -68,7 +68,7 @@ fun CompletionScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "WORKOUT VOLTOOID! 🎉",
+                text = "WORKOUT COMPLETED! 🎉",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Black,
                 color = ZenithAccentNeon,
@@ -76,7 +76,7 @@ fun CompletionScreen(
                 modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
             )
             Text(
-                text = "Gefeliciteerd met je inspanning!",
+                text = "Great job on your workout!",
                 fontSize = 11.sp,
                 color = ZenithSecondary,
                 modifier = Modifier.padding(bottom = 24.dp)
@@ -128,7 +128,7 @@ fun CompletionScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "SAMENVATTING VAN DE TRAINING",
+                        text = "WORKOUT SUMMARY",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White,
@@ -273,10 +273,10 @@ fun CompletionScreen(
                                 }
                             }
 
-                            Toast.makeText(context, "Workout succesvol opgeslagen!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Workout successfully saved!", Toast.LENGTH_SHORT).show()
                             onFinish()
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Fout bij opslaan: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "Error saving: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                         } finally {
                             isSaving = false
                         }
@@ -292,7 +292,7 @@ fun CompletionScreen(
                 if (isSaving) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), color = ZenithBackground)
                 } else {
-                    Text(text = "OPSLAAN EN KLAAR", color = ZenithBackground, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(text = "SAVE AND FINISH", color = ZenithBackground, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }

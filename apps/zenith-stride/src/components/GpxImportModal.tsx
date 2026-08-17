@@ -32,7 +32,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
         setParsedRun(parsed);
       } catch (err) {
         console.error("GPX parse error:", err);
-        setErrorMsg("Kon het GPX bestand niet verwerken. Controleer of het een geldig GPX/XML bestand is.");
+        setErrorMsg("Could not process the GPX file. Please verify it is a valid GPX/TCX/XML file.");
       }
     };
     reader.readAsText(file);
@@ -68,7 +68,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
         <div className="stride-modal-header">
           <div>
             <h3>GPX / FIT / TCX Bestand Importeren</h3>
-            <p className="subtitle">Upload een GPS bestand van je sporthorloge of app</p>
+            <p className="subtitle">Upload a GPS file from your sports watch or app</p>
           </div>
           <button className="stride-close-btn" onClick={onClose}>
             <X size={18} />
@@ -89,7 +89,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
             >
               <UploadCloud size={48} style={{ color: '#38bdf8', marginBottom: 12 }} />
               <h4>Sleep je GPX bestand hier naartoe</h4>
-              <p>of klik om een bestand te selecteren (.gpx, .xml, .tcx)</p>
+              <p>or click to select a file (.gpx, .xml, .tcx)</p>
               <input 
                 type="file" 
                 accept=".gpx,.xml,.tcx" 
@@ -112,7 +112,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
 
               <div className="gpx-metrics-grid">
                 <div className="gpx-metric-card">
-                  <span className="metric-label">Afstand</span>
+                  <span className="metric-label">Distance</span>
                   <span className="metric-val">{parsedRun.distanceKm} km</span>
                 </div>
                 <div className="gpx-metric-card">
@@ -126,7 +126,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
                   <span className="metric-val">{parsedRun.avgPaceMinKm} /km</span>
                 </div>
                 <div className="gpx-metric-card">
-                  <span className="metric-label">Hoogtemeters</span>
+                  <span className="metric-label">Elevation Gain</span>
                   <span className="metric-val">{parsedRun.elevationGainM} m</span>
                 </div>
               </div>
@@ -170,7 +170,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
         </div>
 
         <div className="stride-modal-footer">
-          <button className="btn-cancel" onClick={onClose}>Annuleren</button>
+          <button className="btn-cancel" onClick={onClose}>Cancel</button>
           {parsedRun && (
             <button className="btn-save" onClick={handleConfirmImport}>
               <Check size={16} style={{ marginRight: 6 }} />

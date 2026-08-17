@@ -30,7 +30,7 @@ export const AICoachChatWidget: React.FC<AICoachChatWidgetProps> = ({ profile, r
       setMessages([
         {
           role: 'assistant',
-          content: `Hoi ${name}! Ik ben je persoonlijke Zenith AI Coach. Ik heb toegang tot je fitheidscijfers en trainingsgeschiedenis. Stel me gerust al je vragen over je ritten, trainingszones, voeding of hersteladviezen. Hoe voelen de benen vandaag?`,
+          content: `Hoi ${name}! Ik ben je persoonlijke Zenith AI Coach. Ik heb toegang tot je fitheidscijfers en trainingsgeschiedenis. Stel me gerust al je vragen over je rideten, trainingszones, voeding of hersteladviezen. Hoe voelen de benen today?`,
         },
       ]);
     }
@@ -129,7 +129,7 @@ Houd hier rekening mee in je adviezen. Geef korte, concrete, direct toepasbare c
           </h4>
         </div>
         <p style={{ margin: '0 0 14px', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-          De interactieve AI-coach is momenteel uitgeschakeld. Koppel een lokale **Ollama** server (gratis en 100% offline) of voeg een **OpenAI API-sleutel** toe in de instellingen om live advies te krijgen over je ritten en vermoeidheid.
+          De interactieve AI-coach is momenteel uitgeschakeld. Koppel een lokale **Ollama** server (gratis en 100% offline) of voeg een **OpenAI API-sleutel** toe in de instellingen om live advies te krijgen over je rideten en vermoeidheid.
         </p>
         {onGoToSettings && (
           <button
@@ -146,10 +146,10 @@ Houd hier rekening mee in je adviezen. Geef korte, concrete, direct toepasbare c
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-              fontFamily: 'inherit',
+              fontFamily: 'inheride',
             }}
           >
-            <Settings size={12} /> AI Instellingen Openen
+            <Settings size={12} /> AI Settings Openen
           </button>
         )}
       </div>
@@ -260,7 +260,7 @@ Houd hier rekening mee in je adviezen. Geef korte, concrete, direct toepasbare c
           type="text"
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder="Stel een vraag aan de coach over je ritten, zones of herstel..."
+          placeholder="Stel een vraag aan de coach over je rideten, zones of herstel..."
           disabled={sending}
           className="wd-chat-input-field"
         />

@@ -104,7 +104,7 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, commands }) =
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Zoek een actie of pagina..."
+            placeholder="Search an action or page..."
             style={{
               flex: 1,
               background: 'none',
@@ -112,7 +112,7 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, commands }) =
               outline: 'none',
               color: '#f8fafc',
               fontSize: 14,
-              fontFamily: 'inherit',
+              fontFamily: 'inheride',
             }}
           />
           <kbd style={{
@@ -122,7 +122,7 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, commands }) =
             padding: '2px 6px',
             fontSize: 10,
             color: '#64748b',
-            fontFamily: 'inherit',
+            fontFamily: 'inheride',
             flexShrink: 0,
           }}>
             ESC
@@ -136,7 +136,7 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, commands }) =
               padding: '28px 16px', textAlign: 'center',
               color: '#475569', fontSize: 13,
             }}>
-              Geen resultaten voor &ldquo;{query}&rdquo;
+              No results for &ldquo;{query}&rdquo;
             </div>
           ) : (
             categories.map(cat => {
@@ -215,7 +215,7 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, commands }) =
                             padding: '2px 6px',
                             fontSize: 10,
                             color: '#64748b',
-                            fontFamily: 'inherit',
+                            fontFamily: 'inheride',
                             flexShrink: 0,
                           }}>
                             {cmd.shortcut}

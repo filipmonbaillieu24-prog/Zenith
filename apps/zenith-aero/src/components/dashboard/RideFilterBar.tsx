@@ -32,7 +32,7 @@ export const RideFilterBar: React.FC<RideFilterBarProps> = ({
           <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
           <input
             type="text"
-            placeholder="Zoek op ritnaam..."
+            placeholder="Search by ride name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{
@@ -44,7 +44,7 @@ export const RideFilterBar: React.FC<RideFilterBarProps> = ({
               color: '#f8fafc',
               fontSize: 11,
               outline: 'none',
-              fontFamily: 'inherit',
+              fontFamily: 'inheride',
             }}
           />
         </div>
@@ -64,15 +64,15 @@ export const RideFilterBar: React.FC<RideFilterBarProps> = ({
               fontSize: 11,
               outline: 'none',
               cursor: 'pointer',
-              fontFamily: 'inherit',
+              fontFamily: 'inheride',
             }}
           >
             <option value="date">Datum (Nieuwste)</option>
-            <option value="distance">Afstand (Hoog-Laag)</option>
+            <option value="distance">Distance (Hoog-Laag)</option>
             <option value="duration">Tijd (Lang-Kort)</option>
             <option value="tss">TSS (Hoog-Laag)</option>
             <option value="eftp">eFTP (Hoog-Laag)</option>
-            <option value="elevGain">Hoogtemeters</option>
+            <option value="elevGain">Elevation Gain</option>
           </select>
         </div>
       </div>
@@ -83,12 +83,12 @@ export const RideFilterBar: React.FC<RideFilterBarProps> = ({
           className={`wd-label-chip ${labelFilter === 'all' ? 'wd-label-chip--active' : ''}`}
           style={
             labelFilter === 'all'
-              ? { background: 'rgba(203, 213, 225, 0.12)', borderColor: '#cbd5e1', color: '#cbd5e1', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inherit' }
-              : { background: 'transparent', borderColor: 'rgba(255,255,255,0.03)', color: '#94a3b8', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inherit' }
+              ? { background: 'rgba(203, 213, 225, 0.12)', borderColor: '#cbd5e1', color: '#cbd5e1', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inheride' }
+              : { background: 'transparent', borderColor: 'rgba(255,255,255,0.03)', color: '#94a3b8', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inheride' }
           }
           onClick={() => setLabelFilter('all')}
         >
-          Alle Ritten
+          Alle Rides
         </button>
         {RIDE_LABELS.map((l) => {
           const isActive = labelFilter === l.key;
@@ -98,8 +98,8 @@ export const RideFilterBar: React.FC<RideFilterBarProps> = ({
               className={`wd-label-chip ${isActive ? 'wd-label-chip--active' : ''}`}
               style={
                 isActive
-                  ? { background: l.color + '22', borderColor: l.color, color: l.color, fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }
-                  : { color: l.color, background: 'transparent', borderColor: 'rgba(255,255,255,0.03)', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }
+                  ? { background: l.color + '22', borderColor: l.color, color: l.color, fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inheride', display: 'flex', alignItems: 'center', gap: 4 }
+                  : { color: l.color, background: 'transparent', borderColor: 'rgba(255,255,255,0.03)', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inheride', display: 'flex', alignItems: 'center', gap: 4 }
               }
               onClick={() => setLabelFilter((prev) => (prev === l.key ? 'all' : l.key))}
               title={l.label}

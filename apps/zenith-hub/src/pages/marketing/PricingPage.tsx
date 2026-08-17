@@ -35,7 +35,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
       backgroundColor: '#09090b',
       color: '#f8fafc',
       fontFamily: "'Outfit', 'Inter', system-ui, -apple-system, sans-serif",
-      padding: '32px 40px 60px',
+      padding: '16px 32px 40px',
       position: 'relative'
     }}>
       <div style={{ width: '100%', maxWidth: '100%' }}>

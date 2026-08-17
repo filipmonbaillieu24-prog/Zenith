@@ -33,7 +33,7 @@ export const PRSection: React.FC<PRSectionProps> = ({
   eFTPData,
   rides,
 }) => {
-  const [activeTab, setActiveTab] = useState<'conditie' | 'vermogen' | 'klims'>('conditie');
+  const [activeTab, setActiveTab] = useState<'fitness' | 'power' | 'climbs'>('fitness');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
@@ -50,7 +50,7 @@ export const PRSection: React.FC<PRSectionProps> = ({
         WebkitBackdropFilter: 'blur(16px)'
       }}>
         <button
-          onClick={() => setActiveTab('conditie')}
+          onClick={() => setActiveTab('fitness')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -58,21 +58,21 @@ export const PRSection: React.FC<PRSectionProps> = ({
             gap: 8,
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid ' + (activeTab === 'conditie' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
+            border: '1px solid ' + (activeTab === 'fitness' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
             fontSize: '13px',
             fontWeight: 800,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'all 0.2s',
-            background: activeTab === 'conditie' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
-            color: activeTab === 'conditie' ? '#fff' : '#64748b'
+            background: activeTab === 'fitness' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
+            color: activeTab === 'fitness' ? '#fff' : '#64748b'
           }}
         >
           <TrendingUp size={16} />
-          Conditietrend
+          Fitness Trend
         </button>
         <button
-          onClick={() => setActiveTab('vermogen')}
+          onClick={() => setActiveTab('power')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -80,21 +80,21 @@ export const PRSection: React.FC<PRSectionProps> = ({
             gap: 8,
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid ' + (activeTab === 'vermogen' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
+            border: '1px solid ' + (activeTab === 'power' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
             fontSize: '13px',
             fontWeight: 800,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'all 0.2s',
-            background: activeTab === 'vermogen' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
-            color: activeTab === 'vermogen' ? '#fff' : '#64748b'
+            background: activeTab === 'power' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
+            color: activeTab === 'power' ? '#fff' : '#64748b'
           }}
         >
           <Activity size={16} />
-          Vermogensprofiel
+          Power Profile
         </button>
         <button
-          onClick={() => setActiveTab('klims')}
+          onClick={() => setActiveTab('climbs')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -102,22 +102,22 @@ export const PRSection: React.FC<PRSectionProps> = ({
             gap: 8,
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid ' + (activeTab === 'klims' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
+            border: '1px solid ' + (activeTab === 'climbs' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
             fontSize: '13px',
             fontWeight: 800,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'all 0.2s',
-            background: activeTab === 'klims' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
-            color: activeTab === 'klims' ? '#fff' : '#64748b'
+            background: activeTab === 'climbs' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
+            color: activeTab === 'climbs' ? '#fff' : '#64748b'
           }}
         >
           <Mountain size={16} />
-          Klimklassement
+          Climbs Leaderboard
         </button>
       </div>
 
-      {activeTab === 'conditie' && (
+      {activeTab === 'fitness' && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.1fr', gap: '22px', alignItems: 'start', width: '100%' }}>
           {/* Left: eFTP Predictions */}
@@ -127,7 +127,7 @@ export const PRSection: React.FC<PRSectionProps> = ({
                 <div className="wd-section-card__head">
                   <span className="wd-section-card__title">
                     <Brain size={13} style={{ display:'inline', verticalAlign:'middle', marginRight:5, color:'#cbd5e1' }} />
-                    Offline AI eFTP Prognose (Volgende 8 weken)
+                    Offline AI eFTP Forecast (Next 8 weeks)
                   </span>
                   <span style={{ fontSize: 10, color: 'var(--text-muted, #94a3b8)' }}>
                     Zelflerend MLP Neuraal Netwerk
@@ -186,11 +186,11 @@ export const PRSection: React.FC<PRSectionProps> = ({
                   return (
                     <div>
                       <p style={{ fontSize: 11, color: '#94a3b8', margin: '0 0 12px', lineHeight: 1.4 }}>
-                        Ons offline neuraal netwerk voorspelt dat je drempelvermogen (eFTP) over 8 weken stijgt naar 
+                        Our offline neural network predicts your functional threshold power (eFTP) will reach 
                         <strong style={{ color: '#cbd5e1', marginLeft: 4 }}>
                           {finalPredicted} Watt
                         </strong> (een verandering van {ftpDiff >= 0 ? '+' : ''}{Math.round((ftpDiff / currentFtpVal) * 100)}%), 
-                        gebaseerd op je wekelijkse consistentie van <strong>{consistency.toFixed(1)} trainingen/week</strong>.
+                        based on your weekly consistency of <strong>{consistency.toFixed(1)} workouts/week</strong>.
                       </p>
                       <ResponsiveContainer width="100%" height={160}>
                         <LineChart data={forecastData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -228,7 +228,7 @@ export const PRSection: React.FC<PRSectionProps> = ({
               </div>
             ) : (
               <div className="wd-section-card" style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 11 }}>
-                Onvoldoende vermogensgegevens om een eFTP-prognose te maken. Blijf ritten met wattage uploaden.
+                Insufficient power data for eFTP forecasting. Keep riding with power data.
               </div>
             )}
           </div>
@@ -260,12 +260,12 @@ export const PRSection: React.FC<PRSectionProps> = ({
                       {estimatedVO2} <span style={{ fontSize: '10px', color: '#64748b' }}>ml/kg/min</span>
                     </div>
                     <span style={{ fontSize: 10, color: '#cbd5e1', lineHeight: 1.4, marginTop: 4 }}>
-                      Dit is een submaximale schatting gebaseerd op je eFTP van {ftpVal}W en gewicht van {weightVal}kg. 
+                      This is a submaximal estimate based on your eFTP of {ftpVal}W and weight of {weightVal}kg. 
                       {estimatedVO2 > 50 
-                        ? " Je conditie is uitstekend (topklasse) voor duursporten!" 
+                        ? " Your aerobic fitness is outstanding (elite) for endurance sports!" 
                         : estimatedVO2 > 40 
                           ? " Je conditie is bovengemiddeld. Blijf consistent trainen." 
-                          : " Goede basis. Focus op langere duurtrainingen om je longinhoud te vergrozen."}
+                          : " Good foundation. Focus on longer endurance rides to expand aerobic capacity."}
                     </span>
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export const PRSection: React.FC<PRSectionProps> = ({
             {globalSpeedBests && (
               <div className="wd-section-card" style={{ margin: 0 }}>
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">🏆 Snelheids PR's</span>
+                  <span className="wd-section-card__title">🏆 Speeds PR's</span>
                 </div>
                 <div className="wd-bests-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {SPEED_EFFORT_DURATIONS.map(({ key, label }) => {
@@ -298,7 +298,7 @@ export const PRSection: React.FC<PRSectionProps> = ({
       )}
 
 
-      {activeTab === 'vermogen' && (
+      {activeTab === 'power' && (
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.1fr', gap: '22px', alignItems: 'start', width: '100%' }}>
           {/* Left: Curves */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -322,7 +322,7 @@ export const PRSection: React.FC<PRSectionProps> = ({
         </div>
       )}
 
-      {activeTab === 'klims' && (
+      {activeTab === 'climbs' && (
         <div style={{ width: '100%' }}>
           <ClimbsLeaderboard rides={rides} />
         </div>

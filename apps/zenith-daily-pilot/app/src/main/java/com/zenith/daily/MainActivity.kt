@@ -105,7 +105,7 @@ class MainActivity : ComponentActivity() {
                             text = {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text(
-                                        text = "Er is een nieuwe versie van Zenith Daily beschikbaar (v${info.versionName}).",
+                                        text = "A new version of Zenith Daily is available (v${info.versionName}).",
                                         fontSize = 12.sp,
                                         color = ZenithSecondary,
                                         lineHeight = 16.sp
@@ -160,7 +160,7 @@ class MainActivity : ComponentActivity() {
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
                                     Text(
-                                        text = if (isDownloading) "BEZIG MET DOWNLOADEN..." else "NU AUTOMATISCH UPDATEN",
+                                        text = if (isDownloading) "DOWNLOADING..." else "UPDATE AUTOMATICALLY NOW",
                                         fontWeight = FontWeight.Black,
                                         fontSize = 12.sp
                                     )
@@ -189,7 +189,7 @@ fun MainAppScreen(
     onLogout: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var selectedTab by remember { mutableStateOf(0) } // 0: Vandaag, 1: Voeding, 2: Gezondheid
+    var selectedTab by remember { mutableStateOf(0) } // 0: Today, 1: Nutrition, 2: Health
 
     val todayMeals by repository.getTodayMealLogsFlow().collectAsState(initial = emptyList())
     val weights by repository.weightsFlow.collectAsState(initial = emptyList())
@@ -226,7 +226,7 @@ fun MainAppScreen(
                 },
                 actions = {
                     TextButton(onClick = onLogout) {
-                        Text("UITLOGGEN", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = ZenithSecondary)
+                        Text("LOG OUT", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = ZenithSecondary)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -244,7 +244,7 @@ fun MainAppScreen(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     icon = { Text("🏠", fontSize = 18.sp) },
-                    label = { Text("Vandaag", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("Today", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = ZenithPrimary,
                         selectedTextColor = ZenithPrimary,
@@ -257,7 +257,7 @@ fun MainAppScreen(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     icon = { Text("🥗", fontSize = 18.sp) },
-                    label = { Text("Voeding", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("Nutrition", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = ZenithPrimary,
                         selectedTextColor = ZenithPrimary,
@@ -270,7 +270,7 @@ fun MainAppScreen(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     icon = { Text("⚖️", fontSize = 18.sp) },
-                    label = { Text("Gezondheid", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                    label = { Text("Health", fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = ZenithPrimary,
                         selectedTextColor = ZenithPrimary,
@@ -347,13 +347,13 @@ fun MainAppScreen(
                 AlertDialog(
                     onDismissRequest = { showGlobalWeightModal = false },
                     containerColor = ZenithCardBg,
-                    title = { Text("Snel Gewicht Loggen", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ZenithTextPrimary) },
+                    title = { Text("Quick Weight Log", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ZenithTextPrimary) },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             OutlinedTextField(
                                 value = weightInput,
                                 onValueChange = { weightInput = it },
-                                label = { Text("Gewicht in kg (bijv. 81.4)", color = ZenithSecondary) },
+                                label = { Text("Weight in kg (e.g. 81.4)", color = ZenithSecondary) },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             OutlinedTextField(
@@ -377,7 +377,7 @@ fun MainAppScreen(
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = ZenithPrimary, contentColor = ZenithBackground)
                         ) {
-                            Text("OPSLAAN", fontWeight = FontWeight.ExtraBold)
+                            Text("SAVE", fontWeight = FontWeight.ExtraBold)
                         }
                     },
                     dismissButton = {

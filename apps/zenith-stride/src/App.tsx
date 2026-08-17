@@ -67,7 +67,7 @@ export function App() {
         rpe: 7,
         shoeName: 'Nike ZoomX Vaporfly',
         source: 'strava',
-        notes: 'Sterke marathon tempo blokken in het middenstuk.'
+        notes: 'Strong marathon tempo blocks in the middle section.'
       },
       {
         id: 'run-2',
@@ -88,7 +88,7 @@ export function App() {
         rpe: 8,
         shoeName: 'Hoka Clifton 9',
         source: 'manual',
-        notes: 'Gecontroleerd op de loopband gelopen met gestage helling.'
+        notes: 'Controlled treadmill run with a steady incline.'
       },
       {
         id: 'run-3',
@@ -108,7 +108,7 @@ export function App() {
         rpe: 9,
         shoeName: 'Saucony Endorphin Speed',
         source: 'polar',
-        notes: 'Uitstekende intervallen rond 3:45/km op de atletiekbaan.'
+        notes: 'Excellent intervals around 3:45/km on the track.'
       }
     ];
   });
@@ -276,7 +276,7 @@ export function App() {
             <span>Zenith Stride Running Ecosystem</span>
           </div>
           <h1>Hardloop & Loopband Performance</h1>
-          <p>Analyseer je buitenlopen, GPX bestanden en indoor loopbandsessies met Polar, Strava & Health Connect integratie.</p>
+          <p>Analyze your outdoor runs, GPX files, and indoor treadmill sessions with Polar, Strava & Health Connect integration.</p>
         </div>
 
         <div className="stride-header-actions">
@@ -353,7 +353,7 @@ export function App() {
             <Search size={16} className="search-icon" />
             <input 
               type="text" 
-              placeholder="Zoek op titel of schoen..." 
+              placeholder="Search by title or shoe..." 
               value={searchQuery} 
               onChange={e => setSearchQuery(e.target.value)}
             />
@@ -384,9 +384,9 @@ export function App() {
           <div className="table-header">
             <span>Datum & Titel</span>
             <span>Type & Modus</span>
-            <span>Afstand</span>
+            <span>Distance</span>
             <span>Tempo</span>
-            <span>Hartslag / Cadans</span>
+            <span>Heart Rate / Cadence</span>
             <span>Schoen / Bron</span>
             <span>Actie</span>
           </div>
@@ -399,7 +399,7 @@ export function App() {
                 </div>
                 <div>
                   <strong className="run-name">{run.title}</strong>
-                  <span className="run-date">{run.date} {run.timeOfDay ? `om ${run.timeOfDay}` : ''}</span>
+                  <span className="run-date">{run.date} {run.timeOfDay ? `at ${run.timeOfDay}` : ''}</span>
                 </div>
               </div>
 
@@ -465,7 +465,7 @@ export function App() {
             <div className="stride-modal-body">
               <div className="detail-metrics-grid">
                 <div className="detail-stat-box">
-                  <span className="stat-label">Afstand</span>
+                  <span className="stat-label">Distance</span>
                   <span className="stat-val">{selectedRunDetail.distanceKm > 0 ? `${selectedRunDetail.distanceKm} km` : '0 km (Indoor)'}</span>
                 </div>
                 <div className="detail-stat-box">
@@ -477,19 +477,19 @@ export function App() {
                   <span className="stat-val">{selectedRunDetail.avgPaceMinKm > 0 ? `${formatPace(selectedRunDetail.avgPaceMinKm)} /km` : '0:00 /km'}</span>
                 </div>
                 <div className="detail-stat-box">
-                  <span className="stat-label">{selectedRunDetail.isTreadmill ? 'Loopband Helling' : 'Hoogtemeters'}</span>
+                  <span className="stat-label">{selectedRunDetail.isTreadmill ? 'Loopband Helling' : 'Elevation Gain'}</span>
                   <span className="stat-val">
                     {selectedRunDetail.isTreadmill ? `${selectedRunDetail.inclinePercent || 0}%` : `${selectedRunDetail.elevationGainM} m`}
                   </span>
                 </div>
                 <div className="detail-stat-box">
-                  <span className="stat-label">Gem. Hartslag</span>
+                  <span className="stat-label">Avg Heart Rate</span>
                   <span className="stat-val" style={{ color: '#ef4444' }}>
                     {selectedRunDetail.avgHeartRate ? `${selectedRunDetail.avgHeartRate} bpm` : '-'}
                   </span>
                 </div>
                 <div className="detail-stat-box">
-                  <span className="stat-label">Max. Hartslag</span>
+                  <span className="stat-label">Max Heart Rate</span>
                   <span className="stat-val" style={{ color: '#f87171' }}>
                     {selectedRunDetail.maxHeartRate ? `${selectedRunDetail.maxHeartRate} bpm` : '-'}
                   </span>
@@ -546,10 +546,10 @@ export function App() {
                     </div>
                   </div>
 
-                  {/* Hartslagzones Breakdown Bars (Matching Polar Flow) */}
+                  {/* Heart Rate Zones Breakdown Bars (Matching Polar Flow) */}
                   <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '20px', borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.06)' }}>
                     <h4 style={{ margin: '0 0 14px 0', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#cbd5e1' }}>
-                      Polar Hartslagzones Verdeling
+                      Polar Heart Rate Zones Distribution
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {[
@@ -584,7 +584,7 @@ export function App() {
                     <div className="split-header">
                       <span>Kilometer</span>
                       <span>Pace min/km</span>
-                      <span>Gem. Hartslag</span>
+                      <span>Avg Heart Rate</span>
                       <span>Hoogte</span>
                     </div>
                     {selectedRunDetail.splits.map(s => (
@@ -601,7 +601,7 @@ export function App() {
 
               {selectedRunDetail.notes && (
                 <div className="detail-notes-box" style={{ marginTop: 20 }}>
-                  <strong>Notities van de atleet & Integratie Log:</strong>
+                  <strong>Athlete Notes & Integration Log:</strong>
                   <p>{selectedRunDetail.notes}</p>
                 </div>
               )}

@@ -1,34 +1,34 @@
-# Zenith Ecosysteem - Architectuurgids
+# Zenith Ecosystem - Architecture Guide
 
-Welkom bij de algemene architectuurgids voor het **Zenith** ecosysteem. Zenith is een intelligent platform voor wielrenners om routes te plannen, trainingen te analyseren en live in-ear coaching te ontvangen.
-
----
-
-## 1. De Componenten van het Ecosysteem
-
-Het Zenith-ecosysteem bestaat momenteel uit twee hoofd-applicaties die nauw met elkaar samenwerken via een centrale cloud-database:
-
-### 🚀 Zenith Aero (Desktop-app)
-* **Locatie in monorepo**: `apps/zenith-aero`
-* **Technologie**: React + TypeScript + Vite + Tauri (desktop wrapper).
-* **Rol**: 
-  - **Routeplanner**: Genereert wind-gecorrigeerde en heuvelachtige trainingsroutes op basis van doelen en weersvoorspellingen.
-  - **Coach-paneel**: Analyseert ritten, beheert de fysiologische PMC (Performance Management Chart) simulatie en genereert gepersonaliseerde workouts.
-  - **Kalender**: Plannen en inplannen van trainingen met en zonder routes.
-
-### 🚴 Zenith Pilot (Android-app)
-* **Locatie in monorepo**: `apps/zenith-pilot`
-* **Technologie**: Kotlin + Jetpack Compose + Ktor + Supabase Kotlin SDK.
-* **Rol**:
-  - **Ritcomputer**: Gemonteerd op het stuur van de fiets. Toont realtime metrics (snelheid, vermogen, hartslag, cadans).
-  - **Sensorkoppeling**: Verbindt direct met BLE-sensoren (hartslagbanden, vermogensmeters, cadanssensoren).
-  - **Audio Coach**: Levert live in-ear audiobegeleiding (via spraaksynthese) op basis van de actieve interval-workout en snelheidsdoelen van de gekoppelde route.
+Welcome to the general architecture guide for the **Zenith** ecosystem. Zenith is an intelligent platform for athletes and cyclists to plan routes, analyze training, log strength sessions, monitor health metrics, and receive live coaching.
 
 ---
 
-## 2. Data-synchronisatie en Cloud Architectuur
+## 1. Components of the Ecosystem
 
-Beide applicaties zijn volledig gekoppeld via een gedeelde **Supabase** instantie in de cloud.
+The Zenith ecosystem consists of modular applications that communicate seamlessly via a central cloud database:
+
+### 🚀 Zenith Aero (Desktop & Web App)
+* **Location in monorepo**: `apps/zenith-aero`
+* **Tech Stack**: React + TypeScript + Vite + Tauri (desktop wrapper).
+* **Role**: 
+  - **Route Planner**: Generates wind-adjusted and elevation-focused training routes based on targets and weather forecasts.
+  - **Coach Panel**: Analyzes rides, manages the physiological PMC (Performance Management Chart) simulation, and generates personalized workouts.
+  - **Calendar**: Schedules workouts and training plans.
+
+### 🚴 Zenith Pilot (Android App)
+* **Location in monorepo**: `apps/zenith-pilot`
+* **Tech Stack**: Kotlin + Jetpack Compose + Ktor + Supabase Kotlin SDK.
+* **Role**:
+  - **Bike Computer**: Mounted on handlebars. Displays real-time metrics (speed, power, heart rate, cadence).
+  - **Sensor Pairing**: Connects directly to BLE sensors (heart rate straps, power meters, cadence sensors).
+  - **Audio Coach**: Delivers live in-ear audio guidance based on active interval workouts and route targets.
+
+---
+
+## 2. Data Synchronization & Cloud Architecture
+
+Applications are connected via a shared **Supabase** instance in the cloud.
 
 ```mermaid
 graph TD
@@ -37,7 +37,7 @@ graph TD
         Auth[Supabase Auth]
     end
     
-    subgraph Desktop [Zenith Aero]
+    subgraph Desktop [Zenith Aero & Hub]
         AeroReact[React Frontend]
         AeroTauri[Tauri Rust Core]
     end
@@ -46,39 +46,34 @@ graph TD
         PilotApp[Kotlin Android App]
     end
 
-    AeroReact -->|Leest/Schrijft met Auth| DB
-    PilotApp -->|Leest/Schrijft met Auth| DB
+    AeroReact -->|Reads/Writes with Auth| DB
+    PilotApp -->|Reads/Writes with Auth| DB
 ```
 
-### Datastroom
-1. **Planning**: De gebruiker genereert of selecteert een workout en route in **Aero**. Deze wordt opgeslagen in de tabel `planned_workouts` (met referentie naar `routes`).
-2. **Synchronisatie**: **Pilot** haalt de geplande workouts voor vandaag op uit `planned_workouts` en laadt de bijbehorende routepunten uit `routes` in voor navigatie en coaching.
-3. **Registratie**: Tijdens de rit slaat **Pilot** de sensordata en GPS-locaties op. Na afloop wordt de rit geüpload naar `rides`.
-4. **Analyse**: **Aero** detecteert de nieuwe rit in `rides`, berekent de werkelijke TSS (Training Stress Score) en werkt de PM-grafiek (Fitness, Fatigue, Form) bij.
+### Data Flow
+1. **Planning**: The user generates or selects a workout and route in **Aero**. This is stored in the `planned_workouts` table (referencing `routes`).
+2. **Synchronization**: **Pilot** fetches today's planned workouts from `planned_workouts` and loads corresponding route points from `routes` for navigation and coaching.
+3. **Recording**: During the ride, **Pilot** records sensor data and GPS locations. After finishing, the activity is uploaded to `rides`.
+4. **Analysis**: **Aero** detects the new ride in `rides`, calculates actual TSS (Training Stress Score), and updates the PMC chart (Fitness, Fatigue, Form).
 
 ---
 
-## 3. Richtlijnen voor Gedeelde Configuratie (Single Source of Truth)
+## 3. Shared Configuration Guidelines (Single Source of Truth)
 
-Om te garanderen dat alle huidige en toekomstige apps binnen het ecosysteem naadloos met elkaar communiceren, maken we gebruik van de centrale configuraties in de `/shared` map:
+To ensure all present and future apps within the ecosystem communicate seamlessly, we utilize central configurations in the `/shared` directory:
 
-### 🔑 Database-connectie (`shared/supabase-config.json`)
-Dit bestand bevat de `supabaseUrl` en `supabaseAnonKey`. 
-* **Aero** laadt deze tijdens het bouwen in via de `.env` configuratie.
-* **Pilot** laadt deze in via Gradle-build properties (waarbij hardcodering in de Kotlin-broncode wordt vermeden).
-* **Toekomstige Apps**: Moeten dit bestand parsen of inladen tijdens hun build- of runtime-proces om verbinding te maken met dezelfde database.
+### 🔑 Database Connection (`shared/supabase-config.json`)
+Contains `supabaseUrl` and `supabaseAnonKey`.
+* **Aero** loads this during build time via `.env` configuration.
+* **Pilot** loads this via Gradle build properties.
 
-### 🎨 Styling en Thema (`shared/design-tokens.json`)
-Dit bestand specificeert de universele stylingtokens (kleuren, lettertypes, spacing en vormen) van het Zenith-merk.
-* **Aero** gebruikt deze tokens om zijn CSS-variabelen in `index.css` te definiëren.
-* **Pilot** gebruikt deze tokens in `Color.kt` en `Theme.kt` binnen Jetpack Compose.
-* **Toekomstige Apps**: Moeten dit bestand gebruiken om hun UI-thema's te configureren, zodat de visuele stijl (zoals het neon-groene accent `#39ff14` of de donkere achtergrond `#09090b`) op alle platforms identiek is.
+### 🎨 Styling and Theme (`shared/design-tokens.json`)
+Specifies universal styling tokens (colors, typography, spacing, and shapes) for the Zenith brand.
 
 ---
 
-## 4. Lokale Synchronisatie (Offline / APK Distributie)
+## 4. Local Distribution & QR Sync
 
-Naast de cloud-koppeling beschikt Aero over een ingebouwde **Zenith Hub**. 
-* **Doel**: Het direct lokaal downloaden van de Pilot-app op een Android-apparaat zonder tussenkomst van een app store.
-* **Werking**: Aero start een lokale webserver (poort `1420`). Via de **PilotPanel** pagina in Aero wordt het lokale IP-adres van de PC opgehaald via een Tauri-commando (`get_local_ip`). Er wordt een QR-code getoond die verwijst naar `http://<lokaal-ip>:1420/app-debug.apk`. 
-* Wanneer de Android-telefoon (verbonden met hetzelfde wifi-netwerk) de QR-code scant, wordt de APK rechtstreeks vanaf de pc gedownload en geïnstalleerd.
+Aero features a built-in **Zenith Hub** panel:
+* **Goal**: Download the Pilot Android APK directly to mobile devices on the local network.
+* **Operation**: Aero starts a local HTTP server (port `1420`). The local IP address is retrieved via a Tauri command (`get_local_ip`). A QR code links to `http://<local-ip>:1420/app-debug.apk` for instant installation.

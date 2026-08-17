@@ -108,14 +108,14 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ ride, ftp, lthr, o
           <Area yAxisId="ele" type="monotone" dataKey="ele" stroke="none" fill="rgba(255,255,255,0.05)" />
           {ride.hasPower && <>
             {ftp && <ReferenceLine yAxisId="main" y={ftp} stroke="#e17055" strokeDasharray="3 3" />}
-            <Line yAxisId="main" type="monotone" dataKey="pwr" stroke="#6c5ce7" strokeWidth={1.5} dot={false} name="Vermogen (W)" />
+            <Line yAxisId="main" type="monotone" dataKey="pwr" stroke="#6c5ce7" strokeWidth={1.5} dot={false} name="Power (W)" />
           </>}
           {ride.hasHR && <>
             {lthr && <ReferenceLine yAxisId="main" y={lthr} stroke="#d63031" strokeDasharray="3 3" />}
-            <Line yAxisId="main" type="monotone" dataKey="hr" stroke="#d63031" strokeWidth={1.5} dot={false} name="Hartslag (bpm)" />
+            <Line yAxisId="main" type="monotone" dataKey="hr" stroke="#d63031" strokeWidth={1.5} dot={false} name="Heart Rate (bpm)" />
           </>}
           {!ride.hasPower && !ride.hasHR && (
-            <Line yAxisId="main" type="monotone" dataKey="spd" stroke="#00b894" strokeWidth={1.5} dot={false} name="Snelheid (km/h)" />
+            <Line yAxisId="main" type="monotone" dataKey="spd" stroke="#00b894" strokeWidth={1.5} dot={false} name="Speed (km/h)" />
           )}
         </ComposedChart>
       </ResponsiveContainer>

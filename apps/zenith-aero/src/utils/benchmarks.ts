@@ -8,7 +8,7 @@
  * Categories: Poor / Below Average / Average / Above Average / Excellent / Superior
  */
 
-export type FitnessCategory = 'Slecht' | 'Ondergemiddeld' | 'Gemiddeld' | 'Bovengemiddeld' | 'Excellent' | 'Superieur';
+export type FitnessCategory = 'Slecht' | 'Ondergemiddeld' | 'Average' | 'Bovengemiddeld' | 'Excellent' | 'Superieur';
 
 export interface VO2maxBenchmark {
   category: FitnessCategory;
@@ -41,7 +41,7 @@ const FEMALE_NORMS: Record<string, number[][]> = {
 const CATEGORIES: { label: FitnessCategory; color: string; emoji: string }[] = [
   { label: 'Slecht',          color: '#ff7675', emoji: '😞' },
   { label: 'Ondergemiddeld',  color: '#e17055', emoji: '😐' },
-  { label: 'Gemiddeld',       color: '#fdcb6e', emoji: '🙂' },
+  { label: 'Average',       color: '#fdcb6e', emoji: '🙂' },
   { label: 'Bovengemiddeld',  color: '#00b894', emoji: '😊' },
   { label: 'Excellent',       color: '#55efc4', emoji: '🌟' },
   { label: 'Superieur',       color: '#a29bfe', emoji: '🏆' },
@@ -105,7 +105,7 @@ export function getVO2maxRanges(
 
 /**
  * Cycling W/kg performance category (based on FTP W/kg).
- * Source: British Cycling / Coggan categories.
+ * Source: Brideish Cycling / Coggan categories.
  */
 export interface CyclingCategory {
   label: string;

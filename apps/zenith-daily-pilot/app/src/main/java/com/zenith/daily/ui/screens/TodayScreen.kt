@@ -122,7 +122,7 @@ fun TodayScreen(
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = if (remaining >= 0) "$remaining kcal over" else "${-remaining} kcal te veel",
+                            text = if (remaining >= 0) "$remaining kcal remaining" else "${-remaining} kcal surplus",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (remaining >= 0) ZenithPrimary else ZenithError
@@ -204,7 +204,7 @@ fun TodayScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "GEWICHT",
+                            text = "WEIGHT",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = ZenithSecondary,
@@ -229,14 +229,14 @@ fun TodayScreen(
                             val deltaStr = if (weightDelta > 0) "+${Math.round(weightDelta * 10) / 10.0} kg" else "${Math.round(weightDelta * 10) / 10.0} kg"
                             val deltaColor = if (weightDelta <= 0) ZenithPrimary else ZenithAccentOrange
                             Text(
-                                text = "$deltaStr t.o.v. vorig gewicht",
+                                text = "$deltaStr vs previous weight",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = deltaColor
                             )
                         } else {
                             Text(
-                                text = "Laatst gelogd: ${latestWeight.date}",
+                                text = "Laatst logged: ${latestWeight.date}",
                                 fontSize = 10.sp,
                                 color = ZenithSecondary
                             )
@@ -249,7 +249,7 @@ fun TodayScreen(
                             color = ZenithSecondary
                         )
                         Text(
-                            text = "Klik om gewicht in te voeren",
+                            text = "Tap to enter weight",
                             fontSize = 10.sp,
                             color = ZenithSecondary
                         )
@@ -327,7 +327,7 @@ fun TodayScreen(
                     .border(1.dp, ZenithBorder, RoundedCornerShape(14.dp))
             ) {
                 Text(
-                    text = "＋ GEWICHT LOGGEN",
+                    text = "＋ WEIGHT LOGGEN",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp
@@ -345,7 +345,7 @@ fun TodayScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "GELOGDE MAALTIJDEN VANDAAG (${todayMeals.size})",
+                text = "LOGGED MEALS TODAY (${todayMeals.size})",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = ZenithSecondary,
@@ -354,7 +354,7 @@ fun TodayScreen(
 
             if (todayMeals.isEmpty()) {
                 Text(
-                    text = "Nog geen maaltijden gelogd vandaag. Klik op + Maaltijd Loggen.",
+                    text = "No meals logged today yet. Tap + Add Meal.",
                     fontSize = 11.sp,
                     color = ZenithSecondary,
                     modifier = Modifier.padding(vertical = 8.dp)

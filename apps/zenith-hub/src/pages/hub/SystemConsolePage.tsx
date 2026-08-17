@@ -107,7 +107,7 @@ export const SystemConsolePage: React.FC = () => {
   };
 
   const handleClearLogs = () => {
-    if (window.confirm('Weet je zeker dat je het logboek wilt wissen?')) {
+    if (window.confirm('Are you sure you want to clear the system log?')) {
       loggerService.clearLogs();
     }
   };
@@ -141,7 +141,7 @@ export const SystemConsolePage: React.FC = () => {
             </h1>
           </div>
           <p style={{ margin: '6px 0 0 0', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-            Live overzicht van achtergrond-synchronisatie, Bluetooth BLE events en systeemmeldingen.
+            Real-time log of background sync, Bluetooth BLE events, and system notifications.
           </p>
         </div>
 
@@ -323,7 +323,7 @@ export const SystemConsolePage: React.FC = () => {
           </div>
 
           <div style={{ fontSize: 12, color: '#64748b' }}>
-            {filteredLogs.length} berichten {searchQuery && `(gefilterd op "${searchQuery}")`}
+            {filteredLogs.length} messages {searchQuery && `(filtered by "${searchQuery}")`}
           </div>
         </div>
 
@@ -338,7 +338,7 @@ export const SystemConsolePage: React.FC = () => {
           {filteredLogs.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
               <Terminal size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
-              <div>Geen logberichten gevonden.</div>
+              <div>Geen logmessages gevonden.</div>
             </div>
           ) : (
             filteredLogs.map((log) => {

@@ -78,7 +78,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
 
   // Remove/Unpair device
   const handleUnpairDevice = async (device: PairedDevice) => {
-    if (!window.confirm(`Weet je zeker dat je de ${device.brand} ${device.model} wilt ontkoppelen?`)) {
+    if (!window.confirm(`Are you sure you want to de ${device.brand} ${device.model} wilt ontkoppelen?`)) {
       return;
     }
 
@@ -162,7 +162,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
 
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '10px 0' }}>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 8 }}>
-            Beheer de gekoppelde apparaten die worden gebruikt voor het automatisch synchroniseren van je gezondheidsgegevens.
+            Manage paired devices used for automatically syncing your health data.
           </p>
 
           {loading ? (
@@ -180,14 +180,14 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
               }}
             >
               <div style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 16 }}>
-                Nog geen apparaten gekoppeld.
+                No devices paired yet.
               </div>
               <button 
                 onClick={() => { setView('add'); setSelectedType(null); setSelectedModel(''); }} 
                 className="btn-primary" 
                 style={{ margin: '0 auto', fontSize: 13, padding: '10px 18px' }}
               >
-                <Plus size={16} /> Apparaat Koppelen
+                <Plus size={16} /> Apparaat Pair
               </button>
             </div>
           ) : (
@@ -244,7 +244,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
                         }}
                         onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(239, 68, 68, 0.6)'}
-                        title="Ontkoppelen"
+                        title="Disconnect"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -289,7 +289,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
                 className="btn-secondary" 
                 style={{ width: '100%', borderStyle: 'dashed', background: 'transparent', gap: 8 }}
               >
-                <Plus size={16} /> Apparaat Koppelen
+                <Plus size={16} /> Apparaat Pair
               </button>
             </div>
           )}
@@ -309,7 +309,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
       <>
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            Apparaat Koppelen
+            Apparaat Pair
           </h2>
           <button className="modal-close" onClick={() => setView('list')}>
             <X size={20} />
@@ -399,11 +399,11 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
             >
               {selectedType === 'scale' ? (
                 <>
-                  De <strong>Neo Health Onyx SE</strong> weegschaal maakt verbinding via Web Bluetooth op je computer. Zorg dat je weegschaal aanstaat door er kort op te tikken.
+                  The <strong>Neo Health Onyx SE</strong> scale connects via Web Bluetooth on your computer. Make sure your scale is on.aal aanstaat door er kort op te tikken.
                 </>
               ) : (
                 <>
-                  De <strong>Colmi R02 Smart Ring</strong> synchroniseert via de native BLE bridge van de Zenith desktop-app. Zorg dat de ring opgeladen en in de buurt is.
+                  The <strong>Colmi R02 Smart Ring</strong> syncs via the native BLE bridge of the Zenith desktop app. Make sure the ring is active.ring opgeladen en in de buurt is.
                 </>
               )}
             </div>
@@ -413,7 +413,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
 
         <div className="modal-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', display: 'flex', gap: 12 }}>
           <button className="btn-secondary" onClick={() => setView('list')} style={{ flex: 1, margin: 0 }}>
-            Annuleren
+            Cancel
           </button>
           <button 
             className="btn-primary" 
@@ -439,7 +439,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
               color: (!selectedType || !selectedModel) ? 'var(--text-muted)' : '#09090b'
             }}
           >
-            Koppelen Starten
+            Pair Starten
           </button>
         </div>
       </>

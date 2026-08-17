@@ -57,7 +57,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
         {/* Dynamic Feature Callout */}
         <div style={{ textAlign: 'center', margin: '16px 0 24px' }}>
           <h2 style={{ fontSize: 22, fontWeight: 900, color: '#ffffff', margin: '0 0 8px', letterSpacing: '0.5px' }}>
-            {featureName ? `Ontgrendel ${featureName}` : 'Upgrade naar Zenith Pro'}
+            {featureName ? `Unlock ${featureName}` : 'Upgrade to Zenith Pro'}
           </h2>
           <p style={{ fontSize: 13, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
             {featureDescription || 'Krijg toegang tot visuele voortgangsvergelijking, alle lichaamsomtrekken, weegschaal vet% en diepe slaapfases.'}
@@ -70,7 +70,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Camera size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Voortgangsfoto's & Visuele Vergelijker</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Upload foto's (Voorkant, Zijkant, Achterkant) en vergelijk je fysieke transformatie direct side-by-side met een slider.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Upload photos (Front, Side, Back) and compare je fysieke transformatie direct side-by-side met een slider.</div>
             </div>
           </div>
 
@@ -78,15 +78,15 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Ruler size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Lichaamsomtrekken (Alle 8 Zones)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Volg de centimeters van je Borst, Biceps, Dijen, Heupen, Schouders, Nek, Kuiten en Taille over de tijd.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Track centimeters for Chest, Biceps, Thighs, Hips,chouders, Nek, Kuiten en Taille over de tijd.</div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Activity size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Lichaamssamenstelling (Vet% & Spiermassa)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Automatische uitlezing van slimme weegschalen: Vetpercentage, Spiermassa kg, Visderaal vet & Vocht %.</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Lichaamssamenstelling (Vet% & Muscle Mass)</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Automatic readings from smart scales: Body Fat Percentagege, Muscle Mass kg, Visderaal vet & Vocht %.</div>
             </div>
           </div>
 
@@ -94,7 +94,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Moon size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Slaapfases Breakdown (Smart Ring Sync)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Volledige verdeling van Diepe Slaap (%), REM Slaap (%), Lichte Slaap (%) & Wakker-tijd uit je Colmi Smart Ring.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Full breakdown of Deep Sleep (%), REM Sleep (%), Light Sleep (%)chte Slaap (%) & Wakker-tijd uit je Colmi Smart Ring.</div>
             </div>
           </div>
         </div>
@@ -110,7 +110,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
         }}>
           <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#c084fc', fontWeight: 800, letterSpacing: '0.5px' }}>Zenith Pro Lidmaatschap</div>
           <div style={{ fontSize: 26, fontWeight: 900, color: '#ffffff', margin: '4px 0' }}>
-            €9,99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ maand</span>
+            €9,99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ month</span>
           </div>
           <div style={{ fontSize: 11, color: '#39ff14', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <CheckCircle2 size={12} /> 14 dagen gratis proefperiode, opzegbaar wanneer je wilt

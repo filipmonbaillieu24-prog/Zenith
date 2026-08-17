@@ -98,7 +98,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
       onClose();
     } catch (err) {
       console.error(err);
-      alert("Fout bij opslaan meting.");
+      alert("Error saving measurement.");
     } finally {
       setLoading(false);
     }
@@ -190,7 +190,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
               color: activeTab === 'weight' ? '#fff' : 'var(--text-muted)'
             }}
           >
-            <Scale size={14} style={{ color: activeTab === 'weight' ? '#cbd5e1' : 'inherit' }} /> Gewicht
+            <Scale size={14} style={{ color: activeTab === 'weight' ? '#cbd5e1' : 'inherit' }} /> Weight
           </button>
         </div>
 
@@ -291,10 +291,10 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                   </div>
 
                   {/* 4 Phase Rows */}
-                  {/* 1. Diepe Slaap */}
+                  {/* 1. Deep Sleep */}
                   <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: 12, borderRadius: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      🟣 Diepe Slaap <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Fysiek & spierherstel)</span>
+                      🟣 Deep Sleep <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Fysiek & spierherstel)</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <div>
@@ -322,10 +322,10 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                     </div>
                   </div>
 
-                  {/* 2. Lichte Slaap */}
+                  {/* 2. Light Sleep */}
                   <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: 12, borderRadius: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      🔵 Lichte Slaap <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Geheugenverwerking)</span>
+                      🔵 Light Sleep <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Geheugenverwerking)</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <div>
@@ -353,10 +353,10 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                     </div>
                   </div>
 
-                  {/* 3. REM Slaap */}
+                  {/* 3. REM Sleep */}
                   <div style={{ background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', padding: 12, borderRadius: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      💖 REM Slaap <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Mentale energie & dromen)</span>
+                      💖 REM Sleep <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Mentale energie & dromen)</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <div>
@@ -448,7 +448,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
               {/* Quality Slider */}
               <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <label className="form-label">Slaapkwaliteit Score</label>
+                  <label className="form-label">Sleep Quality Score</label>
                   <span style={{ fontSize: 11, color: '#a855f7', fontWeight: 800 }}>{sleepQuality}/100</span>
                 </div>
                 <input
@@ -468,7 +468,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
           {activeTab === 'weight' && (
             <div className="animate-fade-in">
               <div className="form-group">
-                <label className="form-label">Gewicht (kg)</label>
+                <label className="form-label">Weight (kg)</label>
                 <input
                   type="number"
                   step="0.1"
@@ -498,10 +498,10 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
 
           <div style={{ display: 'flex', gap: 12, marginTop: 32 }}>
             <button type="button" className="btn-secondary" onClick={onClose} style={{ flex: 1 }}>
-              Annuleren
+              Cancel
             </button>
             <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1 }}>
-              {loading ? 'Opslaan...' : 'Meting Opslaan'}
+              {loading ? 'Save...' : 'Meting Save'}
             </button>
           </div>
         </form>

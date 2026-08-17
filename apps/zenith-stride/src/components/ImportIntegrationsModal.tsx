@@ -47,8 +47,8 @@ export const ImportIntegrationsModal: React.FC<ImportIntegrationsModalProps> = (
       <div className="stride-modal-container" onClick={e => e.stopPropagation()}>
         <div className="stride-modal-header">
           <div>
-            <h3>Sessies Importeren uit Polar & Strava</h3>
-            <p className="subtitle">Selecteer de gesynchroniseerde hardloopsessies om toe te voegen</p>
+            <h3>Import Sessions from Polar & Strava</h3>
+            <p className="subtitle">Select synced running sessions to import</p>
           </div>
           <button className="stride-close-btn" onClick={onClose}>
             <X size={18} />
@@ -111,7 +111,7 @@ export const ImportIntegrationsModal: React.FC<ImportIntegrationsModalProps> = (
         </div>
 
         <div className="stride-modal-footer">
-          <button className="btn-cancel" onClick={onClose}>Annuleren</button>
+          <button className="btn-cancel" onClick={onClose}>Cancel</button>
           <button 
             className="btn-save" 
             onClick={handleConfirmImport}

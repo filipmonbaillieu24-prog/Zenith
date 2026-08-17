@@ -20,7 +20,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
   
   if (pmc.length < 3) return (
     <div className="wd-section-card">
-      <p style={{ color: '#64748b', fontSize: 12 }}>Upload ritten met TSS om de PMC te berekenen.</p>
+      <p style={{ color: '#64748b', fontSize: 12 }}>Upload rideten met TSS om de PMC te berekenen.</p>
     </div>
   );
   

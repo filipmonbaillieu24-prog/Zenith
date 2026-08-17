@@ -81,7 +81,7 @@ fun TodayScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "Kies een routine om te starten",
+                        text = "Choose a routine to start",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = ZenithSecondary
@@ -131,7 +131,7 @@ fun TodayScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "$unsyncedCount training(en) nog niet gesynchroniseerd",
+                                text = "$unsyncedCount workout(s) pending sync",
                                 color = Color.White,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
@@ -185,14 +185,14 @@ fun TodayScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Welkom bij Kratos! 💪",
+                                text = "Welcome to Kratos! 💪",
                                 color = Color.White,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                             Text(
-                                text = "Er zijn nog geen routines gesynchroniseerd. Maak eerst routines/templates aan op Kratos Desktop via de computer.",
+                                text = "No routines synced yet. Create routines/templates on Kratos Desktop to start.",
                                 color = ZenithSecondary,
                                 fontSize = 12.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -344,7 +344,7 @@ fun TodayScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 val names = tempExercises.mapNotNull { te -> exercisesCache.find { e -> e.id == te.exerciseId }?.name }
                                 Text(
-                                    text = if (names.isEmpty()) "Geen oefeningen" else names.joinToString(", "),
+                                    text = if (names.isEmpty()) "No exercises" else names.joinToString(", "),
                                     color = ZenithSecondary,
                                     fontSize = 11.sp,
                                     maxLines = 1,

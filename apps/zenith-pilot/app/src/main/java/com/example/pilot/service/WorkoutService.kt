@@ -109,7 +109,7 @@ class WorkoutService : Service() {
 
         // Announcement
         val typeLabel = when (workout.type) {
-            "recovery" -> "actief herstel"
+            "recovery" -> "active recovery"
             "endurance" -> "aerobe duur"
             "sweetspot" -> "sweet spot interval"
             "threshold" -> "drempel"
@@ -117,7 +117,7 @@ class WorkoutService : Service() {
             else -> "custom"
         }
         coachingEngine.speak(
-            "Training gestart. ${workout.title}. Type: $typeLabel. Veel succes.",
+            "Workout started. ${workout.title}. Type: $typeLabel. Good luck.",
             "SYSTEM"
         )
         if (steps.isNotEmpty()) {
@@ -197,14 +197,14 @@ class WorkoutService : Service() {
         
         // 30 seconds warning
         if (currentBlock.duration - _blockElapsedSeconds.value == 30) {
-            coachingEngine.speak("Nog dertig seconden.", "COACHING")
+            coachingEngine.speak("Thirty seconds remaining.", "COACHING")
         }
 
         // Halfway point warning (only for blocks longer than 3 minutes, i.e., 180s)
         if (currentBlock.duration >= 180 && _blockElapsedSeconds.value == currentBlock.duration / 2) {
             val remainingMin = (currentBlock.duration - _blockElapsedSeconds.value) / 60
             if (remainingMin > 0) {
-                coachingEngine.speak("Je bent halverwege dit blok. Nog $remainingMin minuten te gaan.", "COACHING")
+                coachingEngine.speak("You are halfway through this block. Remaining: $remainingMin minutes to go.", "COACHING")
             }
         }
 
@@ -218,7 +218,7 @@ class WorkoutService : Service() {
                 val targetText = if (nextBlock.powerPct > 0.0) {
                     "Richtlijn: probeer ${Math.round(nextBlock.powerPct * ftp)} watt aan te houden."
                 } else {
-                    "Dit is een actief herstelblok. Houd de benen soepel."
+                    "This is an active recovery block. Keep your legs spinning smoothly."
                 }
                 coachingEngine.speak(
                     "Volgend blok: ${nextBlock.name}. Duur: ${nextBlock.duration / 60} minuten. $targetText",
@@ -255,18 +255,18 @@ class WorkoutService : Service() {
 
             if (power < powerLowThreshold) {
                 val phrases = listOf(
-                    "Blijf duwen! Je zit onder je doel van $targetPower watt.",
-                    "Iets meer vermogen leveren. Richt op $targetPower watt.",
-                    "Vermogen is gezakt tot $power watt. Breng het terug naar $targetPower watt."
+                    "Keep pushing! You are below your target of $targetPower watts.",
+                    "Apply more power. Aim for $targetPower watts.",
+                    "Power dropped to $power watts. Breng het terug naar $targetPower watts."
                 )
                 coachingEngine.speak(phrases.random(), "PACING")
                 lastAdaptiveCueTime = now
                 return
             } else if (power > powerHighThreshold) {
                 val phrases = listOf(
-                    "Iets rustiger aan. Doel is $targetPower watt.",
-                    "Spaar je krachten. Neem wat gas terug naar $targetPower watt.",
-                    "Vermogen is te hoog. Probeer stabiel op $targetPower watt te rijden."
+                    "Ease up slightly. Target is $targetPower watts.",
+                    "Save your energy. Ease back to $targetPower watts.",
+                    "Power is too high. Try to hold steady at $targetPower watts."
                 )
                 coachingEngine.speak(phrases.random(), "PACING")
                 lastAdaptiveCueTime = now
@@ -279,11 +279,11 @@ class WorkoutService : Service() {
             // Avoid cadence alerts during active recovery if they just coast, but alert during intervals
             val isIntensive = currentBlock.powerPct > 0.65
             if (isIntensive && cadence < 70) {
-                coachingEngine.speak("Je trapfrequentie is te laag. Schakel lichter om je knieën te sparen.", "PACING")
+                coachingEngine.speak("Your cadence is too low. Shift to a lighter gear to protect your knees.", "PACING")
                 lastAdaptiveCueTime = now
                 return
             } else if (cadence > 110) {
-                coachingEngine.speak("Je trapt erg snel. Schakel zwaarder om rustiger en efficiënter te trappen.", "PACING")
+                coachingEngine.speak("Your cadence is very high. Shift to a heavier gear for efficiency.", "PACING")
                 lastAdaptiveCueTime = now
                 return
             }
@@ -301,7 +301,7 @@ class WorkoutService : Service() {
             }
 
             if (hr > targetHrMax + 5) {
-                coachingEngine.speak("Hartslag is $hr slagen per minuut. Dit is hoog voor dit blok. Focus op diepe ademhaling en ontspan.", "PACING")
+                coachingEngine.speak("Heart rate is $hr bpm. This is high for this block. Focus on deep breathing and relax.", "PACING")
                 lastAdaptiveCueTime = now
             }
         }
@@ -334,10 +334,10 @@ class WorkoutService : Service() {
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Zenith Pilot Actieve Training",
+            "Zenith Pilot Active Workout",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Toont live informatie over uw actieve fietstraining."
+            description = "Displays live metrics for your active cycling workout."
         }
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)

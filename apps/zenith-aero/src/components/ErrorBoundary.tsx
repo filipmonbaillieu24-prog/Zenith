@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div style={{ padding: 20, background: '#2d3748', color: '#fff', borderRadius: 8, margin: 20, border: '1px solid #fc8181', zIndex: 9999, position: 'relative' }}>
-          <h2 style={{ color: '#fc8181', marginTop: 0 }}>🚨 Oeps! Er is een fout opgetreden.</h2>
+          <h2 style={{ color: '#fc8181', marginTop: 0 }}>🚨 Oops! An error occurred.</h2>
           <p style={{ fontWeight: 'bold' }}>{this.state.error && this.state.error.toString()}</p>
           <pre style={{ background: '#1a202c', padding: 10, borderRadius: 4, overflow: 'auto', fontSize: 12, maxHeight: 300 }}>
             {this.state.errorInfo && this.state.errorInfo.componentStack}

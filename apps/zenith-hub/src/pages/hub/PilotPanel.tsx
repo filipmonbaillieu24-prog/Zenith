@@ -12,7 +12,7 @@ interface PilotPanelProps {
 export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
   const [localIp, setLocalIp] = useState<string | null>(null);
   const [useLocalDevLink, setUseLocalDevLink] = useState(false);
-  const [selectedApp, setSelectedApp] = useState<'pilot' | 'kratos' | 'daily'>('daily');
+  const [selectedApp, setSelectedApp] = useState<'pulse' | 'daily' | 'kratos' | 'pilot'>('pulse');
 
   useEffect(() => {
     const fetchIp = async () => {
@@ -27,7 +27,11 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
   }, []);
 
   const isDev = import.meta.env.DEV;
-  const downloadUrl = selectedApp === 'pilot'
+  const downloadUrl = selectedApp === 'pulse'
+    ? ((useLocalDevLink && localIp)
+        ? `http://${localIp}:1420/pulse-debug.apk`
+        : `https://github.com/filipmonbaillieu24-prog/Zenith/raw/main/apk/pulse-debug.apk?t=${Date.now()}`)
+    : selectedApp === 'pilot'
     ? ((useLocalDevLink && localIp)
         ? `http://${localIp}:1420/app-debug.apk` 
         : `https://github.com/filipmonbaillieu24-prog/Zenith/raw/main/apk/app-debug.apk?t=${Date.now()}`)
@@ -40,12 +44,14 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
         : `https://github.com/filipmonbaillieu24-prog/Zenith/raw/main/apk/daily-debug.apk?t=${Date.now()}`);
 
   const getAppName = () => {
+    if (selectedApp === 'pulse') return 'Zenith Pulse';
     if (selectedApp === 'pilot') return 'Aero Pilot';
     if (selectedApp === 'kratos') return 'Kratos Pilot';
     return 'Zenith Daily';
   };
 
   const getAppVersion = () => {
+    if (selectedApp === 'pulse') return 'Version 1.0.2 • 17.5 MB';
     if (selectedApp === 'pilot') return 'Version 1.0.0-alpha • 14.8 MB';
     if (selectedApp === 'kratos') return 'Version 1.36 • 15.8 MB';
     return 'Version 1.0.0 • 41.6 MB';
@@ -72,7 +78,9 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div>
             <h1 className="zh-hub-title" style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '0.5px', lineHeight: '1.2' }}>
-              {selectedApp === 'pilot' ? (
+              {selectedApp === 'pulse' ? (
+                <>ZENITH <span style={{ fontWeight: 400, color: '#38bdf8', fontSize: '16px' }}>PULSE</span></>
+              ) : selectedApp === 'pilot' ? (
                 <>AERO <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '16px' }}>PILOT</span></>
               ) : selectedApp === 'kratos' ? (
                 <>KRATOS <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '16px' }}>PILOT</span></>
@@ -81,7 +89,9 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
               )}
             </h1>
             <p className="zh-hub-subtitle" style={{ fontSize: '9px', color: 'var(--text-muted)', margin: '4px 0 0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-              {selectedApp === 'pilot' 
+              {selectedApp === 'pulse'
+                ? `Android Health Connect Ecosystem Sync for ${userName}`
+                : selectedApp === 'pilot' 
                 ? `Android Audio Companion for ${userName}`
                 : selectedApp === 'kratos'
                 ? `Android Strength Training Tracker for ${userName}`
@@ -113,6 +123,25 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
             borderRadius: 8, 
             border: '1px solid rgba(255,255,255,0.06)' 
           }}>
+            <button 
+              onClick={() => setSelectedApp('pulse')}
+              style={{
+                background: selectedApp === 'pulse' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                border: selectedApp === 'pulse' ? '1px solid rgba(56, 189, 248, 0.3)' : '1px solid transparent',
+                color: selectedApp === 'pulse' ? '#38bdf8' : '#94a3b8',
+                padding: '6px 14px',
+                borderRadius: 6,
+                fontSize: 11,
+                fontWeight: 800,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all 0.15s',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}
+            >
+              Zenith Pulse
+            </button>
             <button 
               onClick={() => setSelectedApp('daily')}
               style={{
@@ -260,7 +289,36 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
           
           {/* App Info Card */}
           <div className="zh-pilot-card" style={{ padding: '24px 28px' }}>
-            {selectedApp === 'daily' ? (
+            {selectedApp === 'pulse' ? (
+              <>
+                <h3 className="zh-pilot-card-title" style={{ fontSize: 14, marginBottom: 12 }}>
+                  <Smartphone size={16} /> Mobile Health Connect Ecosystem Bridge
+                </h3>
+                <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.6 }}>
+                  Directly bridges Google Fit, Samsung Health, Fitbit, Polar, and Garmin data via Android Health Connect into Zenith Vigor &amp; Stride.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <Wifi size={16} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Dual Cloud &amp; Local Sync</h4>
+                      <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
+                        Syncs automatically over 4G/5G directly to Supabase and hosts an embedded Wi-Fi server on port 8787 for Zenith Hub.
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <ShieldCheck size={16} style={{ color: '#a855f7', flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Comprehensive Biometrics</h4>
+                      <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
+                        Background tracking for steps, heart rate, HRV (RMSSD), sleep stages, active calories, weight, and SpO2.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : selectedApp === 'daily' ? (
               <>
                 <h3 className="zh-pilot-card-title" style={{ fontSize: 14, marginBottom: 12 }}>
                   <Smartphone size={16} /> Mobile Nutrition & Weight Tracker

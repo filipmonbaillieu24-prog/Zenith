@@ -24,10 +24,10 @@ export interface PhaseConfig {
 
 export const phaseConfig: Record<TrainingPhase, PhaseConfig> = {
   base:     { color: '#00b894', emoji: '🌱', label: 'Basisopbouw',  description: 'Opbouw van aerobe basis. Veel Z2, minimale intensiteit. Volume is koning.', weekFocus: ['Duur (Z2)','Duur (Z2)','Rust','Duur (Z2)','Sweet Spot','Duur (Z2)','Rust'] },
-  build:    { color: '#fdcb6e', emoji: '🔨', label: 'Build Fase',   description: 'Opbouw van vermogen. Sweet spot en drempel centraal, volume stabiel.', weekFocus: ['Duur','Sweet Spot','Rust','Drempel','Duur','Sweet Spot','Rust'] },
-  peak:     { color: '#ff7675', emoji: '⚡', label: 'Piek / Taper', description: 'Verlaag volume, behoud intensiteit. Laat het lichaam supercompenseren.', weekFocus: ['Sweet Spot','Rust','Drempel','Rust','Duur','Rust','Rust'] },
-  race:     { color: '#6c5ce7', emoji: '🏁', label: 'Race Week',    description: 'Minimale belasting. Slechts 1 activeringsrit. Rust is training.', weekFocus: ['Herstel','Rust','Herstel','Rust','Activering','Rust','RACE'] },
-  recovery: { color: '#94a3b8', emoji: '💤', label: 'Herstel',      description: 'Event voorbij. Neem minimaal 1-2 weken volledig herstel voor je weer opbouwt.', weekFocus: ['Rust','Herstel','Rust','Herstel','Rust','Herstel','Rust'] },
+  build:    { color: '#fdcb6e', emoji: '🔨', label: 'Build Phase',   description: 'Opbouw van vermogen. Sweet spot en drempel centraal, volume stabiel.', weekFocus: ['Duur','Sweet Spot','Rust','Threshold','Duur','Sweet Spot','Rust'] },
+  peak:     { color: '#ff7675', emoji: '⚡', label: 'Piek / Taper', description: 'Verlaag volume, behoud intensiteit. Laat het lichaam supercompenseren.', weekFocus: ['Sweet Spot','Rust','Threshold','Rust','Duur','Rust','Rust'] },
+  race:     { color: '#6c5ce7', emoji: '🏁', label: 'Race Week',    description: 'Minimale belasting. Slechts 1 activeringsride. Rust is training.', weekFocus: ['Recovery','Rust','Recovery','Rust','Activering','Rust','RACE'] },
+  recovery: { color: '#94a3b8', emoji: '💤', label: 'Recovery',      description: 'Event voorbij. Neem minimaal 1-2 weken volledig herstel voor je weer opbouwt.', weekFocus: ['Rust','Recovery','Rust','Recovery','Rust','Recovery','Rust'] },
 };
 
 export function getPhase(eventDate: string): { phase: TrainingPhase; daysToEvent: number; weekLabel: string } {

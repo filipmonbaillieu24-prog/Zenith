@@ -60,7 +60,7 @@ object UpdateManager {
             connection.connect()
 
             if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                withContext(Dispatchers.Main) { onError("Download mislukt met code: ${connection.responseCode}") }
+                withContext(Dispatchers.Main) { onError("Download failed with status code: ${connection.responseCode}") }
                 return@withContext
             }
 
@@ -90,7 +90,7 @@ object UpdateManager {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            withContext(Dispatchers.Main) { onError(e.message ?: "Onbekende fout tijdens downloaden.") }
+            withContext(Dispatchers.Main) { onError(e.message ?: "Unknown error during download.") }
         } finally {
             connection?.disconnect()
         }

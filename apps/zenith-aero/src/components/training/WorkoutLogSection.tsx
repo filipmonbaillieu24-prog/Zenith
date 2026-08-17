@@ -59,10 +59,10 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
             display: 'flex',
             alignItems: 'center',
             gap: 4,
-            fontFamily: 'inherit',
+            fontFamily: 'inheride',
           }}
         >
-          <Plus size={13} /> {showAdd ? 'Annuleren' : 'Log Toevoegen'}
+          <Plus size={13} /> {showAdd ? 'Cancel' : 'Log Add'}
         </button>
       </div>
 
@@ -85,11 +85,11 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
                 onChange={(e) => setWorkoutType(e.target.value)}
                 style={{ width: '100%', background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.05)', color: '#fff', borderRadius: 6, padding: '4px 8px', fontSize: 11 }}
               >
-                <option value="Herstel / Z1">Herstel / Z1</option>
+                <option value="Recovery / Z1">Recovery / Z1</option>
                 <option value="Endurance / Z2">Endurance / Z2</option>
                 <option value="Tempo / Z3">Tempo / Z3</option>
                 <option value="Sweet Spot">Sweet Spot</option>
-                <option value="Drempel / Z4">Drempel / Z4</option>
+                <option value="Threshold / Z4">Threshold / Z4</option>
                 <option value="VO2max / Z5">VO2max / Z5</option>
               </select>
             </div>
@@ -134,13 +134,13 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
               alignSelf: 'flex-end',
             }}
           >
-            Opslaan
+            Save
           </button>
         </form>
       )}
 
       {logs.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 11, color: '#64748b', textAlign: 'center', padding: '10px 0' }}>Nog geen handmatige workout-logs toegevoegd.</p>
+        <p style={{ margin: 0, fontSize: 11, color: '#64748b', textAlign: 'center', padding: '10px 0' }}>No handmatige workout-logs toegevoegd.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {logs.map((item) => (

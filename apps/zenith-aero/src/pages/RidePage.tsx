@@ -191,7 +191,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
 
 
 
-  // ── Polar-stijl Trainingseffect & Coach ritsamenvatting ────────────────────
+  // ── Polar-stijl Trainingseffect & Coach ridesamenvatting ────────────────────
   const trainingBenefit = React.useMemo(() => {
     try {
       if (!ride) return null;
@@ -206,15 +206,15 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
       const activeRpe = rpe ?? aiPredictedRpe;
 
       let title = "Duurtraining";
-      let desc = "Een rustige rit die helpt om je aerobe basissysteem te versterken en vetverbranding te stimuleren.";
-      let category = "Aerobe Conditie";
+      let desc = "Een rustige ride die helpt om je aerobe basissysteem te versterken en vetverbranding te stimuleren.";
+      let category = "Aerobe Fitness";
       let color = "#38bdf8"; // Cyaan
 
-      // Prioritize activeCategory (user selected or AI predicted)
+      // Priorideize activeCategory (user selected or AI predicted)
       if (activeCategory === 'herstel' || (activeRpe != null && activeRpe <= 3 && activeCategory !== 'interval' && activeCategory !== 'wedstrijd')) {
-        title = "Actief Herstel";
-        desc = "Lichte herstelrit. Perfect om afvalstoffen uit je spieren af te voeren en actief herstel te bevorderen zonder extra vermoeidheid op te bouwen.";
-        category = "Herstel";
+        title = "Actief Recovery";
+        desc = "Lichte herstelride. Perfect om afvalstoffen uit je spieren af te voeren en actief herstel te bevorderen zonder extra vermoeidheid op te bouwen.";
+        category = "Recovery";
         color = "#a29bfe"; // Lilac
       } else if (activeCategory === 'berg') {
         title = "Klimtraining";
@@ -228,47 +228,47 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
         color = "#a29bfe"; // Lilac
       } else if (activeCategory === 'wedstrijd') {
         title = "Wedstrijd / Intensief";
-        desc = "Zeer intensieve rit of wedstrijd-simulatie op of boven de drempel. Veroorzaakt diepe vermoeidheid en traint de maximale inspanning.";
+        desc = "Zeer intensieve ride of wedstrijd-simulatie op of boven de drempel. Veroorzaakt diepe vermoeidheid en traint de maximale inspanning.";
         category = "Wedstrijd";
         color = "#ff7675"; // Rood
-      } else if (activeCategory === 'groepsrit') {
-        title = "Groepsrit";
+      } else if (activeCategory === 'groepsride') {
+        title = "Groepsride";
         desc = "Samen rijden in een peloton of groep. Goed voor het trainen van drafting, stuurvaardigheid en wisselende tempo's.";
         category = "Duurvermogen";
         color = "#00b894"; // Groen
       } else if (activeCategory === 'pendel') {
-        title = "Pendelrit / Woon-werk";
-        desc = "Functionele verplaatsingsrit. Handig om extra wekelijks trainingsvolume en basisconditie op te bouwen.";
+        title = "Pendelride / Woon-werk";
+        desc = "Functionele verplaatsingsride. Handig om extra wekelijks trainingsvolume en basisconditie op te bouwen.";
         category = "Basisconditie";
         color = "#ffeaa7"; // Geel
       } else {
         // Fallback to intensity & duration (classical zones)
         if (durationMins < 45) {
           if (intensity < 0.60) {
-            title = "Actief Herstel";
-            desc = "Korte, zeer lichte rit. Perfect om afvalstoffen uit je spieren af te voeren en herstel te bevorderen na zware inspanningen.";
-            category = "Herstel";
+            title = "Actief Recovery";
+            desc = "Korte, zeer lichte ride. Perfect om afvalstoffen uit je spieren af te voeren en herstel te bevorderen na zware inspanningen.";
+            category = "Recovery";
             color = "#a29bfe";
           } else {
             title = "Korte Kwaliteitsprikkel";
-            desc = "Een korte rit met wat intensiteit. Goed om de benen wakker te schudden zonder diepe vermoeidheid op te bouwen.";
+            desc = "Een korte ride met wat intensiteit. Goed om de benen wakker te schudden zonder diepe vermoeidheid op te bouwen.";
             category = "Tempo";
             color = "#fdcb6e";
           }
         } else {
           if (intensity >= 0.85) {
-            title = "Drempeltraining (FTP)";
+            title = "Thresholdtraining (FTP)";
             desc = "Zeer zware training rond je anaerobe drempel. Dit vergroot je vermogen om langdurig een hoog tempo vol te houden.";
-            category = "Drempel / FTP";
+            category = "Threshold / FTP";
             color = "#ff7675";
           } else if (intensity >= 0.75) {
             title = "Tempo & Tempohardheid";
-            desc = "Een stevige tempo-rit. Dit traint je vermogen om gedurende langere tijd druk op de pedalen te houden en verbetert je aerobe uithoudingsvermogen.";
+            desc = "Een stevige tempo-ride. Dit traint je vermogen om gedurende langere tijd druk op de pedalen te houden en verbetert je aerobe uithoudingsvermogen.";
             category = "Tempo";
             color = "#fdcb6e";
           } else {
             title = "Duurtraining (Vetverbranding)";
-            desc = "Een klassieke duurrit. Dit verbetert de efficiëntie van je spieren en stimuleert de vetverbranding voor lange afstanden.";
+            desc = "Een klassieke duurride. Dit verbetert de efficiëntie van je spieren en stimuleert de vetverbranding voor lange afstanden.";
             category = "Duurvermogen";
             color = "#00b894";
           }
@@ -279,11 +279,11 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
       if (hasHR && ride.decoupling != null) {
         const dec = ride.decoupling;
         if (Math.abs(dec) <= 5) {
-          points.push(`Je hartslag bleef zeer stabiel gedurende de hele rit (drift van slechts ${dec.toFixed(1)}%). Dit toont aan dat je een uitstekende aerobe basis hebt.`);
+          points.push(`Je hartslag bleef zeer stabiel gedurende de hele ride (drift van slechts ${dec.toFixed(1)}%). Dit toont aan dat je een uitstekende aerobe basis hebt.`);
         } else if (dec > 5) {
-          points.push(`Je hartslag steeg met ${dec.toFixed(1)}% in de tweede helft van de rit bij gelijke intensiteit. Dit duidt op cardiale drift en opbouwende aerobe vermoeidheid.`);
+          points.push(`Je hartslag steeg met ${dec.toFixed(1)}% in de tweede helft van de ride bij gelijke intensiteit. Dit duidt op cardiale drift en opbouwende aerobe vermoeidheid.`);
         } else if (dec < -5) {
-          points.push(`Je hartslag daalde met ${Math.abs(dec).toFixed(1)}% in de second helft van de rit. Dit wijst op een daling in intensiteit, afkoeling of uitstekende aerobe efficiëntie.`);
+          points.push(`Je hartslag daalde met ${Math.abs(dec).toFixed(1)}% in de second helft van de ride. Dit wijst op een daling in intensiteit, afkoeling of uitstekende aerobe efficiëntie.`);
         }
       }
 
@@ -325,7 +325,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
     <div className="rp-root">
       {/* Header */}
       <div className="rp-header">
-        <button className="rp-back-btn" onClick={onBack}>← Terug</button>
+        <button className="rp-back-btn" onClick={onBack}>← Back</button>
         <div>
           <h2>{ride.name}</h2>
           <p className="rp-date">{fmtDate(ride.date)}</p>
@@ -344,7 +344,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
           {!ride.hasPower && !ride.hasHR && <span className="badge badge--gps">📍 GPS</span>}
           {recover && (
             <span className="badge" style={{ background: `${recover.color}22`, color: recover.color, border: `1px solid ${recover.color}55` }}>
-              😴 Herstel {recover.hours}
+              😴 Recovery {recover.hours}
             </span>
           )}
         </div>
@@ -367,15 +367,15 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
 
       {/* Floating HUD Dashboard Overlays Body */}
       <div className="rp-body rp-body--floating">
-        {/* Kolom 1: Statistieken & Info */}
+        {/* Kolom 1: Statistics & Info */}
         <div className="rp-panel-left">
           <div className="rp-stats-grid">
-            <StatCard label="Afstand"      value={ride.distance}         unit="km"   typeClass="rp-stat-card--gps" />
+            <StatCard label="Distance"      value={ride.distance}         unit="km"   typeClass="rp-stat-card--gps" />
             <StatCard label="Tijd"         value={formatRideDuration(ride.duration)}         typeClass="rp-stat-card--gps" />
-            <StatCard label="Hoogtemeters" value={ride.elevGain}         unit="m"    typeClass="rp-stat-card--gps" />
+            <StatCard label="Elevation Gain" value={ride.elevGain}         unit="m"    typeClass="rp-stat-card--gps" />
             <StatCard label="Gem. snelheid" value={ride.avgSpeed}        unit="km/h" typeClass="rp-stat-card--gps" />
             {ride.calories    && <StatCard label="Calorieën"     value={ride.calories}    unit="kcal" color="#fdcb6e"
-              sub={ride.hasPower ? (ride.isEstimatedPower ? 'HR-schatting (Keytel)' : 'Vermogensmeting') : ride.hasHR ? 'HR-schatting (Keytel)' : 'MET-schatting'} />}
+              sub={ride.hasPower ? (ride.isEstimatedPower ? 'HR-schatting (Keytel)' : 'Powersmeting') : ride.hasHR ? 'HR-schatting (Keytel)' : 'MET-schatting'} />}
             {ride.avgPower    && <StatCard label="Gem. vermogen" value={ride.avgPower}    unit="W"    color="#a29bfe" typeClass="rp-stat-card--power"
               sub={ride.isEstimatedPower ? 'Berekend (Natuurkundig/HR)' : undefined} />}
             {ride.normPower   && <StatCard label="NP"            value={ride.normPower}   unit="W"    color="var(--color-primary,#cbd5e1)" typeClass="rp-stat-card--power"
@@ -390,7 +390,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             {ride.hrTSS       && <StatCard label="hrTSS"         value={ride.hrTSS}                   color="#ff7675" typeClass="rp-stat-card--hr"
               sub={recover?.tip} />}
             {ride.efficiencyFactor && <StatCard label="Efficiency Factor" value={ride.efficiencyFactor}
-              sub={ride.hasPower ? 'NP/HR' : 'Snelheid/HR'} color="var(--color-accent,#39ff14)" />}
+              sub={ride.hasPower ? 'NP/HR' : 'Speed/HR'} color="var(--color-accent,#39ff14)" />}
             {ride.decoupling != null && (
               <StatCard label="Cardiac drift" value={`${ride.decoupling}%`}
                 color={Math.abs(ride.decoupling) < 5 ? '#00b894' : '#fdcb6e'} typeClass="rp-stat-card--hr"
@@ -470,7 +470,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                     {rpe}/10 ({
                       rpe <= 3 ? 'Heel licht' :
                       rpe <= 6 ? 'Matig / Vlot' :
-                      rpe <= 8 ? 'Zwaar' : 'Maximaal'
+                      rpe <= 8 ? 'Zwaar' : 'Maximum'
                     })
                   </span>
                 ) : aiPredictedRpe != null ? (
@@ -492,7 +492,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                         border: isPredicted ? '1px dashed #cbd5e1' : 'none',
                         boxShadow: isPredicted ? '0 0 6px rgba(203, 213, 225, 0.15)' : 'none',
                         cursor: 'pointer',
-                        fontFamily: 'inherit',
+                        fontFamily: 'inheride',
                         background: rpe === n
                           ? n <= 3 ? '#00b894' : n <= 6 ? '#fdcb6e' : n <= 8 ? '#ff7675' : '#d63031'
                           : 'rgba(255,255,255,0.03)',
@@ -569,7 +569,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: '#cbd5e1', fontWeight: 800, textTransform: 'uppercase', fontSize: 10, letterSpacing: '0.6px' }}>
                     <Brain size={14} />
-                    <span>Offline AI Notitie Analyse</span>
+                    <span>Offline AI Notitie Analysis</span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -587,7 +587,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                     {/* Recovery */}
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, color: '#94a3b8' }}>
-                        <span>Herstel / Frisheid</span>
+                        <span>Recovery / Frisheid</span>
                         <span style={{ color: aiScores.recovery > 0.6 ? '#00b894' : '#cbd5e1', fontWeight: 700 }}>{Math.round(aiScores.recovery * 100)}%</span>
                       </div>
                       <div style={{ height: 5, background: 'rgba(255,255,255,0.03)', borderRadius: 2.5, overflow: 'hidden' }}>
@@ -679,7 +679,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                       {/* Recovery */}
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>
-                          <span>Herstel / Frisheid:</span>
+                          <span>Recovery / Frisheid:</span>
                           <span>{Math.round(customRecovery * 100)}%</span>
                         </div>
                         <input
@@ -723,7 +723,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                             fontWeight: 700
                           }}
                         >
-                          Annuleren
+                          Cancel
                         </button>
                         <button
                           onClick={() => {
@@ -752,7 +752,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                             fontWeight: 700
                           }}
                         >
-                          AI Trainen & Opslaan
+                          AI Trainen & Save
                         </button>
                       </div>
                     </div>
@@ -790,7 +790,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700,
                 background: activeDetailTab === 'samenvatting' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
                 color: activeDetailTab === 'samenvatting' ? '#cbd5e1' : '#94a3b8',
-                transition: 'all 0.15s', fontFamily: 'inherit'
+                transition: 'all 0.15s', fontFamily: 'inheride'
               }}
             >
               Coach & Klims
@@ -801,7 +801,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700,
                 background: activeDetailTab === 'zones' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
                 color: activeDetailTab === 'zones' ? '#cbd5e1' : '#94a3b8',
-                transition: 'all 0.15s', fontFamily: 'inherit'
+                transition: 'all 0.15s', fontFamily: 'inheride'
               }}
             >
               Zones & Splits
@@ -812,7 +812,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700,
                 background: activeDetailTab === 'grafieken' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
                 color: activeDetailTab === 'grafieken' ? '#cbd5e1' : '#94a3b8',
-                transition: 'all 0.15s', fontFamily: 'inherit'
+                transition: 'all 0.15s', fontFamily: 'inheride'
               }}
             >
               Grafieken
@@ -923,7 +923,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               {/* Zone Breakdown */}
               {(ride.powerZoneTime || ride.hrZoneTime) && (
                 <div className="rp-chart-card" style={{ margin: 0 }}>
-                  <h3>{ride.hasPower ? '⚡ Vermogenszones' : '❤️ Hartslagzones'}</h3>
+                  <h3>{ride.hasPower ? '⚡ Powerszones' : '❤️ Heart Ratezones'}</h3>
                   <ZoneBreakdown
                     times={ride.hasPower ? (ride.powerZoneTime ?? []) : (ride.hrZoneTime ?? [])}
                     zones={ride.hasPower ? POWER_ZONES : HR_ZONES}
@@ -972,7 +972,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               {ride.hasPower && <PowerHistogram points={ride.points} ftp={ftp} />}
               {!ride.hasPower && (
                 <div className="rp-chart-card" style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 11, margin: 0 }}>
-                  Vermogensgrafieken alleen beschikbaar voor ritten geregistreerd met een vermogensmeter.
+                  Powersgrafieken alleen beschikbaar voor rideten geregistreerd met een vermogensmeter.
                 </div>
               )}
             </div>

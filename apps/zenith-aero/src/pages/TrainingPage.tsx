@@ -52,9 +52,9 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
     const name = profile.name ?? 'Atleet';
     const tsb = state.pmcData.tsb;
     if (tsb < -20) {
-      return `Hallo ${name}. Je lichaam staat momenteel onder aanzienlijke stress (TSB: ${Math.round(tsb)}). Focus vandaag op actief herstel of neem een volledige rustdag.`;
+      return `Hallo ${name}. Je lichaam staat momenteel onder aanzienlijke stress (TSB: ${Math.round(tsb)}). Focus today op actief herstel of neem een volledige rustdag.`;
     } else if (tsb > 5) {
-      return `Hallo ${name}. Je bent uitgerust en je vorm is uitstekend (TSB: +${Math.round(tsb)}). Vandaag is een perfecte dag voor een intensieve intervaltraining of een lange duurrit!`;
+      return `Hallo ${name}. Je bent uitgerust en je vorm is uitstekend (TSB: +${Math.round(tsb)}). Today is een perfecte dag voor een intensieve intervaltraining of een lange duurride!`;
     } else {
       return `Hallo ${name}. Je trainingsopbouw verloopt stabiel en gecontroleerd. Blijf je zones respecteren en volg de onderstaande adviezen om blessures te voorkomen.`;
     }
@@ -139,10 +139,10 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
       };
       
       await savePlannedWorkout(workoutToSave);
-      setSaveSuccessMsg('✓ Training succesvol ingepland voor vandaag!');
+      setSaveSuccessMsg('✓ Training succesvol ingepland voor today!');
       setGeneratedWorkout(null);
     } catch (err) {
-      console.error('Fout bij opslaan geplande workout:', err);
+      console.error('Error saving geplande workout:', err);
       setSaveSuccessMsg('✗ Kon training niet opslaan.');
     } finally {
       setIsSavingWorkout(false);
@@ -216,20 +216,20 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
     } else if (phaseKey === 'race') {
       items.push(
         { icon: '🏁', title: 'Racedag focus', text: 'Geen nieuwe trainingsprikkel meer. Rust en herstel is nu de enige taak.', action: 'Neem rust' },
-        { icon: '🚴', title: 'Activeringsrit', text: 'Doe maximaal 1 korte activeringsrit (30–45 min) met enkele korte acceleraties.', action: 'Korte activering' },
+        { icon: '🚴', title: 'Activeringsride', text: 'Doe maximaal 1 korte activeringsride (30–45 min) met enkele korte acceleraties.', action: 'Korte activering' },
         { icon: '🍝', title: 'Koolhydraten laden', text: 'Carbohydraat-laden 2–3 dagen voor het event (7–10g per kg lichaamsgewicht).', action: 'Carb-loading' }
       );
     } else if (phaseKey === 'recovery') {
       items.push(
         { icon: '🎉', title: 'Volledig herstel', text: 'Neem minimaal 1–2 weken volledige rust om fysiek en mentaal te herstellen.', action: 'Rustperiode' },
-        { icon: '🚶', title: 'Actief herstel', text: 'Wandelen, zwemmen of lichte yoga is prima. Vermijd intensieve ritten.', action: 'Lichte activiteit' },
-        { icon: '🎯', title: 'Nieuw doel stellen', text: `Je hebt ${rides.length} ritten afgerond met een CTL van ${Math.round(state.pmcData.ctl)}. Plan een nieuw doel!`, action: 'Stel doel in' }
+        { icon: '🚶', title: 'Actief herstel', text: 'Wandelen, zwemmen of lichte yoga is prima. Vermijd intensieve rideten.', action: 'Lichte activiteit' },
+        { icon: '🎯', title: 'Nieuw doel stellen', text: `Je hebt ${rides.length} rideten afgerond met een CTL van ${Math.round(state.pmcData.ctl)}. Plan een nieuw doel!`, action: 'Stel doel in' }
       );
     }
     return items;
   }, [state.phaseInfo.phase, state.phaseInfo.daysToEvent, state.pmcData, rides.length]);
 
-  const agendaTitles = ['belasting', 'zone 2', 'frequentie', 'ritten', 'agenda', 'wekelijkse'];
+  const agendaTitles = ['belasting', 'zone 2', 'frequentie', 'rideten', 'agenda', 'wekelijkse'];
 
   const agendaInsights = useMemo(() => {
     return advice.filter(a => agendaTitles.some(term => a.title.toLowerCase().includes(term)));
@@ -372,7 +372,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                     state.setDuration(parseInt(e.target.value));
                     setGeneratedWorkout(null);
                   }}
-                  style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255,255,255,0.06)', color: '#fff', borderRadius: 6, padding: '4px 8px', fontSize: 11, fontFamily: 'inherit', outline: 'none' }}
+                  style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255,255,255,0.06)', color: '#fff', borderRadius: 6, padding: '4px 8px', fontSize: 11, fontFamily: 'inheride', outline: 'none' }}
                 >
                   <option value={45}>45m</option>
                   <option value={60}>60m</option>
@@ -396,7 +396,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                   padding: '6px 14px',
                   cursor: 'pointer',
                   boxShadow: '0 2px 8px rgba(108, 92, 231, 0.15)',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inheride'
                 }}
               >
                 Genereer
@@ -413,7 +413,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
               }}>
                 {saveSuccessMsg} {saveSuccessMsg.startsWith('✓') && (
                   <span style={{ display: 'block', fontSize: 9, fontWeight: 500, color: '#94a3b8', marginTop: 4 }}>
-                    Open de <strong>Routeplanner</strong> om een bijbehorende GPX-route met dynamische snelheidsdoelen te genereren!
+                    Open de <strong>Route Planner</strong> om een bijbehorende GPX-route met dynamische snelheidsdoelen te genereren!
                   </span>
                 )}
               </div>
@@ -456,7 +456,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                           <span style={{ color: '#cbd5e1' }}>{Math.round(step.duration_seconds / 60)} min</span>
                           <span style={{ color: '#475569' }}>|</span>
                           <span style={{ color: '#94a3b8' }}>
-                            Doel: {step.target_power_min > 0 ? `${step.target_power_min}-${step.target_power_max}W` : 'Maximaal'}
+                            Doel: {step.target_power_min > 0 ? `${step.target_power_min}-${step.target_power_max}W` : 'Maximum'}
                             {step.target_hr_min > 0 && ` (${step.target_hr_min}-${step.target_hr_max} bpm)`}
                           </span>
                         </div>
@@ -468,20 +468,20 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                   <button 
                     onClick={() => setGeneratedWorkout(null)}
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, color: '#cbd5e1', fontSize: 10, fontWeight: 700, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, color: '#cbd5e1', fontSize: 10, fontWeight: 700, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inheride' }}
                   >
-                    Annuleren
+                    Cancel
                   </button>
                   <button 
                     onClick={handleSaveGeneratedWorkout}
                     disabled={isSavingWorkout}
-                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#cbd5e1', fontSize: 10, fontWeight: 700, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#cbd5e1', fontSize: 10, fontWeight: 700, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inheride' }}
                   >
                     {isSavingWorkout ? 'Inplannen...' : 'Plan Zonder Route'}
                   </button>
                   <button 
                     onClick={handleGenerateRouteAndPlan}
-                    style={{ background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)', border: 'none', borderRadius: 8, color: '#09090b', fontSize: 10, fontWeight: 800, padding: '6px 14px', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    style={{ background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)', border: 'none', borderRadius: 8, color: '#09090b', fontSize: 10, fontWeight: 800, padding: '6px 14px', cursor: 'pointer', fontFamily: 'inheride', display: 'inline-flex', alignItems: 'center', gap: 4 }}
                   >
                     Route & Plan
                   </button>
@@ -525,7 +525,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
               <button 
                 onClick={() => state.setGoalType('event')}
                 style={{
-                  flex: 1, padding: '6px 0', border: 'none', borderRadius: 7, fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                  flex: 1, padding: '6px 0', border: 'none', borderRadius: 7, fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'inheride',
                   background: state.goalType === 'event' ? 'rgba(255,255,255,0.05)' : 'transparent',
                   color: state.goalType === 'event' ? '#fff' : '#64748b',
                   transition: 'all 0.15s'
@@ -536,7 +536,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
               <button 
                 onClick={() => state.setGoalType('continuous')}
                 style={{
-                  flex: 1, padding: '6px 0', border: 'none', borderRadius: 7, fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                  flex: 1, padding: '6px 0', border: 'none', borderRadius: 7, fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'inheride',
                   background: state.goalType === 'continuous' ? 'rgba(255,255,255,0.05)' : 'transparent',
                   color: state.goalType === 'continuous' ? '#fff' : '#64748b',
                   transition: 'all 0.15s'
@@ -558,18 +558,18 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                 <div>
                   <label style={{ fontSize: 8, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Event datum</label>
                   <input type="date" value={state.eventDate} onChange={e => state.setEventDate(e.target.value)}
-                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6, color: '#f8fafc', padding: '6px 8px', fontSize: 11, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                    style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6, color: '#f8fafc', padding: '6px 8px', fontSize: 11, fontFamily: 'inheride', boxSizing: 'border-box' }} />
                 </div>
               </div>
             ) : (
               <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 10, padding: 12 }}>
                 <label style={{ fontSize: 8, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Actieve Focus</label>
                 <select value={state.activeFocus} onChange={e => state.setActiveFocus(e.target.value as any)}
-                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6, color: '#f8fafc', padding: '6px 8px', fontSize: 11, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}>
-                  <option value="endurance">🌱 Conditieopbouw & Uithoudingsvermogen</option>
-                  <option value="ftp">⚡ FTP verhogen (Drempeltraining)</option>
+                  style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6, color: '#f8fafc', padding: '6px 8px', fontSize: 11, fontFamily: 'inheride', boxSizing: 'border-box', outline: 'none' }}>
+                  <option value="endurance">🌱 Fitnessopbouw & Endurance</option>
+                  <option value="ftp">⚡ FTP verhogen (Thresholdtraining)</option>
                   <option value="vo2max">🚀 VO2max & Hoge Intensiteit</option>
-                  <option value="recovery">💤 Actief Herstel & Rust</option>
+                  <option value="recovery">💤 Actief Recovery & Rust</option>
                 </select>
               </div>
             )}

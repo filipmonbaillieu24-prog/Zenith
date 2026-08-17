@@ -72,11 +72,11 @@ export const PowerProfileTable: React.FC<Props> = ({ rides, weight }) => {
         <span style={{ fontSize: 16 }}>⚡</span>
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-            Vermogensprofiel (W/kg)
+            Powersprofiel (W/kg)
           </div>
           <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
             {!weight
-              ? 'Stel je gewicht in bij Instellingen → Profiel om je categorie te zien'
+              ? 'Stel je gewicht in bij Settings → Profiel om je categorie te zien'
               : 'Jouw beste W/kg vs Coggan-categorieën (▲ = jouw beste prestatie)'
             }
           </div>

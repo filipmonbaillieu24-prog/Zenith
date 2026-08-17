@@ -79,7 +79,7 @@ function App() {
           }));
         }
       } catch (err) {
-        console.error('Kon gewicht uit Vigor niet ophalen:', err);
+        console.error('Could not fetch weight from Vigor:', err);
       }
 
       const metaProfile = userMetadata?.fitness_profile || {};
@@ -246,7 +246,7 @@ function App() {
             logged_at: new Date().toISOString()
           });
         } catch (err) {
-          console.error('Kon gewicht niet opslaan in vigor_weight:', err);
+          console.error('Could not save weight to vigor_weight:', err);
         }
       }
 
@@ -270,7 +270,7 @@ function App() {
               logged_at: new Date(added.date + 'T12:00:00.000Z').toISOString()
             });
           } catch (err) {
-            console.error('Fout bij toevoegen gewichtslog in vigor_weight:', err);
+            console.error('Error adding weight log to vigor_weight:', err);
           }
         }
       }
@@ -285,7 +285,7 @@ function App() {
               .eq('user_id', session.user.id)
               .like('logged_at', `${deleted.date}%`);
           } catch (err) {
-            console.error('Fout bij verwijderen gewichtslog uit vigor_weight:', err);
+            console.error('Error deleting weight log from vigor_weight:', err);
           }
         }
       }
@@ -325,7 +325,7 @@ function App() {
 
   const handleGenerateWithProCheck = useCallback(async (params: any) => {
     if (!isPro) {
-      handleRequestProModal('AI Route Generator', 'Upgrade naar Zenith Pro om automatische GPX-routes op maat te genereren met hoogte- en windprofielen.');
+      handleRequestProModal('AI Route Generator', 'Upgrade to Zenith Pro to generate automatic custom GPX routes with elevation and wind profiles.');
       return;
     }
     await handleGenerate(params);
@@ -333,7 +333,7 @@ function App() {
 
   const handleDownloadGPXWithProCheck = useCallback(async () => {
     if (!isPro) {
-      handleRequestProModal('GPX Route Download', 'Upgrade naar Zenith Pro om je gegenereerde routes te exporteren naar GPX voor je Garmin of Wahoo fietscomputer.');
+      handleRequestProModal('GPX Route Download', 'Upgrade to Zenith Pro to export your generated routes to GPX for your Garmin or Wahoo bike computer.');
       return;
     }
     await handleDownloadGPX();
@@ -341,7 +341,7 @@ function App() {
 
   const handleDownloadTCXWithProCheck = useCallback(async () => {
     if (!isPro) {
-      handleRequestProModal('TCX Route Download', 'Upgrade naar Zenith Pro om je gegenereerde routes te exporteren naar TCX met afslag-per-afslag navigatie.');
+      handleRequestProModal('TCX Route Download', 'Upgrade to Zenith Pro to export your generated routes to TCX with turn-by-turn navigation.');
       return;
     }
     await handleDownloadTCX();
@@ -391,7 +391,7 @@ function App() {
     }
   }, []);
 
-  // ── Gear onderhoud check bij startup ────────────────────────────────────────
+  // ── Gear maintenance check at startup ────────────────────────────────────────
   useEffect(() => {
     const checkGearMaintenance = async () => {
       try {
@@ -402,7 +402,7 @@ function App() {
             if (!comp.maxDistance || comp.maxDistance <= 0) continue;
             const pct = (comp.distance / comp.maxDistance) * 100;
             if (pct >= 90) {
-              warnings.push(`${gear.name}: ${comp.name} (${Math.round(pct)}% van max km bereikt)`);
+              warnings.push(`${gear.name}: ${comp.name} (${Math.round(pct)}% of max km reached)`);
             }
           }
         }
@@ -452,7 +452,7 @@ function App() {
         setKratosWorkouts(data);
       }
     } catch (err) {
-      console.error('Kon Kratos workouts niet inladen in Aero:', err);
+      console.error('Could not load Kratos workouts into Aero:', err);
     }
   }, [session]);
 
@@ -528,7 +528,7 @@ function App() {
     }
     
     setUploadMsg({
-      text: fail === 0 ? `✓ ${ok} rit${ok !== 1 ? 'ten' : ''} geïmporteerd` : `${ok} geïmporteerd, ${fail} mislukt`,
+      text: fail === 0 ? `✓ ${ok} ride${ok !== 1 ? 'ten' : ''} imported` : `${ok} imported, ${fail} failed`,
       ok: fail === 0
     });
     setUploading(false);
@@ -570,8 +570,8 @@ function App() {
       calibrateSummaryModels(freshSummaries, activeFTP, activeWeight);
       calibrateFullModels(freshSummaries, allRides, activeFTP, activeWeight);
     } catch (e) {
-      console.error("Fout tijdens herberekenen van ritten:", e);
-      alert("Er is een fout opgetreden bij het verwerken van de ritten: " + (e instanceof Error ? e.message : String(e)));
+      console.error("Error while recalculating rides:", e);
+      alert("An error occurred while processing rides: " + (e instanceof Error ? e.message : String(e)));
     } finally {
       setRecalculating(false);
     }
@@ -734,13 +734,13 @@ function App() {
                   🎉 AI Fitheidsverbetering Gevonden!
                 </h3>
                 <span style={{ fontSize: 11, color: '#94a3b8' }}>
-                  Analyse van rit: <strong>{activeProposal.rideName}</strong>
+                  Ride Analysis: <strong>{activeProposal.rideName}</strong>
                 </span>
               </div>
             </div>
 
             <p style={{ fontSize: 12, color: '#cbd5e1', margin: 0, lineHeight: 1.5 }}>
-              Je laatste activiteit toont betere fysiologische waarden. Wil je je atleetprofiel en hartslag-/vermogenszones direct bijwerken?
+              Your latest activity demonstrates improved physiological metrics. Would you like to update your athlete profile and heart rate/power zones?
             </p>
 
             {/* Proposals List */}
@@ -756,8 +756,8 @@ function App() {
                   justifyContent: 'space-between'
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>Drempelvermogen (FTP)</span>
-                    <span style={{ fontSize: 10, color: '#64748b' }}>Berekend op basis van ritpieken</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>Thresholdvermogen (FTP)</span>
+                    <span style={{ fontSize: 10, color: '#64748b' }}>Calculated based on ride peak efforts</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: 12, color: '#64748b', textDecoration: 'line-through' }}>{activeProposal.ftp.current} W</span>
@@ -787,7 +787,7 @@ function App() {
                   justifyContent: 'space-between'
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>Drempelhartslag (LTHR)</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>Thresholdhartslag (LTHR)</span>
                     <span style={{ fontSize: 10, color: '#64748b' }}>Cardiale drift & decoupling analyse</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -818,7 +818,7 @@ function App() {
                   justifyContent: 'space-between'
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>Maximale Hartslag (Max HR)</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>Maximum Heart Rate (Max HR)</span>
                     <span style={{ fontSize: 10, color: '#64748b' }}>Nieuwe hartslagpiek geregistreerd</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -864,7 +864,7 @@ function App() {
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                   boxShadow: '0 0 12px rgba(203, 213, 225, 0.15)',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inheride'
                 }}
               >
                 Accepteren & zones updaten
@@ -880,7 +880,7 @@ function App() {
                   fontSize: 11,
                   padding: '12px 18px',
                   cursor: 'pointer',
-                  fontFamily: 'inherit'
+                  fontFamily: 'inheride'
                 }}
               >
                 Negeren
@@ -913,7 +913,7 @@ function App() {
                   ZENITH <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '16px' }}>AERO</span>
                 </h1>
                 <p className="zh-hub-subtitle" style={{ fontSize: '9px', color: 'var(--text-muted)', margin: '4px 0 0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                  Desktop & Analytics voor {userName}
+                  Desktop & Analytics for {userName}
                 </p>
               </div>
 
@@ -943,7 +943,7 @@ function App() {
                   ) : (
                     <Upload size={13} style={{ color: '#cbd5e1' }} />
                   )}
-                  <span>{uploading ? 'Uploaden...' : 'Rit Importeren'}</span>
+                  <span>{uploading ? 'Uploading...' : 'Import Ride'}</span>
                   
                   <input
                     ref={fileInputRef}
@@ -961,7 +961,7 @@ function App() {
                     style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(253,203,110,0.1)', border: '1px solid rgba(253,203,110,0.25)', borderRadius: 7, padding: '3px 10px', cursor: 'pointer', fontSize: 10, fontWeight: 700, color: '#fdcb6e' }}
                   >
                     <span>🔧</span>
-                    <span>Onderhoud nodig!</span>
+                    <span>Maintenance Required!</span>
                   </div>
                 )}
               </div>

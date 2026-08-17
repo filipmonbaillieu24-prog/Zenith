@@ -271,8 +271,8 @@ export const MapView: React.FC<MapViewProps> = ({
           <h3>Route Ontwerpen</h3>
           <p>
             {startPoint 
-              ? (endPoint ? 'Berekenen...' : 'Klik op de kaart om de eindbestemming te bepalen, of genereer een rondje.') 
-              : 'Klik ergens op de kaart om je startpunt te markeren en begin met ontwerpen.'
+              ? (endPoint ? 'Calculating...' : 'Click on the map to set destination, or generate a loop.') 
+              : 'Click anywhere on the map to mark your starting point and begin designing.'
             }
           </p>
         </div>

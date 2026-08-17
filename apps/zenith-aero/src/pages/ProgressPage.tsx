@@ -106,9 +106,9 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
     const scale = (val: number, max: number) => Math.min(100, Math.round((val / max) * 100));
     return [
       { subject: 'Sprint (5s)',         A: scale(bests.s5 / w, 20),   fullMark: 100 },
-      { subject: 'Anaeroob (1m)',        A: scale(bests.m1 / w, 10),   fullMark: 100 },
+      { subject: 'Anaerobic (1m)',        A: scale(bests.m1 / w, 10),   fullMark: 100 },
       { subject: 'VO2max (5m)',          A: scale(bests.m5 / w, 6.8),  fullMark: 100 },
-      { subject: 'Drempel / FTP (20m)',  A: scale(bests.m20 / w, 5.5), fullMark: 100 },
+      { subject: 'Threshold / FTP (20m)',  A: scale(bests.m20 / w, 5.5), fullMark: 100 },
     ];
   }, [filteredRides, profile.weight]);
 
@@ -125,7 +125,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
       }));
   }, [filteredRides, selectedRadarPoint]);
 
-  // Neuromusculaire efficiëntie
+  // Neuromusculare efficiëntie
   const scatterData = useMemo(() =>
     filteredRides.filter(r => r.hasHR && r.vam && r.avgHR)
       .map(r => ({ vam: r.vam!, hr: r.avgHR!, name: r.name })).slice(0, 30),
@@ -205,11 +205,11 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
   const coachAnalysis = useMemo(() => {
     const name = profile.name ?? 'Atleet';
     if (filteredRides.length < 3) return {
-      intro: `Hoi ${name}! Upload minimaal 3 ritten om een analyse te ontvangen.`,
+      intro: `Hoi ${name}! Upload minimaal 3 rideten om een analyse te ontvangen.`,
       pillars: [
-        { title: 'Conditie & Efficiëntie', status: 'Stabiel', statusColor: '#0984e3', desc: 'We meten hoe hard je hart werkt voor je vermogen.', tip: 'Rijd duurritten op comfortabel tempo.' },
-        { title: 'Herstelsnelheid',          status: 'Stabiel', statusColor: '#0984e3', desc: 'Hoe snel daalt je hartslag na inspanning?',        tip: 'Intervallen 30s sprint + 2 min uitrijden.' },
-        { title: 'Taaiheid',                 status: 'Stabiel', statusColor: '#0984e3', desc: 'Behoud je piekvermogen tot het einde?',            tip: 'Goed eten (koolhydraten) tijdens lange ritten.' },
+        { title: 'Fitness & Efficiëntie', status: 'Stabiel', statusColor: '#0984e3', desc: 'We meten hoe hard je hart werkt voor je vermogen.', tip: 'Rijd duurrideten op comfortabel tempo.' },
+        { title: 'Recoverysnelheid',          status: 'Stabiel', statusColor: '#0984e3', desc: 'Hoe snel daalt je hartslag na inspanning?',        tip: 'Intervallen 30s sprint + 2 min uitrijden.' },
+        { title: 'Taaiheid',                 status: 'Stabiel', statusColor: '#0984e3', desc: 'Behoud je piekvermogen tot het einde?',            tip: 'Goed eten (koolhydraten) tijdens lange rideten.' },
       ]
     };
     let effStatus = 'Stabiel', effColor = '#38bdf8', effDesc = 'Stabiele hartslag-vermogen verhouding.';
@@ -233,9 +233,9 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
     return {
       intro,
       pillars: [
-        { title: 'Conditie & Efficiëntie', status: effStatus, statusColor: effColor, desc: effDesc, tip: 'Langere duurritten op rustig tempo verbeteren je aerobe basis.' },
-        { title: 'Herstelsnelheid',          status: recStatus, statusColor: recColor, desc: recDesc, tip: 'Korte intervallen (30s sprint, 2 min uitbollen).' },
-        { title: 'Taaiheid',                 status: fatStatus, statusColor: fatColor, desc: fatDesc, tip: 'Eet voldoende koolhydraten bij ritten langer dan 2 uur.' },
+        { title: 'Fitness & Efficiëntie', status: effStatus, statusColor: effColor, desc: effDesc, tip: 'Langere duurrideten op rustig tempo verbeteren je aerobe basis.' },
+        { title: 'Recoverysnelheid',          status: recStatus, statusColor: recColor, desc: recDesc, tip: 'Korte intervallen (30s sprint, 2 min uitbollen).' },
+        { title: 'Taaiheid',                 status: fatStatus, statusColor: fatColor, desc: fatDesc, tip: 'Eet voldoende koolhydraten bij rideten langer dan 2 uur.' },
       ]
     };
   }, [filteredRides, progressMetrics, profile.name]);
@@ -257,7 +257,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
             <button key={String(r)} onClick={() => handleTimeRangeChange(r)} style={{
               padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700,
               background: timeRange === r ? 'rgba(203, 213, 225,0.12)' : 'rgba(255,255,255,0.04)',
-              color: timeRange === r ? '#cbd5e1' : '#64748b', fontFamily: 'inherit',
+              color: timeRange === r ? '#cbd5e1' : '#64748b', fontFamily: 'inheride',
             }}>
               {r === 'all' ? 'Alles' : `${r}d`} {!isPro && r !== 30 && '🔒'}
             </button>
@@ -340,7 +340,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Heart size={14} color="#ff7675" />
-                <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.4px' }}>AI LTHR Analyse</span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.4px' }}>AI LTHR Analysis</span>
               </div>
               {lthrDrift?.proposeTuning && (
                 <span style={{ fontSize: 9, background: 'rgba(253,203,110,0.12)', color: '#fdcb6e', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>UPDATE</span>
@@ -368,13 +368,13 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                   {lthrDrift.decoupling < 3.5
                     ? 'Uitstekende aerobe efficiëntie.'
                     : lthrDrift.decoupling < 8.0
-                      ? 'Lichte drift - normaal bij langere ritten.'
+                      ? 'Lichte drift - normaal bij langere rideten.'
                       : 'Hoge drift - meer Zone 2 trainen.'}
                 </p>
               </>
             ) : (
               <p style={{ fontSize: 10, color: '#64748b', margin: '4px 0 0', lineHeight: 1.5 }}>
-                Upload HR-ritten langer dan 1 uur voor LTHR drift analyse.
+                Upload HR-rideten langer dan 1 uur voor LTHR drift analyse.
               </p>
             )}
           </div>
@@ -390,7 +390,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
               </div>
               <span style={{ fontSize: 10, color: '#94a3b8' }}>
                 Doel: <strong style={{ color: '#cbd5e1' }}>{aiFTPForecast.targetFTP}W</strong>{' '}
-                ({aiFTPForecast.diff >= 0 ? '+' : ''}{aiFTPForecast.diff}W - {aiFTPForecast.consistency} trainingen/week)
+                ({aiFTPForecast.diff >= 0 ? '+' : ''}{aiFTPForecast.diff}W - {aiFTPForecast.consistency} workouts/week)
               </span>
             </div>
             <ResponsiveContainer width="100%" height={140}>
@@ -464,12 +464,12 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
           <div className="wd-dashboard-grid animate-slide-up" style={{ animationDelay: '0.05s' }}>
             <div className="wd-kpi" style={{ borderLeftColor: '#cbd5e1' }}>
               <div className="wd-kpi__header">
-                <span className="wd-kpi__lbl">Hartslag Herstel (HRR)</span>
+                <span className="wd-kpi__lbl">Heart Rate Recovery (HRR)</span>
                 <Heart size={13} style={{ color: '#cbd5e1' }} />
               </div>
               <span className="wd-kpi__val">{progressMetrics.avgRecentHRR ?? '--'} bpm</span>
               <span className="wd-kpi__trend" style={{ color: progressMetrics.hrrChange >= 0 ? '#cbd5e1' : '#ff7675' }}>
-                {progressMetrics.hrrChange >= 0 ? 'Stijging' : 'Daling'} {Math.abs(progressMetrics.hrrChange)} bpm
+                {progressMetrics.hrrChange >= 0 ? 'Stijging' : 'Descent'} {Math.abs(progressMetrics.hrrChange)} bpm
               </span>
             </div>
             <div className="wd-kpi" style={{ borderLeftColor: '#6c5ce7' }}>
@@ -487,7 +487,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
               </div>
               <span className="wd-kpi__val">{progressMetrics.avgRecentCC ? progressMetrics.avgRecentCC.toFixed(3) : '--'} b/m</span>
               <span className="wd-kpi__trend" style={{ color: progressMetrics.ccChangePct <= 0 ? '#cbd5e1' : '#ff7675' }}>
-                {progressMetrics.ccChangePct <= 0 ? 'Daling' : 'Stijging'} {Math.abs(progressMetrics.ccChangePct)}%
+                {progressMetrics.ccChangePct <= 0 ? 'Descent' : 'Stijging'} {Math.abs(progressMetrics.ccChangePct)}%
               </span>
             </div>
           </div>
@@ -497,7 +497,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
         <div className="wd-charts-row animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <div className="wd-section-card">
             <div className="wd-section-card__head">
-              <span className="wd-section-card__title">Vermogensprofiel Radar</span>
+              <span className="wd-section-card__title">Powersprofiel Radar</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
               {passportData.length > 0 ? (
@@ -510,7 +510,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                   </RadarChart>
                 </ResponsiveContainer>
               ) : (
-                <p style={{ color: '#64748b', fontSize: 12 }}>Upload ritten met wattage voor het radar-profiel.</p>
+                <p style={{ color: '#64748b', fontSize: 12 }}>Upload rideten met wattage voor het radar-profiel.</p>
               )}
             </div>
             <div className="pp-radar-controls">
@@ -520,7 +520,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                   className={`pp-radar-btn${selectedRadarPoint === key ? ' active' : ''}`}
                   onClick={() => setSelectedRadarPoint(selectedRadarPoint === key ? null : key)}
                 >
-                  {['5s Sprint', '1m Anaeroob', '5m VO2max', '20m Drempel'][i]}
+                  {['5s Sprint', '1m Anaerobic', '5m VO2max', '20m Threshold'][i]}
                 </button>
               ))}
             </div>
@@ -549,10 +549,10 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
             )}
           </div>
 
-          {/* Neuromusculaire efficiëntie */}
+          {/* Neuromusculare efficiëntie */}
           <div className="wd-section-card">
             <div className="wd-section-card__head">
-              <span className="wd-section-card__title">Neuromusculaire Efficiëntie</span>
+              <span className="wd-section-card__title">Neuromusculare Efficiëntie</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', height: 200, justifyContent: 'center' }}>
               {cadenceData ? (
@@ -569,7 +569,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                 <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
                     <CartesianGrid stroke="rgba(255,255,255,0.03)" />
-                    <XAxis type="number" dataKey="hr" name="Hartslag" unit=" bpm" tick={{ fill: '#64748b', fontSize: 9 }} />
+                    <XAxis type="number" dataKey="hr" name="Heart Rate" unit=" bpm" tick={{ fill: '#64748b', fontSize: 9 }} />
                     <YAxis type="number" dataKey="vam" name="VAM" unit=" m/h" tick={{ fill: '#64748b', fontSize: 9 }} />
                     <Tooltip contentStyle={{ background: '#0d0d1a', border: 'none', fontSize: 10 }} />
                     <Scatter name="Klimmen" data={scatterData} fill="#00b894" />
@@ -577,7 +577,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                 </ResponsiveContainer>
               ) : (
                 <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center' }}>
-                  Upload ritten met hartslag en hoogte voor efficientiemeting.
+                  Upload rideten met hartslag en hoogte voor efficientiemeting.
                 </p>
               )}
             </div>

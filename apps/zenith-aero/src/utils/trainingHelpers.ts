@@ -40,7 +40,7 @@ export async function planWorkoutInCalendar(
     routeId = 'route_' + Date.now();
     await saveRoute({
       id: routeId,
-      name: route.stats.climbCategory === 'flat' ? 'Vlakke rit' : 'Heuvelachtige rit',
+      name: route.stats.climbCategory === 'flat' ? 'Vlakke ride' : 'Heuvelachtige ride',
       distance: route.stats.distance,
       duration: route.stats.duration,
       elevGain: route.stats.elevationGain,

@@ -100,7 +100,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
       const res = await saveExportFile(gpxContent, fileName, 'application/gpx+xml');
       if (!res.ok) {
         if (res.error !== 'CANCELLED') {
-          setGpxError(res.error || "Fout bij opslaan van bestand.");
+          setGpxError(res.error || "Error saving van bestand.");
         }
       } else {
         setGpxSuccess(res.path ? `✓ GPX opgeslagen op: ${res.path}` : "✓ GPX succesvol gedownload");
@@ -176,7 +176,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
     const firstDayOfMonth = new Date(year, month, 1);
     const lastDayOfMonth = new Date(year, month + 1, 0);
 
-    let startDayOfWeek = firstDayOfMonth.getDay() - 1; // 0 = Maandag
+    let startDayOfWeek = firstDayOfMonth.getDay() - 1; // 0 = Monthag
     if (startDayOfWeek === -1) startDayOfWeek = 6; // Zondag
 
     const days: { dateStr: string; dayNum: number; isCurrentMonth: boolean; dateObj: Date }[] = [];
@@ -220,7 +220,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
     return days;
   }, [year, month]);
 
-  // Map voltooide ritten en geplande workouts per dag
+  // Map voltooide rideten en geplande workouts per dag
   const ridesByDate = useMemo(() => {
     const map = new Map<string, RideSummaryWithBests[]>();
     for (const r of rides) {
@@ -299,7 +299,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
       }
       setIsModalOpen(false);
     } catch (err) {
-      console.error('Fout bij opslaan geplande workout:', err);
+      console.error('Error saving geplande workout:', err);
     }
   };
 
@@ -309,7 +309,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
       setPlannedWorkouts(prev => prev.filter(p => p.id !== id));
       setIsModalOpen(false);
     } catch (err) {
-      console.error('Fout bij verwijderen geplande workout:', err);
+      console.error('Error deleting geplande workout:', err);
     }
   };
 
@@ -364,7 +364,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
           <div>
             <span className="wd-calendar-hero__tag" style={{ fontSize: 13, fontWeight: 700 }}>
               <TrendingUp size={14} style={{ color: '#cbd5e1', marginRight: 6, verticalAlign: 'middle' }} />
-              Periodisering & PMC Voorspelling
+              Periodization & PMC Voorspelling
             </span>
           </div>
 
@@ -400,7 +400,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
               <Tooltip
                 contentStyle={{ background: '#09090b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, color: '#fff' }}
               />
-              <ReferenceLine x={new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} stroke="#cbd5e1" strokeDasharray="3 3" label={{ value: 'Vandaag', fill: '#cbd5e1', fontSize: 10 }} />
+              <ReferenceLine x={new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} stroke="#cbd5e1" strokeDasharray="3 3" label={{ value: 'Today', fill: '#cbd5e1', fontSize: 10 }} />
               <Bar dataKey="tss" fill="rgba(255,255,255,0.08)" radius={[2, 2, 0, 0]} name="Dagelijkse TSS" />
               <Line type="monotone" dataKey="ctl" stroke="#cbd5e1" strokeWidth={2} dot={false} name="Fitheid (CTL)" />
               <Line type="monotone" dataKey="atl" stroke="#ff7675" strokeWidth={1.5} dot={false} name="Vermoeidheid (ATL)" />
@@ -410,10 +410,10 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
         </div>
       </div>
 
-      {/* ── 2. Kalender Controls Bar ─────────────────────────────────────────── */}
+      {/* ── 2. Calendar Controls Bar ─────────────────────────────────────────── */}
       <div className="wd-calendar-controls">
         <div className="wd-calendar-controls__left">
-          <button className="wd-cal-btn" onClick={handleToday}>Vandaag</button>
+          <button className="wd-cal-btn" onClick={handleToday}>Today</button>
           <div className="wd-cal-nav-group">
             <button className="wd-cal-icon-btn" onClick={handlePrev}><ChevronLeft size={16} /></button>
             <button className="wd-cal-icon-btn" onClick={handleNext}><ChevronRight size={16} /></button>
@@ -430,14 +430,14 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
         </div>
       </div>
 
-      {/* ── 3. Maand Grid ────────────────────────────────────────────────────── */}
+      {/* ── 3. Month Grid ────────────────────────────────────────────────────── */}
       <div className="wd-calendar-grid">
         {/* Dagen van de week headers */}
         {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map(d => (
           <div key={d} className="wd-cal-header-cell">{d}</div>
         ))}
 
-        {/* Kalender Dagen */}
+        {/* Calendar Dagen */}
         {calendarDays.map(day => {
           const isToday = day.dateStr === todayStr;
           const dayRides = ridesByDate.get(day.dateStr) ?? [];
@@ -464,12 +464,12 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
               </div>
 
               <div className="wd-cal-day-events">
-                {/* Voltooide Ritten */}
+                {/* Voltooide Rides */}
                 {dayRides.map(r => (
                   <div
                     key={r.id}
                     className="wd-cal-badge wd-cal-badge--completed" onClick={() => onSelectRide?.(r.id)}
-                    title={`Voltooid: ${r.name}\nAfstand: ${r.distance.toFixed(1)} km\nTijd: ${Math.round(r.duration / 60)} min\nHoogte: ${r.elevGain} m\nGem: ${r.avgSpeed.toFixed(1)} km/h\nBelasting: ${Math.round(r.tss ?? r.hrTSS ?? 0)} TSS`}
+                    title={`Voltooid: ${r.name}\nDistance: ${r.distance.toFixed(1)} km\nTijd: ${Math.round(r.duration / 60)} min\nHoogte: ${r.elevGain} m\nGem: ${r.avgSpeed.toFixed(1)} km/h\nBelasting: ${Math.round(r.tss ?? r.hrTSS ?? 0)} TSS`}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '2px', padding: '6px 8px' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -515,12 +515,12 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
         })}
       </div>
 
-      {/* ── 4. Workout Plannen / Bewerken Modal ───────────────────────────────── */}
+      {/* ── 4. Workout Plannen / Edit Modal ───────────────────────────────── */}
       {isModalOpen && (
         <div className="wd-modal-backdrop animate-fade-in" onClick={() => setIsModalOpen(false)}>
           <div className="wd-modal-card" onClick={e => e.stopPropagation()}>
             <div className="wd-modal-header">
-              <h3>{editingWorkout ? 'Workout Bewerken' : 'Nieuwe Workout Plannen'}</h3>
+              <h3>{editingWorkout ? 'Workout Edit' : 'Nieuwe Workout Plannen'}</h3>
               <button className="wd-modal-close" onClick={() => setIsModalOpen(false)}>✕</button>
             </div>
 
@@ -559,10 +559,10 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                     if (t === 'vo2max') setFormTSS(Math.round(formDuration * 1.4));
                   }}
                 >
-                  <option value="recovery">💙 Actief Herstel (Z1)</option>
+                  <option value="recovery">💙 Actief Recovery (Z1)</option>
                   <option value="endurance">🟢 Duurtraining (Z2)</option>
                   <option value="sweetspot">🟡 Sweet Spot Intervallen (Z3/Z4)</option>
-                  <option value="threshold">🔴 Drempel / FTP (Z4)</option>
+                  <option value="threshold">🔴 Threshold / FTP (Z4)</option>
                   <option value="vo2max">💜 VO2Max Intervallen (Z5)</option>
                   <option value="custom">⚡ Aangepast</option>
                 </select>
@@ -570,7 +570,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="wd-form-group">
-                  <label>Duur (minuten)</label>
+                  <label>Duration (minutes)</label>
                   <input
                     type="number"
                     min={15}
@@ -622,7 +622,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                       fontWeight: 700,
                       padding: '10px 14px',
                       cursor: 'pointer',
-                      fontFamily: 'inherit',
+                      fontFamily: 'inheride',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -633,7 +633,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                     }}
                   >
                     <Download size={14} /> 
-                    {downloadingGpx ? 'GPX ophalen...' : 'Gegenereerde GPX Route Downloaden'}
+                    {downloadingGpx ? 'GPX ophalen...' : 'Gegenereerde GPX Route Download'}
                   </button>
                   {gpxError && (
                     <div style={{ fontSize: 10, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>
@@ -655,7 +655,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                   className="wd-modal-btn wd-modal-btn--danger"
                   onClick={() => handleDeleteWorkout(editingWorkout.id)}
                 >
-                  <Trash2 size={13} style={{ marginRight: 4 }} /> Verwijderen
+                  <Trash2 size={13} style={{ marginRight: 4 }} /> Delete
                 </button>
               )}
               <div style={{ flex: 1 }} />
@@ -663,13 +663,13 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                 className="wd-modal-btn wd-modal-btn--secondary"
                 onClick={() => setIsModalOpen(false)}
               >
-                Annuleren
+                Cancel
               </button>
               <button
                 className="wd-modal-btn wd-modal-btn--primary"
                 onClick={handleSaveWorkout}
               >
-                Opslaan & Simuleren
+                Save & Simuleren
               </button>
             </div>
           </div>

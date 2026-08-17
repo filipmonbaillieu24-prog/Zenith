@@ -82,7 +82,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ isPro = false, onRequestProMo
     return (
       <div className="wd-section-card" style={{ textAlign: 'center', padding: 48, color: '#3a3a4a' }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
-        <p>Upload ritten met GPS-data om de heatmap te zien.</p>
+        <p>Upload rideten met GPS-data om de heatmap te zien.</p>
       </div>
     );
   }

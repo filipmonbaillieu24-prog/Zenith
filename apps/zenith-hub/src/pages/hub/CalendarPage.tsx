@@ -193,7 +193,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
 
       setItems([...mappedPlanned, ...mappedRides, ...mappedKratos]);
     } catch (err) {
-      console.error('Kon kalendergegevens niet ophalen:', err);
+      console.error('Failed to fetch calendar data:', err);
     } finally {
       setLoading(false);
     }
@@ -287,7 +287,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
       setIsModalOpen(false);
       fetchData(); // reload
     } catch (err) {
-      console.error('Fout bij opslaan geplande workout:', err);
+      console.error('Error saving planned workout:', err);
     }
   };
 
@@ -300,7 +300,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
       setIsModalOpen(false);
       fetchData(); // reload
     } catch (err) {
-      console.error('Fout bij verwijderen geplande workout:', err);
+      console.error('Error deleting planned workout:', err);
     }
   };
 
@@ -340,7 +340,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           setPlannedWorkouts(prev => prev.map(p => p.id === id ? updated : p));
           fetchData(); // reload
         } catch (err) {
-          console.error('Fout bij verplaatsen geplande workout:', err);
+          console.error('Error moving planned workout:', err);
         }
       }
     }

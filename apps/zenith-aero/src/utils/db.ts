@@ -17,7 +17,7 @@ async function getUserId(): Promise<string> {
     currentUserId = session.user.id;
     return currentUserId;
   }
-  throw new Error("Gebruiker is niet ingelogd.");
+  throw new Error("Gebruiker is niet inlogged.");
 }
 
 // ─── Mapper Helpers ────────────────────────────────────────────────────────────

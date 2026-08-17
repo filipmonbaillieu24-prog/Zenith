@@ -52,7 +52,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
     // Classificeer model
     let model = "Ongebalanceerd";
     let desc = "Je trainingsverdeling past nog niet direct in een klassiek patroon. Dit is normaal als je net bent begonnen of zeer onregelmatig fietst.";
-    let tip = "Probeer je duurritten bewuster in Zone 2 te houden (laag tempo) en je intensieve dagen echt hard te maken (intervallen).";
+    let tip = "Probeer je duurrideten bewuster in Zone 2 te houden (laag tempo) en je intensieve dagen echt hard te maken (intervallen).";
     let color = "#ffeaa7";
 
     if (pctLID >= 75 && pctMID <= 12 && pctHID >= 5) {
@@ -63,15 +63,15 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
     } else if (pctLID >= 60 && pctMID >= 15 && pctMID <= 30 && pctHID < pctMID) {
       model = "Piramide (Pyramidal)";
       color = "#cbd5e1";
-      desc = "Een solide piramidemodel. De basis bestaat uit rustige duurritten, aangevuld met een redelijk aandeel tempowerk (Zone 3/4) en een klein aandeel echte sprints/intervallen.";
+      desc = "Een solide piramidemodel. De basis bestaat uit rustige duurrideten, aangevuld met een redelijk aandeel tempowerk (Zone 3/4) en een klein aandeel echte sprints/intervallen.";
       tip = "Ideaal voor het opbouwen van een all-round basisconditie en tempohardheid in het voorseizoen.";
     } else if (pctMID >= 35) {
-      model = "Drempel / Sweet Spot Focus";
+      model = "Threshold / Sweet Spot Focus";
       color = "#fbbf24";
       desc = "Je traint heel veel in de 'Sweet Spot' of drempelzones (Zone 3 en 4). Dit voelt zwaar en effectief, maar kan leiden tot stagnatie omdat je constant licht vermoeid bent.";
-      tip = "Probeer meer ritten echt rustig te rijden (Zone 2) om je vetverbranding op te bouwen, zodat je frisser bent voor gerichte intervallen.";
+      tip = "Probeer meer rideten echt rustig te rijden (Zone 2) om je vetverbranding op te bouwen, zodat je frisser bent voor gerichte intervallen.";
     } else if (pctLID >= 85 && pctHID < 3) {
-      model = "Basis & Herstel";
+      model = "Basis & Recovery";
       color = "#a29bfe";
       desc = "Je focus ligt momenteel bijna volledig op rustige duurtrainingen en herstel. Uitstekend voor basisopbouw of na een zwaar wedstrijdblok.";
       tip = "Voeg af en toe een intensieve intervaltraining toe om je VO2max en cardiovasculaire systeem te prikkelen.";
@@ -79,7 +79,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
       model = "Hoge Intensiteit (HIIT)";
       color = "#f87171";
       desc = "Je traint extreem intensief! Meer dan een kwart van je tijd breng je door in het rood (Zone 5+). Dit is effectief op korte termijn, maar vergroot de kans op overtraining aanzienlijk.";
-      tip = "Las een herstelweek in en vervang minimaal de helft van de intensieve trainingen door rustige Zone 2 duurritten.";
+      tip = "Las een herstelweek in en vervang minimaal de helft van de intensieve trainingen door rustige Zone 2 duurrideten.";
     }
 
     const data = [
@@ -110,7 +110,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Upload ritten met hartslag- of vermogensdata om je trainingsdistributie te analyseren.
+          Upload rideten met hartslag- of vermogensdata om je trainingsdistributie te analyseren.
         </p>
       </div>
     );
@@ -121,7 +121,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
       <div className="wd-section-card__head">
         <span className="wd-section-card__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <BarChart2 size={13} style={{ color: '#cbd5e1' }} />
-          Trainingsdistributie ({analysis.isPowerBased ? 'Vermogen' : 'Hartslag'})
+          Trainingsdistributie ({analysis.isPowerBased ? 'Power' : 'Heart Rate'})
         </span>
       </div>
 

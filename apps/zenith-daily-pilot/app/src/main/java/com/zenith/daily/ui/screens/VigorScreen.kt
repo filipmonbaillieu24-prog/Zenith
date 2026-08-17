@@ -58,7 +58,7 @@ fun VigorScreen(
                     color = ZenithTextPrimary
                 )
                 Text(
-                    text = "Gewicht & Gezondheid Synchronisatie",
+                    text = "Gewicht & Health Synchronisatie",
                     fontSize = 11.sp,
                     color = ZenithSecondary
                 )
@@ -71,7 +71,7 @@ fun VigorScreen(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 modifier = Modifier.height(36.dp)
             ) {
-                Text("＋ LOG GEWICHT", fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text("＋ LOG WEIGHT", fontSize = 10.sp, fontWeight = FontWeight.Black)
             }
         }
 
@@ -100,7 +100,7 @@ fun VigorScreen(
                         color = ZenithTextPrimary
                     )
                     Text(
-                        text = if (healthSnapshot.isConnected) "Status: Verbonden (Stappen & Calorieën)" else "Status: Automatische sync beschikbaar",
+                        text = if (healthSnapshot.isConnected) "Status: Connected (Steps & Calories)" else "Status: Automatic sync ready",
                         fontSize = 10.sp,
                         color = ZenithSecondary
                     )
@@ -131,7 +131,7 @@ fun VigorScreen(
 
         // 2. Weight History List
         Text(
-            text = "GEWICHTSHISTORIE (${weights.size})",
+            text = "WEIGHTSHISTORIE (${weights.size})",
             fontSize = 11.sp,
             fontWeight = FontWeight.ExtraBold,
             color = ZenithSecondary,
@@ -147,7 +147,7 @@ fun VigorScreen(
             if (weights.isEmpty()) {
                 item {
                     Text(
-                        text = "Nog geen wegingen gelogd. Klik op + Log Gewicht om te beginnen.",
+                        text = "No weigh-ins recorded yet. Tap + Log Weight to begin.",
                         fontSize = 11.sp,
                         color = ZenithSecondary,
                         modifier = Modifier.padding(vertical = 12.dp)
@@ -213,13 +213,13 @@ fun VigorScreen(
         AlertDialog(
             onDismissRequest = { showLogModal = false },
             containerColor = ZenithCardBg,
-            title = { Text("Gewicht Invoeren", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ZenithTextPrimary) },
+            title = { Text("Log Weight", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ZenithTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = weightInput,
                         onValueChange = { weightInput = it },
-                        label = { Text("Gewicht in kg (bijv. 81.4)*", color = ZenithSecondary) },
+                        label = { Text("Weight in kg (e.g. 81.4)*", color = ZenithSecondary) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = ZenithTextPrimary,
@@ -259,7 +259,7 @@ fun VigorScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ZenithPrimary, contentColor = ZenithBackground)
                 ) {
-                    Text("OPSLAAN", fontWeight = FontWeight.ExtraBold)
+                    Text("SAVE", fontWeight = FontWeight.ExtraBold)
                 }
             },
             dismissButton = {

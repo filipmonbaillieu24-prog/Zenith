@@ -60,7 +60,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
         .maybeSingle();
       if (!error && data && data.settings && (data.settings as any).mac_address) {
         targetMac = (data.settings as any).mac_address;
-        addLog(`Opgeslagen MAC-adres gevonden: ${targetMac}. Doelgericht verbinden gestart...`);
+        addLog(`Saved MAC address found: ${targetMac}. Targeted connection started...`);
       }
     } catch (err) {
       console.error('Error fetching target MAC:', err);
@@ -68,7 +68,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
 
     if (window.parent !== window) {
       // In an iframe (Desktop Hub mode)
-      addLog('Verzoek versturen naar Zenith Hub voor Bluetooth-synchronisatie...');
+      addLog('Sending request to Zenith Hub for Bluetooth synchronization...');
       
       const messageListener = async (event: MessageEvent) => {
         if (event.data) {
@@ -85,8 +85,8 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               try {
                 const result = JSON.parse(event.data.data);
                 setStatus('syncing');
-                addLog(`Verbonden met apparaat: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
-                addLog('Synchronisatie van historische stappen & slaap gestart...');
+                addLog(`Connected to device: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
+                addLog('Syncing historical steps & sleep data started...');
 
                 // Process steps: upsert per day (replace existing entries for that day)
                 if (result.steps && result.steps.length > 0) {
@@ -112,9 +112,9 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
                     if (stepsError) throw stepsError;
                     stepsSaved++;
                   }
-                  addLog(`Succes: ${stepsSaved} dagen stappen opgeslagen.`);
+                  addLog(`Success: ${stepsSaved} days of steps saved.`);
                 } else {
-                  addLog('Geen stappen data ontvangen van de ring.');
+                  addLog('No step data received from the smart ring.');
                 }
 
                 // Process sleep: upsert per day with all sleep phases
@@ -146,13 +146,13 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
                     sleepSaved++;
                     addLog(`Slaap ${dateStr}: ${s.duration_minutes}min totaal, ${s.deep_minutes}min diep, ${s.light_minutes}min licht, ${s.rem_minutes}min REM`);
                   }
-                  addLog(`Succes: ${sleepSaved} nachten slaapdata opgeslagen.`);
+                  addLog(`Success: ${sleepSaved} nights of sleep data saved.`);
                 } else {
-                  addLog('Geen slaapdata ontvangen van de ring (ring heeft mogelijk geen slaapsessies opgeslagen).');
+                  addLog('No sleep data received from the ring (the ring may not have recorded sleep sessions).');
                 }
 
                 setStatus('completed');
-                addLog('Synchronisatie volledig voltooid!');
+                addLog('Synchronization fully completed!');
                 if (onPairingSuccess) {
                   onPairingSuccess('Colmi', 'R02', result.mac_address);
                 }
@@ -160,13 +160,13 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               } catch (err: any) {
                 console.error('Ring sync processing error:', err);
                 setStatus('error');
-                setErrorMsg(err.message || 'Fout bij verwerken van ringgegevens.');
-                addLog(`Fout: ${err.message || 'Verwerkingsfout'}`);
+                setErrorMsg(err.message || 'Error processing smart ring data.');
+                addLog(`Error: ${err.message || 'Processing error'}`);
               }
             } else {
               setStatus('error');
-              setErrorMsg(event.data.error || 'Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.');
-              addLog(`Fout: ${event.data.error || 'Verbindingsfout'}`);
+              setErrorMsg(event.data.error || 'No Colmi Smart Ring found nearby. Check if the ring is powered on.');
+              addLog(`Error: ${event.data.error || 'Connection error'}`);
             }
           }
         }
@@ -175,8 +175,8 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
       window.addEventListener('message', messageListener);
       window.parent.postMessage({ type: 'request-colmi-sync', simulate, targetMac }, '*');
       setStatus('connecting');
-      addLog('Zoeken naar Colmi Smart Ring in de buurt...');
-      addLog('Wachten op antwoord van Zenith Hub...');
+      addLog('Scanning for Colmi Smart Ring nearby...');
+      addLog('Waiting for response from Zenith Hub...');
     } else {
       try {
         // Physical BLE Mode via Tauri Rust Bridge (direct if not in iframe)
@@ -185,17 +185,17 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
         }
 
         const { invoke } = await import('@tauri-apps/api/core');
-        addLog('Communiceren met Tauri Native BLE Bridge...');
+        addLog('Communicating with Tauri Native BLE Bridge...');
         
         setStatus('connecting');
-        addLog('Zoeken naar Colmi Smart Ring in de buurt...');
+        addLog('Scanning for Colmi Smart Ring nearby...');
         
         const resultStr = await invoke<string>('sync_colmi_ring', { simulate, targetMac });
         const result = JSON.parse(resultStr);
 
         setStatus('syncing');
-        addLog(`Verbonden met apparaat: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
-        addLog('Synchronisatie van historische stappen & slaap gestart...');
+        addLog(`Connected to device: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
+        addLog('Syncing historical steps & sleep data started...');
 
         // Process steps (1 record per day OVERWRITE)
         if (result.steps && result.steps.length > 0) {
@@ -217,7 +217,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
             }]);
             if (stepsError) throw stepsError;
           }
-          addLog(`Succes: ${result.steps.length} stappendata bijgewerkt.`);
+          addLog(`Success: ${result.steps.length} step records updated.`);
         }
 
         // Process sleep (1 record per day OVERWRITE)
@@ -245,11 +245,11 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
             }]);
             if (sleepError) throw sleepError;
           }
-          addLog(`Succes: ${result.sleep.length} slaapdata bijgewerkt.`);
+          addLog(`Success: ${result.sleep.length} sleep records updated.`);
         }
 
         setStatus('completed');
-        addLog('Synchronisatie volledig voltooid!');
+        addLog('Synchronization fully completed!');
         if (onPairingSuccess) {
           onPairingSuccess('Colmi', 'R02', result.mac_address);
         }
@@ -257,8 +257,8 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
       } catch (err: any) {
         console.error('Ring sync error:', err);
         setStatus('error');
-        setErrorMsg(err.message || 'Geen Colmi Smart Ring gevonden in de buurt. Controleer of de ring aanstaat.');
-        addLog(`Fout: ${err.message || 'Geen verbinding mogelijk'}`);
+        setErrorMsg(err.message || 'No Colmi Smart Ring found nearby. Check if the ring is powered on.');
+        addLog(`Error: ${err.message || 'Connection failed'}`);
       }
     }
   };
@@ -316,7 +316,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               ) : status === 'error' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#ef4444' }}>
                   <X size={40} />
-                  <span style={{ fontSize: 10, fontWeight: 800, marginTop: 4, textTransform: 'uppercase' }}>Fout</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, marginTop: 4, textTransform: 'uppercase' }}>Error</span>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--text-muted)' }}>
@@ -356,9 +356,9 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
             <div style={{ background: 'rgba(92, 124, 250, 0.05)', border: '1px solid rgba(92, 124, 250, 0.15)', borderRadius: '10px', padding: '12px', textAlign: 'left', marginBottom: '20px' }}>
               <h4 style={{ fontSize: 12, fontWeight: 800, color: '#5c7cfa', marginBottom: 4 }}>Hoe werkt Ring synchronisatie?</h4>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                De Colmi R02 Smart Ring slaat tot 7 dagen aan activiteit, stappen en slaapgegevens lokaal op. Met de synchronisatieknop maakt de app verbinding via Bluetooth en haalt deze gegevens automatisch op.
+                The Colmi R02 Smart Ring stores up to 7 days of activity, steps, and sleep data locally. Using the sync button maakt de app verbinding via Bluetooth en haalt deze gegevens automatisch op.
                 <br />
-                <span style={{ color: '#fff', fontWeight: 600 }}>Instructie:</span> Zorg ervoor dat Bluetooth is ingeschakeld op uw computer en dat de ring dichtbij is.
+                <span style={{ color: '#fff', fontWeight: 600 }}>Instruction:</span> Ensure Bluetooth is enabled on your device.uter en dat de ring dichtbij is.
               </p>
             </div>
           )}
@@ -373,9 +373,9 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
             <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)', borderRadius: '10px', padding: '12px', textAlign: 'left', marginBottom: '20px' }}>
               <h4 style={{ fontSize: 12, fontWeight: 800, color: '#10b981', marginBottom: 4 }}>Synchronisatie Geslaagd!</h4>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                Uw Colmi R02 ring is succesvol gesynchroniseerd. Stappen en slaapgegevens zijn opgeslagen in uw profiel.
+                Your Colmi R02 ring has successfully synchronized. Steps and sleep data have been saved to your profile.
                 <br /><br />
-                <span style={{ color: '#cbd5e1' }}>💡 Tip:</span> Synchroniseer dagelijks voor de meest nauwkeurige gegevens. De ring slaat maximaal 7 dagen op.
+                <span style={{ color: '#cbd5e1' }}>💡 Tip:</span> Synchronize daily for the most accurate metrics.at maximaal 7 dagen op.
               </p>
             </div>
           )}
@@ -388,7 +388,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
             disabled={status === 'scanning' || status === 'connecting' || status === 'syncing'}
             style={{ margin: 0 }}
           >
-            Annuleren
+            Cancel
           </button>
           
           {status === 'completed' ? (

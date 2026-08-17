@@ -46,7 +46,7 @@ fun MainNavigation() {
                 context.deleteDatabase("kratos_database")
                 AppDatabase.getDatabase(context)
             } catch (e2: Exception) {
-                databaseInitializationError = "Database Fout: ${e2.localizedMessage ?: "Kan lokaal bestand niet laden"}"
+                databaseInitializationError = "Database Error: ${e2.localizedMessage ?: "Could not load local file"}"
                 null
             }
         }
@@ -145,15 +145,15 @@ fun MainNavigation() {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                androidx.compose.material3.Text("Oeps! Kratos kon niet opstarten.", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 18.sp)
+                androidx.compose.material3.Text("Oops! Kratos could not start.", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 18.sp)
                 Spacer(modifier = Modifier.height(8.dp))
-                androidx.compose.material3.Text(databaseInitializationError ?: "Onbekende database fout", color = Color(0xFFEF4444), fontSize = 13.sp)
+                androidx.compose.material3.Text(databaseInitializationError ?: "Unknown database error", color = Color(0xFFEF4444), fontSize = 13.sp)
                 Spacer(modifier = Modifier.height(24.dp))
                 androidx.compose.material3.Button(
                     onClick = {
                         try {
                             context.deleteDatabase("kratos_database")
-                            databaseInitializationError = "Database gereset. Herstart de app om door te gaan."
+                            databaseInitializationError = "Database reset. Restart the app to continue."
                         } catch (e: Exception) {
                             databaseInitializationError = "Reset mislukt: ${e.message}"
                         }
@@ -266,7 +266,7 @@ fun MainNavigation() {
             text = {
                 Column {
                     androidx.compose.material3.Text(
-                        "Er is een nieuwe versie van Kratos Pilot beschikbaar (v${updateInfo?.versionName}). Wilt u deze nu downloaden en installeren?",
+                        "A new version of Kratos Pilot is available (v${updateInfo?.versionName}). Would you like to download and install now?",
                         color = Color.White
                     )
                     if (downloadProgress != null) {

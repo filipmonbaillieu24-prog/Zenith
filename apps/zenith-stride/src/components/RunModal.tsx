@@ -176,7 +176,7 @@ export const RunModal: React.FC<RunModalProps> = ({
               </div>
             ) : (
               <div className="form-group flex-1">
-                <label>Hoogtemeters (m)</label>
+                <label>Elevation Gain (m)</label>
                 <input 
                   type="number" 
                   value={elevationGainM} 
@@ -189,7 +189,7 @@ export const RunModal: React.FC<RunModalProps> = ({
 
           <div className="form-row">
             <div className="form-group flex-1">
-              <label>Afstand (km)</label>
+              <label>Distance (km)</label>
               <input 
                 type="number" 
                 step="0.01" 
@@ -221,7 +221,7 @@ export const RunModal: React.FC<RunModalProps> = ({
 
           <div className="form-row">
             <div className="form-group flex-1">
-              <label>Gemiddelde Hartslag (bpm)</label>
+              <label>Average Heart Rate (bpm)</label>
               <input 
                 type="number" 
                 value={avgHeartRate} 
@@ -242,7 +242,7 @@ export const RunModal: React.FC<RunModalProps> = ({
 
           <div className="form-row">
             <div className="form-group flex-1">
-              <label>Hardloopschoenen / Gear</label>
+              <label>Running Shoes / Gear</label>
               <select value={shoeId} onChange={e => setShoeId(e.target.value)}>
                 <option value="">-- Geen specifieke schoen --</option>
                 {shoes.map(shoe => (
@@ -280,7 +280,7 @@ export const RunModal: React.FC<RunModalProps> = ({
           </div>
 
           <div className="stride-modal-footer">
-            <button type="button" className="btn-cancel" onClick={onClose}>Annuleren</button>
+            <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-save">
               <Check size={16} /> {initialRun ? 'Save Changes' : 'Save Session'}
             </button>

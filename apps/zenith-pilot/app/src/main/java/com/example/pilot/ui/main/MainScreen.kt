@@ -96,7 +96,7 @@ fun MainScreen(
                 actions = {
                     TextButton(onClick = onLogout) {
                         Text(
-                            text = "UITLOGGEN",
+                            text = "LOG OUT",
                             color = Color(0xFF94A3B8),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -243,7 +243,7 @@ fun MainScreen(
                                     modifier = Modifier.fillMaxWidth().height(6.dp)
                                 )
                                 Text(
-                                    text = "Bezig met downloaden: ${Math.round(progress * 100)}%",
+                                    text = "Downloading: ${Math.round(progress * 100)}%",
                                     fontSize = 9.sp,
                                     color = Color(0xFF94A3B8)
                                 )
@@ -252,7 +252,7 @@ fun MainScreen(
 
                         uiState.updateError?.let { error ->
                             Text(
-                                text = "Fout bij updaten: $error",
+                                text = "Update error: $error",
                                 fontSize = 10.sp,
                                 color = Color(0xFFEF4444),
                                 fontWeight = FontWeight.Bold
@@ -284,9 +284,9 @@ fun MainScreen(
                         )
                         Text(
                             text = when (uiState.syncStatus) {
-                                SyncStatus.Synced -> "Status: Verbonden"
+                                SyncStatus.Synced -> "Status: Connected"
                                 SyncStatus.Checking -> "Status: Controleren..."
-                                SyncStatus.Error -> "Status: Sync Fout"
+                                SyncStatus.Error -> "Status: Sync Error"
                             },
                             fontSize = 10.sp,
                             color = Color(0xFF94A3B8)
@@ -342,14 +342,14 @@ fun MainScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Geen training voor vandaag",
+                            text = "No workout planned for today",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFCBD5E1)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Plan een route en workout in Aero om te beginnen.",
+                            text = "Schedule a route and workout in Aero to get started.",
                             fontSize = 11.sp,
                             color = Color(0xFF94A3B8),
                             textAlign = TextAlign.Center
@@ -398,7 +398,7 @@ fun MainScreen(
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                     modifier = Modifier.height(28.dp)
                                 ) {
-                                    Text("Volgende (${workouts.size})", fontSize = 10.sp, color = Color.White)
+                                    Text("Next (${workouts.size})", fontSize = 10.sp, color = Color.White)
                                 }
                             }
                         }
@@ -444,7 +444,7 @@ fun MainScreen(
                                         }
                                         val targetStr = if (watts != null) "$watts W" else "Zone ${currentStep.zone}"
                                         Text(
-                                            text = "Doel: $targetStr",
+                                            text = "Target: $targetStr",
                                             fontSize = 11.sp,
                                             color = Color(0xFF4ADE80)
                                         )
@@ -518,7 +518,7 @@ fun MainScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Geen Bluetooth sensoren gevonden. Klik op ZOEKEN om te scannen.",
+                            text = "No Bluetooth sensors found. Tap SCAN to search.",
                             fontSize = 10.sp,
                             color = Color(0xFF94A3B8),
                             textAlign = TextAlign.Center
@@ -608,7 +608,7 @@ fun MainScreen(
                 ) {
                     if (displayedCues.isEmpty()) {
                         Text(
-                            text = "Nog geen logs. Start de coaching om feedback te ontvangen.",
+                            text = "No logs yet. Start coaching to receive real-time audio guidance.",
                             fontSize = 10.sp,
                             color = Color(0xFF64748B),
                             modifier = Modifier.padding(vertical = 8.dp)
@@ -673,10 +673,10 @@ fun SensorRow(sensor: BleSensor, viewModel: MainScreenViewModel) {
                 color = Color(0xFFF8FAFC)
             )
             val typeLabel = when (sensor.type) {
-                SensorType.HEART_RATE -> "Hartslag"
-                SensorType.POWER -> "Vermogen"
+                SensorType.HEART_RATE -> "Heart Rate"
+                SensorType.POWER -> "Power"
                 SensorType.CADENCE -> "Cadans"
-                SensorType.SPEED -> "Snelheid"
+                SensorType.SPEED -> "Speed"
             }
             val valSuffix = when (sensor.type) {
                 SensorType.HEART_RATE -> " bpm"
@@ -700,7 +700,7 @@ fun SensorRow(sensor: BleSensor, viewModel: MainScreenViewModel) {
 
         Text(
             text = when (sensor.status) {
-                ConnectionStatus.CONNECTED -> "VERBONDEN"
+                ConnectionStatus.CONNECTED -> "CONNECTED"
                 ConnectionStatus.CONNECTING -> "VERBINDEN"
                 ConnectionStatus.SCANNING -> "ZOEKEN"
                 ConnectionStatus.FOUND -> "KOPPELEN"

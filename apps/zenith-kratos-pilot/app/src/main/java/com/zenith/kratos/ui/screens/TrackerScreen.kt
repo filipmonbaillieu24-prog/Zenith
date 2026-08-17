@@ -381,7 +381,7 @@ fun TrackerScreen(
                                         modifier = Modifier.background(Color(0xFF1C1C23))
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text("Notitie bewerken", color = Color.White, fontSize = 12.sp) },
+                                            text = { Text("Edit Note", color = Color.White, fontSize = 12.sp) },
                                             onClick = {
                                                 exerciseDropdownExpanded[exIndex] = false
                                                 editingNoteExerciseIndex = exIndex
@@ -430,7 +430,7 @@ fun TrackerScreen(
                              ) {
                                  Text("SET", fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(34.dp), textAlign = TextAlign.Center)
                                  Spacer(modifier = Modifier.width(6.dp))
-                                 Text("VORIGE", fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(72.dp), textAlign = TextAlign.Center)
+                                 Text("PREVIOUS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(72.dp), textAlign = TextAlign.Center)
                                  Spacer(modifier = Modifier.width(6.dp))
                                  Text(exState.weightUnit.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(58.dp), textAlign = TextAlign.Center)
                                  Spacer(modifier = Modifier.width(6.dp))
@@ -514,7 +514,7 @@ fun TrackerScreen(
 
                                     Spacer(modifier = Modifier.width(6.dp))
 
-                                    // 2. Column VORIGE (Previous Workout)
+                                    // 2. Column PREVIOUS (Previous Workout)
                                     Box(
                                         modifier = Modifier.width(72.dp),
                                         contentAlignment = Alignment.Center
@@ -822,7 +822,7 @@ fun TrackerScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "+ Set toevoegen",
+                                    text = "+ Add Set",
                                     color = ZenithPrimary,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
@@ -848,7 +848,7 @@ fun TrackerScreen(
                                 )
 
                                 Text(
-                                    text = "- Set verwijderen",
+                                    text = "- Remove Set",
                                     color = ZenithError,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
@@ -876,7 +876,7 @@ fun TrackerScreen(
                 onClick = {
                     val hasCompletedSet = mutableExercises.any { ex -> ex.sets.any { s -> s.isCompleted } }
                     if (!hasCompletedSet) {
-                        Toast.makeText(context, "Minstens één set afvinken om te voltooien.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Check off at least one set to finish.", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
 
@@ -1071,7 +1071,7 @@ fun TrackerScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = if (activeFocusField == "weight") "☞ REPS INVOEREN" else "☞ GEWICHT INVOEREN",
+                                        text = if (activeFocusField == "weight") "☞ ENTER REPS" else "☞ WEIGHT INVOEREN",
                                         color = ZenithPrimary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
@@ -1224,8 +1224,8 @@ fun TrackerScreen(
         if (showCancelDialog) {
             AlertDialog(
                 onDismissRequest = { showCancelDialog = false },
-                title = { Text("Training Annuleren", color = Color.White) },
-                text = { Text("Weet u zeker dat u de training wilt annuleren? Alle niet-opgeslagen sets gaan verloren.", color = Color.White) },
+                title = { Text("Cancel Workout", color = Color.White) },
+                text = { Text("Are you sure you want to cancel this workout? Unsaved sets will be lost.", color = Color.White) },
                 confirmButton = {
                     Button(
                         onClick = {
@@ -1234,7 +1234,7 @@ fun TrackerScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = ZenithError)
                     ) {
-                        Text("Ja, Annuleren", color = Color.White)
+                        Text("Yes, Cancel", color = Color.White)
                     }
                 },
                 dismissButton = {
@@ -1250,12 +1250,12 @@ fun TrackerScreen(
         if (editingNoteExerciseIndex != null) {
             AlertDialog(
                 onDismissRequest = { editingNoteExerciseIndex = null },
-                title = { Text("Notitie bewerken", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+                title = { Text("Edit Note", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
                 text = {
                     OutlinedTextField(
                         value = editingNoteText,
                         onValueChange = { editingNoteText = it },
-                        placeholder = { Text("Voer een notitie in...", color = Color.Gray, fontSize = 12.sp) },
+                        placeholder = { Text("Enter a note...", color = Color.Gray, fontSize = 12.sp) },
                         textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = ZenithPrimary,

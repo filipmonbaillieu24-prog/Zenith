@@ -195,7 +195,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
           iconAnchor: [6, 6]
         })}>
           <LeafletTooltip direction="top" offset={[0, -6]} opacity={0.9}>
-            <span>⚪ Start van rit</span>
+            <span>⚪ Start van ride</span>
           </LeafletTooltip>
         </Marker>
 
@@ -207,7 +207,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
           iconAnchor: [6, 6]
         })}>
           <LeafletTooltip direction="top" offset={[0, -6]} opacity={0.9}>
-            <span>🔴 Finish van rit</span>
+            <span>🔴 Finish van ride</span>
           </LeafletTooltip>
         </Marker>
 
@@ -234,7 +234,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
             iconAnchor: [11, 11]
           })}>
             <LeafletTooltip direction="top" offset={[0, -11]} opacity={0.9}>
-              <span>❤️ Max Hartslag: <strong>{maxHRPt.hr} bpm</strong></span>
+              <span>❤️ Max Heart Rate: <strong>{maxHRPt.hr} bpm</strong></span>
             </LeafletTooltip>
           </Marker>
         )}

@@ -77,7 +77,7 @@ export function useTrainingState(
   const [customBlocks, setCustomBlocks] = useState<CustomBlock[]>([
     { id: '1', name: 'Warm-up',    durationMin: 10, powerPct: 55, zone: 1 },
     { id: '2', name: 'Interval 1', durationMin: 15, powerPct: 88, zone: 3 },
-    { id: '3', name: 'Herstel',    durationMin:  5, powerPct: 50, zone: 1 },
+    { id: '3', name: 'Recovery',    durationMin:  5, powerPct: 50, zone: 1 },
     { id: '4', name: 'Interval 2', durationMin: 15, powerPct: 88, zone: 3 },
     { id: '5', name: 'Cool-down',  durationMin: 10, powerPct: 45, zone: 1 },
   ]);
@@ -101,7 +101,7 @@ export function useTrainingState(
   const customWorkout = useMemo(() => customToWorkout(customBlocks, customTitle), [customBlocks, customTitle]);
   const customTotalMin = customBlocks.reduce((s, b) => s + b.durationMin, 0);
 
-  // ── Periodisering state ──
+  // ── Periodization state ──
   const [eventDate, setEventDate] = useState(() => {
     const saved = localStorage.getItem('zenith_event_date');
     if (saved) return saved;
@@ -149,15 +149,15 @@ export function useTrainingState(
           emoji: '⚡',
           label: 'FTP Verhogen',
           description: 'Gerichte opbouw van je FTP en drempelvermogen.',
-          weekFocus: ['Duur', 'Sweet Spot', 'Rust', 'Drempel', 'Duur', 'Sweet Spot', 'Rust']
+          weekFocus: ['Duur', 'Sweet Spot', 'Rust', 'Threshold', 'Duur', 'Sweet Spot', 'Rust']
         };
       } else if (activeFocus === 'recovery') {
         return {
           color: '#94a3b8',
           emoji: '💤',
-          label: 'Actief Herstel',
-          description: 'Herstellen en onderhouden van je basis zonder stress.',
-          weekFocus: ['Rust', 'Herstel', 'Rust', 'Herstel', 'Rust', 'Herstel', 'Rust']
+          label: 'Actief Recovery',
+          description: 'Recoverylen en onderhouden van je basis zonder stress.',
+          weekFocus: ['Rust', 'Recovery', 'Rust', 'Recovery', 'Rust', 'Recovery', 'Rust']
         };
       } else if (activeFocus === 'vo2max') {
         return {
@@ -172,16 +172,16 @@ export function useTrainingState(
         return {
           color: '#00b894',
           emoji: '🌱',
-          label: 'Conditieopbouw',
+          label: 'Fitnessopbouw',
           description: 'Gerichte opbouw van aerobe conditie en uithoudingsvermogen.',
-          weekFocus: ['Duur (Z2)', 'Duur (Z2)', 'Rust', 'Duur (Z2)', 'Herstel', 'Duur (Z2)', 'Rust']
+          weekFocus: ['Duur (Z2)', 'Duur (Z2)', 'Rust', 'Duur (Z2)', 'Recovery', 'Duur (Z2)', 'Rust']
         };
       }
     }
     return phaseConfig[phaseInfo.phase];
   }, [goalType, activeFocus, phaseInfo.phase]);
 
-  // ── Ritten per dag map ──
+  // ── Rides per dag map ──
   const ridesByDay = useMemo(() => {
     const map = new Map<string, { tss: number; distance: number; name: string }>();
     for (const r of rides) {
@@ -248,16 +248,16 @@ export function useTrainingState(
   } => {
     const days = trainingProfile.daysSinceLast;
     if (days === null || days === 0) {
-      return { type: 'recovery', emoji: '💙', title: 'Herstel of rust', reason: 'Je hebt vandaag al gereden. Morgen kun je weer gaan.' };
+      return { type: 'recovery', emoji: '💙', title: 'Recovery of rust', reason: 'Je hebt today al gereden. Tomorrow kun je weer gaan.' };
     }
     if (days === 1) {
-      return { type: 'endurance', emoji: '🟢', title: 'Rustige duurrit', reason: '1 dag na je laatste rit. Lekker rustig Z2 rijden.' };
+      return { type: 'endurance', emoji: '🟢', title: 'Rustige duurride', reason: '1 dag na je laatste ride. Lekker rustig Z2 rijden.' };
     }
     if (days <= 3) {
-      return { type: 'sweetspot', emoji: '🟡', title: 'Sweet Spot', reason: `${days} dagen rust. Je bent hersteld — maak er een kwaliteitsrit van.` };
+      return { type: 'sweetspot', emoji: '🟡', title: 'Sweet Spot', reason: `${days} dagen rust. Je bent hersteld — maak er een kwaliteitsride van.` };
     }
     if (days <= 7) {
-      return { type: 'threshold', emoji: '🔴', title: 'Drempeltraining', reason: `${days} dagen niet gereden. Lekker stevig trainen, je bent fris.` };
+      return { type: 'threshold', emoji: '🔴', title: 'Thresholdtraining', reason: `${days} dagen niet gereden. Lekker stevig trainen, je bent fris.` };
     }
     return { type: 'endurance', emoji: '🟢', title: 'Rustig opstarten', reason: `${days} dagen niet gereden. Begin rustig — bouw het op.` };
   }, [trainingProfile]);
@@ -336,7 +336,7 @@ export function useTrainingState(
     return null;
   }, [workoutLog, rides]);
 
-  // ── Lokale AI Analyse van Ritnotities ──
+  // ── Lokale AI Analysis van Ritnotities ──
   const localAiAdvice = useMemo(() => {
     const nowMs = Date.now();
     const fortyEightHoursAgo = nowMs - 48 * 3600 * 1000;
@@ -344,10 +344,10 @@ export function useTrainingState(
     for (const r of recentRidesWithNotes) {
       const analysis = analyzeNotesLocally(r.notes!);
       if (analysis.illness >= 0.5) {
-        return { type: 'rest' as const, reason: `Ziekte of acute pijn gedetecteerd in je ritnotities. Neem vandaag volledige rust.`, score: analysis.illness };
+        return { type: 'rest' as const, reason: `Ziekte of acute pijn gedetecteerd in je ridenotities. Neem today volledige rust.`, score: analysis.illness };
       }
       if (analysis.fatigue >= 0.65) {
-        return { type: 'recovery' as const, reason: `Verhoogde spiervermoeidheid gedetecteerd in je ritnotities. Je training is aangepast naar een herstelrit.`, score: analysis.fatigue };
+        return { type: 'recovery' as const, reason: `Verhoogde spiervermoeidheid gedetecteerd in je ridenotities. Je training is aangepast naar een herstelride.`, score: analysis.fatigue };
       }
     }
     return null;

@@ -57,7 +57,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
         {/* Dynamic Feature Callout */}
         <div style={{ textAlign: 'center', margin: '16px 0 24px' }}>
           <h2 style={{ fontSize: 22, fontWeight: 900, color: '#ffffff', margin: '0 0 8px', letterSpacing: '0.5px' }}>
-            {featureName ? `Ontgrendel ${featureName}` : 'Upgrade naar Zenith Pro'}
+            {featureName ? `Unlock ${featureName}` : 'Upgrade to Zenith Pro'}
           </h2>
           <p style={{ fontSize: 13, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
             {featureDescription || 'Krijg toegang tot geavanceerde trainingsleer, AI-routegeneratie en diepgaande prestatie-analyses.'}
@@ -70,15 +70,15 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Compass size={18} color="#cbd5e1" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>AI Route Generator & GPX Export</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Genereer GPX-routes op maat en bekijk hoogte- & windprofielen. Download direct voor Garmin & Wahoo.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Generate custom GPX routes and view elevation & wind profileslen. Download direct voor Garmin & Wahoo.</div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Activity size={18} color="#cbd5e1" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>PMC Conditiegrafiek (CTL / ATL / TSB)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Volledige Fitness, Vermoeidheid en Forme geschiedenis (30d, 90d, 1 jaar) en toekomst-tapering voor doelwedstrijden.</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>PMC Fitnessgrafiek (CTL / ATL / TSB)</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Complete Fitness, Fatigue, and Form history (30d, 90d, 1 jaar) en toekomst-tapering voor doelwedstrijden.</div>
             </div>
           </div>
 
@@ -86,7 +86,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Zap size={18} color="#cbd5e1" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Power Duration Curve & W' Balance</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Vergelijk je maximale vermogen over seizoenen heen en analyseer de uitputtingssnelheid van je anaerobe batterij.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Compare your max power outputs across seasons and analyzeyseer de uitputtingssnelheid van je anaerobe batterij.</div>
             </div>
           </div>
 

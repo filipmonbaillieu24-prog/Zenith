@@ -77,7 +77,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       onClose();
     } catch (err) {
       console.error('Error saving profile:', err);
-      alert('Fout bij opslaan profieldoelen.');
+      alert('Error saving profile goals.');
     } finally {
       setSaving(false);
     }
@@ -128,7 +128,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Stappendoel per dag</label>
+                <label className="form-label">Daily Step Goal</label>
                 <input
                   type="number"
                   className="form-input"
@@ -140,10 +140,10 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
 
             <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
               <button type="button" className="btn-secondary" onClick={onClose} style={{ flex: 1 }}>
-                Annuleren
+                Cancel
               </button>
               <button type="submit" className="btn-primary" disabled={saving} style={{ flex: 1 }}>
-                {saving ? 'Opslaan...' : 'Opslaan'}
+                {saving ? 'Save...' : 'Save'}
               </button>
             </div>
           </form>

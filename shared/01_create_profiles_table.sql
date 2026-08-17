@@ -71,7 +71,7 @@ BEGIN
   INSERT INTO public.profiles (id, name, updated_at)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'name', 'Atleet'),
+    COALESCE(NEW.raw_user_meta_data->>'name', 'Athlete'),
     now()
   )
   ON CONFLICT (id) DO NOTHING;

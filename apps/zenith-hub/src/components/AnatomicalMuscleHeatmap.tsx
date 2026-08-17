@@ -19,13 +19,13 @@ const defaultMuscleDataMap: MuscleDataMap = {
   chest: {
     name: 'Borstspieren (Pectoralis Major)',
     fatiguePercent: 85,
-    lastTrained: 'Gisteren (Bench Press)',
+    lastTrained: 'Yesterday (Bench Press)',
     primaryExercises: ['Barbell Bench Press', 'Incline Dumbbell Press', 'Chest Flyes']
   },
   deltoids: {
     name: 'Schouders (Deltoideus)',
     fatiguePercent: 65,
-    lastTrained: 'Gisteren (Overhead Press)',
+    lastTrained: 'Yesterday (Overhead Press)',
     primaryExercises: ['Overhead Press', 'Lateral Raises', 'Arnold Press']
   },
   biceps: {
@@ -37,7 +37,7 @@ const defaultMuscleDataMap: MuscleDataMap = {
   triceps: {
     name: 'Triceps (Triceps Brachii)',
     fatiguePercent: 60,
-    lastTrained: 'Gisteren (Tricep Pushdowns)',
+    lastTrained: 'Yesterday (Tricep Pushdowns)',
     primaryExercises: ['Dips', 'Tricep Rope Pushdowns', 'Skullcrushers']
   },
   abs: {
@@ -55,7 +55,7 @@ const defaultMuscleDataMap: MuscleDataMap = {
   quadriceps: {
     name: 'Dijspieren (Quadriceps Femoris)',
     fatiguePercent: 80,
-    lastTrained: 'Vandaag (Squats & Cycling)',
+    lastTrained: 'Today (Squats & Cycling)',
     primaryExercises: ['Barbell Back Squats', 'Leg Press', 'Cardio Cycling']
   },
   upperBack: {
@@ -73,19 +73,19 @@ const defaultMuscleDataMap: MuscleDataMap = {
   gluteal: {
     name: 'Zitvlakspieren (Gluteus Maximus)',
     fatiguePercent: 75,
-    lastTrained: 'Vandaag (Squats)',
+    lastTrained: 'Today (Squats)',
     primaryExercises: ['Hip Thrusts', 'Squats', 'Lunges']
   },
   hamstring: {
     name: 'Achterdijbeen (Hamstrings)',
     fatiguePercent: 70,
-    lastTrained: 'Vandaag (Romanian Deadlift)',
+    lastTrained: 'Today (Romanian Deadlift)',
     primaryExercises: ['Romanian Deadlift', 'Lying Leg Curls']
   },
   calves: {
     name: 'Kuitspieren (Gastrocnemius & Soleus)',
     fatiguePercent: 45,
-    lastTrained: 'Vandaag (Cycling)',
+    lastTrained: 'Today (Cycling)',
     primaryExercises: ['Standing Calf Raises', 'Cycling']
   },
   forearm: {
@@ -203,7 +203,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
             Anatomische Muscle Heatmap
           </h3>
           <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
-            Visuele weergave van spiervermoeidheid en herstelstatus per spiergroep.
+            Visual breakdown of muscle fatigue and recovery status per muscle group.
           </p>
         </div>
 
@@ -257,7 +257,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
                 cursor: 'pointer'
               }}
             >
-              Voor & Achter
+              Front & Back
             </button>
             <button
               onClick={() => setActiveView('front')}
@@ -336,7 +336,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
           {selectedMuscle ? (
             <div>
               <div style={{ fontSize: '10px', fontWeight: 800, color: getMuscleFill(hoveredSlug || ''), textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>
-                Spiergroep Details
+                Muscle Group Details
               </div>
               <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', fontWeight: 900 }}>{selectedMuscle.name}</h4>
 
@@ -366,14 +366,14 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
             </div>
           ) : (
             <div style={{ textAlign: 'center', margin: 'auto 0', color: 'rgba(255,255,255,0.5)', fontSize: '13px', lineHeight: '1.6' }}>
-              <p>Beweeg je cursor over de spieren van de menselijke silhouetkaart om de vermoeidheidsstatus en oefeningen te bekijken.</p>
+              <p>Hover over muscles on the silhouette map to view fatigue status and recent exercises.</p>
             </div>
           )}
 
           {/* Color Legend */}
           <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ fontSize: '10px', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '8px' }}>
-              Herstel Legenda
+              Recovery Legend
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

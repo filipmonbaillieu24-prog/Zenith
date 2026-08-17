@@ -49,7 +49,7 @@ object UpdateManager {
             val request = Request.Builder().url(downloadUrl).build()
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    withContext(Dispatchers.Main) { onError("Download mislukt met code: ${response.code}") }
+                    withContext(Dispatchers.Main) { onError("Download failed with status code: ${response.code}") }
                     return@withContext
                 }
                 
@@ -86,7 +86,7 @@ object UpdateManager {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            withContext(Dispatchers.Main) { onError(e.message ?: "Onbekende fout tijdens downloaden.") }
+            withContext(Dispatchers.Main) { onError(e.message ?: "Unknown error during download.") }
         }
     }
 

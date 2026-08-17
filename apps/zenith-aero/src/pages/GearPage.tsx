@@ -44,7 +44,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
         components: [
           {
             id: 'demo-chain',
-            name: 'Ketting (Waxed)',
+            name: 'Chain (Waxed)',
             distance: 1450,
             maxDistance: 3000,
             installedAt: Date.now() - 45 * 24 * 3600 * 1000,
@@ -89,17 +89,17 @@ export const GearPage: React.FC<GearPageProps> = () => {
       components: [
         {
           id: Math.random().toString(36).substring(2, 9),
-          name: 'Ketting',
+          name: 'Chain',
           distance: 0,
           maxDistance: 3000,
-          installedAt: 0  // 0 = telt alle ritten mee vanaf het begin
+          installedAt: 0  // 0 = telt alle rideten mee vanaf het begin
         },
         {
           id: Math.random().toString(36).substring(2, 9),
-          name: 'Banden',
+          name: 'Tires',
           distance: 0,
           maxDistance: 5000,
-          installedAt: 0  // 0 = telt alle ritten mee vanaf het begin
+          installedAt: 0  // 0 = telt alle rideten mee vanaf het begin
         }
       ]
     };
@@ -115,7 +115,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
 
   // Fiets verwijderen
   const handleDeleteGear = async (id: string) => {
-    if (confirm('Weet je zeker dat je deze fiets wilt verwijderen?')) {
+    if (confirm('Are you sure you want to deze fiets wilt delete?')) {
       await deleteGear(id);
       loadData();
     }
@@ -132,7 +132,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
       name: compName,
       distance: 0,
       maxDistance: parseInt(compMaxDist) || 3000,
-      installedAt: 0  // 0 = telt alle ritten mee vanaf fiets-aanmaak
+      installedAt: 0  // 0 = telt alle rideten mee vanaf fiets-aanmaak
     };
 
     const updatedGear = {
@@ -147,13 +147,13 @@ export const GearPage: React.FC<GearPageProps> = () => {
     loadData();
   };
 
-  // Component resetten — timestamp op 0 zetten zodat alle ritten meetellen
+  // Component resetten — timestamp op 0 zetten zodat alle rideten meetellen
   const handleSyncComponentToAllRides = async (gearId: string, compId: string) => {
     const gear = gears.find(g => g.id === gearId);
     if (!gear) return;
     const updatedComponents = gear.components.map(c => {
       if (c.id === compId) {
-        return { ...c, installedAt: 0 }; // 0 = tel alle ritten van deze fiets mee
+        return { ...c, installedAt: 0 }; // 0 = tel alle rideten van deze fiets mee
       }
       return c;
     });
@@ -169,7 +169,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
     const comp = gear.components.find(c => c.id === compId);
     if (!comp) return;
 
-    if (confirm(`Weet je zeker dat je de kilometerstand van ${comp.name} wilt resetten? (Dit archiveert de huidige stand in de geschiedenis)`)) {
+    if (confirm(`Are you sure you want to de kilometerstand van ${comp.name} wilt resetten? (Dit archiveert de huidige stand in de geschiedenis)`)) {
       const updatedComponents = gear.components.map(c => {
         if (c.id === compId) {
           const history = c.history ?? [];
@@ -189,7 +189,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
     }
   };
 
-  // Sync alle componenten van een fiets naar alle ritten (installedAt = 0)
+  // Sync alle componenten van een fiets naar alle rideten (installedAt = 0)
   const handleSyncAllComponents = async (gearId: string) => {
     const gear = gears.find(g => g.id === gearId);
     if (!gear) return;
@@ -221,14 +221,14 @@ export const GearPage: React.FC<GearPageProps> = () => {
         {/* Formulier fiets toevoegen */}
         {showAddGear && (
           <form onSubmit={handleAddGear} className="gp-bike-form animate-slide-up">
-            <h3>Nieuwe Fiets Toevoegen</h3>
+            <h3>Nieuwe Fiets Add</h3>
             <div className="gp-form-grid">
               <div className="gp-form-group">
                 <label>Naam *</label>
                 <input type="text" placeholder="bijv. Specialized Tarmac" value={gearName} onChange={e => setGearName(e.target.value)} required />
               </div>
               <div className="gp-form-group">
-                <label>Type Rit</label>
+                <label>Ride Type</label>
                 <select value={gearType} onChange={e => setGearType(e.target.value as any)}>
                   <option value="road">Racefiets / Weg</option>
                   <option value="gravel">Gravelbike</option>
@@ -250,8 +250,8 @@ export const GearPage: React.FC<GearPageProps> = () => {
               </div>
             </div>
             <div className="gp-form-actions">
-              <button type="button" className="gp-cancel-btn" onClick={() => setShowAddGear(false)}>Annuleren</button>
-              <button type="submit" className="gp-submit-btn">Fiets Opslaan</button>
+              <button type="button" className="gp-cancel-btn" onClick={() => setShowAddGear(false)}>Cancel</button>
+              <button type="submit" className="gp-submit-btn">Fiets Save</button>
             </div>
           </form>
         )}
@@ -279,7 +279,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                       className="gp-comp-reset-btn"
                       style={{ background: 'rgba(203, 213, 225,0.07)', borderColor: 'rgba(203, 213, 225,0.25)', color: '#cbd5e1', fontSize: 10 }}
                       onClick={() => handleSyncAllComponents(g.id)}
-                      title="Synchroniseer alle onderdelen met alle ritten van deze fiets"
+                      title="Synchroniseer alle onderdelen met alle rideten van deze fiets"
                     >
                       🔄 Sync alle km
                     </button>
@@ -309,7 +309,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                     <span style={{ flexShrink: 0 }}>⚠️</span>
                     <span style={{ color: '#fdcb6e', lineHeight: 1.4 }}>
                       <strong>Slijtage km wijkt af van fiets-totaal.</strong> Dit komt doordat de installatiedatum van een onderdeel
-                      later is dan de eerste rit. Klik op <em>Sync alle km</em> om alle ritten mee te tellen.
+                      later is dan de eerste ride. Klik op <em>Sync alle km</em> om alle rideten mee te tellen.
                     </span>
                   </div>
                 )}
@@ -317,8 +317,8 @@ export const GearPage: React.FC<GearPageProps> = () => {
                 {/* Inline formulier onderdeel toevoegen */}
                 {activeGearForAddComp === g.id && (
                   <div className="gp-add-comp-form animate-slide-up">
-                    <input type="text" placeholder="Onderdeel (bijv. Cassette, Ketting)" value={compName} onChange={e => setCompName(e.target.value)} required />
-                    <input type="number" placeholder="Drempel (km)" value={compMaxDist} onChange={e => setCompMaxDist(e.target.value)} required />
+                    <input type="text" placeholder="Onderdeel (bijv. Cassette, Chain)" value={compName} onChange={e => setCompName(e.target.value)} required />
+                    <input type="number" placeholder="Threshold (km)" value={compMaxDist} onChange={e => setCompMaxDist(e.target.value)} required />
                     <button type="button" onClick={() => handleAddComponent(g.id)}><Check size={14} /></button>
                   </div>
                 )}
@@ -339,7 +339,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                                   className="gp-comp-reset-btn"
                                   style={{ background: 'rgba(203, 213, 225,0.06)', borderColor: 'rgba(203, 213, 225,0.2)', color: '#cbd5e1' }}
                                   onClick={() => handleSyncComponentToAllRides(g.id, c.id)}
-                                  title="Synchroniseer met alle ritten (reset installatiedatum naar begin)"
+                                  title="Synchroniseer met alle rideten (reset installatiedatum naar begin)"
                                 >
                                   🔄 Sync alle km
                                 </button>

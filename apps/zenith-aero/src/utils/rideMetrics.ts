@@ -345,7 +345,7 @@ export function calcVAM(points: RidePoint[]): number | undefined {
   return Math.round(totalGain / durationHours);
 }
 
-// ─── Geavanceerde progressie-algoritmes (Fase 2) ───────────────────────────────
+// ─── Geavanceerde progressie-algoridemes (Fase 2) ───────────────────────────────
 
 export function determinePhenotype(bestEfforts: BestEfforts, weight?: number): string {
   const w = weight ?? 75; // fallback gewicht
@@ -371,7 +371,7 @@ export function determinePhenotype(bestEfforts: BestEfforts, weight?: number): s
 
   if (maxScore === sprinterScore) return 'Sprinter';
   if (maxScore === puncheurScore) return 'Puncheur';
-  if (maxScore === timeTrialScore) return 'Tijdritspecialist';
+  if (maxScore === timeTrialScore) return 'Tijdridespecialist';
   return 'Climber';
 }
 
@@ -415,7 +415,7 @@ export function calcPowerUnderFatigue(
     const count = right - left + 1;
     const avg = sum / count;
 
-    // Dynamische vermoeidheidsdrempel: 1000 kJ voor lange ritten, 50% van totaal kJ voor kortere ritten
+    // Dynamische vermoeidheidsthreshold: 1000 kJ voor lange rideten, 50% van totaal kJ voor kortere rideten
     const fatigueThreshold = kjAccum > 1200 ? 1000 : (kjAccum * 0.5);
     const startKJ = kjAtPoint[left];
     if (startKJ < fatigueThreshold) {
@@ -438,7 +438,7 @@ export function calcPowerUnderFatigue(
  * Profile fields (gender, age, weight) improve TRIMP, VO₂max, and W/kg accuracy.
  */
 /**
- * Schat het geleverde vermogen (wattage) voor elk punt in de rit op basis van
+ * Schat het geleverde vermogen (wattage) voor elk punt in de ride op basis van
  * een natuurkundig model (rolweerstand, luchtweerstand en zwaartekracht) en hartslag.
  */
 export function estimatePowerForPoints(
@@ -494,7 +494,7 @@ export function estimatePowerForPoints(
     let P_physics = F_total * v;
     P_physics = Math.max(0, Math.min(1000, P_physics));
 
-    // Hartslagmodel (indien HR data beschikbaar is)
+    // Heart Ratemodel (indien HR data beschikbaar is)
     let P_hr: number | undefined;
     if (curr.hr != null && curr.hr > hrRest) {
       const hrPct = Math.max(0, Math.min(1.0, (curr.hr - hrRest) / (maxHR - hrRest)));
@@ -522,7 +522,7 @@ function isGenericFilename(name: string): boolean {
   const lower = name.toLowerCase();
   
   // Check if it matches the auto-generated pattern so we can re-generate/update it on recalculate
-  const isAutoPattern = /^(Ochtend|Middag|Avond|Nacht) (Wegrit|Gravelrit|MTB-rit|rit) \(\d+(\.\d+)? km\)$/.test(name);
+  const isAutoPattern = /^(Ochtend|Middag|Avond|Nacht) (Wegride|Gravelride|MTB-ride|ride) \(\d+(\.\d+)? km\)$/.test(name);
   if (isAutoPattern) return true;
 
   return (
@@ -545,10 +545,10 @@ function getAutoRideName(dateMs: number, discipline: string, distanceKm: number)
   else if (hour >= 12 && hour < 17) tod = "Middag";
   else if (hour >= 17 && hour < 22) tod = "Avond";
 
-  let disc = "rit";
-  if (discipline === 'road') disc = "Wegrit";
-  else if (discipline === 'gravel') disc = "Gravelrit";
-  else if (discipline === 'mtb') disc = "MTB-rit";
+  let disc = "ride";
+  if (discipline === 'road') disc = "Wegride";
+  else if (discipline === 'gravel') disc = "Gravelride";
+  else if (discipline === 'mtb') disc = "MTB-ride";
 
   return `${tod} ${disc} (${distanceKm.toFixed(1)} km)`;
 }

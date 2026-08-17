@@ -77,7 +77,7 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
 
       {/* Delta summary */}
       <div className="cmp-deltas">
-        <div className="cmp-delta-card"><span className="cmp-delta-label">Afstand</span>{fmtDelta(deltaKm,'km')}</div>
+        <div className="cmp-delta-card"><span className="cmp-delta-label">Distance</span>{fmtDelta(deltaKm,'km')}</div>
         <div className="cmp-delta-card"><span className="cmp-delta-label">Tijd</span>{fmtDurDelta(deltaDur)}</div>
         <div className="cmp-delta-card"><span className="cmp-delta-label">Hoogte</span>{fmtDelta(deltaElev,'m')}</div>
         {deltaNP !== null && <div className="cmp-delta-card"><span className="cmp-delta-label">NP</span>{fmtDelta(deltaNP,'W')}</div>}
@@ -87,16 +87,16 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
       {/* Power overlay */}
       {hasPower && (
         <div className="cmp-chart-wrap">
-          <div className="cmp-chart-label">⚡ Vermogen (W)</div>
+          <div className="cmp-chart-label">⚡ Power (W)</div>
           <ResponsiveContainer width="100%" height={130}>
-            <ComposedChart data={mergeNorm(powerA, powerB, 'ritA', 'ritB')} margin={{top:4,right:8,left:0,bottom:0}}>
+            <ComposedChart data={mergeNorm(powerA, powerB, 'rideA', 'rideB')} margin={{top:4,right:8,left:0,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="pct" tick={{fontSize:9,fill:'#94a3b8'}} unit="%" />
               <YAxis tick={{fontSize:9,fill:'#94a3b8'}} unit="W" width={40} />
               <Tooltip contentStyle={{background:'#0d0d1a',border:'none',borderRadius:8,fontSize:11}}
-                formatter={(v: any, name: any) => [`${v}W`, name === 'ritA' ? dateA : dateB]} />
-              <Line type="monotone" dataKey="ritA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
-              <Line type="monotone" dataKey="ritB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
+                formatter={(v: any, name: any) => [`${v}W`, name === 'rideA' ? dateA : dateB]} />
+              <Line type="monotone" dataKey="rideA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
+              <Line type="monotone" dataKey="rideB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -105,16 +105,16 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
       {/* HR overlay */}
       {hasHR && (
         <div className="cmp-chart-wrap">
-          <div className="cmp-chart-label">❤️ Hartslag (bpm)</div>
+          <div className="cmp-chart-label">❤️ Heart Rate (bpm)</div>
           <ResponsiveContainer width="100%" height={110}>
-            <ComposedChart data={mergeNorm(hrA, hrB, 'ritA', 'ritB')} margin={{top:4,right:8,left:0,bottom:0}}>
+            <ComposedChart data={mergeNorm(hrA, hrB, 'rideA', 'rideB')} margin={{top:4,right:8,left:0,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="pct" tick={{fontSize:9,fill:'#94a3b8'}} unit="%" />
               <YAxis tick={{fontSize:9,fill:'#94a3b8'}} unit="bpm" width={42} />
               <Tooltip contentStyle={{background:'#0d0d1a',border:'none',borderRadius:8,fontSize:11}}
-                formatter={(v: any, name: any) => [`${v} bpm`, name === 'ritA' ? dateA : dateB]} />
-              <Line type="monotone" dataKey="ritA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
-              <Line type="monotone" dataKey="ritB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
+                formatter={(v: any, name: any) => [`${v} bpm`, name === 'rideA' ? dateA : dateB]} />
+              <Line type="monotone" dataKey="rideA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
+              <Line type="monotone" dataKey="rideB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -123,16 +123,16 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
       {/* Speed overlay */}
       {hasSpeed && !hasPower && (
         <div className="cmp-chart-wrap">
-          <div className="cmp-chart-label">🚴 Snelheid (km/h)</div>
+          <div className="cmp-chart-label">🚴 Speed (km/h)</div>
           <ResponsiveContainer width="100%" height={110}>
-            <ComposedChart data={mergeNorm(spdA, spdB, 'ritA', 'ritB')} margin={{top:4,right:8,left:0,bottom:0}}>
+            <ComposedChart data={mergeNorm(spdA, spdB, 'rideA', 'rideB')} margin={{top:4,right:8,left:0,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="pct" tick={{fontSize:9,fill:'#94a3b8'}} unit="%" />
               <YAxis tick={{fontSize:9,fill:'#94a3b8'}} unit="km/h" width={42} />
               <Tooltip contentStyle={{background:'#0d0d1a',border:'none',borderRadius:8,fontSize:11}}
-                formatter={(v: any, name: any) => [`${v} km/h`, name === 'ritA' ? dateA : dateB]} />
-              <Line type="monotone" dataKey="ritA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
-              <Line type="monotone" dataKey="ritB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
+                formatter={(v: any, name: any) => [`${v} km/h`, name === 'rideA' ? dateA : dateB]} />
+              <Line type="monotone" dataKey="rideA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
+              <Line type="monotone" dataKey="rideB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
         </div>

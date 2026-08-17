@@ -30,7 +30,7 @@ export const CriticalPowerCurve: React.FC<CriticalPowerCurveProps> = ({ rides, w
     const hasPowerData = Object.values(bests).some(val => val > 0);
     if (!hasPowerData) return null;
 
-    // 2. Critical Power & W' berekening met lineaire regressie (OLS) over m1 (60s), m5 (300s) en m20 (1200s)
+    // 2. Crideical Power & W' berekening met lineaire regressie (OLS) over m1 (60s), m5 (300s) en m20 (1200s)
     const points = [
       { t: 60, p: bests.m1 },
       { t: 300, p: bests.m5 },
@@ -108,11 +108,11 @@ export const CriticalPowerCurve: React.FC<CriticalPowerCurveProps> = ({ rides, w
         <div className="wd-section-card__head">
           <span className="wd-section-card__title">
             <Zap size={13} style={{ display: 'inline', marginRight: 5, color: '#ff7675' }} />
-            Critical Power & W' Curve
+            Crideical Power & W' Curve
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Geen ritten met vermogensmetergegevens gevonden in de geselecteerde range.
+          Geen rideten met vermogensmetergegevens gevonden in de geselecteerde range.
         </p>
       </div>
     );
@@ -125,7 +125,7 @@ export const CriticalPowerCurve: React.FC<CriticalPowerCurveProps> = ({ rides, w
       <div className="wd-section-card__head">
         <span className="wd-section-card__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Zap size={13} style={{ color: '#ff7675' }} />
-          Critical Power & W' Curve (Modelering)
+          Crideical Power & W' Curve (Modelering)
         </span>
       </div>
 

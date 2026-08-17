@@ -83,10 +83,10 @@ export async function fetchWindData(
     direction = data.current.wind_direction_10m;
   } else {
     const slotMap: Record<string, { dayOffset: number; hour: number; label: string }> = {
-      today_afternoon:              { dayOffset: 0, hour: 14, label: 'Vandaag Middag (14:00)' },
-      today_evening:                { dayOffset: 0, hour: 19, label: 'Vandaag Avond (19:00)' },
-      tomorrow_morning:             { dayOffset: 1, hour:  9, label: 'Morgen Ochtend (09:00)' },
-      tomorrow_afternoon:           { dayOffset: 1, hour: 14, label: 'Morgen Middag (14:00)' },
+      today_afternoon:              { dayOffset: 0, hour: 14, label: 'Today Middag (14:00)' },
+      today_evening:                { dayOffset: 0, hour: 19, label: 'Today Avond (19:00)' },
+      tomorrow_morning:             { dayOffset: 1, hour:  9, label: 'Tomorrow Ochtend (09:00)' },
+      tomorrow_afternoon:           { dayOffset: 1, hour: 14, label: 'Tomorrow Middag (14:00)' },
       day_after_tomorrow_morning:   { dayOffset: 2, hour:  9, label: 'Overmorgen Ochtend (09:00)' },
       day_after_tomorrow_afternoon: { dayOffset: 2, hour: 14, label: 'Overmorgen Middag (14:00)' },
     };

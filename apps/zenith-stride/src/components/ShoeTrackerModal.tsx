@@ -49,7 +49,7 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
       <div className="stride-modal-container" onClick={e => e.stopPropagation()}>
         <div className="stride-modal-header">
           <div>
-            <h3>Hardloopschoenen & Slijtage Tracker</h3>
+            <h3>Running Shoes & Slijtage Tracker</h3>
             <p className="subtitle">Houd de gereden kilometers per paar schoenen bij</p>
           </div>
           <button className="stride-close-btn" onClick={onClose}>
@@ -100,7 +100,7 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
                 </div>
               </div>
               <button type="submit" className="btn-save-shoe">
-                <Check size={14} style={{ marginRight: 4 }} /> Opslaan
+                <Check size={14} style={{ marginRight: 4 }} /> Save
               </button>
             </form>
           )}

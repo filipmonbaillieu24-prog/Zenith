@@ -57,8 +57,8 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ points, onHoverP
   return (
     <div className="elevation-chart-card animate-slide-up">
       <div className="chart-header">
-        <h3>Hoogteprofiel</h3>
-        <span className="chart-info">Beweeg over de grafiek om de locatie op de kaart te zien</span>
+        <h3>Elevation Profile</h3>
+        <span className="chart-info">Hover over the chart to inspect map location</span>
       </div>
       <div className="chart-wrapper">
         <ResponsiveContainer width="100%" height={160}>
@@ -116,7 +116,7 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ points, onHoverP
                   const data = payload[0].payload;
                   return (
                     <div className="custom-chart-tooltip">
-                      <p className="tooltip-distance">Afstand: <span>{data.distanceKm} km</span></p>
+                      <p className="tooltip-distance">Distance: <span>{data.distanceKm} km</span></p>
                       <p className="tooltip-elevation">Hoogte: <span>{data.elevation} m</span></p>
                     </div>
                   );

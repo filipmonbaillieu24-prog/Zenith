@@ -47,7 +47,7 @@ export async function parseFIT(buffer: ArrayBuffer): Promise<RidePoint[]> {
         }
 
         if (!records || !records.length) {
-          reject(new Error('Geen data-records gevonden in FIT bestand.'));
+          reject(new Error('No data-records gevonden in FIT bestand.'));
           return;
         }
 

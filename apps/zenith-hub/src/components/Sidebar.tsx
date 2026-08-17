@@ -27,6 +27,7 @@ interface SidebarProps {
   onLogout: () => void;
   userName: string;
   isPro?: boolean;
+  isFounder?: boolean;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
   onOpenBugReport: () => void;
@@ -38,28 +39,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   userName,
   isPro = false,
+  isFounder = false,
   isCollapsed,
   setIsCollapsed,
   onOpenBugReport,
 }) => {
-  // Toggle collapse state
-  const toggleCollapse = () => {
-    const nextState = !isCollapsed;
-    setIsCollapsed(nextState);
-    localStorage.setItem('zenith_sidebar_collapsed', JSON.stringify(nextState));
-  };
-
   // Keyboard shortcut to toggle sidebar (Ctrl+B)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key.toLowerCase() === 'b') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
-        toggleCollapse();
+        setIsCollapsed(!isCollapsed);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCollapsed]);
+  }, [isCollapsed, setIsCollapsed]);
+
+  const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
   const navGroups = [
     {
@@ -86,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { key: 'prijzen' as TabKey, label: 'Pricing & Pro', icon: Zap },
         { key: 'roadmap' as TabKey, label: 'Feature Requests', icon: MessageSquare },
         { key: 'mobiel' as TabKey, label: 'Download Center', icon: Smartphone },
-        { key: 'logs' as TabKey, label: 'Console Logs', icon: Terminal },
+        ...(isFounder ? [{ key: 'logs' as TabKey, label: 'Console Logs', icon: Terminal }] : []),
       ],
     },
   ];

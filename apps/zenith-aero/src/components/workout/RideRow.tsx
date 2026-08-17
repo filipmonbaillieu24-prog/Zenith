@@ -25,7 +25,7 @@ function ridePrimaryMetric(r: RideSummaryWithBests): { label: string; value: str
   if (r.hasPower && r.normPower) return { label: 'NP',    value: `${r.normPower}W`, cls: 'chip--power' };
   if (r.hasHR   && r.hrTSS)     return { label: 'hrTSS', value: `${r.hrTSS}`,      cls: 'chip--hr' };
   if (r.hasHR   && r.avgHR)     return { label: 'HR',    value: `${r.avgHR} bpm`,  cls: 'chip--hr' };
-  return { label: 'Afstand', value: `${r.distance} km`, cls: 'chip--gps' };
+  return { label: 'Distance', value: `${r.distance} km`, cls: 'chip--gps' };
 }
 
 function cleanRideName(name: string, dateMs: number): string {
@@ -34,10 +34,10 @@ function cleanRideName(name: string, dateMs: number): string {
   if (/^GEOID_/i.test(clean) || /^\d{4}-\d{2}-\d{2}/.test(clean) || clean.length > 30) {
     const hour = new Date(dateMs).getHours();
     let timeOfDay = "Rit";
-    if (hour >= 5 && hour < 12) timeOfDay = "Ochtendrit";
-    else if (hour >= 12 && hour < 17) timeOfDay = "Middagrit";
-    else if (hour >= 17 && hour < 22) timeOfDay = "Avondrit";
-    else timeOfDay = "Nachtrit";
+    if (hour >= 5 && hour < 12) timeOfDay = "Ochtendride";
+    else if (hour >= 12 && hour < 17) timeOfDay = "Middagride";
+    else if (hour >= 17 && hour < 22) timeOfDay = "Avondride";
+    else timeOfDay = "Nachtride";
 
     const localDate = new Date(dateMs).toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
     return `${timeOfDay} (${localDate})`;
@@ -88,7 +88,7 @@ export const RideRow: React.FC<RideRowProps> = ({ ride, selected, comparing, onO
         <button
           className={`wd-ride-row__icon-btn ${comparing ? 'wd-ride-row__icon-btn--active' : ''}`}
           onClick={e => { e.stopPropagation(); onCompare(); }}
-          title={comparing ? 'Vergelijking uitschakelen' : 'Vergelijk deze rit'}
+          title={comparing ? 'Vergelijking uitschakelen' : 'Vergelijk deze ride'}
         >
           ⇄
         </button>

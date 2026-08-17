@@ -81,7 +81,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
     
     Array.from(files).forEach(file => {
       if (!file.type.startsWith('image/')) {
-        alert(`Bestand "${file.name}" is geen afbeelding.`);
+        alert(`Bestand "${file.name}" is not an image file.`);
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
@@ -150,7 +150,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
     } catch (err: any) {
       setSubmitResult({
         success: false,
-        error: err?.message || 'Er is een onbekende fout opgetreden bij het verzenden van het rapport.',
+        error: err?.message || 'An unknown error occurred while submitting the report.',
       });
     } finally {
       setIsSubmitting(false);
@@ -178,7 +178,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
             <div className="bug-success-state animate-fade-in">
               <CheckCircle className="bug-success-icon" size={64} />
               <h3>Bug Succesvol Gerapporteerd!</h3>
-              <p>Het probleem is geregistreerd en er is een GitHub issue aangemaakt.</p>
+              <p>The issue has been registered and a GitHub issue was created.</p>
               {submitResult.githubUrl && (
                 <a 
                   href={submitResult.githubUrl} 
@@ -186,7 +186,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                   rel="noopener noreferrer" 
                   className="bug-github-link-btn"
                 >
-                  Bekijk op GitHub
+                  View on GitHub
                 </a>
               )}
               <button className="bug-action-btn primary" onClick={onClose} style={{ marginTop: '20px' }}>
@@ -268,7 +268,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                 <input 
                   type="text" 
                   id="title" 
-                  placeholder="Bijv. Bluetooth verbinding valt weg bij Vigor app"
+                  placeholder="E.g. Bluetooth connection drops in Vigor app"
                   value={title} 
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={100}
@@ -280,7 +280,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                 <label htmlFor="description">Gedetailleerde beschrijving *</label>
                 <textarea 
                   id="description" 
-                  placeholder="Beschrijf hier het probleem, de stappen om het te reproduceren en wat er zou moeten gebeuren..."
+                  placeholder="Describe the issue, steps to reproduce, and expected outcome..."
                   value={description} 
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
@@ -334,7 +334,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                   style={{ padding: '16px 20px', minHeight: 'auto' }}
                 >
                   <Upload size={20} className="bug-upload-icon" style={{ marginBottom: 6 }} />
-                  <p style={{ margin: '0 0 4px', fontSize: 11 }}>Sleep afbeeldingen hierheen of klik om te bladeren</p>
+                  <p style={{ margin: '0 0 4px', fontSize: 11 }}>Drag & drop images here or click to browse</p>
                   <span style={{ fontSize: 9, opacity: 0.6 }}>Maximale grootte: 5MB per bestand (PNG, JPG, GIF)</span>
                   <input 
                     type="file" 
@@ -352,15 +352,15 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
               {/* Modal Actions */}
               <div className="bug-modal-actions">
                 <button type="button" className="bug-action-btn secondary" onClick={onClose} disabled={isSubmitting}>
-                  Annuleren
+                  Cancel
                 </button>
                 <button type="submit" className="bug-action-btn primary" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
                       <Loader className="bug-spinner" size={16} />
-                      Bezig met verzenden...
+                      Submitting report...
                     </>
-                  ) : 'Verzenden naar GitHub'}
+                  ) : 'Submit to GitHub'}
                 </button>
               </div>
             </form>

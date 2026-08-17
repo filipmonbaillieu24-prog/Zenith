@@ -14,7 +14,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
   onClose,
   onSuccess,
   planName = 'Zenith Pro Maandabonnement',
-  priceDisplay = '€9,99 / maand'
+  priceDisplay = '€9.99 / month'
 }) => {
   const [processing, setProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -47,7 +47,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
       }, 2000);
     } catch (err: any) {
       console.error('PayPal processing error:', err);
-      setErrorMsg('Fout bij verwerken PayPal betaling. Probeer opnieuw.');
+      setErrorMsg('Error processing PayPal payment. Please try again.');
     } finally {
       setProcessing(false);
     }
@@ -128,7 +128,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
               Betaling geslaagd!
             </h3>
             <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-              Bedankt voor je betaling via PayPal. Je <strong>Zenith Pro</strong> abonnement is nu geactiveerd.
+              Thank you for your payment via PayPal. Your <strong>Zenith Pro</strong> subscription is now active.
             </p>
           </div>
         ) : (
@@ -169,7 +169,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
                 <li>Onbeperkte Aero Routegenerator (GPX / TCX export)</li>
                 <li>Vigor Voortgangsfoto's, Omtrekken & Vet% breakdown</li>
                 <li>Geavanceerde Slaapfases & Kratos Muscle Sync</li>
-                <li>Maandelijks opzegbaar via je profiel of PayPal</li>
+                <li>Cancel monthly anytime via your profile or PayPal</li>
               </ul>
             </div>
 
@@ -212,7 +212,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
                 }}
               >
                 <CreditCard size={18} />
-                {processing ? 'Verbinden met PayPal...' : 'Betalen via PayPal (€9,99/m)'}
+                {processing ? 'Connecting to PayPal...' : 'Pay with PayPal (€9.99/mo)'}
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 10, color: '#64748b' }}>

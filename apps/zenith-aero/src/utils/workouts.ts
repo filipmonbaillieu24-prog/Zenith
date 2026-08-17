@@ -21,7 +21,7 @@ export function getRecommendedWorkoutType(
   activeFocus?: 'ftp' | 'endurance' | 'recovery' | 'vo2max',
   phase?: 'base' | 'build' | 'peak' | 'race' | 'recovery'
 ): 'recovery' | 'endurance' | 'sweetspot' | 'threshold' | 'vo2max' {
-  // 1. Kritiek oververmoeidheid-override: Altijd herstelrit/rust als TSB onder -20 zakt!
+  // 1. Krideiek oververmoeidheid-override: Altijd herstelride/rust als TSB onder -20 zakt!
   if (tsb < -20) {
     return 'recovery';
   }
@@ -83,8 +83,8 @@ export function generateWorkout(
 
   switch (type) {
     case 'recovery':
-      title = 'Actief Herstel (Active Recovery)';
-      description = 'Een korte, zeer lichte rit gericht op het stimuleren van de doorbloeding om spierherstel te bevorderen.';
+      title = 'Actief Recovery (Active Recovery)';
+      description = 'Een korte, zeer lichte ride gericht op het stimuleren van de doorbloeding om spierherstel te bevorderen.';
       
       // Warm-up: 15% of duration
       const recWu = Math.round(durationSeconds * 0.15);
@@ -93,13 +93,13 @@ export function generateWorkout(
       const recMain = durationSeconds - recWu - recCd;
       
       blocks.push({ name: 'Warm-up', duration: recWu, powerPct: 0.45, zone: 1, color: zoneColors[0] });
-      blocks.push({ name: 'Herstelzone', duration: recMain, powerPct: 0.52, zone: 1, color: zoneColors[0] });
+      blocks.push({ name: 'Recoveryzone', duration: recMain, powerPct: 0.52, zone: 1, color: zoneColors[0] });
       blocks.push({ name: 'Cool-down', duration: recCd, powerPct: 0.40, zone: 1, color: zoneColors[0] });
       break;
 
     case 'endurance':
       title = 'Aerobe Basisduur (Endurance)';
-      description = 'De klassieke duurrit. Essentieel voor de opbouw van je aerobe basissysteem en vetverbranding.';
+      description = 'De klassieke duurride. Essentieel voor de opbouw van je aerobe basissysteem en vetverbranding.';
       
       // Warm-up: 10 min
       const endWu = Math.min(600, Math.round(durationSeconds * 0.15));
@@ -137,14 +137,14 @@ export function generateWorkout(
       for (let i = 0; i < numIntervals; i++) {
         blocks.push({ name: `Sweet Spot Int ${i+1}`, duration: singleIntervalDuration, powerPct: 0.88, zone: 3, color: zoneColors[2] });
         if (i < numIntervals - 1) {
-          blocks.push({ name: 'Actief Herstel', duration: ssRecoveryTime, powerPct: 0.50, zone: 1, color: zoneColors[0] });
+          blocks.push({ name: 'Actief Recovery', duration: ssRecoveryTime, powerPct: 0.50, zone: 1, color: zoneColors[0] });
         }
       }
       blocks.push({ name: 'Cool-down', duration: ssCd, powerPct: 0.45, zone: 1, color: zoneColors[0] });
       break;
 
     case 'threshold':
-      title = 'Drempel Intervallen (FTP)';
+      title = 'Threshold Intervallen (FTP)';
       description = 'Zware intervallen exact op je anaerobe drempel (FTP) om je vermogen om verzuring te verdragen te vergroten.';
       
       // Warm-up: Ramping up to 70%
@@ -164,7 +164,7 @@ export function generateWorkout(
       for (let i = 0; i < thIntervals; i++) {
         blocks.push({ name: `Threshold Int ${i+1}`, duration: thSingleIntervalDuration, powerPct: 1.00, zone: 4, color: zoneColors[3] });
         if (i < thIntervals - 1) {
-          blocks.push({ name: 'Herstel', duration: thRecoveryTime, powerPct: 0.52, zone: 1, color: zoneColors[0] });
+          blocks.push({ name: 'Recovery', duration: thRecoveryTime, powerPct: 0.52, zone: 1, color: zoneColors[0] });
         }
       }
       blocks.push({ name: 'Cool-down', duration: thCd, powerPct: 0.46, zone: 1, color: zoneColors[0] });
@@ -201,7 +201,7 @@ export function generateWorkout(
       for (let i = 0; i < numSets; i++) {
         blocks.push({ name: `VO2 Interval ${i + 1}`, duration: intervalOn,  powerPct: 1.15, zone: 5, color: '#d63031' });
         if (i < numSets - 1) {
-          blocks.push({ name: 'Herstel',             duration: intervalOff, powerPct: 0.50, zone: 1, color: zoneColors[0] });
+          blocks.push({ name: 'Recovery',             duration: intervalOff, powerPct: 0.50, zone: 1, color: zoneColors[0] });
         }
       }
       blocks.push({ name: 'Cool-down', duration: voCd, powerPct: 0.46, zone: 1, color: zoneColors[0] });

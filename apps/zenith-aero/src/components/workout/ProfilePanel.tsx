@@ -83,20 +83,20 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
   const activeLTHR = profile.lthr ?? (estMaxHR ? Math.round(estMaxHR * 0.9) : 160);
 
   const zonesPower = [
-    { label: 'Z1 - Herstel', range: `< ${Math.round(activeFTP * 0.55)} W`, desc: 'Herstelritjes', color: '#74b9ff' },
+    { label: 'Z1 - Recovery', range: `< ${Math.round(activeFTP * 0.55)} W`, desc: 'Recoveryridejes', color: '#74b9ff' },
     { label: 'Z2 - Duurvermogen', range: `${Math.round(activeFTP * 0.55)} - ${Math.round(activeFTP * 0.75)} W`, desc: 'Vetverbranding', color: '#00b894' },
     { label: 'Z3 - Tempo', range: `${Math.round(activeFTP * 0.76)} - ${Math.round(activeFTP * 0.90)} W`, desc: 'Aerobe basis', color: '#fdcb6e' },
-    { label: 'Z4 - Drempel', range: `${Math.round(activeFTP * 0.91)} - ${Math.round(activeFTP * 1.05)} W`, desc: 'Lactaatdrempel', color: '#e17055' },
+    { label: 'Z4 - Threshold', range: `${Math.round(activeFTP * 0.91)} - ${Math.round(activeFTP * 1.05)} W`, desc: 'Lactaatdrempel', color: '#e17055' },
     { label: 'Z5 - VO2max', range: `${Math.round(activeFTP * 1.06)} - ${Math.round(activeFTP * 1.20)} W`, desc: 'Zuurstofopname', color: '#d63031' },
     { label: 'Z6 - Anaerobe cap.', range: `${Math.round(activeFTP * 1.21)} - ${Math.round(activeFTP * 1.50)} W`, desc: 'Korte inspanning', color: '#a29bfe' },
-    { label: 'Z7 - Neuromusculair', range: `> ${Math.round(activeFTP * 1.50)} W`, desc: 'Sprint & explosie', color: '#e84393' }
+    { label: 'Z7 - Neuromuscular', range: `> ${Math.round(activeFTP * 1.50)} W`, desc: 'Sprint & explosie', color: '#e84393' }
   ];
 
   const zonesHR = [
-    { label: 'Z1 - Herstel', range: `< ${Math.round(activeLTHR * 0.81)} bpm`, desc: 'Lichte inspanning', color: '#74b9ff' },
+    { label: 'Z1 - Recovery', range: `< ${Math.round(activeLTHR * 0.81)} bpm`, desc: 'Lichte inspanning', color: '#74b9ff' },
     { label: 'Z2 - Duurvermogen', range: `${Math.round(activeLTHR * 0.81)} - ${Math.round(activeLTHR * 0.89)} bpm`, desc: 'Basis conditie', color: '#00b894' },
     { label: 'Z3 - Tempo', range: `${Math.round(activeLTHR * 0.90)} - ${Math.round(activeLTHR * 0.93)} bpm`, desc: 'Stevig tempo', color: '#fdcb6e' },
-    { label: 'Z4 - Drempel', range: `${Math.round(activeLTHR * 0.94)} - ${Math.round(activeLTHR * 0.99)} bpm`, desc: 'Zware ademhaling', color: '#e17055' },
+    { label: 'Z4 - Threshold', range: `${Math.round(activeLTHR * 0.94)} - ${Math.round(activeLTHR * 0.99)} bpm`, desc: 'Zware ademhaling', color: '#e17055' },
     { label: 'Z5 - VO2max', range: `>= ${Math.round(activeLTHR * 1.00)} bpm`, desc: 'Maximale inspanning', color: '#d63031' }
   ];
 
@@ -143,7 +143,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginTop: 10 }}>
           <div>
             <h4 style={{ fontSize: 12, fontWeight: 700, color: '#a29bfe', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-              ⚡ Vermogenszones (Coggan)
+              ⚡ Powerszones (Coggan)
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {zonesPower.map(z => (
@@ -158,7 +158,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
           </div>
           <div>
             <h4 style={{ fontSize: 12, fontWeight: 700, color: '#ff7675', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-              ❤️ Hartslagzones (LTHR)
+              ❤️ Heart Ratezones (LTHR)
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {zonesHR.map(z => (
@@ -237,8 +237,8 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
                 onChange={e => handleGdriveRidesAuto(e.target.checked)}
                 style={{ accentColor:'#cbd5e1', width:14, height:14 }} />
               <span>
-                <strong style={{ color: gdriveRidesAuto && gdrivePath ? '#cbd5e1' : undefined }}>Ritten</strong>
-                {' '}— auto-export geïmporteerde ritten naar
+                <strong style={{ color: gdriveRidesAuto && gdrivePath ? '#cbd5e1' : undefined }}>Rides</strong>
+                {' '}— auto-export importede rideten naar
                 <code style={{ fontSize:10, marginLeft:4, color:'#cbd5e1' }}>{GDRIVE_RIDES_FOLDER}/</code>
               </span>
             </label>
@@ -255,7 +255,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
           <button className="wd-recalc-btn" onClick={onRecalculate} disabled={recalculating}>
             {recalculating
               ? <><RefreshCw size={13} className="spin" /> Berekenen…</>
-              : <><RotateCcw size={13} /> Herbereken alle ritten</>
+              : <><RotateCcw size={13} /> Herbereken alle rideten</>
             }
           </button>
         </div>

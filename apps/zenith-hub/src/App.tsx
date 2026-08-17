@@ -6,6 +6,7 @@ import { CalendarPage } from './pages/hub/CalendarPage';
 import { PilotPanel } from './pages/hub/PilotPanel';
 import { ProfilePage } from './pages/hub/ProfilePage';
 import { SystemConsolePage } from './pages/hub/SystemConsolePage';
+import { loggerService } from './utils/loggerService';
 import { IntegrationsPage } from './pages/hub/IntegrationsPage';
 import { Sidebar, TabKey } from './components/Sidebar';
 import { computePMC } from './utils/pmc';
@@ -160,14 +161,14 @@ function App() {
           await relaunch();
         } catch (err) {
           console.error("Failed to relaunch application:", err);
-          setUpdateError("Kan de applicatie niet automatisch herstarten. Sluit de app en start hem handmatig opnieuw op.");
+          setUpdateError("Could not automatically restart the application. Please close and relaunch manually.");
           setUpdateStatus('error');
         }
       }, 1000);
 
     } catch (err: any) {
       console.error("Update failed:", err);
-      setUpdateError(err.toString() || "Update mislukt. Probeer het later opnieuw.");
+      setUpdateError(err.toString() || "Update failed. Please try again later.");
       setUpdateStatus('error');
     }
   };
@@ -525,7 +526,7 @@ function App() {
         setRides(tssList);
       }
     } catch (err) {
-      console.error('Kon ritten niet laden voor PMC:', err);
+      console.error('Failed to load rides for PMC:', err);
     }
   }, [session]);
 
@@ -629,7 +630,7 @@ function App() {
 
   const handleBugReportSubmit = async (data: BugReportSubmitData) => {
     if (!session?.user) {
-      throw new Error("U moet ingelogd zijn om een bug te melden.");
+      throw new Error("You must be logged in to submit a bug report.");
     }
 
     const imageUrls: string[] = [];
@@ -675,11 +676,21 @@ function App() {
 
     if (!token) {
       throw new Error(
-        'Geen GitHub Access Token gevonden. Vul a.u.b. uw token in onder "Developer instellingen" onderaan het formulier.'
+        'No GitHub Access Token found. Please configure your token under "Developer Settings".'
       );
     }
 
-    // 4. Format the Markdown body of the GitHub issue
+    // 4. Extract recent console & system logs for debugging
+    const capturedLogs = loggerService.getLogs();
+    const logsFormatted = capturedLogs.slice(0, 100).map(l => 
+      `[${l.timestamp}] [${l.level.toUpperCase()}] [${l.category}] ${l.message}${l.details ? ' ' + JSON.stringify(l.details) : ''}`
+    ).join('\n');
+
+    let logsMarkdown = '';
+    if (logsFormatted.trim()) {
+      logsMarkdown = `### 📋 System & Console Logs (${capturedLogs.length} lines)\n<details>\n<summary>Click to view automaticallye console logs te bekijken</summary>\n\n\`\`\`log\n${logsFormatted}\n\`\`\`\n</details>\n`;
+    }
+
     const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';
     
     let imagesMarkdown = '';
@@ -694,15 +705,17 @@ ${data.description}
 - **Categorie:** ${data.category}
 - **Type probleem:** ${data.problemType}
 - **Urgentie:** ${data.severity.toUpperCase()}
-- **Gebruiker:** ${userName} <${session.user.email}> (ID: ${session.user.id})
+- **User:** ${userName} <${session.user.email}> (ID: ${session.user.id})
 
 ### Omgevingsfactoren
 - **Besturingssysteem:** ${envOs}
 - **Browser:** ${envBrowser}
 - **Schermresolutie:** ${envScreen}
-- **Applicatie Versie:** 0.1.0 (Tauri)
+- **Application Version:** 0.1.0 (Tauri)
 
 ${imagesMarkdown}
+
+${logsMarkdown}
 `;
 
     // 5. Send post request to GitHub Issues API
@@ -722,7 +735,7 @@ ${imagesMarkdown}
 
     if (!githubResponse.ok) {
       const errJson = await githubResponse.json().catch(() => ({}));
-      throw new Error(errJson.message || `GitHub API fout: ${githubResponse.status} ${githubResponse.statusText}`);
+      throw new Error(errJson.message || `GitHub API error: ${githubResponse.status} ${githubResponse.statusText}`);
     }
 
     const issueData = await githubResponse.json();
@@ -750,10 +763,10 @@ ${imagesMarkdown}
         });
 
       if (dbError) {
-        console.warn("Kon bugrapport niet opslaan in Supabase database:", dbError);
+        console.warn("Could not save bug report to Supabase database:", dbError);
       }
     } catch (dbErr) {
-      console.warn("Fout bij opslaan in database:", dbErr);
+      console.warn("Error saving to database:", dbErr);
     }
 
     return { success: true, githubUrl };
@@ -819,7 +832,7 @@ ${imagesMarkdown}
               cursor: 'pointer'
             }}
           >
-            ← Terug naar Website
+            ← Back to Website
           </button>
           <LoginPage />
         </div>
@@ -846,6 +859,7 @@ ${imagesMarkdown}
   }
 
   const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';
+  const isFounder = session?.user?.email?.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', background: '#09090b', overflow: 'hidden' }}>
@@ -861,6 +875,7 @@ ${imagesMarkdown}
           onLogout={handleLogout}
           userName={userName}
           isPro={isPro}
+          isFounder={isFounder}
           isCollapsed={isSidebarCollapsed}
           setIsCollapsed={setIsSidebarCollapsed}
           onOpenBugReport={() => {
@@ -868,7 +883,7 @@ ${imagesMarkdown}
             setIsBugReportOpen(true);
           }}
         />
-        <div style={{ flex: 1, height: 'calc(100vh - 32px)', marginTop: '32px', overflowY: 'auto', position: 'relative' }}>
+        <div style={{ flex: 1, height: 'calc(100vh - 32px)', marginTop: 0, overflowY: 'auto', position: 'relative' }}>
           {activeTab === 'hub' && (
             <ZenithHubPage
               fitnessProfile={fitnessProfile}
@@ -896,13 +911,11 @@ ${imagesMarkdown}
               initialProfile={{ ...fitnessProfile, isPro }}
               userId={session.user.id}
               userEmail={session.user.email}
-              onBack={() => setActiveTab('hub')}
               onSave={handleSaveProfile}
             />
           )}
           {activeTab === 'prijzen' && (
             <PricingPage
-              onBack={() => setActiveTab('hub')}
               isPro={isPro}
               onActivatePro={async () => {
                 await supabase.auth.updateUser({ data: { is_pro: true } });
@@ -912,14 +925,22 @@ ${imagesMarkdown}
           )}
           {activeTab === 'roadmap' && (
             <FeatureRequestsPage
-              onBack={() => setActiveTab('hub')}
               userId={session.user.id}
               userName={userName}
               userEmail={session.user.email}
             />
           )}
           {activeTab === 'logs' && (
-            <SystemConsolePage />
+            isFounder ? (
+              <SystemConsolePage />
+            ) : (
+              <ZenithHubPage
+                fitnessProfile={fitnessProfile}
+                fitnessMetrics={fitnessMetrics}
+                userId={session.user.id}
+                mlModelsLoaded={mlModelsLoaded}
+              />
+            )
           )}
           {activeTab === 'integrations' && (
             <IntegrationsPage />
@@ -1027,7 +1048,7 @@ ${imagesMarkdown}
               Update Beschikbaar!
             </h2>
             <p style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: 14, marginBottom: 24 }}>
-              Er is een nieuwe versie van Zenith gevonden: <strong style={{ color: '#60a5fa' }}>v{updateInfo.version}</strong>
+              A new version of Zenith is available: <strong style={{ color: '#60a5fa' }}>v{updateInfo.version}</strong>
             </p>
 
             {updateInfo.body && (
@@ -1103,7 +1124,7 @@ ${imagesMarkdown}
                   }} />
                 </div>
                 <span style={{ fontSize: 11, color: 'rgba(255, 255, 255, 0.4)' }}>
-                  {updateStatus === 'downloading' ? 'Sluit de app niet af.' : 'Herstarten om update te voltooien...'}
+                  {updateStatus === 'downloading' ? 'Do not close the app.' : 'Restarting to complete update...'}
                 </span>
               </div>
             )}

@@ -92,7 +92,7 @@ fun CrashScreen(stackTrace: String, onClear: () -> Unit, onResetDb: () -> Unit) 
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Er is een onverwachte fout opgetreden. Hieronder vind je de foutdetails:",
+                    text = "An unexpected error occurred. Error details below:",
                     color = Color(0xFF94A3B8),
                     fontSize = 13.sp
                 )

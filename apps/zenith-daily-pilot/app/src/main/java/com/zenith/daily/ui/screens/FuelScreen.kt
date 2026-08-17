@@ -73,7 +73,7 @@ fun FuelScreen(
                     color = ZenithTextPrimary
                 )
                 Text(
-                    text = "Voedings- & Maaltijdenlog",
+                    text = "Nutritions- & Maaltijdenlog",
                     fontSize = 11.sp,
                     color = ZenithSecondary
                 )
@@ -163,13 +163,13 @@ fun FuelScreen(
                                     .height(32.dp)
                                     .border(1.dp, ZenithBorder, RoundedCornerShape(8.dp))
                             ) {
-                                Text("＋ TOEVOEGEN", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = ZenithTextPrimary)
+                                Text("＋ ADD", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = ZenithTextPrimary)
                             }
                         }
 
                         if (categoryMeals.isEmpty()) {
                             Text(
-                                text = "Geen $category gelogd",
+                                text = "No $category logged",
                                 fontSize = 11.sp,
                                 color = ZenithSecondary,
                                 modifier = Modifier.padding(vertical = 4.dp)
@@ -219,7 +219,7 @@ fun FuelScreen(
             onDismissRequest = { showSearchModal = false },
             containerColor = ZenithCardBg,
             title = {
-                Text("Maaltijd toevoegen aan $selectedMealType", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = ZenithTextPrimary)
+                Text("Add meal to $selectedMealType", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = ZenithTextPrimary)
             },
             text = {
                 Column(
@@ -324,7 +324,7 @@ fun FuelScreen(
                                     showBarcodeModal = false
                                     barcodeInput = ""
                                 } else {
-                                    barcodeLookupError = "Product niet gevonden in OpenFoodFacts of lokale database."
+                                    barcodeLookupError = "Product not found in OpenFoodFacts or local database."
                                 }
                             }
                         }
@@ -433,7 +433,7 @@ fun FuelScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ZenithPrimary, contentColor = ZenithBackground)
                 ) {
-                    Text("OPSLAAN", fontWeight = FontWeight.Bold)
+                    Text("SAVE", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

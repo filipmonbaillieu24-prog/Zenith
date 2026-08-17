@@ -61,7 +61,7 @@ export const AISettingsPanel: React.FC = () => {
             padding: '8px 12px',
             fontSize: 12,
             borderRadius: 8,
-            fontFamily: 'inherit',
+            fontFamily: 'inheride',
             outline: 'none',
           }}
         >
@@ -91,7 +91,7 @@ export const AISettingsPanel: React.FC = () => {
                 padding: '8px 12px',
                 fontSize: 12,
                 borderRadius: 8,
-                fontFamily: 'inherit',
+                fontFamily: 'inheride',
                 outline: 'none',
               }}
             />
@@ -110,7 +110,7 @@ export const AISettingsPanel: React.FC = () => {
                 padding: '8px 12px',
                 fontSize: 12,
                 borderRadius: 8,
-                fontFamily: 'inherit',
+                fontFamily: 'inheride',
                 outline: 'none',
               }}
             />
@@ -138,7 +138,7 @@ export const AISettingsPanel: React.FC = () => {
                 padding: '8px 12px',
                 fontSize: 12,
                 borderRadius: 8,
-                fontFamily: 'inherit',
+                fontFamily: 'inheride',
                 outline: 'none',
               }}
             />
@@ -157,7 +157,7 @@ export const AISettingsPanel: React.FC = () => {
                 padding: '8px 12px',
                 fontSize: 12,
                 borderRadius: 8,
-                fontFamily: 'inherit',
+                fontFamily: 'inheride',
                 outline: 'none',
               }}
             />
@@ -180,7 +180,7 @@ export const AISettingsPanel: React.FC = () => {
               fontWeight: 800,
               borderRadius: 8,
               cursor: 'pointer',
-              fontFamily: 'inherit',
+              fontFamily: 'inheride',
               transition: 'all 0.15s',
             }}
           >

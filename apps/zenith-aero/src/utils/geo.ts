@@ -198,7 +198,7 @@ export function analyzeElevationStats(points: RoutePoint[]): {
 /**
  * Detects whether a route reuses road segments (backtracking / out-and-back sections).
  *
- * Algorithm: Sample the route at ~150 evenly-spaced points.
+ * Algoridehm: Sample the route at ~150 evenly-spaced points.
  * For any two sampled points that are ≥ 600 m apart along the route but
  * ≤ PROXIMITY_THRESHOLD meters apart geographically, a backtrack is flagged.
  *
@@ -246,7 +246,7 @@ export function findBacktrackLocations(points: RoutePoint[]): { lat: number; lng
 
 /**
  * Detects whether a route reuses road segments (returns boolean for quick checks).
- * Uses the same algorithm as findBacktrackLocations.
+ * Uses the same algoridehm as findBacktrackLocations.
  */
 export function detectBacktracking(points: RoutePoint[]): boolean {
   return findBacktrackLocations(points).length > 0;

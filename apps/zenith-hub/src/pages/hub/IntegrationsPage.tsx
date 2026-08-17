@@ -75,18 +75,27 @@ export const IntegrationsPage: React.FC = () => {
     }
     return [
       {
+        id: 'health_connect',
+        name: 'Google Health Connect & Zenith Pulse',
+        category: 'Official Active Companion Sync',
+        icon: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Google_Health_Connect_icon.svg',
+        accentColor: '#38BDF8',
+        connected: true,
+        lastSync: 'Today (Live background worker)',
+        autoSync: true,
+        description: 'Official active health & workout sync pathway for Zenith using the Zenith Pulse app. Automatically syncs steps, heart rate, HRV, sleep, calories, weight, and workouts.',
+        features: ['Steps & Heart Rate Sync', 'HRV & Sleep Stages Ingestion', 'Biometric Weight Logging', 'Background WorkManager Sync']
+      },
+      {
         id: 'strava',
         name: 'Strava',
         category: 'Multisport & GPS',
         icon: 'https://upload.wikimedia.org/wikipedia/commons/3/3b/Strava_Logo.svg',
         accentColor: '#FC4C02',
-        connected: true,
-        lastSync: 'Today at 14:15',
-        clientId: '109823',
-        clientSecret: '••••••••••••••••',
-        autoSync: true,
-        description: 'Automatic synchronization of running and cycling workouts, including GPS tracks, elevation, segments, and power data.',
-        features: ['GPS Tracks & Elevation', 'TSS & GAP Calculation', 'Segment Sync', 'Automatic Import to Aero & Stride']
+        connected: false,
+        autoSync: false,
+        description: 'Direct Strava OAuth integration (Under development). Please use Zenith Pulse or direct FIT file import for current workout sync.',
+        features: ['GPS Tracks & Elevation', 'TSS & GAP Calculation', 'Segment Sync', 'Under Development']
       },
       {
         id: 'onelapfit',
@@ -94,13 +103,10 @@ export const IntegrationsPage: React.FC = () => {
         category: 'Indoor Cycling & FIT Data',
         icon: 'https://www.onelap.com/favicon.ico',
         accentColor: '#00A3FF',
-        connected: true,
-        lastSync: 'Today at 15:40',
-        clientId: 'onelap_user_992',
-        clientSecret: '••••••••••••••••',
-        autoSync: true,
-        description: 'Sync your Onelap indoor rides and Magene bike computer data directly via Strava Auto-Bridge or FIT file import into Zenith Aero.',
-        features: ['Onelap FIT Files & Power', 'Magene Smart Trainer Sync', 'Strava Auto-Bridge Ingestion', 'TSS & Power Curves to Aero']
+        connected: false,
+        autoSync: false,
+        description: 'Direct Magene Onelapfit API integration (Under development). Use FIT file import or Zenith Pulse for workout sync.',
+        features: ['Onelap FIT Files & Power', 'Magene Smart Trainer Sync', 'Power Curves to Aero', 'Under Development']
       },
       {
         id: 'polar',
@@ -108,13 +114,10 @@ export const IntegrationsPage: React.FC = () => {
         category: 'Heart Rate & Recovery',
         icon: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Polar_Electro_logo.svg',
         accentColor: '#E2001A',
-        connected: true,
-        lastSync: 'Yesterday at 22:30',
-        clientId: 'polar_app_88412',
-        clientSecret: '••••••••••••••••',
-        autoSync: true,
-        description: 'Fetch workouts, Nightly Recharge™ recovery scores, sleep analysis, and 24/7 heart rate data from Polar Accesslink API.',
-        features: ['Polar Running Index', 'Nightly Recharge™ Data', '24/7 Heart Rate & Sleep', 'Direct GPX / TCX Import']
+        connected: false,
+        autoSync: false,
+        description: 'Direct Polar Accesslink API integration (Under development). Polar Flow data syncs automatically via Health Connect in Zenith Pulse.',
+        features: ['Polar Running Index', 'Nightly Recharge™ Data', '24/7 Heart Rate & Sleep', 'Under Development']
       },
       {
         id: 'garmin',
@@ -124,8 +127,8 @@ export const IntegrationsPage: React.FC = () => {
         accentColor: '#007CC3',
         connected: false,
         autoSync: false,
-        description: 'Connect your Garmin Edge or Forerunner smartwatch for direct sync via Garmin Health API.',
-        features: ['Body Battery Integration', 'Respiration Rate', 'VO2Max Analytics', 'Coming Soon']
+        description: 'Direct Garmin Health API integration (Under development). Connect Garmin via Health Connect in Zenith Pulse.',
+        features: ['Body Battery Integration', 'Respiration Rate', 'VO2Max Analytics', 'Under Development']
       },
       {
         id: 'wahoo',
@@ -135,8 +138,8 @@ export const IntegrationsPage: React.FC = () => {
         accentColor: '#00A8FF',
         connected: false,
         autoSync: false,
-        description: 'Sync your Wahoo ELEMNT bike computers and KICKR smart trainers directly with Zenith.',
-        features: ['KICKR Erg Mode', 'ELEMNT Auto-sync', 'Direct ERG Files', 'Coming Soon']
+        description: 'Direct Wahoo Cloud API integration (Under development). Use Zenith Pulse for active sensor data.',
+        features: ['KICKR Erg Mode', 'ELEMNT Auto-sync', 'Direct ERG Files', 'Under Development']
       }
     ];
   });
@@ -450,10 +453,25 @@ export const IntegrationsPage: React.FC = () => {
                       Disconnect
                     </button>
                   </>
-                ) : (
+                ) : service.id === 'health_connect' ? (
                   <button className="btn-connect" onClick={() => openConfigModal(service)}>
                     <Zap size={15} />
-                    <span>Connect via Webhook / API</span>
+                    <span>Configure Zenith Pulse</span>
+                  </button>
+                ) : (
+                  <button 
+                    className="btn-connect" 
+                    disabled 
+                    style={{ 
+                      opacity: 0.65, 
+                      cursor: 'not-allowed', 
+                      background: 'rgba(255, 255, 255, 0.04)', 
+                      border: '1px solid rgba(255, 255, 255, 0.1)', 
+                      color: '#94a3b8' 
+                    }}
+                  >
+                    <Clock size={14} />
+                    <span>Under Development (Use Zenith Pulse)</span>
                   </button>
                 )}
               </div>
@@ -502,14 +520,24 @@ export const IntegrationsPage: React.FC = () => {
               {selectedService.id === 'health_connect' ? (
                 <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>
                   <p style={{ marginTop: 0 }}>
-                    Use the open-source Android app <strong style={{ color: '#38bdf8' }}>mcnaveen/health-connect-webhook</strong> to push Google Fit, Samsung Health, Fitbit, and Garmin data via Health Connect directly to Zenith.
+                    Use the official <strong style={{ color: '#38bdf8' }}>Zenith Pulse</strong> Android application (or <em>health-connect-webhook</em>) to push Google Fit, Samsung Health, Fitbit, and Garmin data via Health Connect directly to Zenith.
                   </p>
+
+                  <div style={{ background: 'rgba(168, 85, 247, 0.12)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+                    <div style={{ fontWeight: 700, color: '#a855f7', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Smartphone size={16} />
+                      Official Companion App: Zenith Pulse
+                    </div>
+                    <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0' }}>
+                      Zenith Pulse comes pre-configured with direct Zenith Supabase Webhook integration &amp; local Wi-Fi sync (`:8787`).
+                    </p>
+                  </div>
 
                   {/* Plug and Play Webhook URL */}
                   <div style={{ background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.3)', borderRadius: 12, padding: 14, marginBottom: 16 }}>
                     <div style={{ fontWeight: 700, color: '#38bdf8', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Globe size={16} />
-                      Plug-and-Play Webhook RPC URL (Copy into Android App):
+                      Plug-and-Play Webhook RPC URL (Auto-embedded in Zenith Pulse):
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <input 
@@ -531,9 +559,9 @@ export const IntegrationsPage: React.FC = () => {
                   <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 12, fontSize: 12 }}>
                     <strong style={{ color: 'white', display: 'block', marginBottom: 4 }}>Setup Instructions:</strong>
                     <ol style={{ margin: 0, paddingLeft: 18, color: '#94a3b8' }}>
-                      <li>Open <a href="https://github.com/mcnaveen/health-connect-webhook" target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>health-connect-webhook</a> on your Android smartphone.</li>
-                      <li>Paste the copied RPC URL into the <strong>URL / Endpoint</strong> field in the app.</li>
-                      <li>Tap **Test** or **Sync**. The Android app will receive <code>{"{\"success\": true}"}</code> and <code>HTTP 200 OK</code> immediately!</li>
+                      <li>Install <strong>Zenith Pulse</strong> (<code>apk/zenith-pulse.apk</code>) on your Android smartphone.</li>
+                      <li>Grant Health Connect permissions for steps, heart rate, HRV, and workouts.</li>
+                      <li>Zenith Pulse automatically syncs in the background every 15 mins!</li>
                     </ol>
                   </div>
                 </div>

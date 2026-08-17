@@ -31,7 +31,7 @@ class CoachingEngine(private val context: Context) : TextToSpeech.OnInitListener
     init {
         tts = TextToSpeech(context, this)
         // Add startup cue
-        postCue("SYSTEM", "Zenith Pilot Live gestart. Wachten op training...")
+        postCue("SYSTEM", "Zenith Pilot Live started. Waiting for workout...")
     }
 
     override fun onInit(status: Int) {

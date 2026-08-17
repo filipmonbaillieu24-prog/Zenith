@@ -36,9 +36,9 @@ export class ErrorBoundary extends Component<Props, State> {
           color: '#f87171',
           fontFamily: 'sans-serif'
         }}>
-          <h3 style={{ marginTop: 0 }}>{this.props.fallbackTitle || 'Er is een fout opgetreden'}</h3>
+          <h3 style={{ marginTop: 0 }}>{this.props.fallbackTitle || 'An error occurred'}</h3>
           <p style={{ fontSize: '0.9rem', color: '#fca5a5' }}>
-            {this.state.error?.message || 'De weergave van deze module kon niet geladen worden.'}
+            {this.state.error?.message || 'The view for this module could not be loaded.'}
           </p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}

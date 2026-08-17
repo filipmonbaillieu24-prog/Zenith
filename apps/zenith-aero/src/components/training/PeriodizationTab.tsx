@@ -45,7 +45,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
     <div className="wd-main-single" style={{ display: 'block', overflowY: 'auto' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>🎯 Periodisering</h2>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>🎯 Periodization</h2>
           <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Stel een doeldatum in en de app berekent automatisch je trainingsfase.</p>
         </div>
 
@@ -60,7 +60,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
           <div>
             <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Event datum</label>
             <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)}
-              style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: '#f8fafc', padding: '8px 10px', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+              style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: '#f8fafc', padding: '8px 10px', fontSize: 13, fontFamily: 'inheride', boxSizing: 'border-box' }} />
           </div>
         </div>
 
@@ -107,7 +107,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
           })}
         </div>
 
-        {/* Aanbevolen weekfocus — met gereden ritten */}
+        {/* Aanbevolen weekfocus — met gereden rideten */}
         <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ padding: '8px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.7px', display: 'flex', gap: 6, alignItems: 'center' }}>
             <Star size={11} color={phase.color} /> Aanbevolen Weekfocus — {phase.label}
@@ -153,10 +153,10 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
           </div>
         </div>
 
-        {/* Fase-specifiek advies op basis van echte ritten */}
+        {/* Fase-specifiek advies op basis van echte rideten */}
         <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <AlertCircle size={11} /> Gepersonaliseerd advies — {rides.length} ritten geanalyseerd
+            <AlertCircle size={11} /> Gepersonaliseerd advies — {rides.length} rideten geanalyseerd
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -187,15 +187,15 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}
 
             {phaseInfo.phase === 'race' && [
-              { icon: '🏁', text: 'Geen nieuwe trainingsprikkel meer. Herstel is je enige taak.' },
-              { icon: '🚴', text: 'Maximaal 1 korte activeringsrit (30–45 min) met 2–3 scherpe acceleraties.' },
+              { icon: '🏁', text: 'Geen nieuwe trainingsprikkel meer. Recovery is je enige taak.' },
+              { icon: '🚴', text: 'Maximum 1 korte activeringsride (30–45 min) met 2–3 scherpe acceleraties.' },
               { icon: '🍝', text: 'Carbohydraat-laden 2–3 dagen voor het event (7–10g/kg/dag).' },
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}
 
             {phaseInfo.phase === 'recovery' && [
               { icon: '🎉', text: 'Gefeliciteerd! Neem minimaal 1–2 weken volledig rust.' },
               { icon: '🚶', text: 'Wandelen, zwemmen of lichte yoga is oké. Geen geforceerde training.' },
-              { icon: '🎯', text: `Je hebt ${rides.length} ritten en een CTL van ${Math.round(pmcData.ctl)} opgebouwd. Stel een nieuw doel in!` },
+              { icon: '🎯', text: `Je hebt ${rides.length} rideten en een CTL van ${Math.round(pmcData.ctl)} opgebouwd. Stel een nieuw doel in!` },
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}
           </div>
         </div>

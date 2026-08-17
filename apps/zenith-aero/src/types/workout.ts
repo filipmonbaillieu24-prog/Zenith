@@ -101,15 +101,15 @@ export interface RideSummary {
   hrRecovery60?:    number;    // bpm drop in 60s after peak HR — higher = fitter
 
   // Geavanceerde progressie metrics (Fase 2)
-  phenotype?:             string;    // Fysiologische classificatie: Sprinter, Puncheur, Tijdritspecialist, Climber
+  phenotype?:             string;    // Fysiologische classificatie: Sprinter, Puncheur, Tijdridespecialist, Climber
   kjTotal?:               number;    // Totale energieverbruik in kJ
   fresh5minPower?:        number;    // Beste 5 min vermogen (fris, <1000 kJ)
   fatigued5minPower?:     number;    // Beste 5 min vermogen (vermoeid, >=1000 kJ)
   fresh20minPower?:       number;    // Beste 20 min vermogen (fris, <1000 kJ)
   fatigued20minPower?:    number;    // Beste 20 min vermogen (vermoeid, >=1000 kJ)
   cardiacCost?:           number;    // Cardiale kosten per meter (beats/meter)
-  climbingAvgHR?:         number;    // Gemiddelde hartslag tijdens beklimmingen
-  activeHRDecayRate?:     number;    // Snelheid van hartslagherstel tijdens actieve rust (bpm/min)
+  climbingAvgHR?:         number;    // Averagee hartslag tijdens beklimmingen
+  activeHRDecayRate?:     number;    // Speed van hartslagherstel tijdens actieve rust (bpm/min)
   cadenceEfficiencySweetspot?: number; // Optimale cadans met laagste hartslag/vermogen ratio
 
   // User-added metadata
@@ -135,20 +135,20 @@ export interface RideSummary {
 }
 
 export type RideLabel =
-  | 'duurrit'
+  | 'duurride'
   | 'interval'
   | 'wedstrijd'
   | 'herstel'
-  | 'groepsrit'
+  | 'groepsride'
   | 'pendel'
   | 'berg';
 
 export const RIDE_LABELS: { key: RideLabel; label: string; icon: string; color: string }[] = [
-  { key: 'duurrit',   label: 'Endurance',   icon: '🟢', color: '#00b894' },
+  { key: 'duurride',   label: 'Endurance',   icon: '🟢', color: '#00b894' },
   { key: 'interval',  label: 'Interval',    icon: '🔴', color: '#ff7675' },
   { key: 'wedstrijd', label: 'Race',        icon: '🏁', color: '#fdcb6e' },
   { key: 'herstel',   label: 'Recovery',    icon: '💙', color: '#74b9ff' },
-  { key: 'groepsrit', label: 'Group Ride',  icon: '👥', color: '#a29bfe' },
+  { key: 'groepsride', label: 'Group Ride',  icon: '👥', color: '#a29bfe' },
   { key: 'pendel',    label: 'Commute',     icon: '🏙️', color: '#55efc4' },
   { key: 'berg',      label: 'Climb',       icon: '⛰️', color: '#e17055' },
 ];
@@ -214,16 +214,16 @@ export interface HRZone {
 
 export const POWER_ZONES: PowerZone[] = [
   { zone: 1, name: 'Actief herstel',      color: '#74b9ff', minPct:   0, maxPct:  55 },
-  { zone: 2, name: 'Uithoudingsvermogen', color: '#00b894', minPct:  56, maxPct:  75 },
+  { zone: 2, name: 'Endurance', color: '#00b894', minPct:  56, maxPct:  75 },
   { zone: 3, name: 'Tempo',               color: '#fdcb6e', minPct:  76, maxPct:  90 },
   { zone: 4, name: 'Lactaatdrempel',      color: '#e17055', minPct:  91, maxPct: 105 },
   { zone: 5, name: 'VO2max',              color: '#d63031', minPct: 106, maxPct: 120 },
-  { zone: 6, name: 'Anaeroob',            color: '#6c5ce7', minPct: 121, maxPct: 999 },
+  { zone: 6, name: 'Anaerobic',            color: '#6c5ce7', minPct: 121, maxPct: 999 },
 ];
 
 export const HR_ZONES: HRZone[] = [
   { zone: 1, name: 'Actief herstel',      color: '#74b9ff', minPct:   0, maxPct:  68 },
-  { zone: 2, name: 'Uithoudingsvermogen', color: '#00b894', minPct:  69, maxPct:  83 },
+  { zone: 2, name: 'Endurance', color: '#00b894', minPct:  69, maxPct:  83 },
   { zone: 3, name: 'Tempo',               color: '#fdcb6e', minPct:  84, maxPct:  94 },
   { zone: 4, name: 'Lactaatdrempel',      color: '#e17055', minPct:  95, maxPct: 105 },
   { zone: 5, name: 'VO2max',              color: '#d63031', minPct: 106, maxPct: 999 },
@@ -267,7 +267,7 @@ export interface Gear {
 
 export interface GearComponent {
   id:          string;
-  name:        string; // bijv. "Ketting", "Achterband"
+  name:        string; // bijv. "Chain", "Achterband"
   distance:    number; // km sinds installatie
   maxDistance: number; // onderhoudsinterval in km
   installedAt: number; // timestamp ms

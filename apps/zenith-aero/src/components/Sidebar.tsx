@@ -138,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleGenerate = () => {
     if (!isPro) {
       if (onRequestProModal) {
-        onRequestProModal('AI Route Generator', 'Upgrade naar Zenith Pro om automatische GPX-routes op maat te genereren met hoogte- en windprofielen.');
+        onRequestProModal('AI Route Generator', 'Upgrade to Zenith Pro to generate automatic custom GPX routes with elevation and wind profiles.');
       }
       return;
     }
@@ -159,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-content">
         {!isPro && (
           <div 
-            onClick={() => onRequestProModal && onRequestProModal('AI Route Generator', 'Upgrade naar Zenith Pro om automatische GPX-routes op maat te genereren met hoogte- en windprofielen.')}
+            onClick={() => onRequestProModal && onRequestProModal('AI Route Generator', 'Upgrade to Zenith Pro to generate automatic custom GPX routes with elevation and wind profiles.')}
             style={{
               background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(9, 9, 11, 0.9) 100%)',
               border: '1px solid rgba(168, 85, 247, 0.3)',
@@ -180,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 Route Generator is vergrendeld
               </div>
               <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
-                Klik hier om te upgraden naar Pro
+                Click here to upgrade to Pro
               </div>
             </div>
             <Crown size={22} color="#a855f7" />
@@ -216,13 +216,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div className="location-status">
             {startPoint
-              ? <p className="status-configured"><span className="dot dot-green" /> Startpunt geplaatst</p>
-              : <p className="status-pending">Klik op de kaart of zoek een plaats om te starten.</p>
+              ? <p className="status-configured"><span className="dot dot-green" /> Start point placed</p>
+              : <p className="status-pending">Click on the map or search a location to start.</p>
             }
             {routeType === 'point-to-point' && (
               endPoint
-                ? <p className="status-configured"><span className="dot dot-red" /> Eindpunt geplaatst</p>
-                : <p className="status-pending">Klik nogmaals voor het eindpunt.</p>
+                ? <p className="status-configured"><span className="dot dot-red" /> Destination set</p>
+                : <p className="status-pending">Click again to set destination.</p>
             )}
           </div>
 
@@ -306,21 +306,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </section>
 
-        {/* ── 2. Route & Afstand ──────────────────────── */}
+        {/* ── 2. Route & Distance ──────────────────────── */}
         <section className="sidebar-section">
-          <h2><Sliders className="section-icon" strokeWidth={1.6} /> 2. Route Type & Afstand</h2>
+          <h2><Sliders className="section-icon" strokeWidth={1.6} /> 2. Route Type & Distance</h2>
 
           <div className="tab-container">
             <button className={`tab-button ${routeType === 'loop' ? 'active' : ''}`} onClick={() => setRouteType('loop')}>
-              Rondje (Loop)
+              Loop Route
             </button>
             <button className={`tab-button ${routeType === 'point-to-point' ? 'active' : ''}`} onClick={() => setRouteType('point-to-point')}>
-              A naar B
+              Point A to B
             </button>
           </div>
 
           <div className="form-group">
-            <label>Type Rit</label>
+            <label>Ride Type</label>
             <select value={profile} onChange={(e) => setProfile(e.target.value as RouteProfile)} className="select-input">
               <option value="road">Racefiets (Asfalt)</option>
               <option value="gravel">Gravelbike (Mix)</option>
@@ -331,7 +331,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div className="form-group">
             <div className="label-with-value">
-              <label>Afstand</label>
+              <label>Distance</label>
               <span className="value-display">{distance} km</span>
             </div>
             <input type="range" min="10" max="200" step="5" value={distance}
@@ -386,7 +386,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 className={`toggle-switch ${preferCycleroutes ? 'on' : ''}`}
                 onClick={() => setCycleroutes(!preferCycleroutes)}
-                aria-label="Fietsroutes aan/uit"
+                aria-label="Cycle routes on/off"
               >
                 <span className="toggle-thumb" />
               </button>
@@ -406,7 +406,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 className={`toggle-switch ${avoidHills ? 'on' : ''}`}
                 onClick={() => setAvoidHills(!avoidHills)}
-                aria-label="Helling vermijden aan/uit"
+                aria-label="Avoid steep hills on/off"
               >
                 <span className="toggle-thumb" />
               </button>
@@ -459,11 +459,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 <div className="wind-text-box">
                   <h4>{windData.speed} km/u</h4>
-                  <p>wind uit het {windData.cardinal} ({windData.direction}°)</p>
+                  <p>wind from {windData.cardinal} ({windData.direction}°)</p>
                 </div>
               </div>
             ) : (
-              <p className="wind-error">Kon windgegevens niet laden.</p>
+              <p className="wind-error">Could not load wind data.</p>
             )}
           </section>
         )}
@@ -472,7 +472,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           onClick={() => {
             if (!isPro && onRequestProModal) {
-              onRequestProModal('AI Route Generator', 'Upgrade naar Zenith Pro om automatische GPX-routes op maat te genereren met hoogte- en windprofielen.');
+              onRequestProModal('AI Route Generator', 'Upgrade to Zenith Pro to generate automatic custom GPX routes with elevation and wind profiles.');
               return;
             }
             handleGenerate();
@@ -481,7 +481,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           disabled={isGenerating || !startPoint || (routeType === 'point-to-point' && !endPoint)}
           style={{ position: 'relative' }}
         >
-          {isGenerating ? 'Route Genereren...' : 'Genereer Route'}
+          {isGenerating ? 'Route Generating...' : 'Genereer Route'}
           {!isPro && (
             <span style={{ 
               position: 'absolute', right: 12, top: 12, 
@@ -513,7 +513,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <h3>Route {idx + 1}</h3>
                       <div className="alt-card-badges">
                         {overLimit    && <span className="badge badge-warn">↑ Limiet</span>}
-                        {hasBacktrack && <span className="badge badge-backtrack" title="Mogelijk bevat deze route een stuk heen-en-terug">↩ Terugrijden</span>}
+                        {hasBacktrack && <span className="badge badge-backtrack" title="Route may contain back-and-forth segments">↩ Backrijden</span>}
                         <span className="badge" style={{ color: climb.color, borderColor: climb.color }}>
                           {climb.label}
                         </span>
@@ -556,26 +556,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button 
                   onClick={() => {
                     if (!isPro && onRequestProModal) {
-                      onRequestProModal('GPX Route Export', 'Upgrade naar Zenith Pro om GPX en TCX bestanden te downloaden voor je fietscomputer (Garmin, Wahoo).');
+                      onRequestProModal('GPX Route Export', 'Upgrade to Zenith Pro to download GPX and TCX files for your bike computerer (Garmin, Wahoo).');
                       return;
                     }
                     onDownloadGPX();
                   }} 
                   className="download-button gpx"
                 >
-                  <Download size={16} strokeWidth={1.6} /> GPX Downloaden {!isPro && '🔒'}
+                  <Download size={16} strokeWidth={1.6} /> GPX Download {!isPro && '🔒'}
                 </button>
                 <button 
                   onClick={() => {
                     if (!isPro && onRequestProModal) {
-                      onRequestProModal('TCX Route Export', 'Upgrade naar Zenith Pro om GPX en TCX bestanden te downloaden voor je fietscomputer (Garmin, Wahoo).');
+                      onRequestProModal('TCX Route Export', 'Upgrade to Zenith Pro to download GPX and TCX files for your bike computerer (Garmin, Wahoo).');
                       return;
                     }
                     onDownloadTCX();
                   }} 
                   className="download-button tcx"
                 >
-                  <Download size={16} strokeWidth={1.6} /> TCX Downloaden {!isPro && '🔒'}
+                  <Download size={16} strokeWidth={1.6} /> TCX Download {!isPro && '🔒'}
                 </button>
               </div>
             )}
@@ -597,7 +597,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               );
               const fuelPlan = calculateFuel(
                 activeAIDurationSec,
-                2, // Zone 2 (Duurrit)
+                2, // Zone 2 (Duurride)
                 fitnessProfile.weight ?? 75,
                 fitnessProfile.ftp ?? 220,
                 20
@@ -622,7 +622,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Coffee size={14} strokeWidth={1.6} /> Fuel & Nutrition Plan (AI Estimate)
+                      <Coffee size={14} strokeWidth={1.6} /> Fuel & Nutrideion Plan (AI Estimate)
                     </span>
                     {fuelPanelOpen ? <ChevronUp size={14} strokeWidth={1.6} /> : <ChevronDown size={14} strokeWidth={1.6} />}
                   </button>

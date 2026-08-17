@@ -4,7 +4,7 @@ interface LoaderProps {
   message?: string;
 }
 
-export const Loader: React.FC<LoaderProps> = ({ message = 'Route berekenen...' }) => {
+export const Loader: React.FC<LoaderProps> = ({ message = 'Calculating route...' }) => {
   return (
     <div className="loader-overlay">
       <div className="loader-container">

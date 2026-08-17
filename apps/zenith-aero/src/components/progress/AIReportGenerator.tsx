@@ -39,7 +39,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
       setReportLoadingStep('Fysiologische parameters analyseren...');
 
       setTimeout(() => {
-        setReportLoadingStep('Drempelprogressie & hartslagstabiliteit vergelijken...');
+        setReportLoadingStep('Thresholdprogressie & hartslagstabiliteit vergelijken...');
 
         setTimeout(() => {
           setReportLoadingStep('Rapport samenstellen...');
@@ -109,7 +109,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
             const longestRide = [...periodRides].sort((a, b) => b.distance - a.distance)[0];
             const longestRideStr = longestRide
               ? `${longestRide.distance.toFixed(0)} km (${(longestRide.duration / 3600).toFixed(1)} uur) op ${new Date(longestRide.date).toLocaleDateString('nl-BE')}`
-              : 'Geen ritten geregistreerd';
+              : 'Geen rideten geregistreerd';
 
             let verdict = 'Stabiele fysieke conditie en onderhoud';
             let verdictEmoji = '📈';
@@ -132,13 +132,13 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                 : `**Behoud van drempelvermogen**: Je geschatte drempelwaarde (eFTP) is stabiel gebleven rond de **${endFtp}W**. Dit is een uitstekend resultaat dat getuigt van een goed uitgebalanceerde onderhoudstraining.`,
               avgDecoupling < 5
                 ? `**Uitstekende aerobe en cardiovasculaire efficiëntie**: Met een gemiddelde hartslagdrift (aerobe decoupling) van slechts **${avgDecoupling.toFixed(1)}%** blijft je cardiovasculaire systeem stabiel bij langdurige inspanningen.`
-                : `**Cardiovasculaire drift bij langdurige belasting**: Je hartslag drift stijgt gemiddeld met **${avgDecoupling.toFixed(1)}%** in de tweede helft van je ritten bij gelijkblijvend vermogen.`,
-              `**Duurrecord als fundament**: Je langste rit was **${longestRideStr}**. Dergelijke ritten zijn van cruciaal belang voor de capillaire dichtheid van je spieren.`,
+                : `**Cardiovasculaire drift bij langdurige belasting**: Je hartslag drift stijgt gemiddeld met **${avgDecoupling.toFixed(1)}%** in de tweede helft van je rideten bij gelijkblijvend vermogen.`,
+              `**Duurrecord als fundament**: Je langste ride was **${longestRideStr}**. Dergelijke rideten zijn van cruciaal belang voor de capillaire dichtheid van je spieren.`,
             ];
 
             const werkpuntenBullets = [
               avgRpe >= 7
-                ? `**Intensiteitsverdeling en spierstress**: Je gemiddelde RPE ligt op **${avgRpe.toFixed(1)}/10**. Wij adviseren om 80% van de ritten strikt in Zone 2 te rijden.`
+                ? `**Intensiteitsverdeling en spierstress**: Je gemiddelde RPE ligt op **${avgRpe.toFixed(1)}/10**. Wij adviseren om 80% van de rideten strikt in Zone 2 te rijden.`
                 : `**Gezonde intensiteitsverdeling**: Je gemiddelde RPE van **${avgRpe.toFixed(1)}/10** getuigt van een uitstekende polarisatie van je trainingen.`,
               avgDecoupling >= 5
                 ? `**Focus op Zone 2 duurtraining**: De geconstateerde hartslagdrift van **${avgDecoupling.toFixed(1)}%** vraagt om specifieke aandacht.`
@@ -153,12 +153,12 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                 ? `**Verhoogd risico op overbelasting (Overtraining)**: De trainingsprikkels stapelen zich sneller op dan je lichaam kan herstellen. Plan direct een herstelweek in.`
                 : `**Gebalanceerd belastingsrisico**: Je trainingsbelasting en herstelweken zijn in perfect evenwicht.`,
               decouplingRides.length > 5 && avgDecoupling > 6
-                ? `**Progressief vermoeidheidsrisico**: De aanzienlijke cardiale drift over meerdere ritten wijst op een cumulatief tekort aan herstel.`
+                ? `**Progressief vermoeidheidsrisico**: De aanzienlijke cardiale drift over meerdere rideten wijst op een cumulatief tekort aan herstel.`
                 : `**Stabiele cardiovasculaire tolerantie**: Je reacties laten geen tekenen van chronische vermoeidheid of overtraining zien.`,
             ];
 
             const actieplanBullets = [
-              `**Week 1 (Volume & Herstel)**: Focus volledig op aerobe basis in Zone 2.`,
+              `**Week 1 (Volume & Recovery)**: Focus volledig op aerobe basis in Zone 2.`,
               ftpDiff > 0
                 ? `**Week 2 (Gerichte Intensiteit)**: Voeg één specifieke drempeltraining toe (bijv. 2x12 min op 95% FTP).`
                 : `**Week 3 (Tempohardheid)**: Voeg twee kortere tempoblokken toe (bijv. 3x8 min in Zone 3 tempo op 85% FTP).`,
@@ -193,7 +193,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
     if (!reportData || reportData.empty) return;
     const plainText = `VOORTGANGSRAPPORT (Afgelopen ${selectedPeriod} Dagen)
 Verdict: ${reportData.verdict}
-Totaal: ${reportData.totalKm} km | ${reportData.totalHours} uur | ${reportData.totalRides} ritten
+Totaal: ${reportData.totalKm} km | ${reportData.totalHours} uur | ${reportData.totalRides} rideten
 
 PROGRESSIE & STERKE PUNTEN:
 ${reportData.progressBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).join('\n')}
@@ -247,11 +247,11 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
           <button className="progress-ai-generate-btn" onClick={handleGenerateReport} disabled={reportLoading}>
             {reportLoading ? (
               <>
-                <span className="progress-spinner" /> Genereren...
+                <span className="progress-spinner" /> Generating...
               </>
             ) : (
               <>
-                <Sparkles size={14} /> Genereer Rapport
+                <Sparkles size={14} /> Generate Report
               </>
             )}
           </button>
@@ -272,8 +272,8 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
           {reportData.empty ? (
             <div style={{ textAlign: 'center', padding: '30px 20px' }}>
               <AlertTriangle size={32} color="#ff7675" style={{ marginBottom: 10 }} />
-              <h4 style={{ margin: '0 0 6px', color: '#f8fafc' }}>Geen ritten gevonden in deze periode</h4>
-              <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>Selecteer een langere periode of upload meer ritten.</p>
+              <h4 style={{ margin: '0 0 6px', color: '#f8fafc' }}>Geen rideten gevonden in deze periode</h4>
+              <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>Selecteer een langere periode of upload meer rideten.</p>
             </div>
           ) : (
             <>
@@ -318,7 +318,7 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
                 {reportActiveTab === 'summary' && (
                   <div className="progress-ai-summary-grid">
                     <div className="progress-ai-summary-card">
-                      <span className="label">Totale Afstand</span>
+                      <span className="label">Totale Distance</span>
                       <span className="value">{reportData.totalKm} km</span>
                     </div>
                     <div className="progress-ai-summary-card">
@@ -326,11 +326,11 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
                       <span className="value">{reportData.totalHours} uur</span>
                     </div>
                     <div className="progress-ai-summary-card">
-                      <span className="label">Aantal Ritten</span>
+                      <span className="label">Aantal Rides</span>
                       <span className="value">{reportData.totalRides}</span>
                     </div>
                     <div className="progress-ai-summary-card">
-                      <span className="label">Gemiddelde RPE</span>
+                      <span className="label">Averagee RPE</span>
                       <span className="value">{reportData.avgRpe.toFixed(1)}/10</span>
                     </div>
                   </div>

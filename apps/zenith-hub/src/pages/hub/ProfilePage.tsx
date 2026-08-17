@@ -68,7 +68,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           setWeightDate(dateStr);
         }
       } catch (err) {
-        console.error('Kon laatste gewicht van Vigor niet ophalen:', err);
+        console.error('Could not fetch latest weight from Vigor:', err);
       }
     };
 
@@ -83,13 +83,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
     // Validate inputs
     if (!name.trim()) {
-      setErrorMsg('Naam mag niet leeg zijn.');
+      setErrorMsg('Name cannot be empty.');
       setSaving(false);
       return;
     }
 
     if (height && (parseFloat(height) < 50 || parseFloat(height) > 250)) {
-      setErrorMsg('Voer een geldige lengte in (tussen 50 en 250 cm).');
+      setErrorMsg('Please enter a valid height (between 50 and 250 cm).');
       setSaving(false);
       return;
     }
@@ -128,7 +128,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       setSuccessMsg('Gefeliciteerd! Je betaling via PayPal is verwerkt. Zenith Pro is geactiveerd.');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
-      setErrorMsg('Fout bij activeren Pro: ' + (err.message || String(err)));
+      setErrorMsg('Error activating Pro: ' + (err.message || String(err)));
     } finally {
       setSaving(false);
     }

@@ -58,7 +58,7 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
                 borderRadius: '6px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                fontFamily: 'inherit',
+                fontFamily: 'inheride',
               }}
             >
               {opt.label}

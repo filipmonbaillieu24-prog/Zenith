@@ -48,9 +48,9 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     const name = profile.name ?? 'Atleet';
     const tsb = pmcStatus.latest.tsb;
     if (tsb < -20) {
-      return `Hallo ${name}. Je lichaam staat momenteel onder aanzienlijke stress (TSB: ${Math.round(tsb)}). Focus vandaag op actief herstel of neem een volledige rustdag.`;
+      return `Hallo ${name}. Je lichaam staat momenteel onder aanzienlijke stress (TSB: ${Math.round(tsb)}). Focus today op actief herstel of neem een volledige rustdag.`;
     } else if (tsb > 5) {
-      return `Hallo ${name}. Je bent uitgerust en je vorm is uitstekend (TSB: +${Math.round(tsb)}). Vandaag is een perfecte dag voor een intensieve intervaltraining of een lange duurrit!`;
+      return `Hallo ${name}. Je bent uitgerust en je vorm is uitstekend (TSB: +${Math.round(tsb)}). Today is een perfecte dag voor een intensieve intervaltraining of een lange duurride!`;
     } else {
       return `Hallo ${name}. Je trainingsopbouw verloopt stabiel en gecontroleerd. Blijf je zones respecteren en volg de onderstaande adviezen om blessures te voorkomen.`;
     }
@@ -60,7 +60,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     return (
       <div className="wd-section-card" style={{ padding: 24, textAlign: 'center', color: '#cbd5e1' }}>
         <Brain size={32} strokeWidth={1.5} style={{ color: '#cbd5e1', marginBottom: 12 }} />
-        <p style={{ margin: 0 }}>Upload minimaal 2 ritten met hartslag- of vermogensgegevens om gepersonaliseerd AI-trainingsadvies te genereren.</p>
+        <p style={{ margin: 0 }}>Upload minimaal 2 rideten met hartslag- of vermogensgegevens om gepersonaliseerd AI-trainingsadvies te genereren.</p>
       </div>
     );
   }
@@ -143,10 +143,10 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       };
       
       await savePlannedWorkout(workoutToSave);
-      setSaveSuccessMsg('✓ Training succesvol ingepland voor vandaag!');
+      setSaveSuccessMsg('✓ Training succesvol ingepland voor today!');
       setGeneratedWorkout(null);
     } catch (err) {
-      console.error('Fout bij opslaan geplande workout:', err);
+      console.error('Error saving geplande workout:', err);
       setSaveSuccessMsg('✗ Kon training niet opslaan.');
     } finally {
       setIsSavingWorkout(false);
@@ -209,7 +209,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           <Sparkles size={16} style={{ color: '#cbd5e1', filter: 'drop-shadow(0 0 4px rgba(203, 213, 225, 0.5))' }} /> AI Dagtraining Generator
         </h3>
         <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.5 }}>
-          Genereer automatisch de optimale gestructureerde training voor vandaag op basis van je actuele fysiologische vorm (TSB) en beschikbare tijd.
+          Genereer automatisch de optimale gestructureerde training voor today op basis van je actuele fysiologische vorm (TSB) en beschikbare tijd.
         </p>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
@@ -221,7 +221,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
                 setGenMinutes(parseInt(e.target.value));
                 setGeneratedWorkout(null);
               }}
-              style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', borderRadius: 8, padding: '8px 12px', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+              style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', borderRadius: 8, padding: '8px 12px', fontSize: 12, fontFamily: 'inheride', outline: 'none' }}
             >
               <option value={45}>45 minuten</option>
               <option value={60}>60 minuten (1 uur)</option>
@@ -246,7 +246,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
               padding: '10px 18px',
               cursor: 'pointer',
               boxShadow: '0 4px 15px rgba(203, 213, 225, 0.15)',
-              fontFamily: 'inherit',
+              fontFamily: 'inheride',
               transition: 'transform 0.15s'
             }}
             onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
@@ -269,7 +269,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           }}>
             {saveSuccessMsg} {saveSuccessMsg.startsWith('✓') && (
               <span style={{ display: 'block', fontSize: 10, fontWeight: 500, color: '#cbd5e1', marginTop: 4 }}>
-                Open de <strong>Routeplanner</strong>-tab om een bijbehorende GPX-route met dynamische snelheidsdoelen te genereren!
+                Open de <strong>Route Planner</strong>-tab om een bijbehorende GPX-route met dynamische snelheidsdoelen te genereren!
               </span>
             )}
           </div>
@@ -319,7 +319,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
                       <span style={{ color: '#cbd5e1' }}>{Math.round(step.duration_seconds / 60)} min</span>
                       <span style={{ color: '#64748b' }}>|</span>
                       <span style={{ color: '#94a3b8' }}>
-                        Doel: {step.target_power_min > 0 ? `${step.target_power_min}-${step.target_power_max}W` : 'Maximaal'}
+                        Doel: {step.target_power_min > 0 ? `${step.target_power_min}-${step.target_power_max}W` : 'Maximum'}
                         {step.target_hr_min > 0 && ` (${step.target_hr_min}-${step.target_hr_max} bpm)`}
                       </span>
                     </div>
@@ -331,20 +331,20 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button 
                 onClick={() => setGeneratedWorkout(null)}
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, color: '#cbd5e1', fontSize: 11, fontWeight: 700, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, color: '#cbd5e1', fontSize: 11, fontWeight: 700, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inheride' }}
               >
-                Annuleren
+                Cancel
               </button>
               <button 
                 onClick={handleSaveGeneratedWorkout}
                 disabled={isSavingWorkout}
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#cbd5e1', fontSize: 11, fontWeight: 700, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#cbd5e1', fontSize: 11, fontWeight: 700, padding: '8px 14px', cursor: 'pointer', fontFamily: 'inheride' }}
               >
                 {isSavingWorkout ? 'Inplannen...' : 'Plan Zonder Route'}
               </button>
               <button 
                 onClick={handleGenerateRouteAndPlan}
-                style={{ background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)', border: 'none', borderRadius: 8, color: '#09090b', fontSize: 11, fontWeight: 800, padding: '8px 16px', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                style={{ background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)', border: 'none', borderRadius: 8, color: '#09090b', fontSize: 11, fontWeight: 800, padding: '8px 16px', cursor: 'pointer', fontFamily: 'inheride', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               >
                 Genereer Route & Plan
               </button>
@@ -362,7 +362,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       ) : (
         <div className="wd-coach-list">
           {advice.map((a, i) => {
-            const isUrgent = a.priority === 1;
+            const isUrgent = a.prioridey === 1;
             return (
               <div 
                 key={i} 

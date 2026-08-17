@@ -162,10 +162,10 @@ export function RoutePage({
               style={{
                 width: '100%', background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)',
                 border: 'none', borderRadius: 8, color: '#09090b', fontSize: 11, fontWeight: 800,
-                padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit'
+                padding: '8px 0', cursor: 'pointer', fontFamily: 'inheride'
               }}
             >
-              Opslaan & Plan in kalender
+              Save & Plan in kalender
             </button>
           </div>
         )}
@@ -190,11 +190,11 @@ export function RoutePage({
             {/* Route Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20, background: 'rgba(0,0,0,0.2)', padding: 12, borderRadius: 8 }}>
               <div>
-                <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Afstand</div>
+                <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Distance</div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: '#cbd5e1' }}>{activeRoute.stats.distance} km</div>
               </div>
               <div>
-                <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Hoogtemeters</div>
+                <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Elevation Gain</div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: '#cbd5e1' }}>{activeRoute.stats.elevationGain} m</div>
               </div>
               <div style={{ gridColumn: 'span 2' }}>
@@ -214,7 +214,7 @@ export function RoutePage({
                 onChange={e => setSelectedDate(e.target.value)}
                 style={{
                   width: '100%', background: '#09090b', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8, padding: '8px 12px', color: '#f8fafc', fontSize: 12, fontFamily: 'inherit',
+                  borderRadius: 8, padding: '8px 12px', color: '#f8fafc', fontSize: 12, fontFamily: 'inheride',
                   boxSizing: 'border-box'
                 }}
               />
@@ -228,10 +228,10 @@ export function RoutePage({
                 style={{
                   flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 8, padding: '10px 0', color: '#94a3b8', cursor: 'pointer',
-                  fontSize: 11, fontWeight: 700, fontFamily: 'inherit'
+                  fontSize: 11, fontWeight: 700, fontFamily: 'inheride'
                 }}
               >
-                Annuleren
+                Cancel
               </button>
               <button 
                 disabled={isSaving}
@@ -245,7 +245,7 @@ export function RoutePage({
                       setShowConfirmDialog(false);
                     }, 1500);
                   } catch (err) {
-                    console.error("Opslaan mislukt:", err);
+                    console.error("Save failed:", err);
                   } finally {
                     setIsSaving(false);
                   }
@@ -253,10 +253,10 @@ export function RoutePage({
                 style={{
                   flex: 1, background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)',
                   border: 'none', borderRadius: 8, padding: '10px 0', color: '#09090b',
-                  cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'inherit'
+                  cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'inheride'
                 }}
               >
-                {isSaving ? 'Opslaan...' : saveSuccess ? '✓ Opgeslagen' : 'Bevestig & Plan'}
+                {isSaving ? 'Save...' : saveSuccess ? '✓ Opgeslagen' : 'Bevestig & Plan'}
               </button>
             </div>
           </div>

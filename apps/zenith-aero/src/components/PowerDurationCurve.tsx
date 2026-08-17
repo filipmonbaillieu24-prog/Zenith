@@ -65,7 +65,7 @@ export const PowerDurationCurve: React.FC<Props> = ({
   return (
     <div className="pdc-wrap" data-has-record={data.length > 0 ? "true" : "false"}>
       <div className="pdc-header">
-        <h3 className="pdc-title">{hasPower ? '⚡ Power Duration Curve' : '🚴 Snelheidscurve'}</h3>
+        <h3 className="pdc-title">{hasPower ? '⚡ Power Duration Curve' : '🚴 Speedscurve'}</h3>
         <div className="pdc-legend">
           <span className="pdc-legend__dot" style={{ background: '#cbd5e1' }} /> All-time
           {hasLast90Data && (

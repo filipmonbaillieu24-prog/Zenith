@@ -12,7 +12,7 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
   const [viewMode, setViewMode] = useState<'watts' | 'wkg'>('watts');
 
   const chartData = useMemo(() => {
-    // Haal alle ritten met eFTP op, sorteer chronologisch
+    // Haal alle rideten met eFTP op, sorteer chronologisch
     return [...rides]
       .filter(r => r.eFTP && r.eFTP > 0)
       .sort((a, b) => a.date - b.date)
@@ -35,11 +35,11 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
         <div className="wd-section-card__head">
           <span className="wd-section-card__title">
             <Award size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5, color: '#cbd5e1' }} />
-            eFTP & Vermogensprogressie
+            eFTP & Powersprogressie
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Fiets meer ritten om je eFTP-groei over de tijd te bekijken.
+          Fiets meer rideten om je eFTP-groei over de tijd te bekijken.
         </p>
       </div>
     );

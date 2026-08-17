@@ -98,8 +98,8 @@ export const WeekOverview: React.FC<Props> = ({ rides }) => {
   }, [thisWeek, thisWeekRides]);
 
   const METRICS = [
-    { label: 'Ritten',  this: stats.this.count,   last: stats.last.count,   fmt: (v: number) => String(v),                  unit: ''   },
-    { label: 'Afstand', this: stats.this.km,       last: stats.last.km,       fmt: (v: number) => v.toFixed(0),               unit: 'km' },
+    { label: 'Rides',  this: stats.this.count,   last: stats.last.count,   fmt: (v: number) => String(v),                  unit: ''   },
+    { label: 'Distance', this: stats.this.km,       last: stats.last.km,       fmt: (v: number) => v.toFixed(0),               unit: 'km' },
     { label: 'Tijd',    this: stats.this.seconds,  last: stats.last.seconds,  fmt: fmtHours,                                  unit: ''   },
     { label: 'TSS',     this: stats.this.tss,      last: stats.last.tss,      fmt: (v: number) => Math.round(v).toString(),   unit: ''   },
     { label: 'Hoogte',  this: stats.this.elev,     last: stats.last.elev,     fmt: (v: number) => v.toFixed(0),               unit: 'm'  },
@@ -124,7 +124,7 @@ export const WeekOverview: React.FC<Props> = ({ rides }) => {
           <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>vs vorige week</div>
         </div>
         <span style={{ fontSize: 11, color: '#64748b' }}>
-          {stats.this.count} rit{stats.this.count !== 1 ? 'ten' : ''}
+          {stats.this.count} ride{stats.this.count !== 1 ? 'ten' : ''}
         </span>
       </div>
 

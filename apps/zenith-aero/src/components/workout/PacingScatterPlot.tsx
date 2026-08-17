@@ -29,7 +29,7 @@ export const PacingScatterPlot: React.FC<PacingScatterPlotProps> = ({ rides }) =
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Geen ritten met vermogen en pacing-gegevens gevonden in de geselecteerde range.
+          Geen rideten met vermogen en pacing-gegevens gevonden in de geselecteerde range.
         </p>
       </div>
     );
@@ -74,7 +74,7 @@ export const PacingScatterPlot: React.FC<PacingScatterPlotProps> = ({ rides }) =
             <ReferenceLine x={1.05} stroke="rgba(255,255,255,0.12)" strokeDasharray="3 3" />
             <ReferenceLine y={0.75} stroke="rgba(255,255,255,0.12)" strokeDasharray="3 3" />
             
-            <Scatter name="Ritten" data={chartData} fill="#a29bfe" shape="circle" />
+            <Scatter name="Rides" data={chartData} fill="#a29bfe" shape="circle" />
           </ScatterChart>
         </ResponsiveContainer>
       </div>
@@ -82,7 +82,7 @@ export const PacingScatterPlot: React.FC<PacingScatterPlotProps> = ({ rides }) =
       {/* Quadrants Uitleg */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: 10, borderTop: '1px solid rgba(255, 255, 255, 0.03)', paddingTop: 8 }}>
         <div style={{ fontSize: 9, color: '#94a3b8' }}>
-          <strong style={{ color: '#ff7675' }}>Linksboven:</strong> Egaal & Intensief (Tijdritten, klimmen)
+          <strong style={{ color: '#ff7675' }}>Linksboven:</strong> Egaal & Intensief (Tijdrideten, klimmen)
         </div>
         <div style={{ fontSize: 9, color: '#94a3b8' }}>
           <strong style={{ color: '#fdcb6e' }}>Rechtsboven:</strong> Variabel & Intensief (Wedstrijden, intervals)

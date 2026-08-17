@@ -195,7 +195,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
               setRawPacket(hexStr);
             }
             setStatus('connected');
-            setDecodingInfo(payload.is_stable ? "Stabiele meting bevestigd door weegschaal" : "Tauri Rust Native BLE Link");
+            setDecodingInfo(payload.is_stable ? "Stable weight reading confirmed by scale" : "Tauri Rust Native BLE Link");
             if (onPairingSuccess) {
               onPairingSuccess('Neo Health', 'Onyx SE');
             }
@@ -238,7 +238,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
           setRawPacket(hexStr);
         }
         setStatus('connected');
-        setDecodingInfo(is_stable ? "Stabiele meting bevestigd door weegschaal" : "Tauri Rust Native BLE Link (Via parent)");
+        setDecodingInfo(is_stable ? "Stable weight reading confirmed by scale" : "Tauri Rust Native BLE Link (Via parent)");
         if (onPairingSuccess) {
           onPairingSuccess('Neo Health', 'Onyx SE');
         }
@@ -322,7 +322,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
       await setupDeviceConnection(device);
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'Verbinding afgebroken of weegschaal niet gevonden.');
+      setErrorMsg(err.message || 'Connection aborted or scale not found.');
       setStatus('error');
     }
   };
@@ -389,18 +389,18 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                 return `${c.uuid} [${props.join(', ')}]`;
               });
             } catch (charErr) {
-              charsList = ['Kenmerken niet toegankelijk'];
+              charsList = ['Characteristics not accessible'];
             }
             
             serviceList.push(`• ${name}\n    Kenmerken:\n    ` + charsList.map((ch: string) => `  - ${ch}`).join('\n    '));
           }
           
           throw new Error(
-            `De weegschaal gebruikt een fabrikant-specifieke Bluetooth service.\n\n` +
-            `Gevonden services & kenmerken op dit apparaat:\n` +
+            `The scale uses a manufacturer-specific Bluetooth service.\n\n` +
+            `Found services & characteristics on this device:\n` +
             serviceList.join('\n\n') + `\n\n` +
-            `Zonder de exacte communicatiespecificaties van Neo Health kan de browser de gewichtsdata niet automatisch parsen. ` +
-            `Gebruik de 'Virtual Scale Simulator' aan de rechterkant om de meting te voltooien.`
+            `Without exact specifications from Neo Health, the browser cannot automatically parse weight data. ` +
+            `Use the 'Virtual Scale Simulator' on the right to complete the measurement.`
           );
         }
       }
@@ -534,7 +534,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
 
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message || 'Verbinding afgebroken of weegschaal niet gevonden.');
+      setErrorMsg(err.message || 'Connection aborted or scale not found.');
       setStatus('error');
     }
   };
@@ -576,7 +576,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
         </div>
 
         <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 24 }}>
-          Koppel uw **Neo Health Bluetooth weegschaal** om automatisch uw gewicht, vetpercentage en andere vitale parameters te registreren.
+          Pair your **Neo Health Bluetooth scale** to automatically log weight, body fat %, and vital metrics.gistreren.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 12 }}>
@@ -601,10 +601,10 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                       <Bluetooth size={32} style={{ color: '#cbd5e1' }} />
                     </div>
                     <p style={{ fontSize: 12, color: '#cbd5e1', fontWeight: 600, animation: 'pulseNeon 2s infinite' }}>
-                      Zoeken naar apparaten...
+                      Scanning for devices...
                     </p>
                     <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>
-                      Sta op de weegschaal om deze te activeren.
+                      Step onto the scale to activate it.
                     </p>
                   </>
                 )}
@@ -615,12 +615,12 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                       <Scale size={32} style={{ color: '#cbd5e1' }} />
                     </div>
                     <p style={{ fontSize: 12, color: '#cbd5e1', fontWeight: 800, marginBottom: 8 }}>
-                      VERBONDEN
+                      CONNECTED
                     </p>
                     
                     {isSaved ? (
                       <div style={{ marginTop: 12, textAlign: 'center', width: '100%' }}>
-                        <span style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase' }}>Gemeten gewicht:</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8', textTransform: 'uppercase' }}>Measured weight:</span>
                         <div style={{ fontSize: 24, fontWeight: 900, color: '#cbd5e1', marginBottom: 12 }}>{measuredWeight} kg</div>
                       </div>
                     ) : tempWeight ? (
@@ -650,7 +650,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                               className="btn-primary"
                               style={{ flex: 2, padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                             >
-                              ✓ Accepteren & Opslaan
+                              ✓ Accepteren & Save
                             </button>
                           </div>
                         ) : (

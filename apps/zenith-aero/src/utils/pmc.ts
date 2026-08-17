@@ -176,10 +176,10 @@ export function computeSimulatedPMC(
  *   > 300 → 48–72h
  */
 export function recoveryAdvice(tss: number): { hours: string; color: string; tip: string } {
-  if (tss < 50)  return { hours: '< 12u',  color: '#00b894', tip: 'Morgen weer volledig fit.' };
+  if (tss < 50)  return { hours: '< 12u',  color: '#00b894', tip: 'Tomorrow weer volledig fit.' };
   if (tss < 150) return { hours: '12–24u', color: '#fdcb6e', tip: 'Neem het morgen rustig aan.' };
   if (tss < 300) return { hours: '24–48u', color: '#e17055', tip: 'Minimum één rustdag inplannen.' };
-  return               { hours: '48–72u', color: '#d63031', tip: 'Zware rit — twee à drie rustdagen.' };
+  return               { hours: '48–72u', color: '#d63031', tip: 'Zware ride — twee à drie rustdagen.' };
 }
 
 /**

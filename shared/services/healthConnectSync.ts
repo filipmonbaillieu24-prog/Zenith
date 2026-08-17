@@ -52,7 +52,7 @@ function formatDuration(totalSec: number) {
   const hrs = Math.floor(totalSec / 3600);
   const mins = Math.floor((totalSec % 3600) / 60);
   const secs = totalSec % 60;
-  if (hrs > 0) return `${hrs}u ${mins}m`;
+  if (hrs > 0) return `${hrs}h ${mins}m`;
   return `${mins}m ${secs}s`;
 }
 
@@ -186,10 +186,10 @@ export function transformExerciseForStride(exerciseList: HealthConnectExercisePa
     const timeOfDayStr = ex.start_time ? new Date(ex.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '14:26';
 
     const title = isPolar 
-      ? 'Polar Loopband Hardlopen' 
+      ? 'Polar Treadmill Run' 
       : isTreadmill 
-        ? 'Health Connect Loopband Workout' 
-        : 'Health Connect Hardloop Workout';
+        ? 'Health Connect Treadmill Workout' 
+        : 'Health Connect Run Workout';
 
     return {
       id: `hc-ex-${Date.now()}-${idx}`,
@@ -209,7 +209,7 @@ export function transformExerciseForStride(exerciseList: HealthConnectExercisePa
       calories: 239,
       shoeName: isTreadmill ? 'Hoka Clifton 9' : 'Nike ZoomX Vaporfly',
       source: isPolar ? 'polar' : 'health_connect',
-      notes: `Geïmporteerd via ${isPolar ? 'Polar Flow / ' : ''}Health Connect (${formatDuration(durSec)}, 147 bpm, 239 kcal)`
+      notes: `Imported via ${isPolar ? 'Polar Flow / ' : ''}Health Connect (${formatDuration(durSec)}, 147 bpm, 239 kcal)`
     };
   });
 }

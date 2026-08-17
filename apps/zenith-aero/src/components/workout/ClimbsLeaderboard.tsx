@@ -75,9 +75,9 @@ export const ClimbsLeaderboard: React.FC<Props> = ({ rides }) => {
         textAlign: 'center',
       }}>
         <Mountain size={30} color="#334155" style={{ marginBottom: 10 }} />
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Nog geen klimdata</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>No klimdata</div>
         <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>
-          Upload ritten met hoogtemeters om je klimprestaties te zien.
+          Upload rideten met hoogtemeters om je klimprestaties te zien.
         </div>
       </div>
     );
@@ -108,7 +108,7 @@ export const ClimbsLeaderboard: React.FC<Props> = ({ rides }) => {
               Klimmen Leaderboard
             </div>
             <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>
-              Top ritten op klimmen — gesorteerd op VAM (m/u stijging)
+              Top rideten op klimmen — gesorteerd op VAM (m/u stijging)
             </div>
           </div>
         </div>
@@ -128,7 +128,7 @@ export const ClimbsLeaderboard: React.FC<Props> = ({ rides }) => {
                 fontWeight: 700,
                 padding: '4px 8px',
                 cursor: 'pointer',
-                fontFamily: 'inherit',
+                fontFamily: 'inheride',
                 textTransform: 'uppercase',
               }}
             >
@@ -235,7 +235,7 @@ export const ClimbsLeaderboard: React.FC<Props> = ({ rides }) => {
           borderTop: '1px solid rgba(255,255,255,0.04)',
           fontSize: 10, color: '#64748b', textAlign: 'center',
         }}>
-          + {sorted.length - 15} meer ritten
+          + {sorted.length - 15} meer rideten
         </div>
       )}
     </div>

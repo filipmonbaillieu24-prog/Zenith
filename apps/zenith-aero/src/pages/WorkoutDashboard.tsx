@@ -240,9 +240,9 @@ const WorkoutDashboard: React.FC<Props> = ({
     if (rides.length === 0 && !loading) return (
       <div className="wd-empty-state">
         <div className="wd-empty-icon"><Bike size={52} color="#cbd5e1" strokeWidth={1.5} /></div>
-        <h2>Nog geen ritten</h2>
+        <h2>No rideten</h2>
         <p style={{ marginBottom: 16, color: '#94a3b8', fontSize: 13 }}>
-          Importeer een FIT-, GPX- of TCX-bestand via de knop <strong style={{ color: '#fff' }}>Rit Importeren</strong> in de menubalk hierboven om je activiteitengeschiedenis te laden.
+          Importeer een FIT-, GPX- of TCX-bestand via de knop <strong style={{ color: '#fff' }}>Import Ride</strong> in de menubalk hierboven om je activiteitengeschiedenis te laden.
         </p>
       </div>
     );
@@ -253,7 +253,7 @@ const WorkoutDashboard: React.FC<Props> = ({
         const getLatestRideAISummary = (r: RideSummaryWithBests) => {
           const isZwaar = (r.tss ?? r.hrTSS ?? 0) > 150;
           const labelStr = r.label ? `een ${r.label.toLowerCase()}` : 'een fietstraining';
-          return `Je laatste rit was ${labelStr} van ${r.distance.toFixed(0)} km met ${r.elevGain}m hoogtemeters. ${isZwaar ? 'Dit was een zware belasting voor je lichaam - zorg voor voldoende herstel!' : 'Dit was een uitstekende actieve training.'}`;
+          return `Je laatste ride was ${labelStr} van ${r.distance.toFixed(0)} km met ${r.elevGain}m hoogtemeters. ${isZwaar ? 'Dit was een zware belasting voor je lichaam - zorg voor voldoende herstel!' : 'Dit was een uitstekende actieve training.'}`;
         };
         return (
           <div className="wd-main-grid animate-slide-up">
@@ -268,7 +268,7 @@ const WorkoutDashboard: React.FC<Props> = ({
             {/* Dashboard stats cards grid */}
             <div className="wd-dashboard-grid">
               <div className="wd-dashboard-card">
-                <span className="wd-dashboard-card__label">Afstand</span>
+                <span className="wd-dashboard-card__label">Distance</span>
                 <span className="wd-dashboard-card__value">{totalDist.toFixed(0)} km</span>
               </div>
               <div className="wd-dashboard-card">
@@ -276,7 +276,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                 <span className="wd-dashboard-card__value">{Math.round(totalDur / 3600)} uur</span>
               </div>
               <div className="wd-dashboard-card">
-                <span className="wd-dashboard-card__label">Hoogtemeters</span>
+                <span className="wd-dashboard-card__label">Elevation Gain</span>
                 <span className="wd-dashboard-card__value">{totalElev.toFixed(0)} m</span>
               </div>
               <div className="wd-dashboard-card">
@@ -285,12 +285,12 @@ const WorkoutDashboard: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* 2. Laatste Rit Details */}
+            {/* 2. Laatste Ride Details */}
             <div className="wd-dashboard-row" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-              {/* Laatste rit paneel */}
+              {/* Laatste ride paneel */}
               <div className="wd-section-card" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">🏆 Laatste Rit Details</span>
+                  <span className="wd-section-card__title">🏆 Laatste Ride Details</span>
                   <span style={{ fontSize: 11, color: '#64748b' }}>{fmtShortDate(latestRide.date)}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 20, flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -303,11 +303,11 @@ const WorkoutDashboard: React.FC<Props> = ({
                     {/* Grid stats */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Afstand</div>
+                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Distance</div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: '#cbd5e1' }}>{latestRide.distance.toFixed(1)} km</div>
                       </div>
                       <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Gem. Vermogen</div>
+                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Gem. Power</div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: '#fdcb6e' }}>{latestRide.hasPower ? `${latestRide.avgPower} W` : '--'}</div>
                       </div>
                       <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
@@ -315,7 +315,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                         <div style={{ fontSize: 13, fontWeight: 800, color: '#ff7675' }}>{latestRide.tss ?? latestRide.hrTSS ?? '--'}</div>
                       </div>
                       <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Snelheid</div>
+                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Speed</div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: '#39ff14' }}>{latestRide.avgSpeed?.toFixed(1)} km/h</div>
                       </div>
                     </div>
@@ -361,7 +361,7 @@ const WorkoutDashboard: React.FC<Props> = ({
               {/* Intensiteit verdeling */}
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">⚡ Trainingszones (Vermogen)</span>
+                  <span className="wd-section-card__title">⚡ Trainingszones (Power)</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', height: '100%', paddingBottom: 10 }}>
                   {globalZonePower.length === 0 ? (
@@ -421,16 +421,16 @@ const WorkoutDashboard: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* 4. Maandelijkse Statistieken, Cadans Analyse en Seizoensvergelijking */}
+            {/* 4. Monthelijkse Statistics, Cadence Analysis en Seizoensvergelijking */}
             <div className="wd-dashboard-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.3fr', gap: '16px' }}>
               
-              {/* Maandelijkse stats */}
+              {/* Monthelijkse stats */}
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">📅 Maandelijkse Statistieken</span>
+                  <span className="wd-section-card__title">📅 Monthelijkse Statistics</span>
                 </div>
                 {monthData.length === 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, fontSize: 11, color: '#555' }}>Geen data</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, fontSize: 11, color: '#555' }}>No data</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={160}>
                     <BarChart data={monthData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -439,7 +439,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                       <YAxis tick={{ fontSize: 8, fill: '#64748b' }} />
                       <Tooltip
                         contentStyle={{ background: '#111318', border: 'none', borderRadius: 8, fontSize: 10 }}
-                        formatter={(v: any) => [`${Math.round(v)} km`, 'Afstand']}
+                        formatter={(v: any) => [`${Math.round(v)} km`, 'Distance']}
                       />
                       <Bar dataKey="distance" fill="rgba(203, 213, 225, 0.4)">
                         {monthData.map((_entry: any, index: number) => (
@@ -451,14 +451,14 @@ const WorkoutDashboard: React.FC<Props> = ({
                 )}
               </div>
 
-              {/* Cadans analyse */}
+              {/* Cadence analyse */}
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">🔄 Cadans Stabiliteit</span>
+                  <span className="wd-section-card__title">🔄 Cadence Stabiliteit</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <p style={{ fontSize: 10, color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>
-                    Grafiek toont je gemiddelde trapfrequentie per rit. Optimale cadans ligt tussen 85–95 RPM.
+                    Grafiek toont je gemiddelde trapfrequentie per ride. Optimale cadans ligt tussen 85–95 RPM.
                   </p>
                   {cadData.length < 3 ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, fontSize: 11, color: '#555' }}>Niet genoeg cadansdata</div>
@@ -485,10 +485,10 @@ const WorkoutDashboard: React.FC<Props> = ({
               {/* Seizoensvergelijking */}
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">📅 Vergelijking t.o.v. Vorig Jaar (Afstand)</span>
+                  <span className="wd-section-card__title">📅 Vergelijking t.o.v. Vorig Year (Distance)</span>
                 </div>
                 {seasonData.length === 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, fontSize: 11, color: '#555' }}>Geen data</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, fontSize: 11, color: '#555' }}>No data</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={160}>
                     <BarChart data={seasonData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -617,7 +617,7 @@ const WorkoutDashboard: React.FC<Props> = ({
             animation: 'spin 1s linear infinite'
           }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>AI Modellen Kalibreren...</span>
-          <span style={{ fontSize: 10, color: '#64748b' }}>Historische ritten analyseren & zones bijwerken</span>
+          <span style={{ fontSize: 10, color: '#64748b' }}>Historische rideten analyseren & zones bijwerken</span>
         </div>
       )}
     </div>
