@@ -33,7 +33,7 @@ function App() {
     const activeUserId = session.user.id;
 
     // Run initial sync on app load
-    syncPhoneDataToEcosystem(activeUserId).then(res => {
+    syncPhoneDataToEcosystem(activeUserId).then((res: any) => {
       if (res.success) {
         console.log(`[Zenith Auto-Sync] Initial Health Connect sync completed: ${res.stepsCount} steps, ${res.exerciseCount} exercises, ${res.sleepCount} sleep records.`);
       }
@@ -42,7 +42,7 @@ function App() {
     // Schedule automatic sync every 15 minutes (15 * 60 * 1000 = 900,000 ms)
     const intervalId = setInterval(() => {
       console.log("[Zenith Auto-Sync] Running 15-minute background Health Connect sync...");
-      syncPhoneDataToEcosystem(activeUserId).then(res => {
+      syncPhoneDataToEcosystem(activeUserId).then((res: any) => {
         if (res.success) {
           console.log(`[Zenith Auto-Sync] 15-min background sync completed: ${res.stepsCount} steps, ${res.exerciseCount} exercises, ${res.sleepCount} sleep records.`);
         }
