@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "npm run build:all",
   "outputDirectory": "apps/zenith-hub/dist",
-  "framework": "vite",
+  "framework": null,
   "rewrites": [
     { "source": "/aero/(.*)", "destination": "/aero/$1" },
     { "source": "/vigor/(.*)", "destination": "/vigor/$1" },
