@@ -283,6 +283,34 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 />
               </div>
 
+              {/* Weight Unit */}
+              <div className="zh-profile-row">
+                <label htmlFor="profileWeightUnit">Weight Unit</label>
+                <select
+                  id="profileWeightUnit"
+                  className="zh-profile-select"
+                  value={weightUnit}
+                  onChange={(e) => setWeightUnit(e.target.value as 'kg' | 'lbs')}
+                >
+                  <option value="kg">Kilograms (kg)</option>
+                  <option value="lbs">Pounds (lbs)</option>
+                </select>
+              </div>
+
+              {/* Unit System */}
+              <div className="zh-profile-row">
+                <label htmlFor="profileUnitSystem">System Measurement</label>
+                <select
+                  id="profileUnitSystem"
+                  className="zh-profile-select"
+                  value={unitSystem}
+                  onChange={(e) => setUnitSystem(e.target.value as 'metric' | 'imperial')}
+                >
+                  <option value="metric">Metric (cm / km)</option>
+                  <option value="imperial">Imperial (inches / miles)</option>
+                </select>
+              </div>
+
               {/* Weight (Read-only, linked to Vigor) */}
               <div className="zh-profile-row">
                 <label>Weight <span>(kg)</span></label>
