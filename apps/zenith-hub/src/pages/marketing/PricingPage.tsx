@@ -61,12 +61,12 @@ export const PricingPage: React.FC<PricingPageProps> = ({
               fontFamily: 'inherit'
             }}
           >
-            <ArrowLeft size={16} /> Terug
+            <ArrowLeft size={16} /> Back
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8' }}>
             <ShieldCheck size={14} style={{ color: '#10b981' }} />
-            <span>PayPal Beveiligd Abonnement</span>
+            <span>PayPal Secure Subscription</span>
           </div>
         </div>
 
@@ -85,14 +85,14 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             fontWeight: 800,
             marginBottom: 16
           }}>
-            <Sparkles size={13} /> TRANSPARANTE ATLETEN PRIJZEN
+            <Sparkles size={13} /> TRANSPARENT ATHLETE PRICING
           </div>
 
           <h1 style={{ fontSize: 36, fontWeight: 900, color: '#fff', margin: '0 0 12px' }}>
-            Kies het plan dat bij je doelen past
+            Choose the plan that fits your athletic goals
           </h1>
           <p style={{ fontSize: 15, color: '#94a3b8', maxWidth: '600px', margin: '0 auto' }}>
-            Begin gratis met de basisfuncties of ontgrendel de volledige kracht van het Zenith ecosysteem met Zenith Pro.
+            Start for free with essential tracking or unlock the full power of the Zenith Ecosystem with Zenith Pro.
           </p>
         </div>
 
@@ -113,30 +113,30 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                 ZENITH FREE
               </div>
               <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: '8px 0 16px' }}>
-                €0 <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>/ altijd gratis</span>
+                €0 <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>/ forever free</span>
               </div>
               <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 24, lineHeight: 1.5 }}>
-                Perfect voor atleten die hun basisgewicht, stappen en basistrainingen willen bijhouden.
+                Perfect for athletes looking to track basic body weight, steps, and daily workouts.
               </p>
 
               <ul style={{ padding: 0, listStyle: 'none', fontSize: 12, color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: 10, margin: 0 }}>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#10b981" /> Gewicht (kg) & Stappen loggen
+                  <CheckCircle2 size={16} color="#10b981" /> Weight (kg) & Steps tracking
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#10b981" /> Basisfietsritten & Kalenderoverzicht
+                  <CheckCircle2 size={16} color="#10b981" /> Basic Cycling Rides & Calendar overview
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#10b981" /> Kratos krachttraining workouts
+                  <CheckCircle2 size={16} color="#10b981" /> Kratos Strength Training Workouts
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#10b981" /> Fuel voedings- en hydratatielogger
+                  <CheckCircle2 size={16} color="#10b981" /> Fuel Nutrition & Hydration logger
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
-                  <XCircle size={16} color="#ef4444" /> Aero AI Routegenerator (GPX/TCX)
+                  <XCircle size={16} color="#ef4444" /> Aero AI Route Generator (GPX/TCX Export)
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b' }}>
-                  <XCircle size={16} color="#ef4444" /> Vigor Voortgangsfoto's & Omtrekken
+                  <XCircle size={16} color="#ef4444" /> Vigor Progress Photos & Body Circumferences
                 </li>
               </ul>
             </div>
@@ -157,7 +157,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                   fontFamily: 'inherit'
                 }}
               >
-                {isPro ? 'Standaard Inbegrepen' : 'Huidig Gratis Plan'}
+                {isPro ? 'Included by Default' : 'Current Free Plan'}
               </button>
             </div>
           </div>
@@ -175,7 +175,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             boxShadow: '0 15px 40px rgba(16, 185, 129, 0.2)'
           }}>
             <div style={{ position: 'absolute', top: -12, right: 24, background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', fontSize: 10, fontWeight: 900, padding: '3px 12px', borderRadius: 12 }}>
-              MEEST POPULAIR
+              MOST POPULAR
             </div>
 
             <div>
@@ -183,30 +183,30 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                 ZENITH PRO
               </div>
               <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: '8px 0 4px' }}>
-                €9,99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ maand</span>
+                €9.99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ month</span>
               </div>
               <div style={{ fontSize: 11, color: '#34d399', fontWeight: 800, marginBottom: 16 }}>
-                14 dagen gratis proefperiode • Opzegbaar via PayPal
+                14-day free trial • Cancel anytime via PayPal
               </div>
               <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 24, lineHeight: 1.5 }}>
-                Voor de gedreven atleet die maximaal inzicht wil in routeplanning, lichaamstransformatie en slaapkwaliteit.
+                For dedicated athletes seeking maximum insights into route planning, body transformation, and sleep quality.
               </p>
 
               <ul style={{ padding: 0, listStyle: 'none', fontSize: 12, color: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 10, margin: 0 }}>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> 🚴 Aero AI Routegenerator & GPX/TCX Export
+                  <CheckCircle2 size={16} color="#34d399" /> 🚴 Aero AI Route Generator & GPX/TCX Export
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> 📸 Vigor Voortgangsfoto's & Side-by-side Vergelijker
+                  <CheckCircle2 size={16} color="#34d399" /> 📸 Vigor Progress Photos & Side-by-Side Comparator
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> 📏 Vigor Lichaamsomtrekken (8 Zones)
+                  <CheckCircle2 size={16} color="#34d399" /> 📏 Vigor Body Circumferences (8 Zones)
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> ⚖️ Vetpercentage & Spiermassa Breakdown
+                  <CheckCircle2 size={16} color="#34d399" /> ⚖️ Body Fat & Muscle Mass Breakdown
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <CheckCircle2 size={16} color="#34d399" /> 🌙 Colmi Smart Ring Diepe Slaap & REM Fases
+                  <CheckCircle2 size={16} color="#34d399" /> 🌙 Colmi Smart Ring Deep & REM Sleep Stages
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <CheckCircle2 size={16} color="#34d399" /> 🔥 Kratos Muscle Heatmap & Rep Max Sync
@@ -226,7 +226,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                   borderRadius: 12,
                   textAlign: 'center'
                 }}>
-                  ✓ Zenith Pro Actief
+                  ✓ Zenith Pro Active
                 </div>
               ) : (
                 <button 
@@ -249,7 +249,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                     fontFamily: 'inherit'
                   }}
                 >
-                  <Zap size={16} /> Upgrade via PayPal (€9,99/m)
+                  <Zap size={16} /> Upgrade via PayPal (€9.99/mo)
                 </button>
               )}
             </div>
@@ -265,34 +265,34 @@ export const PricingPage: React.FC<PricingPageProps> = ({
           marginBottom: 40
         }}>
           <h3 style={{ fontSize: 20, fontWeight: 900, color: '#fff', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <HelpCircle size={20} color="#10b981" /> Veelgestelde Vragen (FAQ)
+            <HelpCircle size={20} color="#10b981" /> Frequently Asked Questions (FAQ)
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
             <div>
               <h4 style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 6 }}>
-                Hoe werkt de 14 dagen proefperiode?
+                How does the 14-day free trial work?
               </h4>
               <p style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-                Je kunt Zenith Pro 14 dagen lang volledig gratis uitproberen. Mocht het niet bevallen, kun je het abonnement binnen 14 dagen opzeggen zonder dat er kosten in rekening worden gebracht.
+                You can try Zenith Pro completely free for 14 days. If you decide it's not for you, cancel anytime within 14 days with zero charges.
               </p>
             </div>
 
             <div>
               <h4 style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 6 }}>
-                Hoe verloopt de betaling via PayPal?
+                How does payment work via PayPal?
               </h4>
               <p style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-                Betalingen verlopen via het beveiligde PayPal Checkout platform. Je Pro lidmaatschap wordt automatisch geactiveerd op al je apparaten zodra de betaling is afgerond.
+                Payments are processed via the secure PayPal Checkout platform. Your Pro membership is instantly activated across all your devices upon payment.
               </p>
             </div>
 
             <div>
               <h4 style={{ fontSize: 14, fontWeight: 800, color: '#fff', marginBottom: 6 }}>
-                Kan ik mijn abonnement op elk moment opzeggen?
+                Can I cancel my subscription at any time?
               </h4>
               <p style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
-                Ja, je abonnement is maandelijks opzegbaar via je PayPal account of direct op de profielpagina van Zenith.
+                Yes, your subscription can be canceled monthly via your PayPal account or directly inside your Zenith Profile page.
               </p>
             </div>
           </div>
@@ -303,8 +303,8 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         isOpen={showPayPalModal}
         onClose={() => setShowPayPalModal(false)}
         onSuccess={handlePaymentSuccess}
-        planName="Zenith Pro Maandabonnement"
-        priceDisplay="€9,99 / maand"
+        planName="Zenith Pro Monthly Subscription"
+        priceDisplay="€9.99 / month"
       />
     </div>
   );

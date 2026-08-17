@@ -8,7 +8,7 @@ interface AccountConfirmedModalProps {
 
 export const AccountConfirmedModal: React.FC<AccountConfirmedModalProps> = ({
   onProceed,
-  userName = 'Atleet'
+  userName = 'Athlete'
 }) => {
   const [countdown, setCountdown] = useState(3);
 
@@ -65,7 +65,7 @@ export const AccountConfirmedModal: React.FC<AccountConfirmedModalProps> = ({
           transform: 'translateX(-50%)',
           width: '80%',
           height: '4px',
-          background: 'linear-gradient(90deg, #a855f7 0%, #39ff14 100%)',
+          background: 'linear-gradient(90deg, #10b981 0%, #38bdf8 100%)',
           borderRadius: '2px'
         }} />
 
@@ -74,39 +74,39 @@ export const AccountConfirmedModal: React.FC<AccountConfirmedModalProps> = ({
           width: 72,
           height: 72,
           borderRadius: '50%',
-          background: 'rgba(57, 255, 20, 0.12)',
-          border: '2px solid #39ff14',
+          background: 'rgba(16, 185, 129, 0.12)',
+          border: '2px solid #10b981',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           margin: '0 auto 24px',
-          boxShadow: '0 0 25px rgba(57, 255, 20, 0.4)'
+          boxShadow: '0 0 25px rgba(16, 185, 129, 0.4)'
         }}>
-          <CheckCircle2 size={38} color="#39ff14" />
+          <CheckCircle2 size={38} color="#10b981" />
         </div>
 
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
-          background: 'rgba(168, 85, 247, 0.12)',
-          border: '1px solid rgba(168, 85, 247, 0.3)',
+          background: 'rgba(16, 185, 129, 0.12)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
           padding: '4px 14px',
           borderRadius: 20,
-          color: '#c084fc',
+          color: '#34d399',
           fontSize: 11,
           fontWeight: 800,
           marginBottom: 16
         }}>
-          <Sparkles size={13} /> E-MAILBEVESTIGING VOLTOOID
+          <Sparkles size={13} /> EMAIL VERIFICATION COMPLETE
         </div>
 
         <h2 style={{ fontSize: 26, fontWeight: 900, color: '#fff', margin: '0 0 10px' }}>
-          Account Bevestigd! 🎉
+          Account Confirmed! 🎉
         </h2>
 
         <p style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.6, margin: '0 0 24px' }}>
-          Welkom bij Zenith, <strong style={{ color: '#fff' }}>{userName}</strong>! Je e-mailadres is succesvol geverifieerd. Je account is nu volledig actief.
+          Welcome to Zenith, <strong style={{ color: '#fff' }}>{userName}</strong>! Your email address has been successfully verified. Your account is now fully active.
         </p>
 
         <div style={{
@@ -118,14 +118,14 @@ export const AccountConfirmedModal: React.FC<AccountConfirmedModalProps> = ({
           color: '#cbd5e1',
           marginBottom: 24
         }}>
-          Automatisch doorsturen over <span style={{ color: '#39ff14', fontWeight: 900 }}>{countdown}s</span>...
+          Automatically redirecting in <span style={{ color: '#10b981', fontWeight: 900 }}>{countdown}s</span>...
         </div>
 
         <button
           onClick={onProceed}
           style={{
             width: '100%',
-            background: 'linear-gradient(135deg, #a855f7 0%, #39ff14 100%)',
+            background: 'linear-gradient(135deg, #10b981 0%, #38bdf8 100%)',
             color: '#09090b',
             fontWeight: 900,
             fontSize: 14,
@@ -137,10 +137,10 @@ export const AccountConfirmedModal: React.FC<AccountConfirmedModalProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            boxShadow: '0 8px 25px rgba(57, 255, 20, 0.3)'
+            boxShadow: '0 8px 25px rgba(16, 185, 129, 0.3)'
           }}
         >
-          Naar Zenith Dashboard <ArrowRight size={18} />
+          Go to Zenith Dashboard <ArrowRight size={18} />
         </button>
       </div>
     </div>

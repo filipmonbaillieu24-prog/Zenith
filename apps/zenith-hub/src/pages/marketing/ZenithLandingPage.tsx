@@ -73,17 +73,17 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
           </div>
           <div>
             <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '1px', color: '#fff' }}>ZENITH</span>
-            <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#34d399', marginLeft: 8, fontWeight: 800, letterSpacing: '1px' }}>ECOSYSTEEM</span>
+            <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#34d399', marginLeft: 8, fontWeight: 800, letterSpacing: '1px' }}>ECOSYSTEM</span>
           </div>
         </div>
 
         <nav style={{ display: 'flex', alignItems: 'center', gap: 28, fontSize: 13, fontWeight: 600 }}>
-          <a href="#ecosysteem" style={{ color: '#cbd5e1', textDecoration: 'none', transition: 'color 0.2s' }}>Ecosysteem</a>
+          <a href="#ecosystem" style={{ color: '#cbd5e1', textDecoration: 'none', transition: 'color 0.2s' }}>Ecosystem</a>
           <button 
             onClick={() => onNavigateTab('prijzen')} 
             style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: 'inherit' }}
           >
-            Prijzen & Pro
+            Pricing & Pro
           </button>
           <button 
             onClick={() => onNavigateTab('roadmap')} 
@@ -109,7 +109,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               fontFamily: 'inherit'
             }}
           >
-            Inloggen
+            Log In
           </button>
 
           <button 
@@ -128,7 +128,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               fontFamily: 'inherit'
             }}
           >
-            Account Aanmaken
+            Create Account
           </button>
         </div>
       </header>
@@ -156,7 +156,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
           marginBottom: 24,
           letterSpacing: '0.5px'
         }}>
-          <Sparkles size={14} /> Het All-in-One Atleten Platform
+          <Sparkles size={14} /> The All-in-One Athletic Ecosystem
         </div>
 
         <h1 style={{
@@ -169,8 +169,8 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent'
         }}>
-          Presteren, Herstellen & <br />
-          <span style={{ color: '#10b981', WebkitTextFillColor: '#10b981' }}>Fysiek Transformeren.</span>
+          Perform, Recover & <br />
+          <span style={{ color: '#10b981', WebkitTextFillColor: '#10b981' }}>Transform Physically.</span>
         </h1>
 
         <p style={{
@@ -180,7 +180,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
           margin: '0 auto 40px',
           lineHeight: 1.6
         }}>
-          Zenith integreert AI-routeplanning, gewicht & lichaamsmetingen, krachttraining en voeding in één gestroomlijnd atletenplatform.
+          Zenith integrates AI route planning, body composition & circumferences, strength training, and nutrition into one seamless athletic web application.
         </p>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -202,7 +202,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               fontFamily: 'inherit'
             }}
           >
-            Start Gratis Account <ArrowRight size={18} />
+            Start Free Account <ArrowRight size={18} />
           </button>
 
           <button 
@@ -219,23 +219,23 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               fontFamily: 'inherit'
             }}
           >
-            Bekijk Prijzen & Pro
+            View Pricing & Pro
           </button>
         </div>
       </section>
 
       {/* Ecosystem Apps Grid */}
-      <section id="ecosysteem" style={{
+      <section id="ecosystem" style={{
         maxWidth: '1200px',
         margin: '60px auto 100px',
         padding: '0 24px'
       }}>
         <div style={{ textAlign: 'center', marginBottom: 52 }}>
           <h2 style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 12 }}>
-            Vier Krachtige Extensies. Één Centraal Hub.
+            Four Powerful Extensions. One Central Hub.
           </h2>
           <p style={{ fontSize: 14, color: '#94a3b8', margin: 0 }}>
-            Elke Zenith extensie is afgestemd op een specifiek onderdeel van je sportieve prestaties.
+            Every Zenith extension is tailored for a specific component of your athletic journey.
           </p>
         </div>
 
@@ -257,13 +257,13 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Aero</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Wielren extensie met AI-routegenerator op basis van wind & hoogteprofiel.
+                Cycling extension with AI-powered route generator based on wind & elevation profiles.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
                 <li>AI Route Generator & GPX/TCX Export</li>
-                <li>PMC Conditiegrafiek (CTL / ATL / TSB)</li>
-                <li>FIT & GPX rit-analyse met Best Power</li>
-                <li>All-Time Warmtekaart & Klimmen</li>
+                <li>PMC Fitness Chart (CTL / ATL / TSB)</li>
+                <li>FIT & GPX Ride Analysis with Best Power</li>
+                <li>All-Time Heatmap & Climbs</li>
               </ul>
             </div>
           </div>
@@ -285,13 +285,13 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Vigor</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Gezondheids- & omtrektracker voor gewicht, lichaamssamenstelling en slaap.
+                Health & vitality tracker for body weight, composition, circumferences, and sleep.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
-                <li>Gewicht (kg) & Stappen tracking</li>
-                <li>Lichaamsomtrekken (8 zones)</li>
-                <li>Voortgangsfoto's & Side-by-side slider</li>
-                <li>Colmi Smart Ring Slaapfases</li>
+                <li>Weight (kg) & Steps tracking</li>
+                <li>Body circumferences (8 zones)</li>
+                <li>Progress photos & Side-by-side comparator</li>
+                <li>Colmi Smart Ring Deep & REM Sleep</li>
               </ul>
             </div>
           </div>
@@ -313,13 +313,13 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Kratos</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Krachttraining & spieropbouw tracker met anatomische spierbelasting heatmap.
+                Strength training & muscle building tracker with anatomical muscle load heatmap.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
-                <li>Workout logging & Oefeningen bibliotheek</li>
-                <li>Spierbelasting Heatmap (Anatomisch)</li>
+                <li>Workout logging & Exercises library</li>
+                <li>Muscle Load Heatmap (Anatomical)</li>
                 <li>1RM Repetition Max Calculator</li>
-                <li>Progressieve overbelasting grafieken</li>
+                <li>Progressive overload charts</li>
               </ul>
             </div>
           </div>
@@ -341,13 +341,13 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Fuel</h3>
               <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 18 }}>
-                Voedingsinname, macronutriënten en hydratatie tracking op maat.
+                Nutrition intake, macronutrients, and hydration tracking tailored to your workload.
               </p>
               <ul style={{ paddingLeft: 18, fontSize: 12, color: '#cbd5e1', lineHeight: 1.8, margin: 0 }}>
-                <li>Kalorieën & Macro's (Eiwit, Koolhydraten, Vet)</li>
-                <li>Hydratatie & Vochtbalans loggen</li>
-                <li>Energietargets gebaseerd op Aero/Kratos ritten</li>
-                <li>Dagelijks voedingsdagboek</li>
+                <li>Calories & Macros (Protein, Carbs, Fat)</li>
+                <li>Hydration & Fluid Balance logging</li>
+                <li>Energy targets based on Aero/Kratos workouts</li>
+                <li>Daily nutrition diary</li>
               </ul>
             </div>
           </div>
@@ -362,10 +362,10 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
         background: 'rgba(12, 12, 16, 0.95)'
       }}>
         <h3 style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginBottom: 12 }}>
-          Klaar om Zenith te gebruiken?
+          Ready to elevate your athletic performance?
         </h3>
         <p style={{ fontSize: 14, color: '#94a3b8', marginBottom: 24 }}>
-          Meld je gratis aan en ervaar het complete atleten platform direct op de web app.
+          Sign up for free and experience the complete athletic ecosystem directly on the web.
         </p>
         <button 
           onClick={onRegister}
@@ -382,7 +382,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
             fontFamily: 'inherit'
           }}
         >
-          Nu Registreren
+          Create Free Account
         </button>
         <div style={{ marginTop: 40, fontSize: 11, color: '#64748b' }}>
           © 2026 Zenith Ecosystem. Hosted on Vercel.

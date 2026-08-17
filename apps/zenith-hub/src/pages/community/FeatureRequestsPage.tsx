@@ -24,50 +24,11 @@ interface FeatureRequestsPageProps {
   userId?: string;
 }
 
-const INITIAL_MOCK_REQUESTS: FeatureRequestItem[] = [
-  {
-    id: 'req-1',
-    title: 'Automatische Strava Sync voor Aero & Vigor',
-    description: 'Automatisch al je wielrenritten en gewichtsmetingen synchroniseren met je Strava profiel.',
-    category: 'aero',
-    upvotes: 42,
-    status: 'in_progress',
-    created_at: '2026-08-10T12:00:00Z'
-  },
-  {
-    id: 'req-2',
-    title: 'Apple Health & Garmin Connect Integratie',
-    description: 'Direct je stappen, hartslag, en slaapdata uit lezen uit Apple Health en Garmin Connect.',
-    category: 'vigor',
-    upvotes: 38,
-    status: 'planned',
-    created_at: '2026-08-12T14:30:00Z'
-  },
-  {
-    id: 'req-3',
-    title: 'Aangepaste Krachttraining Builder in Kratos',
-    description: 'Eigen oefeningen en custom workout schema\'s aanmaken met aangepaste rusttimers.',
-    category: 'kratos',
-    upvotes: 29,
-    status: 'planned',
-    created_at: '2026-08-14T09:15:00Z'
-  },
-  {
-    id: 'req-4',
-    title: 'Donker / Licht Thema Instellingen per App',
-    description: 'Optie om per app te kiezen tussen OLED pitch black en high contrast thema.',
-    category: 'general',
-    upvotes: 15,
-    status: 'under_review',
-    created_at: '2026-08-15T16:20:00Z'
-  }
-];
-
 export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
   onBack,
   userId: _userId = ''
 }) => {
-  const [requests, setRequests] = useState<FeatureRequestItem[]>(INITIAL_MOCK_REQUESTS);
+  const [requests, setRequests] = useState<FeatureRequestItem[]>([]);
   const [_loading, setLoading] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -78,7 +39,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
   const [categoryInput, setCategoryInput] = useState<'aero' | 'vigor' | 'kratos' | 'general'>('general');
   const [submitting, setSubmitting] = useState(false);
 
-  // Load feature requests from Supabase table if available
+  // Load feature requests from Supabase table
   useEffect(() => {
     async function fetchRequests() {
       try {
@@ -92,7 +53,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
           setRequests(data);
         }
       } catch (err) {
-        console.error('Feature requests ophalen uit Supabase mislukt:', err);
+        console.error('Failed to fetch feature requests from Supabase:', err);
       } finally {
         setLoading(false);
       }
@@ -106,7 +67,6 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
         const hasVoted = req.user_voted;
         const newVotes = hasVoted ? req.upvotes - 1 : req.upvotes + 1;
         
-        // Try async sync to Supabase
         (async () => {
           try {
             await supabase
@@ -150,7 +110,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
           .from('zenith_feature_requests')
           .insert(newReq);
       } catch (err) {
-        console.error('Kon feature request niet in Supabase invoeren:', err);
+        console.error('Failed to insert feature request into Supabase:', err);
       }
 
       setRequests(prev => [newReq, ...prev]);
@@ -170,13 +130,13 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
   const getStatusBadge = (status: FeatureRequestItem['status']) => {
     switch (status) {
       case 'completed':
-        return <span style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid #34d399', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>✓ VOLTOOID</span>;
+        return <span style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid #34d399', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>✓ COMPLETED</span>;
       case 'in_progress':
-        return <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid #38bdf8', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>⚡ IN ONTWIKKELING</span>;
+        return <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid #38bdf8', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>⚡ IN DEVELOPMENT</span>;
       case 'planned':
-        return <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid #10b981', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>📌 GEPLAAND</span>;
+        return <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid #10b981', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>📌 PLANNED</span>;
       default:
-        return <span style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>IN OVERWEGING</span>;
+        return <span style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>UNDER REVIEW</span>;
     }
   };
 
@@ -212,7 +172,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
               fontFamily: 'inherit'
             }}
           >
-            <ArrowLeft size={16} /> Terug
+            <ArrowLeft size={16} /> Back
           </button>
 
           <button 
@@ -233,7 +193,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
               fontFamily: 'inherit'
             }}
           >
-            <Plus size={16} /> Nieuw Idee Indienen
+            <Plus size={16} /> Submit New Idea
           </button>
         </div>
 
@@ -255,21 +215,21 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             <Sparkles size={13} /> COMMUNITY ROADMAP & VOTING BOARD
           </div>
           <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>
-            Jouw Stem Vormt de Toekomst van Zenith
+            Your Voice Shapes the Future of Zenith
           </h1>
           <p style={{ fontSize: 14, color: '#94a3b8', margin: 0 }}>
-            Stem op je favoriete uitbreidingen of dien zelf nieuwe ideeën in voor Aero, Vigor, Kratos of Fuel.
+            Upvote your favorite features or submit new ideas for Aero, Vigor, Kratos, or Fuel.
           </p>
         </div>
 
         {/* Filter Tabs */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 28, overflowX: 'auto', paddingBottom: 4 }}>
           {[
-            { id: 'all', label: 'Alle Ideeën' },
+            { id: 'all', label: 'All Ideas' },
             { id: 'aero', label: '🚴 Aero' },
             { id: 'vigor', label: '⚖️ Vigor' },
             { id: 'kratos', label: '🔥 Kratos' },
-            { id: 'general', label: '🌐 Algemeen' },
+            { id: 'general', label: '🌐 General' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -293,61 +253,90 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
         </div>
 
         {/* Request List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {filteredRequests.map(req => (
-            <div 
-              key={req.id}
+        {filteredRequests.length === 0 ? (
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '16px',
+            padding: '40px',
+            textAlign: 'center',
+            color: '#94a3b8'
+          }}>
+            <p style={{ fontSize: 14, margin: '0 0 16px' }}>No feature requests submitted yet for this category.</p>
+            <button
+              onClick={() => setShowSubmitModal(true)}
               style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                borderRadius: '16px',
-                padding: '20px 24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 20
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid #10b981',
+                color: '#34d399',
+                fontWeight: 800,
+                fontSize: 12,
+                padding: '8px 18px',
+                borderRadius: 10,
+                cursor: 'pointer',
+                fontFamily: 'inherit'
               }}
             >
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                  <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#34d399', letterSpacing: '0.8px', background: 'rgba(16, 185, 129, 0.12)', padding: '2px 8px', borderRadius: 6 }}>
-                    {req.category}
-                  </span>
-                  {getStatusBadge(req.status)}
-                </div>
-                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>
-                  {req.title}
-                </h3>
-                <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
-                  {req.description}
-                </p>
-              </div>
-
-              {/* Upvote Button */}
-              <button
-                onClick={() => handleVote(req.id)}
+              Be the first to submit an idea!
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {filteredRequests.map(req => (
+              <div 
+                key={req.id}
                 style={{
-                  background: req.user_voted ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                  border: req.user_voted ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
-                  color: req.user_voted ? '#34d399' : '#cbd5e1',
-                  padding: '10px 16px',
-                  borderRadius: 12,
-                  cursor: 'pointer',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '16px',
+                  padding: '20px 24px',
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  minWidth: 64,
-                  transition: 'all 0.2s',
-                  fontFamily: 'inherit'
+                  justifyContent: 'space-between',
+                  gap: 20
                 }}
               >
-                <ThumbsUp size={16} color={req.user_voted ? '#34d399' : '#cbd5e1'} />
-                <span style={{ fontSize: 13, fontWeight: 900, marginTop: 4 }}>{req.upvotes}</span>
-              </button>
-            </div>
-          ))}
-        </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#34d399', letterSpacing: '0.8px', background: 'rgba(16, 185, 129, 0.12)', padding: '2px 8px', borderRadius: 6 }}>
+                      {req.category}
+                    </span>
+                    {getStatusBadge(req.status)}
+                  </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>
+                    {req.title}
+                  </h3>
+                  <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
+                    {req.description}
+                  </p>
+                </div>
+
+                {/* Upvote Button */}
+                <button
+                  onClick={() => handleVote(req.id)}
+                  style={{
+                    background: req.user_voted ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                    border: req.user_voted ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
+                    color: req.user_voted ? '#34d399' : '#cbd5e1',
+                    padding: '10px 16px',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: 64,
+                    transition: 'all 0.2s',
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  <ThumbsUp size={16} color={req.user_voted ? '#34d399' : '#cbd5e1'} />
+                  <span style={{ fontSize: 13, fontWeight: 900, marginTop: 4 }}>{req.upvotes}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Submit Feature Request Modal */}
@@ -385,37 +374,37 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             </button>
 
             <h3 style={{ fontSize: 18, fontWeight: 900, color: '#fff', marginBottom: 6 }}>
-              Nieuw Idee Indienen
+              Submit New Feature Idea
             </h3>
             <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>
-              Laat ons weten welke functionaliteit jij graag ziet in Zenith.
+              Let us know what functionality you would like to see in Zenith.
             </p>
 
             <form onSubmit={handleSubmitNewRequest} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <label style={{ fontSize: 11, fontWeight: 800, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>
-                  CATEGORIE
+                  CATEGORY
                 </label>
                 <select
                   value={categoryInput}
                   onChange={(e: any) => setCategoryInput(e.target.value)}
                   style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12, fontFamily: 'inherit' }}
                 >
-                  <option value="aero">🚴 Zenith Aero (Wielrennen & Routing)</option>
-                  <option value="vigor">⚖️ Zenith Vigor (Gezondheid & Omtrekken)</option>
-                  <option value="kratos">🔥 Zenith Kratos (Krachttraining)</option>
-                  <option value="general">🌐 Algemeen Zenith Ecosysteem</option>
+                  <option value="aero">🚴 Zenith Aero (Cycling & Routing)</option>
+                  <option value="vigor">⚖️ Zenith Vigor (Health & Circumferences)</option>
+                  <option value="kratos">🔥 Zenith Kratos (Strength Training)</option>
+                  <option value="general">🌐 General Zenith Ecosystem</option>
                 </select>
               </div>
 
               <div>
                 <label style={{ fontSize: 11, fontWeight: 800, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>
-                  TITEL
+                  TITLE
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Bijv. Strava Auto Sync..."
+                  placeholder="e.g. Strava Auto Sync..."
                   value={titleInput}
                   onChange={e => setTitleInput(e.target.value)}
                   style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12, fontFamily: 'inherit' }}
@@ -424,12 +413,12 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
 
               <div>
                 <label style={{ fontSize: 11, fontWeight: 800, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>
-                  OMSCHRIJVING
+                  DESCRIPTION
                 </label>
                 <textarea
                   required
                   rows={4}
-                  placeholder="Beschrijf hoe deze feature zou moeten werken..."
+                  placeholder="Describe how this feature should work..."
                   value={descInput}
                   onChange={e => setDescInput(e.target.value)}
                   style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12, resize: 'vertical', fontFamily: 'inherit' }}
@@ -442,14 +431,14 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                   onClick={() => setShowSubmitModal(false)}
                   style={{ flex: 1, padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontWeight: 700, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
                 >
-                  Annuleren
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
                   style={{ flex: 1, padding: 12, borderRadius: 10, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: '#fff', fontWeight: 900, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
                 >
-                  {submitting ? 'Indienen...' : 'Indienen'}
+                  {submitting ? 'Submitting...' : 'Submit'}
                 </button>
               </div>
             </form>
