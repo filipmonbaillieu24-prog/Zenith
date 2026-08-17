@@ -78,7 +78,7 @@ object ZenithSyncManager {
             }.toString()
 
             val rpcBodyJson = buildJsonObject {
-                put("timestamp", data.timestamp)
+                put("timestamp", System.currentTimeMillis())
                 put("synctype", "MANUAL")
                 put("datatype", "BIOMETRIC_FULL")
                 put("recordcount", 1)
