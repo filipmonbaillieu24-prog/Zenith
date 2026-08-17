@@ -46,9 +46,9 @@ export const LoginPage: React.FC = () => {
         if (error) throw error;
         
         if (data?.user?.identities?.length === 0) {
-          setErrorMsg("Dit e-mailadres is al geregistreerd. Probeer in te loggen.");
+          setErrorMsg("This email address is already registered. Please try logging in.");
         } else {
-          setInfoMsg("Registratie succesvol! Controleer je e-mail voor de verificatielink.");
+          setInfoMsg("Registration successful! Please check your email for the verification link.");
         }
       } else {
         // Sign In
@@ -68,7 +68,7 @@ export const LoginPage: React.FC = () => {
         }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || "Er is een fout opgetreden.");
+      setErrorMsg(err.message || "An error occurred during authentication.");
     } finally {
       setLoading(false);
     }
@@ -82,8 +82,8 @@ export const LoginPage: React.FC = () => {
       minHeight: '100vh',
       width: '100vw',
       background: '#09090b',
-      backgroundImage: 'radial-gradient(circle at 10% 20%, rgba(203, 213, 225, 0.04) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(108, 92, 231, 0.05) 0%, transparent 40%)',
-      fontFamily: "'Outfit', sans-serif",
+      backgroundImage: 'radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 40%)',
+      fontFamily: "'Outfit', 'Inter', system-ui, -apple-system, sans-serif",
       color: '#f8fafc',
       padding: '24px',
       boxSizing: 'border-box'
@@ -124,7 +124,7 @@ export const LoginPage: React.FC = () => {
             textAlign: 'center',
             fontWeight: 500
           }}>
-            {isSignUp ? 'Maak een Zenith-account aan om te beginnen' : 'Log in op uw Zenith-dashboard'}
+            {isSignUp ? 'Create your Zenith account to get started' : 'Sign in to your Zenith Dashboard'}
           </p>
         </div>
 
@@ -168,13 +168,13 @@ export const LoginPage: React.FC = () => {
 
           {isSignUp && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8', fontWeight: 700 }}>Naam</label>
+              <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8', fontWeight: 700 }}>Full Name</label>
               <div style={{ position: 'relative' }}>
                 <User size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                 <input
                   type="text"
                   required
-                  placeholder="Je naam"
+                  placeholder="Your name"
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
                   style={{
@@ -190,7 +190,7 @@ export const LoginPage: React.FC = () => {
                     transition: 'border-color 0.15s',
                     boxSizing: 'border-box'
                   }}
-                  onFocus={e => e.target.style.borderColor = 'rgba(203, 213, 225, 0.4)'}
+                  onFocus={e => e.target.style.borderColor = 'rgba(16, 185, 129, 0.4)'}
                   onBlur={e => e.target.style.borderColor = 'rgba(255, 255, 255, 0.05)'}
                 />
               </div>
@@ -198,13 +198,13 @@ export const LoginPage: React.FC = () => {
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8', fontWeight: 700 }}>E-mailadres</label>
+            <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8', fontWeight: 700 }}>Email Address</label>
             <div style={{ position: 'relative' }}>
               <Mail size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
               <input
                 type="email"
                 required
-                placeholder="atleet@zenith.com"
+                placeholder="athlete@zenith.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 style={{
@@ -220,14 +220,14 @@ export const LoginPage: React.FC = () => {
                   transition: 'border-color 0.15s',
                   boxSizing: 'border-box'
                 }}
-                onFocus={e => e.target.style.borderColor = 'rgba(203, 213, 225, 0.4)'}
+                onFocus={e => e.target.style.borderColor = 'rgba(16, 185, 129, 0.4)'}
                 onBlur={e => e.target.style.borderColor = 'rgba(255, 255, 255, 0.05)'}
               />
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8', fontWeight: 700 }}>Wachtwoord</label>
+            <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#94a3b8', fontWeight: 700 }}>Password</label>
             <div style={{ position: 'relative' }}>
               <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
               <input
@@ -249,7 +249,7 @@ export const LoginPage: React.FC = () => {
                   transition: 'border-color 0.15s',
                   boxSizing: 'border-box'
                 }}
-                onFocus={e => e.target.style.borderColor = 'rgba(203, 213, 225, 0.4)'}
+                onFocus={e => e.target.style.borderColor = 'rgba(16, 185, 129, 0.4)'}
                 onBlur={e => e.target.style.borderColor = 'rgba(255, 255, 255, 0.05)'}
               />
             </div>
@@ -266,11 +266,11 @@ export const LoginPage: React.FC = () => {
                 onChange={() => {}} 
                 style={{
                   cursor: 'pointer',
-                  accentColor: '#cbd5e1'
+                  accentColor: '#10b981'
                 }}
               />
               <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>
-                Onthoud inloggegevens
+                Remember credentials
               </span>
             </div>
           )}
@@ -279,7 +279,7 @@ export const LoginPage: React.FC = () => {
             type="submit"
             disabled={loading}
             style={{
-              background: 'linear-gradient(135deg, #cbd5e1, #6c5ce7)',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
               border: 'none',
               borderRadius: '10px',
               color: '#fff',
@@ -289,14 +289,15 @@ export const LoginPage: React.FC = () => {
               cursor: 'pointer',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
-              boxShadow: '0 4px 15px rgba(203, 213, 225, 0.15)',
+              boxShadow: '0 4px 15px rgba(16, 185, 129, 0.25)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
               marginTop: '10px',
               transition: 'transform 0.15s, opacity 0.15s',
-              opacity: loading ? 0.7 : 1
+              opacity: loading ? 0.7 : 1,
+              fontFamily: 'inherit'
             }}
             onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
@@ -305,7 +306,7 @@ export const LoginPage: React.FC = () => {
               <div style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.2)', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
             ) : (
               <>
-                <span>{isSignUp ? 'Registreren' : 'Inloggen'}</span>
+                <span>{isSignUp ? 'Create Account' : 'Log In'}</span>
                 <ArrowRight size={14} />
               </>
             )}
@@ -321,7 +322,7 @@ export const LoginPage: React.FC = () => {
           fontSize: '11px',
           color: '#94a3b8'
         }}>
-          {isSignUp ? 'Heb je al een account?' : 'Nieuw bij Zenith Ecosysteem?'}{' '}
+          {isSignUp ? 'Already have an account?' : 'New to Zenith Ecosystem?'}{' '}
           <button
             onClick={() => {
               setIsSignUp(!isSignUp);
@@ -331,14 +332,14 @@ export const LoginPage: React.FC = () => {
             style={{
               background: 'none',
               border: 'none',
-              color: '#cbd5e1',
+              color: '#34d399',
               fontWeight: 700,
               cursor: 'pointer',
               padding: 0,
               fontFamily: 'inherit'
             }}
           >
-            {isSignUp ? 'Inloggen' : 'Account aanmaken'}
+            {isSignUp ? 'Log In' : 'Create Account'}
           </button>
         </div>
       </div>

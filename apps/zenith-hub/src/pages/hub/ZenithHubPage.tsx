@@ -659,32 +659,32 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
             <div className="zh-stats-card">
               <div style={{ marginBottom: 12 }}>
                 <h3 style={{ margin: 0, fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '1px' }}>
-                  Fysiologische Belastingsbalans (PMC)
+                  Physiological Training Load (PMC)
                 </h3>
               </div>
               <p style={{ margin: '0 0 16px', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-                Berekend op basis van uw geregistreerde trainingsbelasting uit de gekoppelde Aero & Kratos extensies.
+                Calculated from your logged training workload across linked Aero & Kratos extensions.
               </p>
               <div className="zh-stats-grid">
                 <div className="zh-stat-item">
-                  <span className="zh-stat-label">Fitheid (CTL)</span>
+                  <span className="zh-stat-label">Fitness (CTL)</span>
                   <strong className="zh-stat-value" style={{ color: '#cbd5e1' }}>{ctl}</strong>
                 </div>
                 <div className="zh-stat-item">
-                  <span className="zh-stat-label">Vermoeidheid (ATL)</span>
+                  <span className="zh-stat-label">Fatigue (ATL)</span>
                   <strong className="zh-stat-value" style={{ color: '#ff7675' }}>{atl}</strong>
                 </div>
                 <div className="zh-stat-item">
-                  <span className="zh-stat-label">Vorm (TSB)</span>
+                  <span className="zh-stat-label">Form (TSB)</span>
                   <strong className="zh-stat-value" style={{ color: tsb >= 0 ? '#cbd5e1' : '#eccc68' }}>{tsb >= 0 ? `+${tsb}` : tsb}</strong>
                 </div>
               </div>
               
-              {/* Recharts PMC Voorspelling Grafiek */}
+              {/* Recharts PMC Prediction Chart */}
               <div className="wd-calendar-chart-wrapper" style={{ marginTop: 20, borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Periodisering & Voorspelling (+35 dagen)
+                    Periodization & Forecast (+35 days)
                   </span>
                   <span style={{ fontSize: 10, color: currentFormStatus.color, fontWeight: 700 }}>
                     Status: {currentFormStatus.label} {currentFormStatus.emoji}
@@ -698,11 +698,11 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                     <Tooltip
                       contentStyle={{ background: '#09090b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, color: '#fff' }}
                     />
-                    <ReferenceLine x={new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} stroke="#cbd5e1" strokeDasharray="3 3" label={{ value: 'Vandaag', fill: '#cbd5e1', fontSize: 10 }} />
-                    <Bar dataKey="tss" fill="rgba(255,255,255,0.08)" radius={[2, 2, 0, 0]} name="Dagelijkse TSS" />
-                    <Line type="monotone" dataKey="ctl" stroke="#cbd5e1" strokeWidth={2} dot={false} name="Fitheid (CTL)" />
-                    <Line type="monotone" dataKey="atl" stroke="#ff7675" strokeWidth={1.5} dot={false} name="Vermoeidheid (ATL)" />
-                    <Line type="monotone" dataKey="tsb" stroke="#fdcb6e" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Vorm (TSB)" />
+                    <ReferenceLine x={new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} stroke="#cbd5e1" strokeDasharray="3 3" label={{ value: 'Today', fill: '#cbd5e1', fontSize: 10 }} />
+                    <Bar dataKey="tss" fill="rgba(255,255,255,0.08)" radius={[2, 2, 0, 0]} name="Daily TSS" />
+                    <Line type="monotone" dataKey="ctl" stroke="#cbd5e1" strokeWidth={2} dot={false} name="Fitness (CTL)" />
+                    <Line type="monotone" dataKey="atl" stroke="#ff7675" strokeWidth={1.5} dot={false} name="Fatigue (ATL)" />
+                    <Line type="monotone" dataKey="tsb" stroke="#fdcb6e" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Form (TSB)" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -716,7 +716,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                     <Heart size={14} style={{ color: recoveryCardStyle.color }} /> AI Recovery Score
                   </h3>
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-                    Real-time herstelscore berekend over slaap, cardiobelasting en krachttraining.
+                    Real-time recovery score calculated from sleep, cardio load, and strength workouts.
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: recoveryCardStyle.circleBg, border: `1px solid ${recoveryCardStyle.circleBorder}`, width: 56, height: 56, borderRadius: '50%', transition: 'all 0.3s ease' }}>
@@ -741,26 +741,26 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
             {/* Widget 1: Health & Vitality (Vigor) */}
             <div className="zh-stats-card" style={{ display: 'flex', flexDirection: 'column', justifySelf: 'stretch' }}>
               <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Scale size={14} style={{ color: '#cbd5e1' }} /> Gezondheid & Vitaliteit (Vigor)
+                <Scale size={14} style={{ color: '#cbd5e1' }} /> Health & Vitality (Vigor)
               </h3>
               
               {loadingDashboard ? (
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 11, minHeight: 120 }}>
-                  Vitaliteit laden...
+                  Loading vitality...
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, justifyContent: 'center' }}>
                   {/* Weight log */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.15)', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.02)' }}>
                     <div>
-                      <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>Meest Recente Gewicht</span>
+                      <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>Latest Weight Log</span>
                       <strong style={{ fontSize: 18, color: '#f8fafc', fontWeight: 800 }}>
                         {latestWeight ? `${latestWeight.weight} kg` : '--'}
                       </strong>
                     </div>
                     {latestWeight && (
                       <span style={{ fontSize: 10, color: '#64748b' }}>
-                        {new Date(latestWeight.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })}
+                        {new Date(latestWeight.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
                       </span>
                     )}
                   </div>
@@ -770,9 +770,9 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <Moon size={16} style={{ color: '#a29bfe' }} />
                       <div>
-                        <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>Slaapkwaliteit</span>
+                        <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>Sleep Quality</span>
                         <strong style={{ fontSize: 13, color: '#f8fafc' }}>
-                          {latestSleep ? `${Math.round(latestSleep.duration_minutes / 60 * 10) / 10} uur` : '--'}
+                          {latestSleep ? `${Math.round(latestSleep.duration_minutes / 60 * 10) / 10} hrs` : '--'}
                         </strong>
                       </div>
                     </div>
@@ -788,7 +788,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <Footprints size={16} style={{ color: '#cbd5e1' }} />
-                        <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800 }}>Stappenteller Vandaag</span>
+                        <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800 }}>Today's Step Count</span>
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>
                         {(todaySteps || 0).toLocaleString()} / {(stepsGoal || 10000).toLocaleString()}
@@ -805,12 +805,12 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
             {/* Widget 2: Weekly training summary statistics */}
             <div className="zh-stats-card" style={{ display: 'flex', flexDirection: 'column', justifySelf: 'stretch' }}>
               <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Activity size={14} style={{ color: '#cbd5e1' }} /> Wekelijkse Prestaties
+                <Activity size={14} style={{ color: '#cbd5e1' }} /> Weekly Performance
               </h3>
 
               {loadingDashboard ? (
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 11, minHeight: 120 }}>
-                  Prestaties laden...
+                  Loading performance...
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1 }}>
@@ -825,7 +825,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                         {weeklyRidesDistance.toFixed(0)} <span style={{ fontSize: 13, fontWeight: 500, color: '#cbd5e1' }}>km</span>
                       </strong>
                       <span style={{ fontSize: 11, color: '#cbd5e1' }}>
-                        {weeklyRidesCount} {weeklyRidesCount === 1 ? 'fietserit' : 'fietseritten'}
+                        {weeklyRidesCount} {weeklyRidesCount === 1 ? 'cycling ride' : 'cycling rides'}
                       </span>
                     </div>
                   </div>
@@ -834,14 +834,14 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                   <div style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.02)', borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Dumbbell size={18} style={{ color: '#c084fc' }} />
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Kracht (Kratos)</span>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>Strength (Kratos)</span>
                     </div>
                     <div>
                       <strong style={{ fontSize: 24, display: 'block', fontWeight: 900, color: '#f8fafc' }}>
-                        {weeklyKratosCount} <span style={{ fontSize: 13, fontWeight: 500, color: '#cbd5e1' }}>sessies</span>
+                        {weeklyKratosCount} <span style={{ fontSize: 13, fontWeight: 500, color: '#cbd5e1' }}>sessions</span>
                       </strong>
                       <span style={{ fontSize: 11, color: '#cbd5e1' }}>
-                        Deze week voltooid
+                        Completed this week
                       </span>
                     </div>
                   </div>

@@ -61,14 +61,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navGroups = [
     {
-      title: 'Algemeen',
+      title: 'General',
       items: [
         { key: 'hub' as TabKey, label: 'Dashboard', icon: LayoutDashboard },
-        { key: 'calendar' as TabKey, label: 'Kalender', icon: Calendar },
+        { key: 'calendar' as TabKey, label: 'Calendar', icon: Calendar },
       ],
     },
     {
-      title: 'Extensies',
+      title: 'Extensions',
       items: [
         { key: 'aero' as TabKey, label: 'Aero', icon: Bike },
         { key: 'vigor' as TabKey, label: 'Vigor', icon: Scale },
@@ -77,9 +77,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      title: 'Systeem & Community',
+      title: 'System & Community',
       items: [
-        { key: 'prijzen' as TabKey, label: 'Prijzen & Pro', icon: Zap },
+        { key: 'prijzen' as TabKey, label: 'Pricing & Pro', icon: Zap },
         { key: 'roadmap' as TabKey, label: 'Feature Requests', icon: MessageSquare },
         { key: 'mobiel' as TabKey, label: 'Download Center', icon: Smartphone },
         { key: 'logs' as TabKey, label: 'Console Logs', icon: Terminal },
@@ -99,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button 
           onClick={toggleCollapse} 
           className="zenith-sidebar-toggle-btn" 
-          title={isCollapsed ? "Sidebar uitklappen (Ctrl+B)" : "Sidebar inklappen (Ctrl+B)"}
+          title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
         >
           {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
@@ -144,7 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             onClick={() => setActiveTab('profile')}
             className={`zenith-sidebar-user-profile-btn ${activeTab === 'profile' ? 'active' : ''}`}
-            title={isCollapsed ? `Profiel van ${userName}` : undefined}
+            title={isCollapsed ? `Profile of ${userName}` : undefined}
           >
             <div className="zenith-user-avatar">
               <User size={16} />
@@ -163,19 +163,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button 
           onClick={onOpenBugReport} 
           className="zenith-sidebar-bug-btn"
-          title={isCollapsed ? "Meld een bug" : undefined}
+          title={isCollapsed ? "Report an Issue" : undefined}
         >
           <Bug size={16} />
-          {!isCollapsed && <span className="animate-fade-in">Meld een bug</span>}
+          {!isCollapsed && <span className="animate-fade-in">Report an Issue</span>}
         </button>
 
         <button 
           onClick={onLogout} 
           className="zenith-sidebar-logout-btn"
-          title="Uitloggen"
+          title="Log Out"
         >
           <LogOut size={16} />
-          {!isCollapsed && <span className="animate-fade-in">Uitloggen</span>}
+          {!isCollapsed && <span className="animate-fade-in">Log Out</span>}
         </button>
       </div>
     </aside>
