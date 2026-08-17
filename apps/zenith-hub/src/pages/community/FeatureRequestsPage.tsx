@@ -3,12 +3,7 @@ import {
   ArrowLeft, 
   ThumbsUp, 
   Plus, 
-  MessageSquare, 
   Sparkles, 
-  Tag, 
-  CheckCircle2, 
-  Clock, 
-  Flame,
   X
 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
@@ -70,10 +65,10 @@ const INITIAL_MOCK_REQUESTS: FeatureRequestItem[] = [
 
 export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
   onBack,
-  userId = ''
+  userId: _userId = ''
 }) => {
   const [requests, setRequests] = useState<FeatureRequestItem[]>(INITIAL_MOCK_REQUESTS);
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
@@ -112,12 +107,16 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
         const newVotes = hasVoted ? req.upvotes - 1 : req.upvotes + 1;
         
         // Try async sync to Supabase
-        supabase
-          .from('zenith_feature_requests')
-          .update({ upvotes: newVotes })
-          .eq('id', id)
-          .then(() => {})
-          .catch(console.error);
+        (async () => {
+          try {
+            await supabase
+              .from('zenith_feature_requests')
+              .update({ upvotes: newVotes })
+              .eq('id', id);
+          } catch (err) {
+            console.error('Error updating upvote:', err);
+          }
+        })();
 
         return {
           ...req,

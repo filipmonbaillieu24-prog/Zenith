@@ -6,8 +6,7 @@ import {
   Zap, 
   ShieldCheck, 
   Sparkles, 
-  HelpCircle, 
-  Lock 
+  HelpCircle 
 } from 'lucide-react';
 import { PayPalModal } from '../../components/PayPalModal';
 
