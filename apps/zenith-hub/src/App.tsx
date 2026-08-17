@@ -13,6 +13,7 @@ import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import { AccountConfirmedModal } from './components/AccountConfirmedModal';
 import { ZenithLandingPage } from './pages/marketing/ZenithLandingPage';
 import { PricingPage } from './pages/marketing/PricingPage';
 import { FeatureRequestsPage } from './pages/community/FeatureRequestsPage';
@@ -25,6 +26,22 @@ function App() {
   }, [session]);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showAccountConfirmed, setShowAccountConfirmed] = useState(false);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    const search = window.location.search;
+    if (
+      hash.includes('type=signup') || 
+      hash.includes('type=email_verification') || 
+      hash.includes('access_token') ||
+      search.includes('account_confirmed=true') ||
+      search.includes('type=signup')
+    ) {
+      setShowAccountConfirmed(true);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   const isPro = useMemo(() => {
     if (!session?.user) return false;
@@ -1074,6 +1091,13 @@ ${imagesMarkdown}
         onSubmit={handleBugReportSubmit}
         prefilledCategory={bugPrefilledCategory}
       />
+
+      {showAccountConfirmed && (
+        <AccountConfirmedModal
+          userName={userName}
+          onProceed={() => setShowAccountConfirmed(false)}
+        />
+      )}
 
       <OnboardingModal
         isOpen={showOnboarding}
