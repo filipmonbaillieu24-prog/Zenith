@@ -27,9 +27,11 @@ object UpdateManager {
     suspend fun checkForUpdates(currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
-            val url = URL(PULSE_VERSION_URL)
+            val url = URL("$PULSE_VERSION_URL?t=${System.currentTimeMillis()}")
             connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
+            connection.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate")
+            connection.setRequestProperty("Pragma", "no-cache")
             connection.instanceFollowRedirects = true
             connection.connectTimeout = 8000
             connection.readTimeout = 8000

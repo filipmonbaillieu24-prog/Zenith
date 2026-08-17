@@ -2,6 +2,7 @@ package com.zenith.pulse.sync
 
 import android.content.Context
 import android.util.Log
+import com.zenith.pulse.auth.UserAuthManager
 import com.zenith.pulse.data.HealthConnectManager
 import com.zenith.pulse.data.HealthDataPayload
 import io.ktor.client.HttpClient
@@ -44,9 +45,14 @@ object ZenithSyncManager {
             val data = manager.fetchLatestHealthData()
             cachedPayload = data
 
+            val userEmail = UserAuthManager.getUserEmail(context) ?: "anonymous@zenith.app"
+            val userId = UserAuthManager.getUserId(context) ?: ""
+
             val jsonBody = buildJsonObject {
                 put("app_name", "Zenith Pulse")
-                put("app_version", "1.0.0")
+                put("app_version", "1.0.4")
+                put("user_email", userEmail)
+                put("user_id", userId)
                 put("timestamp", data.timestamp)
                 put("steps_count", data.stepsCount)
                 put("active_calories", data.activeCaloriesBurned)

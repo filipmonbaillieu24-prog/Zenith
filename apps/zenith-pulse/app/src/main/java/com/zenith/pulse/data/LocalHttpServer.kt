@@ -2,6 +2,7 @@ package com.zenith.pulse.data
 
 import android.content.Context
 import android.util.Log
+import com.zenith.pulse.auth.UserAuthManager
 import com.zenith.pulse.sync.ZenithSyncManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,10 +21,12 @@ object LocalHttpServer {
     private const val PORT = 8787
     private var isRunning = false
     private var serverSocket: ServerSocket? = null
+    private var appContext: Context? = null
 
     fun startServer(context: Context) {
         if (isRunning) return
         isRunning = true
+        appContext = context.applicationContext
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -51,19 +54,26 @@ object LocalHttpServer {
                 val requestLine = reader.readLine() ?: return@launch
                 val path = requestLine.split(" ").getOrNull(1) ?: "/"
 
+                val userEmail = appContext?.let { UserAuthManager.getUserEmail(it) } ?: "anonymous@zenith.app"
+                val userId = appContext?.let { UserAuthManager.getUserId(it) } ?: ""
+
                 val jsonResponse = when {
                     path.startsWith("/ping") -> {
                         buildJsonObject {
                             put("status", "online")
                             put("app", "Zenith Pulse")
-                            put("app_version", "1.0.0")
+                            put("app_version", "1.0.4")
+                            put("user_email", userEmail)
+                            put("user_id", userId)
                             put("uptime_ms", System.currentTimeMillis())
                         }.toString()
                     }
                     path.startsWith("/latest") -> {
                         val payload = ZenithSyncManager.cachedPayload
                         buildJsonObject {
-                            put("app_version", "1.0.0")
+                            put("app_version", "1.0.4")
+                            put("user_email", userEmail)
+                            put("user_id", userId)
                             put("timestamp", payload.timestamp)
                             put("steps", buildJsonArray {
                                 for (s in payload.rawStepsList) {

@@ -115,8 +115,9 @@ fun ZenithPulseScreen(
         if (hasPermissions) {
             payload = healthConnectManager.fetchLatestHealthData()
         }
-        // Auto update check (current versionCode is 2)
-        val info = com.zenith.pulse.update.UpdateManager.checkForUpdates(2)
+        // Auto update check using dynamic versionCode
+        val currentCode = com.zenith.pulse.BuildConfig.VERSION_CODE
+        val info = com.zenith.pulse.update.UpdateManager.checkForUpdates(currentCode)
         if (info != null) {
             updateInfo = info
         }
@@ -254,6 +255,177 @@ fun ZenithPulseScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
+
+            // Zenith User Account & Coupling Card
+            val userEmail = remember { mutableStateOf(com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: "") }
+            val isLoggedIn = remember { mutableStateOf(com.zenith.pulse.auth.UserAuthManager.isLoggedIn(context)) }
+            val emailInput = remember { mutableStateOf("filip.monbaillieu.24@gmail.com") }
+            val passwordInput = remember { mutableStateOf("") }
+            val isLoggingIn = remember { mutableStateOf(false) }
+            val authMessage = remember { mutableStateOf<String?>(null) }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF131C2E)),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isLoggedIn.value) Color(0xFF10B981) else Color(0xFFF59E0B)
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(if (isLoggedIn.value) Color(0xFF10B981) else Color(0xFFF59E0B))
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isLoggedIn.value) "Gekoppeld met Zenith Profiel" else "Zenith Account Koppelen",
+                            fontWeight = FontWeight.Bold,
+                            color = if (isLoggedIn.value) Color(0xFF10B981) else Color(0xFFF59E0B),
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (isLoggedIn.value) {
+                        Text(
+                            text = "Ingelogd als: ${userEmail.value}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Alle Health Connect gegevens (stappen, HR, HRV, slaap, gewicht) worden automatisch gekoppeld aan dit profiel.",
+                            fontSize = 12.sp,
+                            color = Color(0xFFCBD5E1)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = {
+                                com.zenith.pulse.auth.UserAuthManager.logout(context)
+                                isLoggedIn.value = false
+                                userEmail.value = ""
+                                Toast.makeText(context, "Account ontkoppeld", Toast.LENGTH_SHORT).show()
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Account Ontkoppelen / Uitloggen", color = Color(0xFFEF4444), fontSize = 12.sp)
+                        }
+                    } else {
+                        Text(
+                            text = "Meld je aan met je Zenith account om biometrische data direct aan jouw profiel te koppelen.",
+                            fontSize = 12.sp,
+                            color = Color(0xFFCBD5E1)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = emailInput.value,
+                            onValueChange = { emailInput.value = it },
+                            label = { Text("Zenith Emailadres") },
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF38BDF8),
+                                unfocusedBorderColor = Color(0xFF334155),
+                                focusedLabelColor = Color(0xFF38BDF8),
+                                unfocusedLabelColor = Color(0xFF94A3B8)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = passwordInput.value,
+                            onValueChange = { passwordInput.value = it },
+                            label = { Text("Wachtwoord (Optioneel for Supabase Auth)") },
+                            singleLine = true,
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF38BDF8),
+                                unfocusedBorderColor = Color(0xFF334155),
+                                focusedLabelColor = Color(0xFF38BDF8),
+                                unfocusedLabelColor = Color(0xFF94A3B8)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        authMessage.value?.let { msg ->
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(text = msg, fontSize = 12.sp, color = Color(0xFFF87171))
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        isLoggingIn.value = true
+                                        authMessage.value = null
+                                        val (success, msg) = com.zenith.pulse.auth.UserAuthManager.loginWithSupabase(
+                                            context,
+                                            emailInput.value,
+                                            passwordInput.value
+                                        )
+                                        isLoggingIn.value = false
+                                        if (success) {
+                                            isLoggedIn.value = true
+                                            userEmail.value = com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: emailInput.value
+                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            authMessage.value = msg
+                                        }
+                                    }
+                                },
+                                enabled = !isLoggingIn.value,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = if (isLoggingIn.value) "Inloggen..." else "Inloggen op Zenith",
+                                    color = Color(0xFF090D16),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (emailInput.value.isNotBlank()) {
+                                        com.zenith.pulse.auth.UserAuthManager.saveUserAccount(context, emailInput.value)
+                                        isLoggedIn.value = true
+                                        userEmail.value = emailInput.value.trim().lowercase()
+                                        Toast.makeText(context, "Gekoppeld aan ${emailInput.value}", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        authMessage.value = "Voer een geldig emailadres in."
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = "Direct Koppelen",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
             // Status Card
             Card(
