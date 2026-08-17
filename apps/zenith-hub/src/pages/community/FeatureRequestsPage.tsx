@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ArrowLeft, 
   ThumbsUp, 
   Plus, 
   Sparkles, 
@@ -200,39 +199,18 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
 
   return (
     <div style={{
-      height: '100vh',
-      width: '100vw',
-      overflowY: 'auto',
-      overflowX: 'hidden',
+      minHeight: '100%',
+      width: '100%',
+      boxSizing: 'border-box',
       backgroundColor: '#09090b',
       color: '#f8fafc',
       fontFamily: "'Outfit', 'Inter', system-ui, -apple-system, sans-serif",
-      padding: '32px 24px 60px',
+      padding: '32px 40px 60px',
       position: 'relative'
     }}>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        {/* Top Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 36 }}>
-          <button 
-            onClick={onBack} 
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: '#fff',
-              fontWeight: 700,
-              fontSize: 13,
-              padding: '8px 16px',
-              borderRadius: 10,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              fontFamily: 'inherit'
-            }}
-          >
-            <ArrowLeft size={16} /> Back
-          </button>
-
+      <div style={{ width: '100%', maxWidth: '100%' }}>
+        {/* Top Action Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 24 }}>
           <button 
             onClick={handleOpenSubmitModal}
             style={{
