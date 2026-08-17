@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="zenith-sidebar-toggle-btn" 
           title={isCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
         >
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
       </div>
 

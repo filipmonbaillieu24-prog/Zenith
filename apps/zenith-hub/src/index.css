@@ -1799,22 +1799,26 @@ body {
 }
 
 .zenith-sidebar-toggle-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted, #94a3b8);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  transition: all var(--transition-fast, 0.2s);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .zenith-sidebar-toggle-btn:hover {
   color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.18);
+  transform: scale(1.05);
 }
 
 /* Content & Groups */
