@@ -4,11 +4,14 @@ import {
   ThumbsUp, 
   Plus, 
   Sparkles, 
-  X
+  X,
+  User,
+  Lock,
+  Users
 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 
-interface FeatureRequestItem {
+export interface FeatureRequestItem {
   id: string;
   title: string;
   description: string;
@@ -16,17 +19,26 @@ interface FeatureRequestItem {
   upvotes: number;
   status: 'under_review' | 'planned' | 'in_progress' | 'completed';
   created_at: string;
+  author_name?: string;
+  author_id?: string;
+  upvoter_names?: string[];
   user_voted?: boolean;
 }
 
 interface FeatureRequestsPageProps {
   onBack: () => void;
   userId?: string;
+  userName?: string;
+  userEmail?: string;
+  onRequireLogin?: () => void;
 }
 
 export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
   onBack,
-  userId: _userId = ''
+  userId = '',
+  userName = '',
+  userEmail = '',
+  onRequireLogin,
 }) => {
   const [requests, setRequests] = useState<FeatureRequestItem[]>([]);
   const [_loading, setLoading] = useState(false);
@@ -39,6 +51,9 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
   const [categoryInput, setCategoryInput] = useState<'aero' | 'vigor' | 'kratos' | 'general'>('general');
   const [submitting, setSubmitting] = useState(false);
 
+  const isAuthenticated = Boolean(userId && userId.trim().length > 0);
+  const currentAuthorName = userName || (userEmail ? userEmail.split('@')[0] : 'Athlete');
+
   // Load feature requests from Supabase table
   useEffect(() => {
     async function fetchRequests() {
@@ -49,8 +64,13 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
           .select('*')
           .order('upvotes', { ascending: false });
 
-        if (!error && data && data.length > 0) {
-          setRequests(data);
+        if (!error && data) {
+          const formatted = data.map((item: any) => ({
+            ...item,
+            upvoter_names: Array.isArray(item.upvoter_names) ? item.upvoter_names : [],
+            user_voted: Array.isArray(item.upvoter_names) && currentAuthorName ? item.upvoter_names.includes(currentAuthorName) : false
+          }));
+          setRequests(formatted);
         }
       } catch (err) {
         console.error('Failed to fetch feature requests from Supabase:', err);
@@ -59,33 +79,68 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
       }
     }
     fetchRequests();
-  }, []);
+  }, [currentAuthorName]);
 
   const handleVote = async (id: string) => {
+    if (!isAuthenticated) {
+      if (onRequireLogin) {
+        onRequireLogin();
+      } else {
+        alert('Only existing users can upvote feature requests. Please sign in.');
+      }
+      return;
+    }
+
     setRequests(prev => prev.map(req => {
       if (req.id === id) {
         const hasVoted = req.user_voted;
-        const newVotes = hasVoted ? req.upvotes - 1 : req.upvotes + 1;
+        const newVotes = hasVoted ? Math.max(0, req.upvotes - 1) : req.upvotes + 1;
         
+        let newUpvoterNames = req.upvoter_names || [];
+        if (hasVoted) {
+          newUpvoterNames = newUpvoterNames.filter(n => n !== currentAuthorName);
+        } else {
+          if (!newUpvoterNames.includes(currentAuthorName)) {
+            newUpvoterNames = [...newUpvoterNames, currentAuthorName];
+          }
+        }
+
+        // Try async sync to Supabase
         (async () => {
           try {
             await supabase
               .from('zenith_feature_requests')
-              .update({ upvotes: newVotes })
+              .update({ 
+                upvotes: newVotes,
+                upvoter_names: newUpvoterNames
+              })
               .eq('id', id);
           } catch (err) {
-            console.error('Error updating upvote:', err);
+            console.error('Error updating upvote in Supabase:', err);
           }
         })();
 
         return {
           ...req,
           upvotes: newVotes,
+          upvoter_names: newUpvoterNames,
           user_voted: !hasVoted
         };
       }
       return req;
     }));
+  };
+
+  const handleOpenSubmitModal = () => {
+    if (!isAuthenticated) {
+      if (onRequireLogin) {
+        onRequireLogin();
+      } else {
+        alert('Only existing users can submit feature requests. Please sign in or create an account.');
+      }
+      return;
+    }
+    setShowSubmitModal(true);
   };
 
   const handleSubmitNewRequest = async (e: React.FormEvent) => {
@@ -102,6 +157,9 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
         upvotes: 1,
         status: 'under_review',
         created_at: new Date().toISOString(),
+        author_name: currentAuthorName,
+        author_id: userId,
+        upvoter_names: [currentAuthorName],
         user_voted: true
       };
 
@@ -153,7 +211,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
       position: 'relative'
     }}>
       <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        {/* Header */}
+        {/* Top Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 36 }}>
           <button 
             onClick={onBack} 
@@ -176,10 +234,12 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
           </button>
 
           <button 
-            onClick={() => setShowSubmitModal(true)}
+            onClick={handleOpenSubmitModal}
             style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              border: 'none',
+              background: isAuthenticated 
+                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                : 'rgba(255, 255, 255, 0.08)',
+              border: isAuthenticated ? 'none' : '1px solid rgba(255, 255, 255, 0.15)',
               color: '#fff',
               fontWeight: 900,
               fontSize: 13,
@@ -189,13 +249,53 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+              boxShadow: isAuthenticated ? '0 4px 15px rgba(16, 185, 129, 0.3)' : 'none',
               fontFamily: 'inherit'
             }}
           >
-            <Plus size={16} /> Submit New Idea
+            {isAuthenticated ? <Plus size={16} /> : <Lock size={14} />} 
+            {isAuthenticated ? 'Submit New Idea' : 'Log In to Submit Idea'}
           </button>
         </div>
+
+        {/* Guest Warning Banner if unauthenticated */}
+        {!isAuthenticated && (
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '14px',
+            padding: '14px 20px',
+            marginBottom: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#cbd5e1' }}>
+              <Lock size={16} color="#34d399" />
+              <span>Only registered Zenith athletes can submit new feature requests and upvote ideas.</span>
+            </div>
+            {onRequireLogin && (
+              <button
+                onClick={onRequireLogin}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: 'none',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: 12,
+                  padding: '6px 14px',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  fontFamily: 'inherit'
+                }}
+              >
+                Log In / Sign Up
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Hero Title */}
         <div style={{ marginBottom: 36 }}>
@@ -264,7 +364,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
           }}>
             <p style={{ fontSize: 14, margin: '0 0 16px' }}>No feature requests submitted yet for this category.</p>
             <button
-              onClick={() => setShowSubmitModal(true)}
+              onClick={handleOpenSubmitModal}
               style={{
                 background: 'rgba(16, 185, 129, 0.15)',
                 border: '1px solid #10b981',
@@ -282,59 +382,79 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {filteredRequests.map(req => (
-              <div 
-                key={req.id}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '16px',
-                  padding: '20px 24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 20
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#34d399', letterSpacing: '0.8px', background: 'rgba(16, 185, 129, 0.12)', padding: '2px 8px', borderRadius: 6 }}>
-                      {req.category}
-                    </span>
-                    {getStatusBadge(req.status)}
-                  </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>
-                    {req.title}
-                  </h3>
-                  <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
-                    {req.description}
-                  </p>
-                </div>
+            {filteredRequests.map(req => {
+              const voters = req.upvoter_names || [];
+              const hasVoters = voters.length > 0;
+              const votersText = hasVoters 
+                ? voters.join(', ')
+                : `${req.upvotes} athlete${req.upvotes === 1 ? '' : 's'}`;
 
-                {/* Upvote Button */}
-                <button
-                  onClick={() => handleVote(req.id)}
+              return (
+                <div 
+                  key={req.id}
                   style={{
-                    background: req.user_voted ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                    border: req.user_voted ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
-                    color: req.user_voted ? '#34d399' : '#cbd5e1',
-                    padding: '10px 16px',
-                    borderRadius: 12,
-                    cursor: 'pointer',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px',
+                    padding: '20px 24px',
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: 64,
-                    transition: 'all 0.2s',
-                    fontFamily: 'inherit'
+                    justifyContent: 'space-between',
+                    gap: 20
                   }}
                 >
-                  <ThumbsUp size={16} color={req.user_voted ? '#34d399' : '#cbd5e1'} />
-                  <span style={{ fontSize: 13, fontWeight: 900, marginTop: 4 }}>{req.upvotes}</span>
-                </button>
-              </div>
-            ))}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                      <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#34d399', letterSpacing: '0.8px', background: 'rgba(16, 185, 129, 0.12)', padding: '2px 8px', borderRadius: 6 }}>
+                        {req.category}
+                      </span>
+                      {getStatusBadge(req.status)}
+                    </div>
+                    <h3 style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>
+                      {req.title}
+                    </h3>
+                    <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 12px', lineHeight: 1.5 }}>
+                      {req.description}
+                    </p>
+
+                    {/* Author & Upvoters Details */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 11, color: '#64748b', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <User size={12} color="#10b981" />
+                        <span>Submitted by <strong style={{ color: '#cbd5e1' }}>{req.author_name || 'Athlete'}</strong></span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Users size={12} color="#38bdf8" />
+                        <span>Upvoted by <strong style={{ color: '#cbd5e1' }}>{votersText}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Upvote Button */}
+                  <button
+                    onClick={() => handleVote(req.id)}
+                    style={{
+                      background: req.user_voted ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                      border: req.user_voted ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
+                      color: req.user_voted ? '#34d399' : '#cbd5e1',
+                      padding: '10px 16px',
+                      borderRadius: 12,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 64,
+                      transition: 'all 0.2s',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    <ThumbsUp size={16} color={req.user_voted ? '#34d399' : '#cbd5e1'} />
+                    <span style={{ fontSize: 13, fontWeight: 900, marginTop: 4 }}>{req.upvotes}</span>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -376,8 +496,8 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             <h3 style={{ fontSize: 18, fontWeight: 900, color: '#fff', marginBottom: 6 }}>
               Submit New Feature Idea
             </h3>
-            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 20 }}>
-              Let us know what functionality you would like to see in Zenith.
+            <p style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>
+              Submitting as <strong style={{ color: '#34d399' }}>{currentAuthorName}</strong>
             </p>
 
             <form onSubmit={handleSubmitNewRequest} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

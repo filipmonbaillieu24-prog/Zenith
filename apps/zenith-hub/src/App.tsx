@@ -791,7 +791,12 @@ ${imagesMarkdown}
       return <PricingPage onBack={() => setPublicView('landing')} isPro={false} />;
     }
     if (publicView === 'roadmap') {
-      return <FeatureRequestsPage onBack={() => setPublicView('landing')} />;
+      return (
+        <FeatureRequestsPage 
+          onBack={() => setPublicView('landing')} 
+          onRequireLogin={() => setPublicView('auth')}
+        />
+      );
     }
     return (
       <ZenithLandingPage
@@ -871,6 +876,8 @@ ${imagesMarkdown}
             <FeatureRequestsPage
               onBack={() => setActiveTab('hub')}
               userId={session.user.id}
+              userName={userName}
+              userEmail={session.user.email}
             />
           )}
           {activeTab === 'logs' && (

@@ -30,7 +30,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
       fontFamily: "'Outfit', 'Inter', system-ui, -apple-system, sans-serif",
       position: 'relative'
     }}>
-      {/* Background Glow Overlay */}
+      {/* Zenith Steel Grey Background Glow Overlay */}
       <div style={{
         position: 'absolute',
         top: 0,
@@ -39,7 +39,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
         width: '100%',
         maxWidth: '1200px',
         height: '600px',
-        background: 'radial-gradient(circle at 50% 10%, rgba(16, 185, 129, 0.18) 0%, rgba(56, 189, 248, 0.08) 40%, transparent 70%)',
+        background: 'radial-gradient(circle at 50% 10%, rgba(45, 45, 58, 0.4) 0%, rgba(16, 185, 129, 0.08) 40%, transparent 75%)',
         pointerEvents: 'none',
         zIndex: 0
       }} />
@@ -51,7 +51,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
         zIndex: 100,
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        backgroundColor: 'rgba(9, 9, 11, 0.85)',
+        backgroundColor: 'rgba(12, 13, 18, 0.88)',
         borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         padding: '16px 32px',
         display: 'flex',
@@ -123,7 +123,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
               padding: '8px 20px',
               borderRadius: 10,
               cursor: 'pointer',
-              boxShadow: '0 4px 18px rgba(16, 185, 129, 0.4)',
+              boxShadow: '0 4px 18px rgba(16, 185, 129, 0.35)',
               transition: 'all 0.2s',
               fontFamily: 'inherit'
             }}
@@ -146,17 +146,17 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
           display: 'inline-flex',
           alignItems: 'center',
           gap: 8,
-          background: 'rgba(16, 185, 129, 0.12)',
-          border: '1px solid rgba(16, 185, 129, 0.3)',
+          background: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
           padding: '6px 18px',
           borderRadius: 20,
-          color: '#34d399',
+          color: '#cbd5e1',
           fontSize: 12,
           fontWeight: 800,
           marginBottom: 24,
           letterSpacing: '0.5px'
         }}>
-          <Sparkles size={14} /> The All-in-One Athletic Ecosystem
+          <Sparkles size={14} color="#10b981" /> Zenith Steel Grey Edition
         </div>
 
         <h1 style={{
@@ -187,8 +187,8 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
           <button 
             onClick={onRegister}
             style={{
-              background: 'linear-gradient(135deg, #10b981 0%, #38bdf8 100%)',
-              color: '#09090b',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: '#fff',
               fontWeight: 900,
               fontSize: 15,
               padding: '14px 34px',
@@ -224,7 +224,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
         </div>
       </section>
 
-      {/* Ecosystem Apps Grid */}
+      {/* Ecosystem Apps Grid (Zenith Steel Grey Cards) */}
       <section id="ecosystem" style={{
         maxWidth: '1200px',
         margin: '60px auto 100px',
@@ -240,19 +240,19 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24 }}>
-          {/* Card 1: Aero */}
+          {/* Card 1: Aero (Steel Grey) */}
           <div style={{
-            background: 'linear-gradient(145deg, rgba(14, 30, 45, 0.8) 0%, rgba(18, 18, 24, 0.95) 100%)',
-            border: '1px solid rgba(56, 189, 248, 0.25)',
+            background: 'linear-gradient(145deg, #12131a 0%, #1a1b24 100%)',
+            border: '1px solid rgba(56, 189, 248, 0.3)',
             borderRadius: '22px',
             padding: '30px',
-            boxShadow: '0 12px 35px rgba(0,0,0,0.5)',
+            boxShadow: '0 12px 35px rgba(0,0,0,0.6)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}>
             <div>
-              <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(56, 189, 248, 0.12)', border: '1px solid rgba(56, 189, 248, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                 <Bike size={24} color="#38bdf8" />
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Aero</h3>
@@ -268,19 +268,19 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
             </div>
           </div>
 
-          {/* Card 2: Vigor */}
+          {/* Card 2: Vigor (Steel Grey) */}
           <div style={{
-            background: 'linear-gradient(145deg, rgba(14, 38, 28, 0.8) 0%, rgba(18, 18, 24, 0.95) 100%)',
-            border: '1px solid rgba(52, 211, 153, 0.25)',
+            background: 'linear-gradient(145deg, #12131a 0%, #1a1b24 100%)',
+            border: '1px solid rgba(52, 211, 153, 0.3)',
             borderRadius: '22px',
             padding: '30px',
-            boxShadow: '0 12px 35px rgba(0,0,0,0.5)',
+            boxShadow: '0 12px 35px rgba(0,0,0,0.6)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}>
             <div>
-              <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(52, 211, 153, 0.15)', border: '1px solid rgba(52, 211, 153, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(52, 211, 153, 0.12)', border: '1px solid rgba(52, 211, 153, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                 <Activity size={24} color="#34d399" />
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Vigor</h3>
@@ -296,19 +296,19 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
             </div>
           </div>
 
-          {/* Card 3: Kratos */}
+          {/* Card 3: Kratos (Steel Grey) */}
           <div style={{
-            background: 'linear-gradient(145deg, rgba(42, 26, 16, 0.8) 0%, rgba(18, 18, 24, 0.95) 100%)',
-            border: '1px solid rgba(249, 115, 22, 0.25)',
+            background: 'linear-gradient(145deg, #12131a 0%, #1a1b24 100%)',
+            border: '1px solid rgba(249, 115, 22, 0.3)',
             borderRadius: '22px',
             padding: '30px',
-            boxShadow: '0 12px 35px rgba(0,0,0,0.5)',
+            boxShadow: '0 12px 35px rgba(0,0,0,0.6)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}>
             <div>
-              <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(249, 115, 22, 0.15)', border: '1px solid rgba(249, 115, 22, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(249, 115, 22, 0.12)', border: '1px solid rgba(249, 115, 22, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                 <Dumbbell size={24} color="#f97316" />
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Kratos</h3>
@@ -324,19 +324,19 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
             </div>
           </div>
 
-          {/* Card 4: Fuel */}
+          {/* Card 4: Fuel (Steel Grey) */}
           <div style={{
-            background: 'linear-gradient(145deg, rgba(20, 30, 48, 0.8) 0%, rgba(18, 18, 24, 0.95) 100%)',
-            border: '1px solid rgba(96, 165, 250, 0.25)',
+            background: 'linear-gradient(145deg, #12131a 0%, #1a1b24 100%)',
+            border: '1px solid rgba(96, 165, 250, 0.3)',
             borderRadius: '22px',
             padding: '30px',
-            boxShadow: '0 12px 35px rgba(0,0,0,0.5)',
+            boxShadow: '0 12px 35px rgba(0,0,0,0.6)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between'
           }}>
             <div>
-              <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(96, 165, 250, 0.15)', border: '1px solid rgba(96, 165, 250, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+              <div style={{ width: 46, height: 46, borderRadius: 14, background: 'rgba(96, 165, 250, 0.12)', border: '1px solid rgba(96, 165, 250, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                 <Utensils size={24} color="#60a5fa" />
               </div>
               <h3 style={{ fontSize: 22, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Zenith Fuel</h3>
@@ -359,7 +359,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
         borderTop: '1px solid rgba(255, 255, 255, 0.08)',
         padding: '60px 24px 40px',
         textAlign: 'center',
-        background: 'rgba(12, 12, 16, 0.95)'
+        background: '#0c0d12'
       }}>
         <h3 style={{ fontSize: 24, fontWeight: 900, color: '#fff', marginBottom: 12 }}>
           Ready to elevate your athletic performance?
