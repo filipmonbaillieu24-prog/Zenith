@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   MapPin, Compass, Sliders, Download, Search,
   ChevronRight, Wind, Mountain, Route, Layers,
-  Star, Trash2, Check, Pencil, X, Coffee, ChevronDown, ChevronUp
+  Star, Trash2, Check, Pencil, X, Coffee, ChevronDown, ChevronUp, Crown
 } from 'lucide-react';
 import {
   RouteProfile, RouteType, DirectionBias,
@@ -45,6 +45,8 @@ interface SidebarProps {
   onSaveLocation: (name: string, lat: number, lng: number) => void;
   onDeleteLocation: (id: string) => void;
   onRenameLocation: (id: string, name: string) => void;
+  isPro?: boolean;
+  onRequestProModal?: (featureName: string, desc: string) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -86,6 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isGenerating, windData, windSlot, setWindSlot, isFetchingWind,
   maxElevationGain, setMaxElevationGain,
   savedLocations, onSaveLocation, onDeleteLocation, onRenameLocation,
+  isPro = false, onRequestProModal,
 }) => {
   // Filter state
   const [distance, setDistance]               = useState<number>(50);
@@ -133,6 +136,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleGenerate = () => {
+    if (!isPro) {
+      if (onRequestProModal) {
+        onRequestProModal('AI Route Generator', 'Upgrade naar Zenith Pro om automatische GPX-routes op maat te genereren met hoogte- en windprofielen.');
+      }
+      return;
+    }
     onGenerate({
       type: routeType,
       distance,
@@ -148,6 +157,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
 
       <div className="sidebar-content">
+        {!isPro && (
+          <div 
+            onClick={() => onRequestProModal && onRequestProModal('AI Route Generator', 'Upgrade naar Zenith Pro om automatische GPX-routes op maat te genereren met hoogte- en windprofielen.')}
+            style={{
+              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(9, 9, 11, 0.9) 100%)',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              borderRadius: '12px',
+              padding: '14px',
+              marginBottom: '16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#a855f7', letterSpacing: '0.8px' }}>
+                ZENITH PRO FEATURE
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginTop: 2 }}>
+                Route Generator is vergrendeld
+              </div>
+              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+                Klik hier om te upgraden naar Pro
+              </div>
+            </div>
+            <Crown size={22} color="#a855f7" />
+          </div>
+        )}
 
         {/* ── 1. Startlocatie ─────────────────────────── */}
         <section className="sidebar-section">
@@ -432,11 +470,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Generate Button */}
         <button
-          onClick={handleGenerate}
+          onClick={() => {
+            if (!isPro && onRequestProModal) {
+              onRequestProModal('AI Route Generator', 'Upgrade naar Zenith Pro om automatische GPX-routes op maat te genereren met hoogte- en windprofielen.');
+              return;
+            }
+            handleGenerate();
+          }}
           className="generate-button"
           disabled={isGenerating || !startPoint || (routeType === 'point-to-point' && !endPoint)}
+          style={{ position: 'relative' }}
         >
           {isGenerating ? 'Route Genereren...' : 'Genereer Route'}
+          {!isPro && (
+            <span style={{ 
+              position: 'absolute', right: 12, top: 12, 
+              background: 'linear-gradient(135deg, #cbd5e1 0%, #64748b 100%)', 
+              color: '#09090b', fontSize: 9, fontWeight: 900, 
+              padding: '2px 6px', borderRadius: 4 
+            }}>
+              PRO
+            </span>
+          )}
         </button>
 
         {/* ── 5. Route Alternatieven ───────────────────── */}
@@ -498,11 +553,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
             {activeRoute && (
               <div className="download-container">
-                <button onClick={onDownloadGPX} className="download-button gpx">
-                  <Download size={16} strokeWidth={1.6} /> GPX Downloaden
+                <button 
+                  onClick={() => {
+                    if (!isPro && onRequestProModal) {
+                      onRequestProModal('GPX Route Export', 'Upgrade naar Zenith Pro om GPX en TCX bestanden te downloaden voor je fietscomputer (Garmin, Wahoo).');
+                      return;
+                    }
+                    onDownloadGPX();
+                  }} 
+                  className="download-button gpx"
+                >
+                  <Download size={16} strokeWidth={1.6} /> GPX Downloaden {!isPro && '🔒'}
                 </button>
-                <button onClick={onDownloadTCX} className="download-button tcx">
-                  <Download size={16} strokeWidth={1.6} /> TCX Downloaden
+                <button 
+                  onClick={() => {
+                    if (!isPro && onRequestProModal) {
+                      onRequestProModal('TCX Route Export', 'Upgrade naar Zenith Pro om GPX en TCX bestanden te downloaden voor je fietscomputer (Garmin, Wahoo).');
+                      return;
+                    }
+                    onDownloadTCX();
+                  }} 
+                  className="download-button tcx"
+                >
+                  <Download size={16} strokeWidth={1.6} /> TCX Downloaden {!isPro && '🔒'}
                 </button>
               </div>
             )}

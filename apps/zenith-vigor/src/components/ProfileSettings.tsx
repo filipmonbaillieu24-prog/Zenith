@@ -138,53 +138,6 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
               </div>
             </fieldset>
 
-            {/* Connected Devices */}
-            <fieldset style={{ border: 'none', padding: '12px 0 0', margin: 0, display: 'flex', flexDirection: 'column', gap: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <legend style={{ fontSize: '13px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>Gekoppelde Apparaten</legend>
-              
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Weegschaal Model</label>
-                <select
-                  className="form-input"
-                  value={scaleModel}
-                  onChange={(e) => setScaleModel(e.target.value)}
-                  style={{
-                    width: '100%',
-                    backgroundColor: 'rgba(9, 9, 11, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
-                    padding: '10px 12px',
-                    color: '#fff',
-                    fontFamily: 'Outfit, sans-serif'
-                  }}
-                >
-                  <option value="none">Geen (Handmatig loggen)</option>
-                  <option value="neo-health-onyx-se">Neo Health Onyx SE weegschaal</option>
-                </select>
-              </div>
-
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Smart Ring / Tracker</label>
-                <select
-                  className="form-input"
-                  value={ringModel}
-                  onChange={(e) => setRingModel(e.target.value)}
-                  style={{
-                    width: '100%',
-                    backgroundColor: 'rgba(9, 9, 11, 0.6)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
-                    padding: '10px 12px',
-                    color: '#fff',
-                    fontFamily: 'Outfit, sans-serif'
-                  }}
-                >
-                  <option value="none">Geen (Handmatig loggen)</option>
-                  <option value="colbi-r02">Colbi R02 smart ring</option>
-                </select>
-              </div>
-            </fieldset>
-
             <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
               <button type="button" className="btn-secondary" onClick={onClose} style={{ flex: 1 }}>
                 Annuleren

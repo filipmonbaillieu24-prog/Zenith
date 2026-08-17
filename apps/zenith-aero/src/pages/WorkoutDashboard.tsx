@@ -43,6 +43,8 @@ interface Props {
   recalculating:   boolean;
   navSection:      'dashboard' | 'rides' | 'prs' | 'heatmap';
   onHandleFiles?:  (files: FileList) => void;
+  isPro?:          boolean;
+  onRequestProModal?: (featureName: string, desc: string) => void;
 }
 
 type SortKey    = 'date' | 'distance' | 'duration' | 'tss' | 'eftp' | 'elevGain';
@@ -67,7 +69,9 @@ const WorkoutDashboard: React.FC<Props> = ({
   globaleFTP,
   recalculating,
   navSection,
-  onHandleFiles
+  onHandleFiles,
+  isPro = false,
+  onRequestProModal,
 }) => {
   const [loading]                           = useState(false);
   const [deleting,       setDeleting]       = useState<string | null>(null);
@@ -551,7 +555,7 @@ const WorkoutDashboard: React.FC<Props> = ({
 
       case 'heatmap': return (
         <div className="wd-main-single" style={{ maxWidth: '100%' }}>
-          <HeatmapView />
+          <HeatmapView isPro={isPro} onRequestProModal={onRequestProModal} />
         </div>
       );
     }

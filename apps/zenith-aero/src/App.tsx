@@ -16,11 +16,11 @@ import { RideSummaryWithBests } from './types/workout';
 import { computeRide, getWeightForDate, estimateGlobalFTP } from './utils/rideMetrics';
 import WorkoutDashboard from './pages/WorkoutDashboard';
 import RidePage from './pages/RidePage';
-import { TrainingPage } from './pages/TrainingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPalette, CommandItem } from './components/CommandPalette';
+import { ProPaywallModal } from './components/common/ProPaywallModal';
 import { calibrateSummaryModels, calibrateFullModels, analyzeCardiacDrift, initializeModels } from './utils/localNeuralNet';
 import { supabase } from './utils/supabaseClient';
 import { planWorkoutInCalendar } from './utils/trainingHelpers';
@@ -31,6 +31,19 @@ function App() {
   const isIframe = window.self !== window.top;
   const [session, setSession] = useState<any>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
+
+  const isPro = useMemo(() => {
+    if (!session?.user) return false;
+    const email = session.user.email?.toLowerCase();
+    if (email === 'filip.monbaillieu.24@gmail.com') return true;
+    return session.user.user_metadata?.is_pro === true;
+  }, [session]);
+
+  const [proModal, setProModal] = useState<{ isOpen: boolean; featureName?: string; desc?: string }>({ isOpen: false });
+
+  const handleRequestProModal = useCallback((featureName: string, desc: string) => {
+    setProModal({ isOpen: true, featureName, desc });
+  }, []);
 
   const loadAeroProfile = useCallback(async (userId: string, userMetadata: any) => {
     try {
@@ -302,7 +315,6 @@ function App() {
     handleMapClick,
     handleSetLocation,
     handleGenerate,
-    handleGenerateTrainingsroute,
     handleDownloadGPX,
     handleDownloadTCX,
     setActiveRouteIndex,
@@ -310,6 +322,30 @@ function App() {
     setError,
     setHoverPoint,
   } = useRoutePlanner(() => setActiveTab('route'));
+
+  const handleGenerateWithProCheck = useCallback(async (params: any) => {
+    if (!isPro) {
+      handleRequestProModal('AI Route Generator', 'Upgrade naar Zenith Pro om automatische GPX-routes op maat te genereren met hoogte- en windprofielen.');
+      return;
+    }
+    await handleGenerate(params);
+  }, [isPro, handleRequestProModal, handleGenerate]);
+
+  const handleDownloadGPXWithProCheck = useCallback(async () => {
+    if (!isPro) {
+      handleRequestProModal('GPX Route Download', 'Upgrade naar Zenith Pro om je gegenereerde routes te exporteren naar GPX voor je Garmin of Wahoo fietscomputer.');
+      return;
+    }
+    await handleDownloadGPX();
+  }, [isPro, handleRequestProModal, handleDownloadGPX]);
+
+  const handleDownloadTCXWithProCheck = useCallback(async () => {
+    if (!isPro) {
+      handleRequestProModal('TCX Route Download', 'Upgrade naar Zenith Pro om je gegenereerde routes te exporteren naar TCX met afslag-per-afslag navigatie.');
+      return;
+    }
+    await handleDownloadTCX();
+  }, [isPro, handleRequestProModal, handleDownloadTCX]);
   
   const handlePlanWorkoutOnRoute = useCallback(async (date: string, route: any) => {
     if (!activeWorkout) return;
@@ -575,8 +611,7 @@ function App() {
     { id: 'nav-prs',       category: 'Navigatie', icon: <Trophy size={14} />,          label: 'Progressie & PR\'s',    description: 'eFTP trend, VO2max en records',                 shortcut: '3', action: () => setActiveTab('prs') },
     { id: 'nav-heatmap',   category: 'Navigatie', icon: <MapIcon size={14} />,         label: 'Heatmap',               description: 'Geografische rittenkaart',                      shortcut: '4', action: () => setActiveTab('heatmap') },
     { id: 'nav-route',     category: 'Navigatie', icon: <Compass size={14} />,         label: 'Route Planner',         description: 'Genereer en plan fietsroutes',                  shortcut: '5', action: () => setActiveTab('route') },
-    { id: 'nav-training',  category: 'Navigatie', icon: <Brain size={14} />,           label: 'Smart Coach',           description: 'AI coach en trainingsschema\'s',                 shortcut: '6', action: () => setActiveTab('training') },
-    { id: 'nav-settings',  category: 'Navigatie', icon: <Settings size={14} />,        label: 'Instellingen',          description: 'Profiel en gear beheren',                       shortcut: '7', action: () => setActiveTab('settings') },
+    { id: 'nav-settings',  category: 'Navigatie', icon: <Settings size={14} />,        label: 'Instellingen',          description: 'Profiel en gear beheren',                       shortcut: '6', action: () => setActiveTab('settings') },
     { id: 'action-recalc', category: 'Acties',    icon: <Activity size={14} />,        label: 'Herbereken alle ritten', description: 'Pas gewijzigde FTP/LTHR toe op alle ritten',    action: handleRecalculate },
   ], [handleRecalculate]);
 
@@ -586,7 +621,6 @@ function App() {
     { key: 'prs',       icon: <Trophy          size={16} strokeWidth={1.6} />, label: 'Progressie & PR\'s' },
     { key: 'heatmap',   icon: <MapIcon         size={16} strokeWidth={1.6} />, label: 'Heatmap' },
     { key: 'route',     icon: <Compass         size={16} strokeWidth={1.6} />, label: 'Routeplanner' },
-    { key: 'training',  icon: <Brain           size={16} strokeWidth={1.6} />, label: 'Smart Coach' },
     { key: 'settings',  icon: <Settings        size={16} strokeWidth={1.6} />, label: 'Instellingen' },
   ] as const;
 
@@ -985,6 +1019,8 @@ function App() {
                     recalculating={recalculating}
                     navSection={activeTab as any}
                     onHandleFiles={handleFiles}
+                    isPro={isPro}
+                    onRequestProModal={handleRequestProModal}
                   />
                 ) : (
                   <>
@@ -1060,20 +1096,7 @@ function App() {
               </div>
             )}
 
-            {/* ── Training View ── */}
-            {activeTab === 'training' && (
-              <div className="workout-tab-content" style={{ height: 'auto', overflow: 'visible' }}>
-                <TrainingPage
-                  profile={fitnessProfile}
-                  onProfileChange={handleProfileChange}
-                  rides={rides}
-                  kratosWorkouts={kratosWorkouts}
-                  savedLocations={savedLocations}
-                  onGenerateTrainingsroute={handleGenerateTrainingsroute}
-                  onActiveWorkoutChange={setActiveWorkout}
-                />
-              </div>
-            )}
+
 
             {/* ── Settings View ── */}
             {activeTab === 'settings' && (
@@ -1113,9 +1136,9 @@ function App() {
                   setMaxElevationGain={setMaxElevationGain}
                   activeRoutePoints={activeRoutePoints}
                   onSetLocation={handleSetLocation}
-                  onGenerate={handleGenerate}
-                  onDownloadGPX={handleDownloadGPX}
-                  onDownloadTCX={handleDownloadTCX}
+                  onGenerate={handleGenerateWithProCheck}
+                  onDownloadGPX={handleDownloadGPXWithProCheck}
+                  onDownloadTCX={handleDownloadTCXWithProCheck}
                   onMapClick={handleMapClick}
                   onSelectRoute={setActiveRouteIndex}
                   setWindSlot={setWindSlot}
@@ -1123,6 +1146,8 @@ function App() {
                   onHoverPoint={setHoverPoint}
                   activeWorkout={activeWorkout}
                   onPlanWorkout={handlePlanWorkoutOnRoute}
+                  isPro={isPro}
+                  onRequestProModal={handleRequestProModal}
                 />
               </div>
             )}
@@ -1135,6 +1160,14 @@ function App() {
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
         commands={paletteCommands}
+      />
+
+      {/* Zenith Pro Paywall Modal */}
+      <ProPaywallModal
+        isOpen={proModal.isOpen}
+        onClose={() => setProModal({ isOpen: false })}
+        featureName={proModal.featureName}
+        featureDescription={proModal.desc}
       />
     </div>
   );

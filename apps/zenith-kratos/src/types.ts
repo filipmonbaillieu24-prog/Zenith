@@ -18,7 +18,7 @@ export interface Exercise {
   id: string;
   user_id: string;
   name: string;
-  category: 'Quads' | 'Hamstrings' | 'Calves' | 'Chest' | 'Lats' | 'Upper Back' | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs';
+  category: 'Quads' | 'Hamstrings' | 'Calves' | 'Glutes' | 'Chest' | 'Lats' | 'Upper Back' | 'Lower Back' | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs' | 'Obliques' | 'Traps' | 'Forearms';
   primary_muscle?: MuscleGroupKey;
   secondary_muscles?: MuscleGroupKey[];
   notes?: string;

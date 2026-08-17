@@ -22,6 +22,7 @@ interface SidebarProps {
   setActiveTab: (tab: TabKey) => void;
   onLogout: () => void;
   userName: string;
+  isPro?: boolean;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
   onOpenBugReport: () => void;
@@ -32,6 +33,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setActiveTab,
   onLogout,
   userName,
+  isPro = false,
   isCollapsed,
   setIsCollapsed,
   onOpenBugReport,
@@ -146,7 +148,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed && (
               <div className="zenith-user-info animate-fade-in">
                 <span className="zenith-user-name">{userName}</span>
-                <span className="zenith-user-role">Atleet</span>
+                <span className="zenith-user-role" style={{ color: isPro ? '#c084fc' : '#94a3b8', fontWeight: isPro ? 900 : 700, fontSize: 10 }}>
+                  {isPro ? 'ZENITH PRO' : 'ZENITH FREE'}
+                </span>
               </div>
             )}
           </button>

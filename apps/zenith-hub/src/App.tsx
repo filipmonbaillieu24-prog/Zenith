@@ -12,6 +12,7 @@ import { recoveryModel } from '../../../shared/ml/RecoveryScore';
 import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
+import { OnboardingModal } from './components/OnboardingModal';
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -20,6 +21,14 @@ function App() {
     sessionRef.current = session;
   }, [session]);
   const [sessionLoading, setSessionLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const isPro = useMemo(() => {
+    if (!session?.user) return false;
+    const email = session.user.email?.toLowerCase();
+    if (email === 'filip.monbaillieu.24@gmail.com') return true;
+    return session.user.user_metadata?.is_pro === true;
+  }, [session]);
   const [activeTab, setActiveTab] = useState<TabKey>('hub');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     const saved = localStorage.getItem('zenith_sidebar_collapsed');
@@ -408,6 +417,11 @@ function App() {
       setSessionLoading(false);
       if (session?.user) {
         loadFitnessProfile(session.user.id, session.user.user_metadata);
+        const isCompleted = session.user.user_metadata?.onboarding_completed === true;
+        const isFounder = session.user.email?.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
+        if (!isCompleted && !isFounder) {
+          setShowOnboarding(true);
+        }
       }
     });
 
@@ -415,6 +429,11 @@ function App() {
       setSession(session);
       if (session?.user) {
         loadFitnessProfile(session.user.id, session.user.user_metadata);
+        const isCompleted = session.user.user_metadata?.onboarding_completed === true;
+        const isFounder = session.user.email?.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
+        if (!isCompleted && !isFounder) {
+          setShowOnboarding(true);
+        }
       } else {
         setRides([]);
         setFitnessProfile({ name: 'Atleet' });
@@ -736,6 +755,7 @@ ${imagesMarkdown}
           setActiveTab={setActiveTab}
           onLogout={handleLogout}
           userName={userName}
+          isPro={isPro}
           isCollapsed={isSidebarCollapsed}
           setIsCollapsed={setIsSidebarCollapsed}
           onOpenBugReport={() => {
@@ -768,8 +788,9 @@ ${imagesMarkdown}
           )}
           {activeTab === 'profile' && (
             <ProfilePage
-              initialProfile={fitnessProfile}
+              initialProfile={{ ...fitnessProfile, isPro }}
               userId={session.user.id}
+              userEmail={session.user.email}
               onBack={() => setActiveTab('hub')}
               onSave={handleSaveProfile}
             />
@@ -991,6 +1012,19 @@ ${imagesMarkdown}
         onClose={() => setIsBugReportOpen(false)}
         onSubmit={handleBugReportSubmit}
         prefilledCategory={bugPrefilledCategory}
+      />
+
+      <OnboardingModal
+        isOpen={showOnboarding}
+        userId={session?.user?.id || ''}
+        userEmail={session?.user?.email || ''}
+        initialName={fitnessProfile?.name}
+        onCompleted={async (_profilePayload, isProChosen) => {
+          setShowOnboarding(false);
+          if (session?.user?.id) {
+            await loadFitnessProfile(session.user.id, { ...session.user.user_metadata, onboarding_completed: true, is_pro: isProChosen });
+          }
+        }}
       />
     </div>
   );

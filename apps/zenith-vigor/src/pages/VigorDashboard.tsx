@@ -6,14 +6,13 @@ import {
   Footprints, 
   Settings, 
   Plus, 
-  ArrowLeft, 
   Info,
   Calendar,
   Sparkles,
   X,
-  Bluetooth,
   Camera,
-  Trash2
+  Trash2,
+  Ruler
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -34,13 +33,37 @@ import { WeightScaleConnector } from '../components/WeightScaleConnector';
 import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
 import { DeviceManagerModal } from '../components/DeviceManagerModal';
+import { ProPaywallModal } from '../components/ProPaywallModal';
 
 interface VigorDashboardProps {
   session: any;
 }
 
+const getLocalDateKey = (dateInput: string | Date | null | undefined): string => {
+  if (!dateInput) return '';
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
-  const user = session.user;
+  const user = session?.user;
+
+  const isPro = useMemo(() => {
+    if (!user) return false;
+    const email = user.email?.toLowerCase();
+    if (email === 'filip.monbaillieu.24@gmail.com') return true;
+    return user.user_metadata?.is_pro === true;
+  }, [user]);
+
+  const [proModal, setProModal] = useState<{ isOpen: boolean; featureName?: string; desc?: string }>({ isOpen: false });
+
+  const handleRequestProModal = (featureName: string, desc: string) => {
+    setProModal({ isOpen: true, featureName, desc });
+  };
   const [dbProfile, setDbProfile] = useState<any>(null);
   const userName = dbProfile?.name || user.user_metadata?.name || user.user_metadata?.fitness_profile?.name || 'Atleet';
 
@@ -112,7 +135,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
   // Auto-connect BLE scale state
   const [autoConnectedDevice, setAutoConnectedDevice] = useState<any>(null);
-  const [backgroundConnecting, setBackgroundConnecting] = useState(false);
+  const [_backgroundConnecting, setBackgroundConnecting] = useState(false);
 
 
   // Logs management state
@@ -175,44 +198,53 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         .from('vigor_weight')
         .select('*')
         .eq('user_id', user.id)
-        .order('logged_at', { ascending: true })
-        .limit(30);
+        .order('logged_at', { ascending: false })
+        .limit(60);
       if (wError) throw wError;
-      setWeights(weightData || []);
+      const sortedWeights = (weightData || []).sort(
+        (a: any, b: any) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime()
+      );
+      setWeights(sortedWeights);
 
       // 2. Fetch Sleep Logs
       const { data: sleepData, error: sError } = await supabase
         .from('vigor_sleep')
         .select('*')
         .eq('user_id', user.id)
-        .order('logged_at', { ascending: true })
-        .limit(60);
+        .order('logged_at', { ascending: false })
+        .limit(90);
       if (sError) throw sError;
 
-      // Deduplicate sleeps by date (keep latest per calendar date)
+      // Deduplicate sleeps by date (keep latest per local calendar date)
       const uniqueSleepsMap = new Map<string, any>();
       (sleepData || []).forEach((item: any) => {
-        const dateKey = item.logged_at ? item.logged_at.substring(0, 10) : '';
-        if (dateKey) uniqueSleepsMap.set(dateKey, item);
+        const dateKey = getLocalDateKey(item.logged_at);
+        if (dateKey && !uniqueSleepsMap.has(dateKey)) uniqueSleepsMap.set(dateKey, item);
       });
-      setSleeps(Array.from(uniqueSleepsMap.values()));
+      const sortedSleeps = Array.from(uniqueSleepsMap.values()).sort(
+        (a: any, b: any) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime()
+      );
+      setSleeps(sortedSleeps);
 
       // 3. Fetch Steps Logs
       const { data: stepData, error: stError } = await supabase
         .from('vigor_steps')
         .select('*')
         .eq('user_id', user.id)
-        .order('logged_at', { ascending: true })
-        .limit(60);
+        .order('logged_at', { ascending: false })
+        .limit(90);
       if (stError) throw stError;
 
-      // Deduplicate steps by date (keep latest per calendar date)
+      // Deduplicate steps by date (keep latest per local calendar date)
       const uniqueStepsMap = new Map<string, any>();
       (stepData || []).forEach((item: any) => {
-        const dateKey = item.logged_at ? item.logged_at.substring(0, 10) : '';
-        if (dateKey) uniqueStepsMap.set(dateKey, item);
+        const dateKey = getLocalDateKey(item.logged_at);
+        if (dateKey && !uniqueStepsMap.has(dateKey)) uniqueStepsMap.set(dateKey, item);
       });
-      setSteps(Array.from(uniqueStepsMap.values()));
+      const sortedSteps = Array.from(uniqueStepsMap.values()).sort(
+        (a: any, b: any) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime()
+      );
+      setSteps(sortedSteps);
 
       // 4. Fetch Body Measurements Logs
       const { data: measureData, error: mError } = await supabase
@@ -756,7 +788,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   const todayStepsItem = useMemo(() => {
     return steps.find(s => {
       if (!s.logged_at) return false;
-      const dateKey = typeof s.logged_at === 'string' ? s.logged_at.substring(0, 10) : '';
+      const dateKey = getLocalDateKey(s.logged_at);
       return dateKey === todayStr;
     }) || null;
   }, [steps, todayStr]);
@@ -836,15 +868,6 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
     if (error) throw error;
     fetchLogs();
-  };
-
-  const handleReturnToHub = () => {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: 'close-app' }, '*');
-    } else {
-      const isDev = import.meta.env.DEV;
-      window.location.href = isDev ? 'http://localhost:1420' : window.location.origin;
-    }
   };
 
   // Steps goal progress percentage based on today's steps
@@ -1134,11 +1157,25 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
           {/* Lichaamssamenstelling trend chart */}
           <div className="vigor-card col-6" style={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
-              Lichaamssamenstelling (%)
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
+                Lichaamssamenstelling (%)
+              </h3>
+              {!isPro && (
+                <span style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#fff', fontSize: 9, fontWeight: 900, padding: '2px 6px', borderRadius: 4 }}>PRO</span>
+              )}
+            </div>
             <div style={{ height: 240, width: '100%' }}>
-              {weights.length === 0 ? (
+              {!isPro ? (
+                <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(168, 85, 247, 0.04)', borderRadius: 12, border: '1px solid rgba(168, 85, 247, 0.15)', textAlign: 'center', padding: 20, boxSizing: 'border-box' }}>
+                  <Sparkles size={24} color="#a855f7" style={{ marginBottom: 8 }} />
+                  <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 4 }}>Lichaamssamenstelling is Pro</div>
+                  <p style={{ fontSize: 10, color: '#94a3b8', margin: '0 0 12px', maxWidth: 280, lineHeight: 1.4 }}>Ontgrendel vetpercentage (%), spiermassa (kg) en vochtgehalte uit je slimme weegschaal.</p>
+                  <button onClick={() => handleRequestProModal('Lichaamssamenstelling', 'Ontgrendel vetpercentage (%), spiermassa (kg) en vochtgehalte uit je slimme weegschaal.')} className="btn-primary" style={{ padding: '6px 14px', fontSize: 10, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}>
+                    🔒 Ontgrendel Zenith Pro
+                  </button>
+                </div>
+              ) : weights.length === 0 ? (
                 <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
                   <Info size={14} style={{ marginRight: 6 }} /> Geen gegevens om trends te tekenen.
                 </div>
@@ -1291,7 +1328,25 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         </div>
 
         {progressSubTab === 'measurements' ? (
-          <div className="vigor-grid">
+          !isPro ? (
+            <div className="vigor-card col-12" style={{ padding: 48, textAlign: 'center', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(9, 9, 11, 0.95) 100%)', border: '1px solid rgba(168, 85, 247, 0.2)', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <Ruler size={40} color="#a855f7" style={{ marginBottom: 16 }} />
+              <h3 style={{ fontSize: 18, fontWeight: 900, color: '#fff', margin: '0 0 8px', letterSpacing: '0.5px' }}>
+                Lichaamsomtrekken Logboek is a Pro Feature
+              </h3>
+              <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 24px', maxWidth: 440, lineHeight: 1.6 }}>
+                Volg de centimeters van al je 8 lichaamszones (Borst, Biceps, Dijen, Heupen, Schouders, Nek, Kuiten en Taille) over de tijd met gedetailleerde progressiegrafieken.
+              </p>
+              <button 
+                onClick={() => handleRequestProModal('Lichaamsomtrekken', 'Volg de centimeters van al je 8 lichaamszones over de tijd met gedetailleerde progressiegrafieken.')} 
+                className="btn-primary" 
+                style={{ padding: '10px 24px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}
+              >
+                🔒 Ontgrendel Lichaamsomtrekken (PRO)
+              </button>
+            </div>
+          ) : (
+            <div className="vigor-grid">
             {/* Quick Log Measurements Card */}
             <div className="vigor-card col-4">
               <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
@@ -1579,8 +1634,27 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </div>
             </div>
           </div>
+          )
         ) : (
-          <div className="vigor-grid">
+          !isPro ? (
+            <div className="vigor-card col-12" style={{ padding: 48, textAlign: 'center', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(9, 9, 11, 0.95) 100%)', border: '1px solid rgba(168, 85, 247, 0.2)', borderRadius: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <Camera size={40} color="#a855f7" style={{ marginBottom: 16 }} />
+              <h3 style={{ fontSize: 18, fontWeight: 900, color: '#fff', margin: '0 0 8px', letterSpacing: '0.5px' }}>
+                Voortgangsfoto's & Vergelijker is a Pro Feature
+              </h3>
+              <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 24px', maxWidth: 440, lineHeight: 1.6 }}>
+                Upload maandelijks foto's (Voorkant, Zijkant, Achterkant) en vergelijk je fysieke transformatie direct Side-by-Side met de interactieve slider.
+              </p>
+              <button 
+                onClick={() => handleRequestProModal("Voortgangsfoto's & Vergelijker", "Upload maandelijks foto's en vergelijk je fysieke transformatie direct Side-by-Side met de interactieve slider.")} 
+                className="btn-primary" 
+                style={{ padding: '10px 24px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}
+              >
+                🔒 Ontgrendel Voortgangsfoto's (PRO)
+              </button>
+            </div>
+          ) : (
+            <div className="vigor-grid">
             {/* Photo Uploader Card */}
             <div className="vigor-card col-4">
               <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
@@ -1786,6 +1860,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               )}
             </div>
           </div>
+          )
         )}
       </div>
     );
@@ -1827,45 +1902,63 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             </div>
 
             {/* Visual Stacked Stage Progress Bar */}
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6, color: 'var(--text-muted)' }}>
-                <span>Totale nachtrust: <strong style={{ color: '#fff' }}>{Math.floor(durMins / 60)}u {durMins % 60}m</strong></span>
-                <span>Fysiek & mentaal herstel</span>
+            {!isPro ? (
+              <div style={{ padding: '16px', background: 'rgba(168, 85, 247, 0.06)', borderRadius: 12, border: '1px solid rgba(168, 85, 247, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 2 }}>Totale Nachtrust: {Math.floor(durMins / 60)}u {durMins % 60}m</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Sluit je Colmi Smart Ring aan en ontgrendel je Diepe Slaap, REM & Herstelscores (PRO).</div>
+                </div>
+                <button 
+                  onClick={() => handleRequestProModal('Slaapfases Breakdown', 'Bekijk je exacte diepe slaap, REM-slaap en lichte slaap percentages uit je Colmi Smart Ring.')} 
+                  className="btn-primary" 
+                  style={{ padding: '8px 16px', fontSize: 11, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900, flexShrink: 0 }}
+                >
+                  🔒 Ontgrendel Slaapfases (PRO)
+                </button>
               </div>
-              <div style={{ height: 14, width: '100%', borderRadius: 8, overflow: 'hidden', display: 'flex', background: '#1c1c23' }}>
-                <div style={{ width: `${deepPct}%`, background: 'linear-gradient(90deg, #8b5cf6, #a855f7)', transition: 'width 0.5s ease' }} title={`Diepe slaap: ${deepPct}%`} />
-                <div style={{ width: `${lightPct}%`, background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', transition: 'width 0.5s ease' }} title={`Lichte slaap: ${lightPct}%`} />
-                <div style={{ width: `${remPct}%`, background: 'linear-gradient(90deg, #ec4899, #f472b6)', transition: 'width 0.5s ease' }} title={`REM slaap: ${remPct}%`} />
-                <div style={{ width: `${Math.max(awakePct, 2)}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', transition: 'width 0.5s ease' }} title={`Wakker: ${awakePct}%`} />
-              </div>
-            </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6, color: 'var(--text-muted)' }}>
+                    <span>Totale nachtrust: <strong style={{ color: '#fff' }}>{Math.floor(durMins / 60)}u {durMins % 60}m</strong></span>
+                    <span>Fysiek & mentaal herstel</span>
+                  </div>
+                  <div style={{ height: 14, width: '100%', borderRadius: 8, overflow: 'hidden', display: 'flex', background: '#1c1c23' }}>
+                    <div style={{ width: `${deepPct}%`, background: 'linear-gradient(90deg, #8b5cf6, #a855f7)', transition: 'width 0.5s ease' }} title={`Diepe slaap: ${deepPct}%`} />
+                    <div style={{ width: `${lightPct}%`, background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', transition: 'width 0.5s ease' }} title={`Lichte slaap: ${lightPct}%`} />
+                    <div style={{ width: `${remPct}%`, background: 'linear-gradient(90deg, #ec4899, #f472b6)', transition: 'width 0.5s ease' }} title={`REM slaap: ${remPct}%`} />
+                    <div style={{ width: `${Math.max(awakePct, 2)}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', transition: 'width 0.5s ease' }} title={`Wakker: ${awakePct}%`} />
+                  </div>
+                </div>
 
-            {/* 4 Phase Cards Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
-              <div style={{ background: 'rgba(139, 92, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#a855f7', marginBottom: 4 }}>🟣 Diepe Slaap</div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(deepMins / 60)}u {deepMins % 60}m</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{deepPct}% (Spierherstel)</div>
-              </div>
+                {/* 4 Phase Cards Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
+                  <div style={{ background: 'rgba(139, 92, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#a855f7', marginBottom: 4 }}>🟣 Diepe Slaap</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(deepMins / 60)}u {deepMins % 60}m</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{deepPct}% (Spierherstel)</div>
+                  </div>
 
-              <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4 }}>🔵 Lichte Slaap</div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(lightMins / 60)}u {lightMins % 60}m</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{lightPct}% (Geheugen)</div>
-              </div>
+                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4 }}>🔵 Lichte Slaap</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(lightMins / 60)}u {lightMins % 60}m</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{lightPct}% (Geheugen)</div>
+                  </div>
 
-              <div style={{ background: 'rgba(236, 72, 153, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(236, 72, 153, 0.2)' }}>
-                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#f472b6', marginBottom: 4 }}>💖 REM Slaap</div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(remMins / 60)}u {remMins % 60}m</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{remPct}% (Mentale Energie)</div>
-              </div>
+                  <div style={{ background: 'rgba(236, 72, 153, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(236, 72, 153, 0.2)' }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#f472b6', marginBottom: 4 }}>💖 REM Slaap</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(remMins / 60)}u {remMins % 60}m</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{remPct}% (Mentale Energie)</div>
+                  </div>
 
-              <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#fbbf24', marginBottom: 4 }}>🟡 Wakker</div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{awakeMins}m</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{awakePct}% (Micro-ontwakingen)</div>
-              </div>
-            </div>
+                  <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#fbbf24', marginBottom: 4 }}>🟡 Wakker</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{awakeMins}m</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{awakePct}% (Micro-ontwakingen)</div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -2050,73 +2143,36 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       <div className="vigor-glow" />
 
       {/* Header section */}
-      <header className="vigor-header animate-slide-down" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)', paddingBottom: '20px', marginBottom: '24px' }}>
-        <div className="vigor-brand" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button onClick={handleReturnToHub} className="zh-back-btn">
-            <ArrowLeft size={14} /> Hub
-          </button>
+      <header className="vigor-header animate-slide-down" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        borderBottom: '1px solid rgba(255, 255, 255, 0.06)', 
+        padding: '16px 24px', 
+        background: 'transparent',
+        height: '70px',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+        marginBottom: '24px'
+      }}>
+        <div className="vigor-brand">
           <div>
-            <h1 className="zh-hub-title" style={{ fontSize: 22 }}>ZENITH <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 18 }}>VIGOR</span></h1>
-            <p className="zh-hub-subtitle">Health & Vitality Tracker voor {userName}</p>
+            <h1 className="zh-hub-title" style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '0.5px', lineHeight: '1.2' }}>
+              ZENITH <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '16px' }}>VIGOR</span>
+            </h1>
+            <p className="zh-hub-subtitle" style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
+              Health & Vitality Tracker voor {userName}
+            </p>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          {pairedDevices.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginRight: 4, lineHeight: 1.2 }}>
-              <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status:</span>
-              <span style={{ fontSize: 10, color: autoConnectedDevice ? '#39ff14' : backgroundConnecting ? '#5c7cfa' : '#cbd5e1', fontWeight: 800 }}>
-                {autoConnectedDevice ? 'Weegschaal Actief' : backgroundConnecting ? 'Zoeken...' : 'Stand-by'}
-              </span>
-            </div>
-          )}
-          
           <button onClick={() => setShowSettings(true)} className="vigor-nav-btn" style={{ background: 'rgba(255, 255, 255, 0.03)', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
             <Settings size={15} /> Doelen Instellen
           </button>
           
           <button onClick={() => setShowManualLog(true)} className="btn-secondary" style={{ padding: '10px 18px', fontSize: 13, height: '40px' }}>
             <Plus size={16} /> Log Handmatig
-          </button>
-
-          <button 
-            onClick={() => setShowDeviceManager(true)} 
-            className="btn-primary" 
-            style={{ 
-              padding: '10px 18px', 
-              fontSize: 13, 
-              height: '40px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              color: '#cbd5e1',
-              transition: 'all 0.2s',
-              cursor: 'pointer'
-            }}
-          >
-            <Bluetooth size={16} style={{ color: autoConnectedDevice ? '#39ff14' : backgroundConnecting ? '#5c7cfa' : 'var(--text-muted)' }} /> 
-            <span>Apparaten</span>
-            {pairedDevices.length > 0 && (
-              <span 
-                style={{ 
-                  background: autoConnectedDevice ? '#39ff14' : 'rgba(255, 255, 255, 0.1)', 
-                  color: autoConnectedDevice ? '#09090b' : '#cbd5e1',
-                  borderRadius: '50%',
-                  fontSize: 10,
-                  width: 18,
-                  height: 18,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 900,
-                  marginLeft: 2
-                }}
-              >
-                {pairedDevices.length}
-              </span>
-            )}
           </button>
         </div>
       </header>
@@ -2509,6 +2565,14 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           scaleModel={pairedDevices.find(d => d.device_type === 'scale')?.model}
         />
       )}
+
+      {/* Zenith Pro Paywall Modal */}
+      <ProPaywallModal 
+        isOpen={proModal.isOpen}
+        onClose={() => setProModal({ isOpen: false })}
+        featureName={proModal.featureName}
+        featureDescription={proModal.desc}
+      />
 
     </div>
   );

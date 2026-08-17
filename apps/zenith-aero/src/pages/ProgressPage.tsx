@@ -25,12 +25,22 @@ import './ProgressPage.css';
 interface ProgressPageProps {
   profile: FitnessProfile;
   rides: RideSummaryWithBests[];
+  isPro?: boolean;
+  onRequestProModal?: (featureName: string, desc: string) => void;
 }
 
-export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides }) => {
-  const [timeRange, setTimeRange] = useState<30 | 90 | 365 | 'all'>(90);
+export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPro = false, onRequestProModal }) => {
+  const [timeRange, setTimeRange] = useState<30 | 90 | 365 | 'all'>(30);
   const [selectedRadarPoint, setSelectedRadarPoint] = useState<'s5' | 'm1' | 'm5' | 'm20' | null>(null);
   const [activePillar, setActivePillar] = useState<number | null>(null);
+
+  const handleTimeRangeChange = (range: 30 | 90 | 365 | 'all') => {
+    if (!isPro && range !== 30 && onRequestProModal) {
+      onRequestProModal('PMC & Historische Progressie', 'Upgrade naar Zenith Pro om langetermijn conditie- en vermogensgrafieken (90 dagen, 1 jaar, All-time) in te zien.');
+      return;
+    }
+    setTimeRange(range);
+  };
 
 
   const filteredRides = useMemo(() => {
@@ -244,12 +254,12 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides }) =>
         <h2 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: '#f8fafc' }}>Fysiologisch Paspoort</h2>
         <div style={{ display: 'flex', gap: 6 }}>
           {([30, 90, 365, 'all'] as const).map(r => (
-            <button key={String(r)} onClick={() => setTimeRange(r)} style={{
+            <button key={String(r)} onClick={() => handleTimeRangeChange(r)} style={{
               padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700,
               background: timeRange === r ? 'rgba(203, 213, 225,0.12)' : 'rgba(255,255,255,0.04)',
               color: timeRange === r ? '#cbd5e1' : '#64748b', fontFamily: 'inherit',
             }}>
-              {r === 'all' ? 'Alles' : `${r}d`}
+              {r === 'all' ? 'Alles' : `${r}d`} {!isPro && r !== 30 && '🔒'}
             </button>
           ))}
         </div>

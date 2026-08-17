@@ -40,15 +40,21 @@ function trackColor(idx: number, total: number, hovered: boolean): string {
   return `rgba(203, 213, 225,${opacity.toFixed(2)})`;
 }
 
-const HeatmapView: React.FC = () => {
+interface HeatmapViewProps {
+  isPro?: boolean;
+  onRequestProModal?: (featureName: string, desc: string) => void;
+}
+
+const HeatmapView: React.FC<HeatmapViewProps> = ({ isPro = false, onRequestProModal }) => {
   const [tracks,    setTracks]    = useState<Track[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
     getAllRidesFull().then(rides => {
+      const cutoff = isPro ? 0 : Date.now() - 30 * 24 * 3600 * 1000;
       const t = rides
-        .filter(r => r.points?.some(p => p.lat != null))
+        .filter(r => r.points?.some(p => p.lat != null) && (isPro || r.date >= cutoff))
         .sort((a, b) => b.date - a.date)
         .map(r => ({
           id:    r.id,
@@ -61,7 +67,7 @@ const HeatmapView: React.FC = () => {
       setTracks(t);
       setLoading(false);
     });
-  }, []);
+  }, [isPro]);
 
   if (loading) {
     return (
@@ -86,11 +92,27 @@ const HeatmapView: React.FC = () => {
 
   return (
     <div className="wd-section-card wd-heatmap-card">
-      <div className="wd-heatmap-header">
-        <span className="wd-section-card__title">🗺️ Alle routes ({tracks.length})</span>
-        <span style={{ fontSize: 11, color: '#3a3a4a' }}>
-          Blauwer = recenter · Hover voor naam
+      <div className="wd-heatmap-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span className="wd-section-card__title">
+          🗺️ {isPro ? `Alle routes (${tracks.length})` : `Routes afgelopen 30d (${tracks.length})`}
         </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {!isPro && (
+            <button
+              onClick={() => onRequestProModal && onRequestProModal('All-Time Heatmap', 'Upgrade naar Zenith Pro om al je gereden wegen ooit samen te voegen op 1 glowing kaart.')}
+              style={{
+                background: 'linear-gradient(135deg, #cbd5e1 0%, #64748b 100%)',
+                border: 'none', borderRadius: 6, color: '#09090b', fontSize: 10, fontWeight: 900,
+                padding: '3px 8px', cursor: 'pointer'
+              }}
+            >
+              🔒 Unlock All-Time Heatmap (PRO)
+            </button>
+          )}
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>
+            Blauwer = recenter · Hover voor naam
+          </span>
+        </div>
       </div>
       <div className="wd-heatmap-map">
         <MapContainer

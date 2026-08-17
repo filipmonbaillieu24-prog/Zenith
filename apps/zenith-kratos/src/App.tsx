@@ -35,7 +35,7 @@ interface Exercise {
   id: string;
   user_id: string;
   name: string;
-  category: 'Quads' | 'Hamstrings' | 'Calves' | 'Chest' | 'Lats' | 'Upper Back' | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs';
+  category: 'Quads' | 'Hamstrings' | 'Calves' | 'Glutes' | 'Chest' | 'Lats' | 'Upper Back' | 'Lower Back' | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs' | 'Obliques' | 'Traps' | 'Forearms';
   primary_muscle?: string;
   secondary_muscles?: string[];
   notes?: string;
@@ -373,7 +373,7 @@ export default function App() {
       .order('logged_at', { ascending: false })
       .limit(1);
     if (stepsData && stepsData.length > 0) {
-      setTodaySteps(Number(stepsData[0].steps));
+      setTodaySteps(Number(stepsData[0].step_count ?? stepsData[0].steps ?? 0));
     }
 
     // Load rides for PMC
@@ -651,7 +651,22 @@ export default function App() {
     const payload = {
       name: exerciseForm.name,
       category: exerciseForm.category,
-      primary_muscle: exerciseForm.primary_muscle || (exerciseForm.category === 'Shoulders' ? 'deltoids' : exerciseForm.category === 'Chest' ? 'chest' : exerciseForm.category === 'Quads' ? 'quadriceps' : exerciseForm.category === 'Hamstrings' ? 'hamstring' : exerciseForm.category === 'Biceps' ? 'biceps' : exerciseForm.category === 'Triceps' ? 'triceps' : exerciseForm.category === 'Abs' ? 'abs' : exerciseForm.category === 'Calves' ? 'calves' : 'upperBack'),
+      primary_muscle: exerciseForm.primary_muscle || (
+        exerciseForm.category === 'Shoulders' ? 'deltoids' :
+        exerciseForm.category === 'Chest' ? 'chest' :
+        exerciseForm.category === 'Quads' ? 'quadriceps' :
+        exerciseForm.category === 'Hamstrings' ? 'hamstring' :
+        exerciseForm.category === 'Calves' ? 'calves' :
+        exerciseForm.category === 'Glutes' ? 'gluteal' :
+        exerciseForm.category === 'Biceps' ? 'biceps' :
+        exerciseForm.category === 'Triceps' ? 'triceps' :
+        exerciseForm.category === 'Abs' ? 'abs' :
+        exerciseForm.category === 'Obliques' ? 'obliques' :
+        exerciseForm.category === 'Lower Back' ? 'lowerBack' :
+        exerciseForm.category === 'Traps' ? 'trapezius' :
+        exerciseForm.category === 'Forearms' ? 'forearm' :
+        'upperBack'
+      ),
       secondary_muscles: exerciseForm.secondary_muscles || [],
       notes: exerciseForm.notes,
       increment_weight: Number(exerciseForm.increment_weight || 2.5),
@@ -1872,16 +1887,21 @@ export default function App() {
                         value={exerciseForm.category} 
                         onChange={(e) => setExerciseForm({ ...exerciseForm, category: e.target.value as any })}
                       >
-                        <option value="Quads">Quads (Benen)</option>
-                        <option value="Hamstrings">Hamstrings (Achterkant Benen)</option>
-                        <option value="Calves">Calves (Kuiten)</option>
                         <option value="Chest">Chest (Borst)</option>
-                        <option value="Lats">Lats (Zijkant Rug)</option>
-                        <option value="Upper Back">Upper Back (Bovenrug)</option>
                         <option value="Shoulders">Shoulders (Schouders)</option>
-                        <option value="Biceps">Biceps (Armen)</option>
-                        <option value="Triceps">Triceps (Armen)</option>
+                        <option value="Biceps">Biceps (Bovenarmen)</option>
+                        <option value="Triceps">Triceps (Achterkant Armen)</option>
+                        <option value="Forearms">Forearms (Onderarmen)</option>
+                        <option value="Upper Back">Upper Back (Bovenrug)</option>
+                        <option value="Lats">Lats (Latissimus Dorsi / Zijkant Rug)</option>
+                        <option value="Lower Back">Lower Back (Lendenrug / Onderrug)</option>
+                        <option value="Traps">Traps (Monnikskapspier)</option>
+                        <option value="Quads">Quads (Voorkant Dijen)</option>
+                        <option value="Hamstrings">Hamstrings (Achterkant Dijen)</option>
+                        <option value="Glutes">Glutes (Zitvlak / Bilspieren)</option>
+                        <option value="Calves">Calves (Kuiten)</option>
                         <option value="Abs">Abs (Buikspieren)</option>
+                        <option value="Obliques">Obliques (Schuine Buikspieren)</option>
                       </select>
                     </div>
 

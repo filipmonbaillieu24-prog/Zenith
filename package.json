@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "zenith": "concurrently \"npm run dev --workspace=apps/zenith-aero\" \"npm run tauri --workspace=apps/zenith-hub dev\" \"npm run dev --workspace=apps/zenith-vigor\" \"npm run dev --workspace=apps/zenith-kratos\" \"npm run dev --workspace=apps/zenith-fuel\"",
+    "zenith:web": "concurrently \"npm run dev --workspace=apps/zenith-aero\" \"npm run dev --workspace=apps/zenith-hub\" \"npm run dev --workspace=apps/zenith-vigor\" \"npm run dev --workspace=apps/zenith-kratos\" \"npm run dev --workspace=apps/zenith-fuel\"",
     "zenith:build": "npm run build:all",
     "build:all": "npm run aero:build && npm run hub:build && npm run vigor:build && npm run kratos:build && npm run fuel:build && node copy-builds.js",
     "aero:dev": "npm run dev --workspace=apps/zenith-aero",

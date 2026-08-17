@@ -47,6 +47,8 @@ export interface RoutePageProps {
   onHoverPoint: (point: RoutePoint | null) => void;
   activeWorkout: any | null;
   onPlanWorkout?: (date: string, route: GeneratedRoute) => Promise<void>;
+  isPro?: boolean;
+  onRequestProModal?: (featureName: string, desc: string) => void;
 }
 
 export function RoutePage({
@@ -81,6 +83,8 @@ export function RoutePage({
   onHoverPoint,
   activeWorkout,
   onPlanWorkout,
+  isPro = false,
+  onRequestProModal,
 }: RoutePageProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -121,6 +125,8 @@ export function RoutePage({
         onSaveLocation={onSaveLocation}
         onDeleteLocation={onDeleteLocation}
         onRenameLocation={onRenameLocation}
+        isPro={isPro}
+        onRequestProModal={onRequestProModal}
       />
 
       <main className="main-content" style={{ position: 'relative' }}>
