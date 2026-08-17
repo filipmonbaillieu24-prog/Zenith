@@ -5,10 +5,7 @@ import {
   Activity, 
   Dumbbell, 
   Utensils, 
-  ArrowRight,
-  ShieldCheck,
-  Zap,
-  CheckCircle2
+  ArrowRight
 } from 'lucide-react';
 
 interface ZenithLandingPageProps {
