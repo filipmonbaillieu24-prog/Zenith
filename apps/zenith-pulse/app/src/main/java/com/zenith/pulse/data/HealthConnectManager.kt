@@ -4,15 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
-import androidx.health.connect.client.records.ExerciseSessionRecord
-import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
-import androidx.health.connect.client.records.OxygenSaturationRecord
-import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
-import androidx.health.connect.client.records.WeightRecord
+import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
@@ -20,13 +12,27 @@ import java.time.temporal.ChronoUnit
 
 data class HealthDataPayload(
     val stepsCount: Long = 0,
+    val distanceMeters: Double = 0.0,
+    val elevationGainedMeters: Double = 0.0,
     val activeCaloriesBurned: Double = 0.0,
     val totalCaloriesBurned: Double = 0.0,
+    val bmrCalories: Double = 0.0,
     val latestHeartRate: Int = 0,
+    val restingHeartRate: Int = 0,
     val latestHrvRmssd: Double = 0.0,
     val sleepDurationMinutes: Long = 0,
     val latestWeightKg: Double = 0.0,
+    val heightCm: Double = 0.0,
+    val bodyFatPercent: Double = 0.0,
+    val leanBodyMassKg: Double = 0.0,
     val latestSpO2: Double = 0.0,
+    val respiratoryRate: Double = 0.0,
+    val systolicBp: Double = 0.0,
+    val diastolicBp: Double = 0.0,
+    val bodyTempCelsius: Double = 0.0,
+    val hydrationMl: Double = 0.0,
+    val avgPowerWatts: Double = 0.0,
+    val avgSpeedKmh: Double = 0.0,
     val exerciseSessionsCount: Int = 0,
     val rawStepsList: List<Map<String, Any>> = emptyList(),
     val rawSleepList: List<Map<String, Any>> = emptyList(),
@@ -47,14 +53,27 @@ class HealthConnectManager(private val context: Context) {
 
     val requiredPermissions = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
-        HealthPermission.getReadPermission(HeartRateRecord::class),
-        HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
-        HealthPermission.getReadPermission(SleepSessionRecord::class),
-        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+        HealthPermission.getReadPermission(DistanceRecord::class),
+        HealthPermission.getReadPermission(ElevationGainedRecord::class),
         HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
         HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(BasalMetabolicRateRecord::class),
+        HealthPermission.getReadPermission(HeartRateRecord::class),
+        HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+        HealthPermission.getReadPermission(HeartRateVariabilityRmssdRecord::class),
+        HealthPermission.getReadPermission(OxygenSaturationRecord::class),
+        HealthPermission.getReadPermission(RespiratoryRateRecord::class),
+        HealthPermission.getReadPermission(BloodPressureRecord::class),
+        HealthPermission.getReadPermission(BodyTemperatureRecord::class),
+        HealthPermission.getReadPermission(SleepSessionRecord::class),
+        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
         HealthPermission.getReadPermission(WeightRecord::class),
-        HealthPermission.getReadPermission(OxygenSaturationRecord::class)
+        HealthPermission.getReadPermission(HeightRecord::class),
+        HealthPermission.getReadPermission(BodyFatRecord::class),
+        HealthPermission.getReadPermission(LeanBodyMassRecord::class),
+        HealthPermission.getReadPermission(HydrationRecord::class),
+        HealthPermission.getReadPermission(PowerRecord::class),
+        HealthPermission.getReadPermission(SpeedRecord::class)
     )
 
     suspend fun hasAllPermissions(): Boolean {
@@ -72,13 +91,27 @@ class HealthConnectManager(private val context: Context) {
         val startTime7Days = now.minus(7, ChronoUnit.DAYS)
 
         var totalSteps: Long = 0
+        var totalDistMeters: Double = 0.0
+        var totalElevMeters: Double = 0.0
         var activeCals: Double = 0.0
         var totalCals: Double = 0.0
+        var bmrCals: Double = 0.0
         var latestHr = 0
+        var restingHr = 0
         var latestHrv = 0.0
         var sleepMinutes: Long = 0
         var latestWeight = 0.0
+        var heightValueCm = 0.0
+        var bodyFatPct = 0.0
+        var leanMassKg = 0.0
         var latestSpO2Val = 0.0
+        var respRate = 0.0
+        var sysBp = 0.0
+        var diaBp = 0.0
+        var tempCelsius = 0.0
+        var totalHydrationMl = 0.0
+        var avgPower = 0.0
+        var avgSpeed = 0.0
 
         val stepsMaps = mutableListOf<Map<String, Any>>()
         val sleepMaps = mutableListOf<Map<String, Any>>()
@@ -104,7 +137,29 @@ class HealthConnectManager(private val context: Context) {
                 )
             }
 
-            // 2. Active Calories Today
+            // 2. Distance Today
+            val distRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = DistanceRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                )
+            )
+            for (record in distRes.records) {
+                totalDistMeters += record.distance.inMeters
+            }
+
+            // 3. Elevation Gained Today
+            val elevRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = ElevationGainedRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                )
+            )
+            for (record in elevRes.records) {
+                totalElevMeters += record.elevation.inMeters
+            }
+
+            // 4. Active & Total Calories
             val activeCalsRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = ActiveCaloriesBurnedRecord::class,
@@ -115,7 +170,27 @@ class HealthConnectManager(private val context: Context) {
                 activeCals += record.energy.inKilocalories
             }
 
-            // 3. Heart Rate (Last 24h)
+            val totalCalsRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = TotalCaloriesBurnedRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                )
+            )
+            for (record in totalCalsRes.records) {
+                totalCals += record.energy.inKilocalories
+            }
+
+            val bmrRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = BasalMetabolicRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startTime24h)
+                )
+            )
+            if (bmrRes.records.isNotEmpty()) {
+                bmrCals = bmrRes.records.last().basalMetabolicRate.inKilocaloriesPerDay
+            }
+
+            // 5. Heart Rate (Last 24h)
             val hrRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = HeartRateRecord::class,
@@ -129,7 +204,17 @@ class HealthConnectManager(private val context: Context) {
                 }
             }
 
-            // 4. HRV (Last 24h)
+            val rhrRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = RestingHeartRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startTime24h)
+                )
+            )
+            if (rhrRes.records.isNotEmpty()) {
+                restingHr = rhrRes.records.last().beatsPerMinute.toInt()
+            }
+
+            // 6. HRV (Last 24h)
             val hrvRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = HeartRateVariabilityRmssdRecord::class,
@@ -140,7 +225,7 @@ class HealthConnectManager(private val context: Context) {
                 latestHrv = hrvRes.records.last().heartRateVariabilityMillis
             }
 
-            // 5. Sleep Sessions (Last 24h)
+            // 7. Sleep Sessions (Last 24h)
             val sleepRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = SleepSessionRecord::class,
@@ -168,7 +253,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             }
 
-            // 6. Exercise Sessions (Last 7 Days)
+            // 8. Exercise Sessions (Last 7 Days)
             val exRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = ExerciseSessionRecord::class,
@@ -189,7 +274,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             }
 
-            // 7. Weight (Latest)
+            // 9. Body Composition (Weight, Height, Fat, Muscle)
             val weightRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = WeightRecord::class,
@@ -200,7 +285,37 @@ class HealthConnectManager(private val context: Context) {
                 latestWeight = weightRes.records.last().weight.inKilograms
             }
 
-            // 8. SpO2 (Latest)
+            val heightRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = HeightRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startTime7Days)
+                )
+            )
+            if (heightRes.records.isNotEmpty()) {
+                heightValueCm = heightRes.records.last().height.inMeters * 100.0
+            }
+
+            val fatRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = BodyFatRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startTime7Days)
+                )
+            )
+            if (fatRes.records.isNotEmpty()) {
+                bodyFatPct = fatRes.records.last().percentage.value
+            }
+
+            val leanRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = LeanBodyMassRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startTime7Days)
+                )
+            )
+            if (leanRes.records.isNotEmpty()) {
+                leanMassKg = leanRes.records.last().mass.inKilograms
+            }
+
+            // 10. SpO2 & Respiratory
             val spo2Res = client.readRecords(
                 ReadRecordsRequest(
                     recordType = OxygenSaturationRecord::class,
@@ -211,19 +326,77 @@ class HealthConnectManager(private val context: Context) {
                 latestSpO2Val = spo2Res.records.last().percentage.value
             }
 
+            val respRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = RespiratoryRateRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startTime24h)
+                )
+            )
+            if (respRes.records.isNotEmpty()) {
+                respRate = respRes.records.last().rate
+            }
+
+            // 11. Blood Pressure & Temperature
+            val bpRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = BloodPressureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startTime24h)
+                )
+            )
+            if (bpRes.records.isNotEmpty()) {
+                val lastBp = bpRes.records.last()
+                sysBp = lastBp.systolic.inMillimetersOfMercury
+                diaBp = lastBp.diastolic.inMillimetersOfMercury
+            }
+
+            val tempRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = BodyTemperatureRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startTime24h)
+                )
+            )
+            if (tempRes.records.isNotEmpty()) {
+                tempCelsius = tempRes.records.last().temperature.inCelsius
+            }
+
+            // 12. Hydration
+            val hydRes = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = HydrationRecord::class,
+                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                )
+            )
+            for (h in hydRes.records) {
+                totalHydrationMl += h.volume.inLiters * 1000.0
+            }
+
         } catch (e: Exception) {
             Log.e("HealthConnectManager", "Error reading Health Connect records", e)
         }
 
         return HealthDataPayload(
             stepsCount = totalSteps,
+            distanceMeters = totalDistMeters,
+            elevationGainedMeters = totalElevMeters,
             activeCaloriesBurned = activeCals,
             totalCaloriesBurned = totalCals,
+            bmrCalories = bmrCals,
             latestHeartRate = latestHr,
+            restingHeartRate = restingHr,
             latestHrvRmssd = latestHrv,
             sleepDurationMinutes = sleepMinutes,
             latestWeightKg = latestWeight,
+            heightCm = heightValueCm,
+            bodyFatPercent = bodyFatPct,
+            leanBodyMassKg = leanMassKg,
             latestSpO2 = latestSpO2Val,
+            respiratoryRate = respRate,
+            systolicBp = sysBp,
+            diastolicBp = diaBp,
+            bodyTempCelsius = tempCelsius,
+            hydrationMl = totalHydrationMl,
+            avgPowerWatts = avgPower,
+            avgSpeedKmh = avgSpeed,
             exerciseSessionsCount = exerciseMaps.size,
             rawStepsList = stepsMaps,
             rawSleepList = sleepMaps,

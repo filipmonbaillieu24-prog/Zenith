@@ -542,10 +542,48 @@ fun ZenithPulseScreen(
                     modifier = Modifier.weight(1f)
                 )
                 MetricTile(
-                    title = "Weight",
+                    title = "Gewicht",
                     value = if (payload.latestWeightKg > 0) "${payload.latestWeightKg} kg" else "--",
                     unit = "biometrisch",
                     accentColor = ZenithGreen,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MetricTile(
+                    title = "Afstand",
+                    value = if (payload.distanceMeters > 0) String.format("%.1f km", payload.distanceMeters / 1000.0) else "--",
+                    unit = "vandaag",
+                    accentColor = Color(0xFF38BDF8),
+                    modifier = Modifier.weight(1f)
+                )
+                MetricTile(
+                    title = "Rusthartslag",
+                    value = if (payload.restingHeartRate > 0) "${payload.restingHeartRate}" else "--",
+                    unit = "BPM (rust)",
+                    accentColor = Color(0xFFEC4899),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MetricTile(
+                    title = "Hydratatie",
+                    value = if (payload.hydrationMl > 0) "${payload.hydrationMl.toInt()} ml" else "--",
+                    unit = "waterinname",
+                    accentColor = Color(0xFF0EA5E9),
+                    modifier = Modifier.weight(1f)
+                )
+                MetricTile(
+                    title = "Ademhaling",
+                    value = if (payload.respiratoryRate > 0) "${payload.respiratoryRate.toInt()}" else "--",
+                    unit = "rpm (rust)",
+                    accentColor = Color(0xFF10B981),
                     modifier = Modifier.weight(1f)
                 )
             }
