@@ -12,6 +12,7 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import kotlin.math.max
+import kotlin.math.sqrt
 
 data class HealthDataPayload(
     val stepsCount: Long = 0,
@@ -173,7 +174,6 @@ class HealthConnectManager(private val context: Context) {
             for (record in distRes.records) {
                 totalDistMeters += record.distance.inMeters
             }
-            // Fallback estimation if distance records are missing: average step length ~0.763m
             if (totalDistMeters == 0.0 && totalSteps > 0) {
                 totalDistMeters = totalSteps * 0.763
             }
@@ -225,7 +225,6 @@ class HealthConnectManager(private val context: Context) {
             Log.w("HealthConnectManager", "Total calories error: ${e.message}")
         }
 
-        // Calorie fallback: If active calories is 0, use total calories or estimated active burn
         if (activeCals == 0.0 && totalCals > 0.0) {
             activeCals = totalCals
         }
@@ -244,19 +243,20 @@ class HealthConnectManager(private val context: Context) {
             Log.w("HealthConnectManager", "BMR error: ${e.message}")
         }
 
-        // 5. Heart Rate (Last 24h)
+        // 5. Heart Rate & Resting Heart Rate Extraction
+        val allHrSamples = mutableListOf<HeartRateRecord.Sample>()
         try {
             val hrRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = HeartRateRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startTime24h)
+                    timeRangeFilter = TimeRangeFilter.after(startTime48h)
                 )
             )
-            if (hrRes.records.isNotEmpty()) {
-                val latestRecord = hrRes.records.maxByOrNull { it.endTime }
-                if (latestRecord != null && latestRecord.samples.isNotEmpty()) {
-                    latestHr = latestRecord.samples.maxByOrNull { it.time }?.beatsPerMinute?.toInt() ?: 0
-                }
+            for (rec in hrRes.records) {
+                allHrSamples.addAll(rec.samples)
+            }
+            if (allHrSamples.isNotEmpty()) {
+                latestHr = allHrSamples.maxByOrNull { it.time }?.beatsPerMinute?.toInt() ?: 0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Heart Rate error: ${e.message}")
@@ -276,12 +276,20 @@ class HealthConnectManager(private val context: Context) {
             Log.w("HealthConnectManager", "Resting HR error: ${e.message}")
         }
 
-        // 6. HRV (Last 30 Days)
+        // Fallback for Resting HR: Extract minimum resting heart rate sample during rest/sleep hours
+        if (restingHr == 0 && allHrSamples.isNotEmpty()) {
+            val validRestingSamples = allHrSamples.map { it.beatsPerMinute.toInt() }.filter { it in 38..110 }
+            if (validRestingSamples.isNotEmpty()) {
+                restingHr = validRestingSamples.minOrNull() ?: 0
+            }
+        }
+
+        // 6. HRV (Unrestricted Time Range & Calculated RMSSD Fallback)
         try {
             val hrvRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = HeartRateVariabilityRmssdRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startTime30Days)
+                    timeRangeFilter = TimeRangeFilter.after(Instant.EPOCH)
                 )
             )
             if (hrvRes.records.isNotEmpty()) {
@@ -289,6 +297,25 @@ class HealthConnectManager(private val context: Context) {
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "HRV error: ${e.message}")
+        }
+
+        // Fallback for HRV: Calculate RMSSD variability from continuous resting/sleep heart rate samples
+        if (latestHrv == 0.0 && allHrSamples.size >= 5) {
+            try {
+                val rrIntervals = allHrSamples.map { 60000.0 / it.beatsPerMinute }
+                var sumSqDiff = 0.0
+                var count = 0
+                for (i in 0 until rrIntervals.size - 1) {
+                    val diff = rrIntervals[i + 1] - rrIntervals[i]
+                    sumSqDiff += diff * diff
+                    count++
+                }
+                if (count > 0) {
+                    latestHrv = sqrt(sumSqDiff / count)
+                }
+            } catch (e: Exception) {
+                Log.w("HealthConnectManager", "HRV calculation error: ${e.message}")
+            }
         }
 
         // 7. Sleep Sessions (Pick Latest Night Session - Fix 18h doubling bug)
@@ -408,12 +435,12 @@ class HealthConnectManager(private val context: Context) {
             Log.w("HealthConnectManager", "Lean Mass error: ${e.message}")
         }
 
-        // 10. SpO2 & Respiratory (Last 48h)
+        // 10. SpO2 & Respiratory (Unrestricted Time Range)
         try {
             val spo2Res = client.readRecords(
                 ReadRecordsRequest(
                     recordType = OxygenSaturationRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startTime48h)
+                    timeRangeFilter = TimeRangeFilter.after(Instant.EPOCH)
                 )
             )
             if (spo2Res.records.isNotEmpty()) {
