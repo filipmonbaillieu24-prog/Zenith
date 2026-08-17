@@ -170,11 +170,11 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
   const getStatusBadge = (status: FeatureRequestItem['status']) => {
     switch (status) {
       case 'completed':
-        return <span style={{ background: 'rgba(57, 255, 20, 0.15)', color: '#39ff14', border: '1px solid #39ff14', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>✓ VOLTOOID</span>;
+        return <span style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid #34d399', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>✓ VOLTOOID</span>;
       case 'in_progress':
-        return <span style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', border: '1px solid #a855f7', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>⚡ IN ONTWIKKELING</span>;
+        return <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid #38bdf8', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>⚡ IN ONTWIKKELING</span>;
       case 'planned':
-        return <span style={{ background: 'rgba(96, 165, 250, 0.15)', color: '#60a5fa', border: '1px solid #60a5fa', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>📌 GEPLAAND</span>;
+        return <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', border: '1px solid #10b981', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>📌 GEPLAAND</span>;
       default:
         return <span style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>IN OVERWEGING</span>;
     }
@@ -182,164 +182,172 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100vh',
+      width: '100vw',
+      overflowY: 'auto',
+      overflowX: 'hidden',
       backgroundColor: '#09090b',
       color: '#f8fafc',
-      fontFamily: 'Outfit, sans-serif',
+      fontFamily: "'Outfit', 'Inter', system-ui, -apple-system, sans-serif",
       padding: '32px 24px 60px',
-      maxWidth: '1000px',
-      margin: '0 auto'
+      position: 'relative'
     }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 36 }}>
-        <button 
-          onClick={onBack} 
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            color: '#fff',
-            fontWeight: 700,
-            fontSize: 13,
-            padding: '8px 16px',
-            borderRadius: 10,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8
-          }}
-        >
-          <ArrowLeft size={16} /> Terug
-        </button>
-
-        <button 
-          onClick={() => setShowSubmitModal(true)}
-          style={{
-            background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)',
-            border: 'none',
-            color: '#fff',
-            fontWeight: 900,
-            fontSize: 13,
-            padding: '9px 18px',
-            borderRadius: 10,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            boxShadow: '0 4px 15px rgba(168, 85, 247, 0.3)'
-          }}
-        >
-          <Plus size={16} /> Nieuw Idee Indienen
-        </button>
-      </div>
-
-      {/* Hero Title */}
-      <div style={{ marginBottom: 36 }}>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-          background: 'rgba(168, 85, 247, 0.12)',
-          border: '1px solid rgba(168, 85, 247, 0.3)',
-          padding: '4px 14px',
-          borderRadius: 20,
-          color: '#c084fc',
-          fontSize: 11,
-          fontWeight: 800,
-          marginBottom: 12
-        }}>
-          <Sparkles size={13} /> COMMUNITY ROADMAP & VOTING BOARD
-        </div>
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>
-          Jouw Stem Vormt de Toekomst van Zenith
-        </h1>
-        <p style={{ fontSize: 14, color: '#94a3b8', margin: 0 }}>
-          Stem op je favoriete uitbreidingen of dien zelf nieuwe ideeën in voor Aero, Vigor, Kratos of Fuel.
-        </p>
-      </div>
-
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 28, overflowX: 'auto', paddingBottom: 4 }}>
-        {[
-          { id: 'all', label: 'Alle Ideeën' },
-          { id: 'aero', label: '🚴 Aero' },
-          { id: 'vigor', label: '⚖️ Vigor' },
-          { id: 'kratos', label: '🔥 Kratos' },
-          { id: 'general', label: '🌐 Algemeen' },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setFilterCategory(tab.id)}
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 36 }}>
+          <button 
+            onClick={onBack} 
             style={{
-              background: filterCategory === tab.id ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-              border: filterCategory === tab.id ? '1px solid #a855f7' : '1px solid rgba(255, 255, 255, 0.08)',
-              color: filterCategory === tab.id ? '#fff' : '#94a3b8',
-              fontWeight: 800,
-              fontSize: 12,
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 13,
               padding: '8px 16px',
               borderRadius: 10,
               cursor: 'pointer',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Request List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        {filteredRequests.map(req => (
-          <div 
-            key={req.id}
-            style={{
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '16px',
-              padding: '20px 24px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 20
+              gap: 8,
+              fontFamily: 'inherit'
             }}
           >
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#a855f7', letterSpacing: '0.8px', background: 'rgba(168, 85, 247, 0.1)', padding: '2px 8px', borderRadius: 6 }}>
-                  {req.category}
-                </span>
-                {getStatusBadge(req.status)}
-              </div>
-              <h3 style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>
-                {req.title}
-              </h3>
-              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
-                {req.description}
-              </p>
-            </div>
+            <ArrowLeft size={16} /> Terug
+          </button>
 
-            {/* Upvote Button */}
+          <button 
+            onClick={() => setShowSubmitModal(true)}
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              border: 'none',
+              color: '#fff',
+              fontWeight: 900,
+              fontSize: 13,
+              padding: '9px 18px',
+              borderRadius: 10,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+              fontFamily: 'inherit'
+            }}
+          >
+            <Plus size={16} /> Nieuw Idee Indienen
+          </button>
+        </div>
+
+        {/* Hero Title */}
+        <div style={{ marginBottom: 36 }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            background: 'rgba(16, 185, 129, 0.12)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            padding: '4px 14px',
+            borderRadius: 20,
+            color: '#34d399',
+            fontSize: 11,
+            fontWeight: 800,
+            marginBottom: 12
+          }}>
+            <Sparkles size={13} /> COMMUNITY ROADMAP & VOTING BOARD
+          </div>
+          <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>
+            Jouw Stem Vormt de Toekomst van Zenith
+          </h1>
+          <p style={{ fontSize: 14, color: '#94a3b8', margin: 0 }}>
+            Stem op je favoriete uitbreidingen of dien zelf nieuwe ideeën in voor Aero, Vigor, Kratos of Fuel.
+          </p>
+        </div>
+
+        {/* Filter Tabs */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 28, overflowX: 'auto', paddingBottom: 4 }}>
+          {[
+            { id: 'all', label: 'Alle Ideeën' },
+            { id: 'aero', label: '🚴 Aero' },
+            { id: 'vigor', label: '⚖️ Vigor' },
+            { id: 'kratos', label: '🔥 Kratos' },
+            { id: 'general', label: '🌐 Algemeen' },
+          ].map(tab => (
             <button
-              onClick={() => handleVote(req.id)}
+              key={tab.id}
+              onClick={() => setFilterCategory(tab.id)}
               style={{
-                background: req.user_voted ? 'rgba(168, 85, 247, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                border: req.user_voted ? '1px solid #a855f7' : '1px solid rgba(255, 255, 255, 0.1)',
-                color: req.user_voted ? '#c084fc' : '#cbd5e1',
-                padding: '10px 16px',
-                borderRadius: 12,
+                background: filterCategory === tab.id ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                border: filterCategory === tab.id ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.08)',
+                color: filterCategory === tab.id ? '#34d399' : '#94a3b8',
+                fontWeight: 800,
+                fontSize: 12,
+                padding: '8px 16px',
+                borderRadius: 10,
                 cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: 64,
-                transition: 'all 0.2s'
+                whiteSpace: 'nowrap',
+                fontFamily: 'inherit'
               }}
             >
-              <ThumbsUp size={16} color={req.user_voted ? '#c084fc' : '#cbd5e1'} />
-              <span style={{ fontSize: 13, fontWeight: 900, marginTop: 4 }}>{req.upvotes}</span>
+              {tab.label}
             </button>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Request List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {filteredRequests.map(req => (
+            <div 
+              key={req.id}
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '16px',
+                padding: '20px 24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 20
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                  <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#34d399', letterSpacing: '0.8px', background: 'rgba(16, 185, 129, 0.12)', padding: '2px 8px', borderRadius: 6 }}>
+                    {req.category}
+                  </span>
+                  {getStatusBadge(req.status)}
+                </div>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>
+                  {req.title}
+                </h3>
+                <p style={{ fontSize: 12, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
+                  {req.description}
+                </p>
+              </div>
+
+              {/* Upvote Button */}
+              <button
+                onClick={() => handleVote(req.id)}
+                style={{
+                  background: req.user_voted ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                  border: req.user_voted ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
+                  color: req.user_voted ? '#34d399' : '#cbd5e1',
+                  padding: '10px 16px',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: 64,
+                  transition: 'all 0.2s',
+                  fontFamily: 'inherit'
+                }}
+              >
+                <ThumbsUp size={16} color={req.user_voted ? '#34d399' : '#cbd5e1'} />
+                <span style={{ fontSize: 13, fontWeight: 900, marginTop: 4 }}>{req.upvotes}</span>
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Submit Feature Request Modal */}
@@ -352,18 +360,19 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
           bottom: 0,
           width: '100vw',
           height: '100vh',
-          background: 'rgba(5, 5, 8, 0.85)',
-          backdropFilter: 'blur(8px)',
+          background: 'rgba(5, 5, 8, 0.88)',
+          backdropFilter: 'blur(10px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 99999
+          zIndex: 99999,
+          fontFamily: 'inherit'
         }}>
           <div style={{
             maxWidth: '460px',
             width: '90%',
             background: 'linear-gradient(145deg, #121218 0%, #1a1a26 100%)',
-            border: '1px solid rgba(168, 85, 247, 0.3)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
             borderRadius: '20px',
             padding: '28px',
             position: 'relative'
@@ -390,7 +399,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                 <select
                   value={categoryInput}
                   onChange={(e: any) => setCategoryInput(e.target.value)}
-                  style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12 }}
+                  style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12, fontFamily: 'inherit' }}
                 >
                   <option value="aero">🚴 Zenith Aero (Wielrennen & Routing)</option>
                   <option value="vigor">⚖️ Zenith Vigor (Gezondheid & Omtrekken)</option>
@@ -409,7 +418,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                   placeholder="Bijv. Strava Auto Sync..."
                   value={titleInput}
                   onChange={e => setTitleInput(e.target.value)}
-                  style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12 }}
+                  style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12, fontFamily: 'inherit' }}
                 />
               </div>
 
@@ -423,7 +432,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                   placeholder="Beschrijf hoe deze feature zou moeten werken..."
                   value={descInput}
                   onChange={e => setDescInput(e.target.value)}
-                  style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12, resize: 'vertical' }}
+                  style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12, resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
 
@@ -431,14 +440,14 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowSubmitModal(false)}
-                  style={{ flex: 1, padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontWeight: 700, cursor: 'pointer', fontSize: 12 }}
+                  style={{ flex: 1, padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#cbd5e1', fontWeight: 700, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
                 >
                   Annuleren
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{ flex: 1, padding: 12, borderRadius: 10, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900, cursor: 'pointer', fontSize: 12 }}
+                  style={{ flex: 1, padding: 12, borderRadius: 10, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none', color: '#fff', fontWeight: 900, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
                 >
                   {submitting ? 'Indienen...' : 'Indienen'}
                 </button>
