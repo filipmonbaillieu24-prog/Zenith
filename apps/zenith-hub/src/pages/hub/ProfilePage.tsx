@@ -17,6 +17,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   initialProfile,
   userId,
   userEmail = '',
+  onBack,
   onSave,
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile');
