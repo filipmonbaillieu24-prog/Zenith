@@ -68,6 +68,7 @@ function App() {
     async function checkForUpdates() {
       if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
         try {
+          // @ts-ignore
           const { check } = await import('@tauri-apps/plugin-updater');
           console.log("Checking for updates...");
           const update = await check();
@@ -110,6 +111,7 @@ function App() {
       setUpdateStatus('installing');
       setTimeout(async () => {
         try {
+          // @ts-ignore
           const { relaunch } = await import('@tauri-apps/plugin-process');
           await relaunch();
         } catch (err) {
