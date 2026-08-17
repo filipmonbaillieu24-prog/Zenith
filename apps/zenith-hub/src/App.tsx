@@ -860,15 +860,18 @@ ${logsMarkdown}
 
   const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';
   const isFounder = session?.user?.email?.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
+  const isTauri = typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window || !!(window as any).__TAURI_METADATA__);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', background: '#09090b', overflow: 'hidden' }}>
-      <AppTitlebar
-        onMinimize={handleMinimize}
-        onMaximize={handleMaximize}
-        onClose={handleClose}
-      />
-      <div style={{ display: 'flex', flex: 1, width: '100%', height: 'calc(100vh - 32px)', overflow: 'hidden' }}>
+      {isTauri && (
+        <AppTitlebar
+          onMinimize={handleMinimize}
+          onMaximize={handleMaximize}
+          onClose={handleClose}
+        />
+      )}
+      <div style={{ display: 'flex', flex: 1, width: '100%', height: isTauri ? 'calc(100vh - 32px)' : '100vh', overflow: 'hidden' }}>
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -883,7 +886,7 @@ ${logsMarkdown}
             setIsBugReportOpen(true);
           }}
         />
-        <div style={{ flex: 1, height: 'calc(100vh - 32px)', marginTop: 0, overflowY: 'auto', position: 'relative' }}>
+        <div style={{ flex: 1, height: isTauri ? 'calc(100vh - 32px)' : '100vh', marginTop: 0, overflowY: 'auto', position: 'relative' }}>
           {activeTab === 'hub' && (
             <ZenithHubPage
               fitnessProfile={fitnessProfile}

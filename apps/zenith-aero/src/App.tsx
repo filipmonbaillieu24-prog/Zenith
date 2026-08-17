@@ -663,10 +663,11 @@ function App() {
   }
 
   const userName = session?.user?.user_metadata?.name || fitnessProfile?.name || 'Atleet';
+  const isTauri = typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window || !!(window as any).__TAURI_METADATA__);
 
   return (
     <div className="app-container" style={{ flexDirection: 'column' }}>
-      {!isIframe && (
+      {(!isIframe && isTauri) && (
         <AppTitlebar
           onMinimize={handleMinimize}
           onMaximize={handleMaximize}
@@ -890,8 +891,8 @@ function App() {
         </div>
       )}
 
-      {/* Main Layout containing Topbar and Viewport - pushed down by 32px for window drag region titlebar */}
-      <div className="wd-app" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100vw', paddingTop: isIframe ? '0px' : '32px' }}>
+      {/* Main Layout containing Topbar and Viewport - pushed down by 32px for window drag region titlebar only in Tauri */}
+      <div className="wd-app" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100vw', paddingTop: (isIframe || !isTauri) ? '0px' : '32px' }}>
         {/* Horizontal Topbar Header */}
         {activeTab !== 'hub' && activeTab !== 'cyclopilot' && (
           <>
