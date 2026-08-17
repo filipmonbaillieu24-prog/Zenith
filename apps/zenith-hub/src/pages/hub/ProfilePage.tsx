@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { ArrowLeft, User, AlertCircle, Check, Sparkles, CreditCard, ShieldCheck, CheckCircle2, XCircle, Zap } from 'lucide-react';
+import { User, AlertCircle, Check, Sparkles, CreditCard, ShieldCheck, CheckCircle2, XCircle, Zap } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 import { PayPalModal } from '../../components/PayPalModal';
 import './ProfilePage.css';
@@ -9,7 +9,7 @@ interface ProfilePageProps {
   initialProfile: any;
   userId: string;
   userEmail?: string;
-  onBack: () => void;
+  onBack?: () => void;
   onSave: (updatedProfile: any) => Promise<void>;
 }
 
@@ -17,7 +17,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   initialProfile,
   userId,
   userEmail = '',
-  onBack,
   onSave,
 }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile');
@@ -135,13 +134,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       <div className="zh-hub-glow" style={{ background: 'radial-gradient(circle at 50% 30%, rgba(168, 85, 247, 0.08) 0%, transparent 60%)' }} />
 
       <header className="zh-hub-header animate-slide-down">
-        <button onClick={onBack} className="zh-back-btn">
-          <ArrowLeft size={14} /> Hub
-        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: '#64748b' }}>
-          <Sparkles size={12} style={{ color: '#a855f7' }} />
+          <Sparkles size={12} style={{ color: '#38bdf8' }} />
           <span style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Persoonlijk Profiel & Abonnement
+            Personal Profile & Subscription
           </span>
         </div>
       </header>
