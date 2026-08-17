@@ -10,6 +10,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.headers
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.Dispatchers
@@ -20,8 +21,14 @@ import kotlinx.serialization.json.put
 
 object ZenithSyncManager {
 
-    private const val ZENITH_WEBHOOK_URL =
-        "https://usvddplwtrelmqsecprp.supabase.co/rest/v1/rpc/health_connect_ingest?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmRkcGx3dHJlbG1xc2VjcHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1NzAyMjksImV4cCI6MjEwMTE4NjIyOX0.WGLIaVq-7bzOQGtSpypApOBt1UyBeATnREmPgz8BacM"
+    private const val ZENITH_RPC_URL =
+        "https://usvddplwtrelmqsecprp.supabase.co/rest/v1/rpc/health_connect_ingest"
+
+    private const val SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmRkcGx3dHJlbG1xc2VjcHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1NzAyMjksImV4cCI6MjEwMTE4NjIyOX0.WGLIaVq-7bzOQGtSpypApOBt1UyBeATnREmPgz8BacM"
+
+    private const val VALID_SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmRkcGx3dHJlbG1xc2VjcHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1NzAyMjksImV4cCI6MjEwMTE0NjIyOX0.WGLIaVq-7bzOQGtSpypApOBt1UyBeATnREmPgz8BacM"
 
     private val httpClient by lazy {
         HttpClient(OkHttp)
@@ -54,9 +61,9 @@ object ZenithSyncManager {
             val userEmail = UserAuthManager.getUserEmail(context) ?: ""
             val userId = UserAuthManager.getUserId(context) ?: ""
 
-            val jsonBody = buildJsonObject {
+            val innerPayloadJson = buildJsonObject {
                 put("app_name", "Zenith Pulse")
-                put("app_version", "1.0.4")
+                put("app_version", "1.0.11")
                 put("user_email", userEmail)
                 put("user_id", userId)
                 put("timestamp", data.timestamp)
@@ -70,26 +77,37 @@ object ZenithSyncManager {
                 put("exercise_sessions_count", data.exerciseSessionsCount)
             }.toString()
 
-            val response = httpClient.post(ZENITH_WEBHOOK_URL) {
+            val rpcBodyJson = buildJsonObject {
+                put("timestamp", data.timestamp)
+                put("synctype", "MANUAL")
+                put("datatype", "BIOMETRIC_FULL")
+                put("recordcount", 1)
+                put("payload", innerPayloadJson)
+            }.toString()
+
+            val response = httpClient.post(ZENITH_RPC_URL) {
                 contentType(ContentType.Application.Json)
                 headers {
-                    append("Prefer", "return=minimal")
+                    append("apikey", VALID_SUPABASE_ANON_KEY)
+                    append("Authorization", "Bearer $VALID_SUPABASE_ANON_KEY")
                 }
-                setBody(jsonBody)
+                setBody(rpcBodyJson)
             }
 
+            val bodyText = response.bodyAsText()
             lastSyncTimestamp = System.currentTimeMillis()
+
             if (response.status.value in 200..299) {
-                lastSyncStatus = "Succesvol gesynchroniseerd (${data.stepsCount} stappen)"
-                Log.i("ZenithSyncManager", "Sync to Zenith Supabase succeeded!")
+                lastSyncStatus = "Succesvol gesynchroniseerd met Zenith! (${data.stepsCount} stappen)"
+                Log.i("ZenithSyncManager", "Sync to Zenith Supabase succeeded: $bodyText")
                 return@withContext true
             } else {
-                lastSyncStatus = "HTTP Fout ${response.status.value}"
-                Log.w("ZenithSyncManager", "Sync failed with status ${response.status.value}")
+                lastSyncStatus = "Sync Fout (HTTP ${response.status.value}): $bodyText"
+                Log.w("ZenithSyncManager", "Sync failed with status ${response.status.value}: $bodyText")
                 return@withContext false
             }
         } catch (e: Exception) {
-            lastSyncStatus = "Fout: ${e.localizedMessage}"
+            lastSyncStatus = "Fout bij synchroniseren: ${e.localizedMessage}"
             Log.e("ZenithSyncManager", "Exception during Zenith sync", e)
             return@withContext false
         }
