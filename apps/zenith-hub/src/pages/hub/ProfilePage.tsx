@@ -26,6 +26,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [birthDate, setBirthDate] = useState(initialProfile.birthDate || '');
   const [height, setHeight] = useState<string>(initialProfile.height?.toString() || '');
   
+  const [unitSystem, setUnitSystem] = useState<'metric' | 'imperial'>(initialProfile.unit_system || 'metric');
+  const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>(initialProfile.weight_unit || 'kg');
+
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
   const [weightDate, setWeightDate] = useState<string | null>(null);
 
@@ -98,14 +101,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         gender: gender || undefined,
         birthDate: birthDate || undefined,
         height: height ? parseFloat(height) : undefined,
+        unit_system: unitSystem,
+        weight_unit: weightUnit,
         weight: latestWeight !== null ? latestWeight : initialProfile.weight
       };
 
       await onSave(updatedProfile);
-      setSuccessMsg('Profiel succesvol bijgewerkt!');
+      setSuccessMsg('Profile successfully updated!');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Fout bij het bijwerken van het profiel.');
+      setErrorMsg(err.message || 'Error updating profile.');
     } finally {
       setSaving(false);
     }
