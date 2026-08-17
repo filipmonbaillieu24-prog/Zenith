@@ -3,7 +3,6 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Calendar, 
-  X, 
   Plus, 
   Trash2, 
   Dumbbell 
@@ -89,20 +88,10 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
     return `${y}-${m}-${d}`;
   };
 
-  const formatDuration = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    if (h > 0) {
-      return `${h}u ${m}m ${s}s`;
-    }
-    return `${m}m ${s}s`;
-  };
-
   const formatMonthName = (monthIdx: number) => {
     const months = [
-      'Januari', 'Februari', 'Maart', 'April', 'Mei', 'Juni',
-      'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return months[monthIdx];
   };
