@@ -8,7 +8,10 @@ import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
+import kotlin.math.max
 
 data class HealthDataPayload(
     val stepsCount: Long = 0,
@@ -79,7 +82,6 @@ class HealthConnectManager(private val context: Context) {
     suspend fun hasAllPermissions(): Boolean {
         val client = healthConnectClient ?: return false
         val granted = client.permissionController.getGrantedPermissions()
-        // Return true if at least any key health permission is granted so sync isn't blocked completely
         if (granted.contains(HealthPermission.getReadPermission(StepsRecord::class)) ||
             granted.contains(HealthPermission.getReadPermission(HeartRateRecord::class)) ||
             granted.contains(HealthPermission.getReadPermission(SleepSessionRecord::class)) ||
@@ -93,7 +95,9 @@ class HealthConnectManager(private val context: Context) {
         val client = healthConnectClient ?: return HealthDataPayload()
 
         val now = Instant.now()
-        val startOfDay = now.truncatedTo(ChronoUnit.DAYS)
+        val systemZone = ZoneId.systemDefault()
+        val localMidnight = ZonedDateTime.now(systemZone).toLocalDate().atStartOfDay(systemZone).toInstant()
+        val startTime24h = now.minus(24, ChronoUnit.HOURS)
         val startTime48h = now.minus(48, ChronoUnit.HOURS)
         val startTime30Days = now.minus(30, ChronoUnit.DAYS)
 
@@ -124,39 +128,54 @@ class HealthConnectManager(private val context: Context) {
         val sleepMaps = mutableListOf<Map<String, Any>>()
         val exerciseMaps = mutableListOf<Map<String, Any>>()
 
-        // 1. Steps Today (Isolated Try-Catch)
+        // 1. Steps Today (Deduplicated per Data Origin to match QRing / Primary Tracker)
         try {
             val stepsResponse = client.readRecords(
                 ReadRecordsRequest(
                     recordType = StepsRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                    timeRangeFilter = TimeRangeFilter.after(localMidnight)
                 )
             )
+            
+            val stepsByOrigin = mutableMapOf<String, Long>()
             for (record in stepsResponse.records) {
-                totalSteps += record.count
+                val pkg = record.metadata.dataOrigin.packageName
+                stepsByOrigin[pkg] = (stepsByOrigin[pkg] ?: 0L) + record.count
                 stepsMaps.add(
                     mapOf(
                         "count" to record.count,
                         "start_time" to record.startTime.toString(),
                         "end_time" to record.endTime.toString(),
-                        "metadata" to mapOf("data_origin" to record.metadata.dataOrigin.packageName)
+                        "metadata" to mapOf("data_origin" to pkg)
                     )
                 )
+            }
+
+            // Deduplication logic: Prioritize QRing ("cq.ring" / "qring") or take max single origin total to avoid phone+ring double counting
+            val qringKey = stepsByOrigin.keys.firstOrNull { it.contains("ring", ignoreCase = true) }
+            if (qringKey != null && (stepsByOrigin[qringKey] ?: 0L) > 0L) {
+                totalSteps = stepsByOrigin[qringKey]!!
+            } else if (stepsByOrigin.isNotEmpty()) {
+                totalSteps = stepsByOrigin.values.maxOrNull() ?: 0L
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Steps fetch error: ${e.message}")
         }
 
-        // 2. Distance Today (Isolated Try-Catch)
+        // 2. Distance Today
         try {
             val distRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = DistanceRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                    timeRangeFilter = TimeRangeFilter.after(localMidnight)
                 )
             )
             for (record in distRes.records) {
                 totalDistMeters += record.distance.inMeters
+            }
+            // Fallback estimation if distance records are missing: average step length ~0.763m
+            if (totalDistMeters == 0.0 && totalSteps > 0) {
+                totalDistMeters = totalSteps * 0.763
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Distance fetch error: ${e.message}")
@@ -167,7 +186,7 @@ class HealthConnectManager(private val context: Context) {
             val elevRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = ElevationGainedRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                    timeRangeFilter = TimeRangeFilter.after(localMidnight)
                 )
             )
             for (record in elevRes.records) {
@@ -177,12 +196,12 @@ class HealthConnectManager(private val context: Context) {
             Log.w("HealthConnectManager", "Elevation fetch error: ${e.message}")
         }
 
-        // 4. Active & Total Calories
+        // 4. Active & Total Calories (Today)
         try {
             val activeCalsRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = ActiveCaloriesBurnedRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                    timeRangeFilter = TimeRangeFilter.after(localMidnight)
                 )
             )
             for (record in activeCalsRes.records) {
@@ -196,7 +215,7 @@ class HealthConnectManager(private val context: Context) {
             val totalCalsRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = TotalCaloriesBurnedRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                    timeRangeFilter = TimeRangeFilter.after(localMidnight)
                 )
             )
             for (record in totalCalsRes.records) {
@@ -204,6 +223,11 @@ class HealthConnectManager(private val context: Context) {
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Total calories error: ${e.message}")
+        }
+
+        // Calorie fallback: If active calories is 0, use total calories or estimated active burn
+        if (activeCals == 0.0 && totalCals > 0.0) {
+            activeCals = totalCals
         }
 
         try {
@@ -220,18 +244,18 @@ class HealthConnectManager(private val context: Context) {
             Log.w("HealthConnectManager", "BMR error: ${e.message}")
         }
 
-        // 5. Heart Rate (Last 48h)
+        // 5. Heart Rate (Last 24h)
         try {
             val hrRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = HeartRateRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startTime48h)
+                    timeRangeFilter = TimeRangeFilter.after(startTime24h)
                 )
             )
             if (hrRes.records.isNotEmpty()) {
-                val lastRecord = hrRes.records.last()
-                if (lastRecord.samples.isNotEmpty()) {
-                    latestHr = lastRecord.samples.last().beatsPerMinute.toInt()
+                val latestRecord = hrRes.records.maxByOrNull { it.endTime }
+                if (latestRecord != null && latestRecord.samples.isNotEmpty()) {
+                    latestHr = latestRecord.samples.maxByOrNull { it.time }?.beatsPerMinute?.toInt() ?: 0
                 }
             }
         } catch (e: Exception) {
@@ -246,7 +270,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (rhrRes.records.isNotEmpty()) {
-                restingHr = rhrRes.records.last().beatsPerMinute.toInt()
+                restingHr = rhrRes.records.maxByOrNull { it.time }?.beatsPerMinute?.toInt() ?: 0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Resting HR error: ${e.message}")
@@ -261,13 +285,13 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (hrvRes.records.isNotEmpty()) {
-                latestHrv = hrvRes.records.last().heartRateVariabilityMillis
+                latestHrv = hrvRes.records.maxByOrNull { it.time }?.heartRateVariabilityMillis ?: 0.0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "HRV error: ${e.message}")
         }
 
-        // 7. Sleep Sessions (Last 48h)
+        // 7. Sleep Sessions (Pick Latest Night Session - Fix 18h doubling bug)
         try {
             val sleepRes = client.readRecords(
                 ReadRecordsRequest(
@@ -275,10 +299,12 @@ class HealthConnectManager(private val context: Context) {
                     timeRangeFilter = TimeRangeFilter.after(startTime48h)
                 )
             )
-            for (session in sleepRes.records) {
-                val durSec = ChronoUnit.SECONDS.between(session.startTime, session.endTime)
-                sleepMinutes += durSec / 60
-                val stagesList = session.stages.map { st ->
+            val latestSession = sleepRes.records.maxByOrNull { it.endTime }
+            if (latestSession != null) {
+                val durSec = ChronoUnit.SECONDS.between(latestSession.startTime, latestSession.endTime)
+                sleepMinutes = durSec / 60
+
+                val stagesList = latestSession.stages.map { st ->
                     val stDur = ChronoUnit.SECONDS.between(st.startTime, st.endTime)
                     mapOf(
                         "stage" to st.stage,
@@ -289,7 +315,8 @@ class HealthConnectManager(private val context: Context) {
                 }
                 sleepMaps.add(
                     mapOf(
-                        "session_end_time" to session.endTime.toString(),
+                        "session_start_time" to latestSession.startTime.toString(),
+                        "session_end_time" to latestSession.endTime.toString(),
                         "duration_seconds" to durSec,
                         "stages" to stagesList
                     )
@@ -333,7 +360,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (weightRes.records.isNotEmpty()) {
-                latestWeight = weightRes.records.last().weight.inKilograms
+                latestWeight = weightRes.records.maxByOrNull { it.time }?.weight?.inKilograms ?: 0.0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Weight error: ${e.message}")
@@ -347,7 +374,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (heightRes.records.isNotEmpty()) {
-                heightValueCm = heightRes.records.last().height.inMeters * 100.0
+                heightValueCm = (heightRes.records.maxByOrNull { it.time }?.height?.inMeters ?: 0.0) * 100.0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Height error: ${e.message}")
@@ -361,7 +388,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (fatRes.records.isNotEmpty()) {
-                bodyFatPct = fatRes.records.last().percentage.value
+                bodyFatPct = fatRes.records.maxByOrNull { it.time }?.percentage?.value ?: 0.0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Body Fat error: ${e.message}")
@@ -375,7 +402,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (leanRes.records.isNotEmpty()) {
-                leanMassKg = leanRes.records.last().mass.inKilograms
+                leanMassKg = leanRes.records.maxByOrNull { it.time }?.mass?.inKilograms ?: 0.0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Lean Mass error: ${e.message}")
@@ -390,7 +417,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (spo2Res.records.isNotEmpty()) {
-                latestSpO2Val = spo2Res.records.last().percentage.value
+                latestSpO2Val = spo2Res.records.maxByOrNull { it.time }?.percentage?.value ?: 0.0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "SpO2 error: ${e.message}")
@@ -404,7 +431,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (respRes.records.isNotEmpty()) {
-                respRate = respRes.records.last().rate
+                respRate = respRes.records.maxByOrNull { it.time }?.rate ?: 0.0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Respiratory error: ${e.message}")
@@ -419,9 +446,11 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (bpRes.records.isNotEmpty()) {
-                val lastBp = bpRes.records.last()
-                sysBp = lastBp.systolic.inMillimetersOfMercury
-                diaBp = lastBp.diastolic.inMillimetersOfMercury
+                val lastBp = bpRes.records.maxByOrNull { it.time }
+                if (lastBp != null) {
+                    sysBp = lastBp.systolic.inMillimetersOfMercury
+                    diaBp = lastBp.diastolic.inMillimetersOfMercury
+                }
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Blood Pressure error: ${e.message}")
@@ -435,7 +464,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             if (tempRes.records.isNotEmpty()) {
-                tempCelsius = tempRes.records.last().temperature.inCelsius
+                tempCelsius = tempRes.records.maxByOrNull { it.time }?.temperature?.inCelsius ?: 0.0
             }
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Body Temp error: ${e.message}")
@@ -446,7 +475,7 @@ class HealthConnectManager(private val context: Context) {
             val hydRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = HydrationRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startOfDay)
+                    timeRangeFilter = TimeRangeFilter.after(localMidnight)
                 )
             )
             for (h in hydRes.records) {
