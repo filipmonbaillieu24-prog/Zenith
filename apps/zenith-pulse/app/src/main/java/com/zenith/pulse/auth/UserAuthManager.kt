@@ -71,16 +71,16 @@ object UserAuthManager {
         val password = passwordInput.trim()
 
         if (email.isEmpty() || password.isEmpty()) {
-            return@withContext Pair(false, "Vul a.u.b. email en wachtwoord in.")
+            return@withContext Pair(false, "Vul a.u.b. emailadres en wachtwoord in.")
         }
 
         try {
-            val jsonBody = """
-                {
-                    "email": "$email",
-                    "password": "$password"
-                }
-            """.trimIndent()
+            val payloadObj = kotlinx.serialization.json.buildJsonObject {
+                put("email", kotlinx.serialization.json.JsonPrimitive(email))
+                put("password", kotlinx.serialization.json.JsonPrimitive(password))
+            }
+
+            val jsonBody = payloadObj.toString()
 
             val response = httpClient.post("$SUPABASE_URL/auth/v1/token?grant_type=password") {
                 contentType(ContentType.Application.Json)
@@ -92,6 +92,7 @@ object UserAuthManager {
             }
 
             val bodyText = response.bodyAsText()
+            Log.d("UserAuthManager", "Supabase Auth status: ${response.status.value}, body: $bodyText")
 
             if (response.status.value in 200..299) {
                 val json = Json.parseToJsonElement(bodyText).jsonObject
@@ -103,12 +104,27 @@ object UserAuthManager {
                 saveUserAccount(context, userEmail, userId, accessToken)
                 return@withContext Pair(true, "Succesvol ingelogd als $userEmail!")
             } else {
-                Log.w("UserAuthManager", "Supabase auth failed: $bodyText")
-                return@withContext Pair(false, "Inloggen mislukt (Status ${response.status.value}). Controleer je wachtwoord.")
+                val errorReason = try {
+                    val json = Json.parseToJsonElement(bodyText).jsonObject
+                    val msg = json["msg"]?.jsonPrimitive?.content
+                        ?: json["error_description"]?.jsonPrimitive?.content
+                        ?: json["message"]?.jsonPrimitive?.content
+                        ?: json["error"]?.jsonPrimitive?.content
+                    if (msg == "Invalid login credentials") {
+                        "Ongeldige inloggegevens. Controleer je e-mailadres en wachtwoord."
+                    } else {
+                        msg ?: "Fout ${response.status.value}"
+                    }
+                } catch (e: Exception) {
+                    "Status ${response.status.value}"
+                }
+
+                Log.w("UserAuthManager", "Supabase auth failed: $errorReason")
+                return@withContext Pair(false, "Inloggen mislukt: $errorReason")
             }
         } catch (e: Exception) {
             Log.e("UserAuthManager", "Auth exception", e)
-            return@withContext Pair(false, "Fout bij verbinden met Zenith Auth: ${e.localizedMessage}")
+            return@withContext Pair(false, "Verbindingsfout: ${e.localizedMessage}")
         }
     }
 }
