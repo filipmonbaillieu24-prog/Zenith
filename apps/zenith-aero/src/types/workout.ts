@@ -144,13 +144,13 @@ export type RideLabel =
   | 'berg';
 
 export const RIDE_LABELS: { key: RideLabel; label: string; icon: string; color: string }[] = [
-  { key: 'duurrit',   label: 'Duurrit',     icon: '🟢', color: '#00b894' },
+  { key: 'duurrit',   label: 'Endurance',   icon: '🟢', color: '#00b894' },
   { key: 'interval',  label: 'Interval',    icon: '🔴', color: '#ff7675' },
-  { key: 'wedstrijd', label: 'Wedstrijd',   icon: '🏁', color: '#fdcb6e' },
-  { key: 'herstel',   label: 'Herstel',     icon: '💙', color: '#74b9ff' },
-  { key: 'groepsrit', label: 'Groepsrit',   icon: '👥', color: '#a29bfe' },
-  { key: 'pendel',    label: 'Pendel',      icon: '🏙️', color: '#55efc4' },
-  { key: 'berg',      label: 'Bergrit',     icon: '⛰️', color: '#e17055' },
+  { key: 'wedstrijd', label: 'Race',        icon: '🏁', color: '#fdcb6e' },
+  { key: 'herstel',   label: 'Recovery',    icon: '💙', color: '#74b9ff' },
+  { key: 'groepsrit', label: 'Group Ride',  icon: '👥', color: '#a29bfe' },
+  { key: 'pendel',    label: 'Commute',     icon: '🏙️', color: '#55efc4' },
+  { key: 'berg',      label: 'Climb',       icon: '⛰️', color: '#e17055' },
 ];
 
 /** Full ride including all data points (stored in IndexedDB). */

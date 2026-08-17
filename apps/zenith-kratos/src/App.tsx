@@ -1353,21 +1353,21 @@ export default function App() {
           onClick={() => setActiveTab('exercises')}
           style={{ flex: 1, justifyContent: 'center' }}
         >
-          <Dumbbell size={13} /> Oefeningen
+          <Dumbbell size={13} /> Exercises
         </button>
         <button 
           className={`kratos-nav-btn ${activeTab === 'logs' ? 'active' : ''}`}
           onClick={() => setActiveTab('logs')}
           style={{ flex: 1, justifyContent: 'center' }}
         >
-          <FileText size={13} /> Logboek
+          <FileText size={13} /> Workout Log
         </button>
         <button 
           className={`kratos-nav-btn ${activeTab === 'hypertrophy' ? 'active' : ''}`}
           onClick={() => setActiveTab('hypertrophy')}
           style={{ flex: 1, justifyContent: 'center' }}
         >
-          <TrendingUp size={13} /> Hypertrofie
+          <TrendingUp size={13} /> Hypertrophy
         </button>
       </nav>      {/* Content */}
       <main className="kratos-content animate-fade-in">
@@ -1377,15 +1377,15 @@ export default function App() {
             {/* PMC Widget */}
             <section className="kratos-pmc-card">
               <div className="kratos-pmc-metric">
-                <span className="kratos-pmc-label">Fitheid (CTL)</span>
+                <span className="kratos-pmc-label">Fitness (CTL)</span>
                 <span className="kratos-pmc-value">{currentPMC.ctl}</span>
               </div>
               <div className="kratos-pmc-metric">
-                <span className="kratos-pmc-label">Vermoeidheid (ATL)</span>
+                <span className="kratos-pmc-label">Fatigue (ATL)</span>
                 <span className="kratos-pmc-value" style={{ color: '#ff7675' }}>{currentPMC.atl}</span>
               </div>
               <div className="kratos-pmc-metric">
-                <span className="kratos-pmc-label">Vorm (TSB)</span>
+                <span className="kratos-pmc-label">Form (TSB)</span>
                 <span className="kratos-pmc-value" style={{ color: currentPMC.tsb >= 0 ? '#cbd5e1' : '#eccc68' }}>
                   {currentPMC.tsb >= 0 ? `+${currentPMC.tsb}` : currentPMC.tsb}
                 </span>
@@ -1398,8 +1398,8 @@ export default function App() {
                   <span style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.5px' }}>AI Cardio & Recovery Link</span>
                   <span style={{ fontSize: 11, color: isAnyFatigueDetected ? '#eccc68' : '#94a3b8', lineHeight: 1.4 }}>
                     {isAnyFatigueDetected
-                      ? `Herstel-impact gedetecteerd (${fatigueSummaryText}). Rusttimer met +${restTimerExtensionPct}% verlengd.`
-                      : 'Herstelstatus is optimaal. Standaard rusttijden van kracht.'}
+                      ? `Recovery impact detected (${fatigueSummaryText}). Rest timer extended by +${restTimerExtensionPct}%.`
+                      : 'Recovery status is optimal. Standard rest times applied.'}
                   </span>
                 </div>
               </div>
@@ -1412,7 +1412,7 @@ export default function App() {
               <div className="kratos-card">
                 <div className="kratos-card-header">
                   <h3 className="kratos-card-title">
-                    <TrendingUp size={16} style={{ color: '#cbd5e1' }} /> Wekelijkse Volume Analyse
+                    <TrendingUp size={16} style={{ color: '#cbd5e1' }} /> Weekly Volume Analysis
                   </h3>
                   <div className="kratos-nav" style={{ padding: 2 }}>
                     <button 
@@ -1547,16 +1547,16 @@ export default function App() {
 
                 {templates.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: 13 }}>
-                    Geen routines gevonden. Maak een nieuw template aan om te gebruiken in de sportschool app!
+                    No routines found. Create a new template to use in your strength workouts!
                   </div>
                 ) : (
                   <table className="kratos-table">
                     <thead>
                       <tr>
-                        <th>Routine Naam</th>
-                        <th>Oefeningen</th>
-                        <th>Werksets</th>
-                        <th style={{ textAlign: 'right' }}>Acties</th>
+                        <th>Routine Name</th>
+                        <th>Exercises</th>
+                        <th>Working Sets</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1571,10 +1571,10 @@ export default function App() {
                             <td>{totalWorkingSets} sets</td>
                             <td style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                               <button className="kratos-btn kratos-btn-secondary" style={{ padding: '6px 12px', fontSize: 10 }} onClick={() => handleEditTemplateClick(temp)}>
-                                <Edit3 size={11} /> Bewerken
+                                <Edit3 size={11} /> Edit
                               </button>
                               <button className="kratos-btn kratos-btn-danger" style={{ padding: '6px 12px', fontSize: 10 }} onClick={() => handleDeleteTemplate(temp.id)}>
-                                <Trash2 size={11} /> Verwijder
+                                <Trash2 size={11} /> Delete
                               </button>
                             </td>
                           </tr>

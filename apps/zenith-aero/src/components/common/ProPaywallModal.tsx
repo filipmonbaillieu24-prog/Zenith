@@ -93,8 +93,8 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Map size={18} color="#cbd5e1" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>All-Time Fiets-Heatmap & Klimdetectie</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Bekijk al je gereden wegen ooit op 1 glowing kaart en analyseer automatisch elke beklimming met VAM stijgsnelheid.</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>All-Time Cycling Heatmap & Climb Analysis</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>View all your ridden roads on a glowing map and automatically analyze climbs with VAM ascent speed.</div>
             </div>
           </div>
         </div>
@@ -108,12 +108,12 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
           textAlign: 'center',
           marginBottom: 20 
         }}>
-          <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#94a3b8', fontWeight: 800, letterSpacing: '0.5px' }}>Zenith Pro Lidmaatschap</div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#94a3b8', fontWeight: 800, letterSpacing: '0.5px' }}>Zenith Pro Subscription</div>
           <div style={{ fontSize: 26, fontWeight: 900, color: '#ffffff', margin: '4px 0' }}>
-            €9,99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ maand</span>
+            €9.99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ month</span>
           </div>
-          <div style={{ fontSize: 11, color: '#39ff14', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <CheckCircle2 size={12} /> 14 dagen gratis proefperiode, opzegbaar wanneer je wilt
+          <div style={{ fontSize: 11, color: '#38bdf8', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <CheckCircle2 size={12} /> 14-day free trial, cancel anytime
           </div>
         </div>
 
@@ -125,7 +125,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             onClick={onClose} 
             style={{ flex: 1, height: '44px', fontSize: 13 }}
           >
-            Sluiten
+            Close
           </button>
           <button 
             type="button" 

@@ -294,7 +294,7 @@ export function App() {
           </button>
           <button className="btn-action outline" onClick={() => setIsShoeModalOpen(true)}>
             <Footprints size={16} />
-            <span>Schoenen ({shoes.filter(s => !s.retired).length})</span>
+            <span>Shoes ({shoes.filter(s => !s.retired).length})</span>
           </button>
         </div>
       </header>
@@ -306,9 +306,9 @@ export function App() {
             <Footprints size={20} />
           </div>
           <div>
-            <span className="kpi-label">Totaal Afstand</span>
+            <span className="kpi-label">Total Distance</span>
             <span className="kpi-value">{totalKm.toFixed(1)} <small>km</small></span>
-            <span className="kpi-subtext">Waarvan {totalTreadmillKm.toFixed(1)} km op loopband</span>
+            <span className="kpi-subtext">Including {totalTreadmillKm.toFixed(1)} km on treadmill</span>
           </div>
         </div>
 
@@ -317,9 +317,9 @@ export function App() {
             <Clock size={20} />
           </div>
           <div>
-            <span className="kpi-label">Totale Looptijd</span>
+            <span className="kpi-label">Total Running Time</span>
             <span className="kpi-value">{formatDuration(totalDurationSec)}</span>
-            <span className="kpi-subtext">{runs.length} totaal geregistreerde sessies</span>
+            <span className="kpi-subtext">{runs.length} total recorded sessions</span>
           </div>
         </div>
 
@@ -328,9 +328,9 @@ export function App() {
             <TrendingUp size={20} />
           </div>
           <div>
-            <span className="kpi-label">Gemiddeld Tempo</span>
+            <span className="kpi-label">Average Pace</span>
             <span className="kpi-value">{formatPace(avgPace)} <small>/km</small></span>
-            <span className="kpi-subtext">Sterk aerobe efficiëntie</span>
+            <span className="kpi-subtext">Strong aerobic efficiency</span>
           </div>
         </div>
 

@@ -97,8 +97,8 @@ export const RunModal: React.FC<RunModalProps> = ({
       <div className="stride-modal-container" onClick={e => e.stopPropagation()}>
         <div className="stride-modal-header">
           <div>
-            <h3>{initialRun ? 'Sessie Bewerken' : 'Nieuwe Hardloopsessie Invoeren'}</h3>
-            <p className="subtitle">Handmatige invoer & Loopband instellingen</p>
+            <h3>{initialRun ? 'Edit Session' : 'Log New Run Session'}</h3>
+            <p className="subtitle">Manual entry & Treadmill settings</p>
           </div>
           <button className="stride-close-btn" onClick={onClose}>
             <X size={18} />
@@ -111,8 +111,8 @@ export const RunModal: React.FC<RunModalProps> = ({
             <div className="treadmill-info">
               <Layers size={18} className="treadmill-icon" />
               <div>
-                <strong>Hardloopsessie op Loopband (Indoor)</strong>
-                <span>Helling & virtuele afstand kaliberatie</span>
+                <strong>Treadmill Run Session (Indoor)</strong>
+                <span>Incline & virtual distance calibration</span>
               </div>
             </div>
             <label className="stride-toggle-switch">
@@ -127,17 +127,17 @@ export const RunModal: React.FC<RunModalProps> = ({
 
           <div className="form-row">
             <div className="form-group flex-2">
-              <label>Titel van de sessie</label>
+              <label>Session Title</label>
               <input 
                 type="text" 
                 value={title} 
                 onChange={e => setTitle(e.target.value)} 
-                placeholder={isTreadmill ? 'Bijv. Loopband Drempel 4x5 min' : 'Bijv. Ochtendduurloop Bossen'}
+                placeholder={isTreadmill ? 'e.g. Treadmill Threshold 4x5 min' : 'e.g. Morning Trail Run'}
                 required
               />
             </div>
             <div className="form-group flex-1">
-              <label>Datum</label>
+              <label>Date</label>
               <input 
                 type="date" 
                 value={date} 
@@ -149,15 +149,15 @@ export const RunModal: React.FC<RunModalProps> = ({
 
           <div className="form-row">
             <div className="form-group flex-1">
-              <label>Type Training</label>
+              <label>Workout Type</label>
               <select value={type} onChange={e => setType(e.target.value as RunType)}>
-                <option value="easy">Easy Run / Herstel</option>
-                <option value="long_run">Lange Duurloop</option>
-                <option value="intervals">Intervallen / Tempolopen</option>
+                <option value="easy">Easy Run / Recovery</option>
+                <option value="long_run">Long Run</option>
+                <option value="intervals">Intervals / Tempo</option>
                 <option value="tempo">Tempo Run</option>
-                <option value="treadmill">Loopband (Indoor)</option>
+                <option value="treadmill">Treadmill (Indoor)</option>
                 <option value="trail">Trail Run</option>
-                <option value="race">Wedstrijd / Race</option>
+                <option value="race">Race</option>
               </select>
             </div>
 
@@ -282,8 +282,7 @@ export const RunModal: React.FC<RunModalProps> = ({
           <div className="stride-modal-footer">
             <button type="button" className="btn-cancel" onClick={onClose}>Annuleren</button>
             <button type="submit" className="btn-save">
-              <Check size={16} style={{ marginRight: 6 }} />
-              Sessie Opslaan
+              <Check size={16} /> {initialRun ? 'Save Changes' : 'Save Session'}
             </button>
           </div>
         </form>

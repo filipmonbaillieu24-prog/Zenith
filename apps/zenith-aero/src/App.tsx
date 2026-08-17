@@ -606,22 +606,22 @@ function App() {
 
   // ── Command palette commands ────────────────────────────────────────────
   const paletteCommands = useMemo((): CommandItem[] => [
-    { id: 'nav-dashboard', category: 'Navigatie', icon: <LayoutDashboard size={14} />, label: 'Performance Dashboard', description: 'Bekijk je fitness-cockpit en AI analyses', shortcut: '1', action: () => setActiveTab('dashboard') },
-    { id: 'nav-rides',     category: 'Navigatie', icon: <Bike size={14} />,            label: 'Mijn Ritten',           description: 'Volledig activiteiten archief',                 shortcut: '2', action: () => setActiveTab('rides') },
-    { id: 'nav-prs',       category: 'Navigatie', icon: <Trophy size={14} />,          label: 'Progressie & PR\'s',    description: 'eFTP trend, VO2max en records',                 shortcut: '3', action: () => setActiveTab('prs') },
-    { id: 'nav-heatmap',   category: 'Navigatie', icon: <MapIcon size={14} />,         label: 'Heatmap',               description: 'Geografische rittenkaart',                      shortcut: '4', action: () => setActiveTab('heatmap') },
-    { id: 'nav-route',     category: 'Navigatie', icon: <Compass size={14} />,         label: 'Route Planner',         description: 'Genereer en plan fietsroutes',                  shortcut: '5', action: () => setActiveTab('route') },
-    { id: 'nav-settings',  category: 'Navigatie', icon: <Settings size={14} />,        label: 'Instellingen',          description: 'Profiel en gear beheren',                       shortcut: '6', action: () => setActiveTab('settings') },
-    { id: 'action-recalc', category: 'Acties',    icon: <Activity size={14} />,        label: 'Herbereken alle ritten', description: 'Pas gewijzigde FTP/LTHR toe op alle ritten',    action: handleRecalculate },
+    { id: 'nav-dashboard', category: 'Navigation', icon: <LayoutDashboard size={14} />, label: 'Performance Dashboard', description: 'View your fitness cockpit and AI analytics', shortcut: '1', action: () => setActiveTab('dashboard') },
+    { id: 'nav-rides',     category: 'Navigation', icon: <Bike size={14} />,            label: 'My Rides',              description: 'Complete workout activity archive',            shortcut: '2', action: () => setActiveTab('rides') },
+    { id: 'nav-prs',       category: 'Navigation', icon: <Trophy size={14} />,          label: 'Progression & PRs',     description: 'eFTP trends, VO2max, and personal records',    shortcut: '3', action: () => setActiveTab('prs') },
+    { id: 'nav-heatmap',   category: 'Navigation', icon: <MapIcon size={14} />,         label: 'Heatmap',               description: 'Geographic rides map',                         shortcut: '4', action: () => setActiveTab('heatmap') },
+    { id: 'nav-route',     category: 'Navigation', icon: <Compass size={14} />,         label: 'Route Planner',         description: 'Generate and plan cycling routes',             shortcut: '5', action: () => setActiveTab('route') },
+    { id: 'nav-settings',  category: 'Navigation', icon: <Settings size={14} />,        label: 'Settings',              description: 'Manage profile and gear',                      shortcut: '6', action: () => setActiveTab('settings') },
+    { id: 'action-recalc', category: 'Actions',    icon: <Activity size={14} />,        label: 'Recalculate all rides', description: 'Apply updated FTP/LTHR to all rides',          action: handleRecalculate },
   ], [handleRecalculate]);
 
   const navItems = [
     { key: 'dashboard', icon: <LayoutDashboard size={16} strokeWidth={1.6} />, label: 'Dashboard' },
-    { key: 'rides',     icon: <Bike            size={16} strokeWidth={1.6} />, label: 'Mijn Ritten' },
-    { key: 'prs',       icon: <Trophy          size={16} strokeWidth={1.6} />, label: 'Progressie & PR\'s' },
+    { key: 'rides',     icon: <Bike            size={16} strokeWidth={1.6} />, label: 'My Rides' },
+    { key: 'prs',       icon: <Trophy          size={16} strokeWidth={1.6} />, label: 'Progression & PRs' },
     { key: 'heatmap',   icon: <MapIcon         size={16} strokeWidth={1.6} />, label: 'Heatmap' },
-    { key: 'route',     icon: <Compass         size={16} strokeWidth={1.6} />, label: 'Routeplanner' },
-    { key: 'settings',  icon: <Settings        size={16} strokeWidth={1.6} />, label: 'Instellingen' },
+    { key: 'route',     icon: <Compass         size={16} strokeWidth={1.6} />, label: 'Route Planner' },
+    { key: 'settings',  icon: <Settings        size={16} strokeWidth={1.6} />, label: 'Settings' },
   ] as const;
 
 
@@ -650,8 +650,8 @@ function App() {
   if (!session) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#09090b', color: '#fff', fontFamily: 'Outfit, sans-serif' }}>
-        <h2 style={{ fontSize: 20, marginBottom: 10 }}>Geen actieve Zenith-sessie</h2>
-        <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 20 }}>Open de Zenith Hub-applicatie om in te loggen en deze extensie te gebruiken.</p>
+        <h2 style={{ fontSize: 20, marginBottom: 10 }}>No Active Zenith Session</h2>
+        <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 20 }}>Open the Zenith Hub application to log in and access this extension.</p>
         <button 
           onClick={navigateBackToHub}
           style={{ background: '#cbd5e1', color: '#09090b', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, cursor: 'pointer' }}

@@ -241,17 +241,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="save-name-input"
                     maxLength={30}
                   />
-                  <button className="icon-btn icon-btn-confirm" onClick={handleConfirmSave} title="Opslaan">
+                  <button className="icon-btn icon-btn-confirm" onClick={handleConfirmSave} title="Save">
                     <Check size={14} />
                   </button>
-                  <button className="icon-btn icon-btn-cancel" onClick={() => setIsSaving(false)} title="Annuleren">
+                  <button className="icon-btn icon-btn-cancel" onClick={() => setIsSaving(false)} title="Cancel">
                     <X size={14} />
                   </button>
                 </div>
               ) : (
                 <button className="save-location-btn" onClick={() => setIsSaving(true)}>
                   <Star size={13} strokeWidth={1.6} />
-                  Startlocatie opslaan
+                  Save Start Location
                 </button>
               )}
             </div>
@@ -273,10 +273,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         className="save-name-input"
                         maxLength={30}
                       />
-                      <button className="icon-btn icon-btn-confirm" onClick={() => handleConfirmRename(loc.id)} title="Bevestigen">
+                      <button className="icon-btn icon-btn-confirm" onClick={() => handleConfirmRename(loc.id)} title="Confirm">
                         <Check size={13} />
                       </button>
-                      <button className="icon-btn icon-btn-cancel" onClick={() => setEditingId(null)} title="Annuleren">
+                      <button className="icon-btn icon-btn-cancel" onClick={() => setEditingId(null)} title="Cancel">
                         <X size={13} />
                       </button>
                     </div>
@@ -285,16 +285,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         className="saved-loc-load"
                         onClick={() => onSetLocation(loc.lat, loc.lng, 'start')}
-                        title={`Laad: ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`}
+                        title={`Load: ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)}`}
                       >
                         <Star size={12} className="saved-loc-star" />
                         <span className="saved-loc-name">{loc.name}</span>
                       </button>
                       <div className="saved-loc-actions">
-                        <button className="icon-btn" onClick={() => { setEditingId(loc.id); setEditNameInput(loc.name); }} title="Hernoemen">
+                        <button className="icon-btn" onClick={() => { setEditingId(loc.id); setEditNameInput(loc.name); }} title="Rename">
                           <Pencil size={12} strokeWidth={1.6} />
                         </button>
-                        <button className="icon-btn icon-btn-danger" onClick={() => onDeleteLocation(loc.id)} title="Verwijderen">
+                        <button className="icon-btn icon-btn-danger" onClick={() => onDeleteLocation(loc.id)} title="Delete">
                           <Trash2 size={12} strokeWidth={1.6} />
                         </button>
                       </div>
@@ -418,7 +418,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="label-with-value">
               <label>Max. hoogtemeters</label>
               <span className="value-display">
-                {maxElevationGain === 0 ? 'Geen limiet' : `${maxElevationGain} m`}
+                {maxElevationGain === 0 ? 'No limit' : `${maxElevationGain} m`}
               </span>
             </div>
             <input
@@ -433,19 +433,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* ── 4. Windplanner ──────────────────────────── */}
         {startPoint && (
           <section className="sidebar-section animate-fade-in">
-            <h2><Wind className="section-icon" strokeWidth={1.6} /> 4. Windplanner</h2>
+            <h2><Wind className="section-icon" strokeWidth={1.6} /> 4. Wind Planner</h2>
 
             <div className="form-group">
-              <label>Tijdstip van je rit</label>
+              <label>Ride Departure Time</label>
               <select value={windSlot} onChange={(e) => setWindSlot(e.target.value)}
                 className="select-input" disabled={isFetchingWind}>
-                <option value="now">Nu (Huidige Wind)</option>
-                <option value="today_afternoon">Vandaag Middag (14:00)</option>
-                <option value="today_evening">Vandaag Avond (19:00)</option>
-                <option value="tomorrow_morning">Morgen Ochtend (09:00)</option>
-                <option value="tomorrow_afternoon">Morgen Middag (14:00)</option>
-                <option value="day_after_tomorrow_morning">Overmorgen Ochtend (09:00)</option>
-                <option value="day_after_tomorrow_afternoon">Overmorgen Middag (14:00)</option>
+                <option value="now">Now (Current Wind)</option>
+                <option value="today_afternoon">Today Afternoon (14:00)</option>
+                <option value="today_evening">Today Evening (19:00)</option>
+                <option value="tomorrow_morning">Tomorrow Morning (09:00)</option>
+                <option value="tomorrow_afternoon">Tomorrow Afternoon (14:00)</option>
+                <option value="day_after_tomorrow_morning">Day After Tomorrow Morning (09:00)</option>
+                <option value="day_after_tomorrow_afternoon">Day After Tomorrow Afternoon (14:00)</option>
               </select>
             </div>
 
@@ -622,7 +622,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Coffee size={14} strokeWidth={1.6} /> Brandstof- & Voedingsplan (AI Schatting)
+                      <Coffee size={14} strokeWidth={1.6} /> Fuel & Nutrition Plan (AI Estimate)
                     </span>
                     {fuelPanelOpen ? <ChevronUp size={14} strokeWidth={1.6} /> : <ChevronDown size={14} strokeWidth={1.6} />}
                   </button>

@@ -48,23 +48,23 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
     <div className="wd-main-single animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main,#f8fafc)', margin: '0 0 4px' }}>🚲 Mijn Ritten</h2>
-          <p style={{ fontSize: 12, color: 'var(--text-muted,#94a3b8)', margin: 0 }}>Bekijk, filter en vergelijk al je gereden trainingen.</p>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main,#f8fafc)', margin: '0 0 4px' }}>🚲 My Rides</h2>
+          <p style={{ fontSize: 12, color: 'var(--text-muted,#94a3b8)', margin: 0 }}>View, filter, and compare all your recorded rides.</p>
         </div>
 
-        {/* Zoekbalk & Sortering */}
+        {/* Search bar & Sorting */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
           <div className="wd-search-wrap" style={{ width: 180, margin: 0 }}>
             <Search size={14} className="wd-search-icon" />
-            <input className="wd-search" type="text" placeholder="Zoek rit…"
+            <input className="wd-search" type="text" placeholder="Search ride…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
 
           <div className="wd-sort-bar" style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.02)', padding: 3, borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)' }}>
             {([
-              { k: 'date',      icon: <CalendarDays size={14} strokeWidth={1.6} />,   title: 'Datum' },
-              { k: 'distance',  icon: <MoveRight    size={14} strokeWidth={1.6} />,   title: 'Afstand' },
-              { k: 'elevGain',  icon: <Mountain     size={14} strokeWidth={1.6} />,   title: 'Hoogtemeters' },
+              { k: 'date',      icon: <CalendarDays size={14} strokeWidth={1.6} />,   title: 'Date' },
+              { k: 'distance',  icon: <MoveRight    size={14} strokeWidth={1.6} />,   title: 'Distance' },
+              { k: 'elevGain',  icon: <Mountain     size={14} strokeWidth={1.6} />,   title: 'Elevation' },
               { k: 'tss',       icon: <BarChart2    size={14} strokeWidth={1.6} />,   title: 'TSS' },
               { k: 'eftp',      icon: <Zap          size={14} strokeWidth={1.6} />,   title: 'eFTP' },
             ] as const).map(({ k, icon, title }) => (
@@ -98,7 +98,7 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
           className={`wd-label-chip ${labelFilter === 'all' ? 'wd-label-chip--active' : ''}`}
           onClick={() => setLabelFilter('all')}
           style={{ fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', fontFamily: 'inherit' }}
-        >Alle</button>
+        >All</button>
         {RIDE_LABELS.map(l => {
           const labelIcon: Record<string, React.ReactNode> = {
             duurrit:   <Clock         size={11} strokeWidth={1.6} />,
@@ -127,32 +127,32 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
         })}
       </div>
 
-      {/* Rittentabel */}
+      {/* Rides Table */}
       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, color: '#cbd5e1', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(255,255,255,0.01)' }}>
-                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700 }}>Datum</th>
-                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700 }}>Activiteit</th>
-                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'right' }}>Afstand</th>
-                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'right' }}>Tijd</th>
-                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'right' }}>Gem. Watt</th>
+                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700 }}>Date</th>
+                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700 }}>Activity</th>
+                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'right' }}>Distance</th>
+                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'right' }}>Time</th>
+                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'right' }}>Avg Power</th>
                 <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'right' }}>TSS</th>
                 <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'right' }}>Gear</th>
-                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'center' }}>Acties</th>
+                <th style={{ padding: '10px 14px', color: '#94a3b8', fontWeight: 700, textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {sortedRides.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ padding: '32px 14px', textAlign: 'center', color: '#94a3b8' }}>
-                    Geen ritten gevonden die aan de filters voldoen.
+                    No rides found matching the selected filters.
                   </td>
                 </tr>
               ) : (
                 sortedRides.map(ride => {
-                  const dateStr = new Date(ride.date).toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                  const dateStr = new Date(ride.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
                   const durStr = new Date(ride.duration * 1000).toISOString().substr(11, 8).replace(/^00:/, '');
                   const gear = gears.find((g: any) => g.id === ride.gearId);
                   const gearName = gear ? `${gear.brand} ${gear.model}` : '--';

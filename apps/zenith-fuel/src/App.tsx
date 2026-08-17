@@ -1800,12 +1800,12 @@ function App() {
           {/* Macros Progress Card */}
           <div className="fuel-card col-6">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Macronutriënten
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Macronutrients
             </h3>
             <div className="macro-list">
               <div className="macro-bar-item">
                 <div className="macro-header">
-                  <span className="macro-name" style={{ color: 'var(--color-carb)' }}>Koolhydraten</span>
+                  <span className="macro-name" style={{ color: 'var(--color-carb)' }}>Carbohydrates</span>
                   <span className="macro-amounts">
                     {intakeCarbs}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {zaneResult.dailyCarbTarget}g</span>
                   </span>
@@ -1820,7 +1820,7 @@ function App() {
 
               <div className="macro-bar-item">
                 <div className="macro-header">
-                  <span className="macro-name" style={{ color: 'var(--color-protein)' }}>Eiwitten</span>
+                  <span className="macro-name" style={{ color: 'var(--color-protein)' }}>Protein</span>
                   <span className="macro-amounts">
                     {intakeProtein}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {zaneResult.dailyProteinTarget}g</span>
                   </span>
@@ -1835,7 +1835,7 @@ function App() {
 
               <div className="macro-bar-item">
                 <div className="macro-header">
-                  <span className="macro-name" style={{ color: 'var(--color-fat)' }}>Vetten</span>
+                  <span className="macro-name" style={{ color: 'var(--color-fat)' }}>Fats</span>
                   <span className="macro-amounts">
                     {intakeFat}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {zaneResult.dailyFatTarget}g</span>
                   </span>
