@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build:all",
+  "outputDirectory": "apps/zenith-hub/dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/aero/(.*)", "destination": "/aero/$1" },
+    { "source": "/vigor/(.*)", "destination": "/vigor/$1" },
+    { "source": "/kratos/(.*)", "destination": "/kratos/$1" },
+    { "source": "/fuel/(.*)", "destination": "/fuel/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

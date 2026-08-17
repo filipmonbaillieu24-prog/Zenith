@@ -13,6 +13,9 @@ import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import { ZenithLandingPage } from './pages/marketing/ZenithLandingPage';
+import { PricingPage } from './pages/marketing/PricingPage';
+import { FeatureRequestsPage } from './pages/community/FeatureRequestsPage';
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -726,6 +729,8 @@ ${imagesMarkdown}
     }
   };
 
+  const [publicView, setPublicView] = useState<'landing' | 'prijzen' | 'roadmap' | 'auth'>('landing');
+
   if (sessionLoading) {
     return (
       <div className="zh-hub-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
@@ -737,7 +742,45 @@ ${imagesMarkdown}
   }
 
   if (!session) {
-    return <LoginPage />;
+    if (publicView === 'auth') {
+      return (
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={() => setPublicView('landing')}
+            style={{
+              position: 'fixed',
+              top: 20,
+              left: 20,
+              zIndex: 9999,
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 12,
+              padding: '8px 16px',
+              borderRadius: 10,
+              cursor: 'pointer'
+            }}
+          >
+            ← Terug naar Website
+          </button>
+          <LoginPage />
+        </div>
+      );
+    }
+    if (publicView === 'prijzen') {
+      return <PricingPage onBack={() => setPublicView('landing')} isPro={false} />;
+    }
+    if (publicView === 'roadmap') {
+      return <FeatureRequestsPage onBack={() => setPublicView('landing')} />;
+    }
+    return (
+      <ZenithLandingPage
+        onLogin={() => setPublicView('auth')}
+        onRegister={() => setPublicView('auth')}
+        onNavigateTab={(tab) => setPublicView(tab as any)}
+      />
+    );
   }
 
   const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';
@@ -793,6 +836,22 @@ ${imagesMarkdown}
               userEmail={session.user.email}
               onBack={() => setActiveTab('hub')}
               onSave={handleSaveProfile}
+            />
+          )}
+          {activeTab === 'prijzen' && (
+            <PricingPage
+              onBack={() => setActiveTab('hub')}
+              isPro={isPro}
+              onActivatePro={async () => {
+                await supabase.auth.updateUser({ data: { is_pro: true } });
+                loadFitnessProfile(session.user.id, { ...session.user.user_metadata, is_pro: true });
+              }}
+            />
+          )}
+          {activeTab === 'roadmap' && (
+            <FeatureRequestsPage
+              onBack={() => setActiveTab('hub')}
+              userId={session.user.id}
             />
           )}
           {activeTab === 'logs' && (

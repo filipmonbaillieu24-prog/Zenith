@@ -12,10 +12,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Bug,
-  Terminal
+  Terminal,
+  Zap,
+  MessageSquare
 } from 'lucide-react';
 
-export type TabKey = 'hub' | 'calendar' | 'aero' | 'vigor' | 'kratos' | 'fuel' | 'mobiel' | 'profile' | 'logs';
+export type TabKey = 'hub' | 'calendar' | 'aero' | 'vigor' | 'kratos' | 'fuel' | 'mobiel' | 'profile' | 'logs' | 'prijzen' | 'roadmap';
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -75,8 +77,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      title: 'Systeem & Tools',
+      title: 'Systeem & Community',
       items: [
+        { key: 'prijzen' as TabKey, label: 'Prijzen & Pro', icon: Zap },
+        { key: 'roadmap' as TabKey, label: 'Feature Requests', icon: MessageSquare },
         { key: 'mobiel' as TabKey, label: 'Download Center', icon: Smartphone },
         { key: 'logs' as TabKey, label: 'Console Logs', icon: Terminal },
       ],
