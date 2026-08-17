@@ -22,3 +22,4 @@ copyDir('apps/zenith-aero/dist', 'apps/zenith-hub/dist/aero');
 copyDir('apps/zenith-vigor/dist', 'apps/zenith-hub/dist/vigor');
 copyDir('apps/zenith-kratos/dist', 'apps/zenith-hub/dist/kratos');
 copyDir('apps/zenith-fuel/dist', 'apps/zenith-hub/dist/fuel');
+copyDir('apps/zenith-stride/dist', 'apps/zenith-hub/dist/stride');

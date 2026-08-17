@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 import { predictRecoveryScore, recoveryModel } from '../../../../../shared/ml/RecoveryScore';
+import { calculateZenithSleepScore } from '../../../../../shared/services/zenithSleepEngine';
 import { computeSimulatedPMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
@@ -41,6 +42,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   const [kratosExercises, setKratosExercises] = useState<any[]>([]);
   const [latestWeight, setLatestWeight] = useState<any | null>(null);
   const [latestSleep, setLatestSleep] = useState<any | null>(null);
+  const [allSleeps, setAllSleeps] = useState<any[]>([]);
   const [todaySteps, setTodaySteps] = useState<number>(0);
   const [weeklyRidesCount, setWeeklyRidesCount] = useState<number>(0);
   const [weeklyRidesDistance, setWeeklyRidesDistance] = useState<number>(0);
@@ -64,17 +66,19 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         setLatestWeight(null);
       }
 
-      // 2. Fetch latest sleep log
+      // 2. Fetch latest 14 sleep logs for ML baseline & debt analysis
       const { data: sData } = await supabase
         .from('vigor_sleep')
         .select('*')
         .eq('user_id', userId)
         .order('logged_at', { ascending: false })
-        .limit(1);
+        .limit(14);
       if (sData && sData.length > 0) {
         setLatestSleep(sData[0]);
+        setAllSleeps(sData);
       } else {
         setLatestSleep(null);
+        setAllSleeps([]);
       }
 
       // 3. Fetch today's steps log
@@ -559,13 +563,18 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   const atl = Math.round(todayPoint.atl);
   const tsb = Math.round(todayPoint.tsb);
 
-  // Calculate recovery score (CR11)
+  // Zenith Sleep Engine Analysis
+  const sleepAnalysis = useMemo(() => {
+    return calculateZenithSleepScore(latestSleep, allSleeps, 8.0);
+  }, [latestSleep, allSleeps]);
+
+  // Calculate recovery score (CR11 ML Model)
   const recoveryScore = useMemo(() => {
     if (!recoveryModel.loaded) {
       return null;
     }
-    const sQual = latestSleep?.quality_score ?? 80;
-    const sDur = (latestSleep?.duration_minutes ?? 480) / 60;
+    const sQual = sleepAnalysis.score;
+    const sDur = sleepAnalysis.metrics.totalHours;
     const weightVal = latestWeight?.weight ?? fitnessProfile.weight ?? 75;
     
     return predictRecoveryScore(
@@ -578,7 +587,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       weightVal,
       atl
     );
-  }, [tsb, latestSleep, latestWeight, fitnessProfile.weight, weeklyGymVolume, todaySteps, atl, mlModelsLoaded]);
+  }, [tsb, sleepAnalysis, latestWeight, fitnessProfile.weight, weeklyGymVolume, todaySteps, atl, mlModelsLoaded]);
 
   const recoveryCardStyle = useMemo(() => {
     if (recoveryScore === null) {
@@ -768,18 +777,25 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                   {/* Sleep log */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.15)', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.02)' }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <Moon size={16} style={{ color: '#a29bfe' }} />
+                      <Moon size={16} style={{ color: sleepAnalysis.ratingColor }} />
                       <div>
-                        <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>Sleep Quality</span>
+                        <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>ML Sleep Score</span>
                         <strong style={{ fontSize: 13, color: '#f8fafc' }}>
-                          {latestSleep ? `${Math.round(latestSleep.duration_minutes / 60 * 10) / 10} hrs` : '--'}
+                          {latestSleep ? `${sleepAnalysis.metrics.totalHours} hrs` : '--'}
                         </strong>
                       </div>
                     </div>
                     {latestSleep && (
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1', background: 'rgba(255,255,255,0.04)', padding: '3px 8px', borderRadius: 6 }}>
-                        Score: {latestSleep.quality_score}/100
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {sleepAnalysis.sleepDebtHours > 2 && (
+                          <span style={{ fontSize: 9, fontWeight: 800, color: '#fb923c', background: 'rgba(251, 146, 60, 0.12)', padding: '2px 6px', borderRadius: 4 }}>
+                            -{sleepAnalysis.sleepDebtHours}u schuld
+                          </span>
+                        )}
+                        <span style={{ fontSize: 11, fontWeight: 800, color: sleepAnalysis.ratingColor, background: `${sleepAnalysis.ratingColor}15`, padding: '3px 8px', borderRadius: 6, border: `1px solid ${sleepAnalysis.ratingColor}40` }}>
+                          {sleepAnalysis.score}/100 ({sleepAnalysis.rating})
+                        </span>
+                      </div>
                     )}
                   </div>
 

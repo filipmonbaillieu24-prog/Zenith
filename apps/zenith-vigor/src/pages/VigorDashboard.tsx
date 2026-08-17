@@ -34,6 +34,7 @@ import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
 import { DeviceManagerModal } from '../components/DeviceManagerModal';
 import { ProPaywallModal } from '../components/ProPaywallModal';
+import { calculateZenithSleepScore } from '../../../../shared/services/zenithSleepEngine';
 
 interface VigorDashboardProps {
   session: any;
@@ -1868,36 +1869,66 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
   const renderSleepTab = () => {
     const latestSleep = sleeps.length > 0 ? sleeps[sleeps.length - 1] : null;
-    const durMins = latestSleep?.duration_minutes || 450;
-    const deepMins = latestSleep?.deep_minutes || Math.round(durMins * 0.25);
-    const lightMins = latestSleep?.light_minutes || Math.round(durMins * 0.55);
-    const remMins = latestSleep?.rem_minutes || Math.round(durMins * 0.18);
-    const awakeMins = latestSleep?.awake_minutes || Math.round(durMins * 0.02);
-    const totalPhaseMins = (deepMins + lightMins + remMins + awakeMins) || 1;
+    const sleepAnalysis = calculateZenithSleepScore(latestSleep, sleeps, profile.target_sleep_hours || 8.0);
+    const durMins = sleepAnalysis.metrics.totalMins;
+    const deepMins = sleepAnalysis.metrics.deepMins;
+    const lightMins = sleepAnalysis.metrics.lightMins;
+    const remMins = sleepAnalysis.metrics.remMins;
+    const awakeMins = sleepAnalysis.metrics.awakeMins;
 
-    const deepPct = Math.round((deepMins / totalPhaseMins) * 100);
-    const lightPct = Math.round((lightMins / totalPhaseMins) * 100);
-    const remPct = Math.round((remMins / totalPhaseMins) * 100);
-    const awakePct = 100 - (deepPct + lightPct + remPct);
+    const deepPct = sleepAnalysis.metrics.deepPct;
+    const lightPct = sleepAnalysis.metrics.lightPct;
+    const remPct = sleepAnalysis.metrics.remPct;
+    const awakePct = sleepAnalysis.metrics.awakePct;
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} className="animate-fade-in">
         
-        {/* Sleep Phase Breakdown Cards */}
+        {/* Zenith AI Sleep & Recovery Score Engine Card */}
         {latestSleep && (
-          <div className="vigor-card col-12" style={{ background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.04) 0%, rgba(9, 9, 11, 0.95) 100%)', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div className="vigor-card col-12" style={{ background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(9, 9, 11, 0.98) 100%)', border: '1px solid rgba(168, 85, 247, 0.25)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
               <div>
-                <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
-                  Slaapfases & Kwaliteit (Afgelopen Nacht)
-                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles size={16} style={{ color: '#a855f7' }} />
+                  <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
+                    Zenith Sleep & Recovery Engine (ML)
+                  </h3>
+                </div>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                   Geregistreerd op {new Date(latestSleep.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })}
                 </span>
               </div>
-              <div style={{ background: 'rgba(168, 85, 247, 0.12)', padding: '6px 14px', borderRadius: 20, border: '1px solid rgba(168, 85, 247, 0.3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Moon size={14} style={{ color: '#a855f7' }} />
-                <span style={{ fontSize: 13, fontWeight: 900, color: '#a855f7' }}>Score: {latestSleep.quality_score || 82}/100</span>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ background: `${sleepAnalysis.ratingColor}20`, padding: '6px 14px', borderRadius: 20, border: `1px solid ${sleepAnalysis.ratingColor}50`, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Moon size={14} style={{ color: sleepAnalysis.ratingColor }} />
+                  <span style={{ fontSize: 13, fontWeight: 900, color: sleepAnalysis.ratingColor }}>Score: {sleepAnalysis.score}/100</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', marginLeft: 4, opacity: 0.85 }}>({sleepAnalysis.rating})</span>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Recommendation Alert Box */}
+            <div style={{ background: 'rgba(168, 85, 247, 0.06)', borderRadius: 12, padding: '14px 16px', border: '1px solid rgba(168, 85, 247, 0.15)', marginBottom: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#a855f7', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Sparkles size={14} /> AI Herstel & Slaapadvies
+              </div>
+              <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', lineHeight: 1.5 }}>
+                {sleepAnalysis.recommendation}
+              </p>
+              
+              {/* Debt & Z-Score Badges */}
+              <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  Slaapschuld (7d): <strong style={{ color: sleepAnalysis.sleepDebtHours > 2 ? '#fb923c' : '#4ade80' }}>{sleepAnalysis.sleepDebtHours} uur</strong>
+                </div>
+                <div style={{ fontSize: 11, color: '#94a3b8', background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  Persoonlijke Baseline: <strong style={{ color: '#fff' }}>{sleepAnalysis.personalBaselineHours}u / nacht</strong>
+                </div>
+                <div style={{ fontSize: 11, color: '#94a3b8', background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  Efficiëntie: <strong style={{ color: '#38bdf8' }}>{sleepAnalysis.metrics.efficiencyPct}%</strong>
+                </div>
               </div>
             </div>
 

@@ -6,9 +6,11 @@ import { CalendarPage } from './pages/hub/CalendarPage';
 import { PilotPanel } from './pages/hub/PilotPanel';
 import { ProfilePage } from './pages/hub/ProfilePage';
 import { SystemConsolePage } from './pages/hub/SystemConsolePage';
+import { IntegrationsPage } from './pages/hub/IntegrationsPage';
 import { Sidebar, TabKey } from './components/Sidebar';
 import { computePMC } from './utils/pmc';
 import { recoveryModel } from '../../../shared/ml/RecoveryScore';
+import { syncPhoneDataToEcosystem } from '../../../shared/services/healthConnectSync';
 import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
@@ -24,6 +26,31 @@ function App() {
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
+
+  // Automatic 15-minute background sync with local Health Connect HTTP server
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const activeUserId = session.user.id;
+
+    // Run initial sync on app load
+    syncPhoneDataToEcosystem(activeUserId).then(res => {
+      if (res.success) {
+        console.log(`[Zenith Auto-Sync] Initial Health Connect sync completed: ${res.stepsCount} steps, ${res.exerciseCount} exercises, ${res.sleepCount} sleep records.`);
+      }
+    });
+
+    // Schedule automatic sync every 15 minutes (15 * 60 * 1000 = 900,000 ms)
+    const intervalId = setInterval(() => {
+      console.log("[Zenith Auto-Sync] Running 15-minute background Health Connect sync...");
+      syncPhoneDataToEcosystem(activeUserId).then(res => {
+        if (res.success) {
+          console.log(`[Zenith Auto-Sync] 15-min background sync completed: ${res.stepsCount} steps, ${res.exerciseCount} exercises, ${res.sleepCount} sleep records.`);
+        }
+      });
+    }, 15 * 60 * 1000);
+
+    return () => clearInterval(intervalId);
+  }, [session?.user?.id]);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAccountConfirmed, setShowAccountConfirmed] = useState(false);
@@ -191,6 +218,17 @@ function App() {
     return isDev
       ? `http://localhost:1460/#access_token=${token}&refresh_token=${refresh}`
       : `${window.location.origin}/fuel/index.html#access_token=${token}&refresh_token=${refresh}`;
+  }, [session]);
+
+  // Memoized Stride URL containing auth hashes
+  const strideUrl = useMemo(() => {
+    if (!session) return '';
+    const token = session.access_token;
+    const refresh = session.refresh_token;
+    const isDev = import.meta.env.DEV;
+    return isDev
+      ? `http://localhost:1470/#access_token=${token}&refresh_token=${refresh}`
+      : `${window.location.origin}/stride/index.html#access_token=${token}&refresh_token=${refresh}`;
   }, [session]);
 
   // Listen for native Tauri BLE weight and metrics events and forward to Vigor iframe
@@ -883,6 +921,9 @@ ${imagesMarkdown}
           {activeTab === 'logs' && (
             <SystemConsolePage />
           )}
+          {activeTab === 'integrations' && (
+            <IntegrationsPage />
+          )}
           {activeTab === 'aero' && (
             <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
               <iframe
@@ -922,6 +963,16 @@ ${imagesMarkdown}
                 src={fuelUrl}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 title="Zenith Fuel"
+              />
+            </div>
+          )}
+          {activeTab === 'stride' && (
+            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
+              <iframe
+                id="stride-iframe"
+                src={strideUrl}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                title="Zenith Stride"
               />
             </div>
           )}

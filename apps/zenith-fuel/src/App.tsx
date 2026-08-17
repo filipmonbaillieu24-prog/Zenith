@@ -409,13 +409,20 @@ function App() {
         .order('logged_at');
       setSleepLogs(sLogs || []);
 
-      // 8. Fetch active training calories for the viewed week
+      // 8. Fetch active training calories for the viewed week (Aero Rides & Stride Runs)
       const { data: ridesData } = await supabase
         .from('rides')
         .select('date, metadata')
         .eq('user_id', userId)
         .gte('date', startOfWeek.getTime())
         .lt('date', endOfWeek.getTime());
+
+      const { data: strideData } = await supabase
+        .from('stride_activities')
+        .select('date, calories, duration_sec')
+        .eq('user_id', userId)
+        .gte('date', startOfWeekStr)
+        .lte('date', endOfWeekStr);
 
       const { data: kratosData } = await supabase
         .from('kratos_workouts')
@@ -437,6 +444,14 @@ function App() {
         const dStr = formatDateString(new Date(Number(r.date)));
         if (activeCalMap[dStr] !== undefined) {
           activeCalMap[dStr] += Number(meta?.calories ?? 0);
+        }
+      });
+
+      strideData?.forEach((s: any) => {
+        const dStr = s.date;
+        if (activeCalMap[dStr] !== undefined) {
+          const cal = Number(s.calories || 0) || Math.round(((s.duration_sec || 1231) / 60) * 11.5);
+          activeCalMap[dStr] += cal;
         }
       });
 
@@ -1455,7 +1470,7 @@ function App() {
   if (selectedDateGymVolume > 0) {
     gymCalories = zaneResult.isCalibrated
       ? Math.round(selectedDateGymVolume * zaneResult.gymVolumeCoeff)
-      : Math.min(400, Math.max(100, Math.round(selectedDateGymVolume * 0.15)));
+      : Math.min(280, Math.max(50, Math.round(selectedDateGymVolume * 0.025)));
   }
 
   const tef = Math.round(intakeCalories * 0.1);
@@ -1983,7 +1998,7 @@ function App() {
                 <span style={{ fontWeight: 700, color: '#fff' }}>+{baseTdee - baseBmr} kcal</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Ritten & Cardio (Aero):</span>
+                <span style={{ color: 'var(--text-muted)' }}>Cardio & Hardlopen (Aero & Stride):</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>+{activeCalories} kcal</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>

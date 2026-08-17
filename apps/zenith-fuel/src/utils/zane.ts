@@ -116,14 +116,14 @@ export function runZaneCalibration(
   let bmrOffset = 0;
   let sleepQualityCoeff = 0;
   let sleepDurationCoeff = 0;
-  let gymVolumeCoeff = 0.15; // baseline prior
+  let gymVolumeCoeff = 0.025; // baseline prior (0.025 kcal per kg moved in strength training)
   let caffeineCoeff = 0.15; // baseline prior (0.15 kcal per mg)
 
   // Mifflin-St Jeor params
   const currentWeight = latestWeightMeasured || (logsWithWeight[logsWithWeight.length - 1]?.weight ?? 75);
-  const height = profile.height || 175;
+  const height = profile.height || 181;
   const age = calculateAge(profile.birthDate);
-  const gender = profile.gender || 'other';
+  const gender = profile.gender || 'male';
   const palFactor = 1.25; // PAL baseline
 
   // Find target log for the selected date

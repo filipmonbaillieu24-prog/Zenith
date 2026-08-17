@@ -6,6 +6,7 @@ import {
   Scale, 
   Dumbbell, 
   ChefHat, 
+  Footprints,
   Smartphone, 
   User, 
   LogOut,
@@ -14,10 +15,11 @@ import {
   Bug,
   Terminal,
   Zap,
-  MessageSquare
+  MessageSquare,
+  Link2
 } from 'lucide-react';
 
-export type TabKey = 'hub' | 'calendar' | 'aero' | 'vigor' | 'kratos' | 'fuel' | 'mobiel' | 'profile' | 'logs' | 'prijzen' | 'roadmap';
+export type TabKey = 'hub' | 'calendar' | 'aero' | 'vigor' | 'kratos' | 'fuel' | 'stride' | 'mobiel' | 'integrations' | 'profile' | 'logs' | 'prijzen' | 'roadmap';
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -74,11 +76,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { key: 'vigor' as TabKey, label: 'Vigor', icon: Scale },
         { key: 'kratos' as TabKey, label: 'Kratos', icon: Dumbbell },
         { key: 'fuel' as TabKey, label: 'Fuel', icon: ChefHat },
+        { key: 'stride' as TabKey, label: 'Stride', icon: Footprints },
       ],
     },
     {
       title: 'System & Community',
       items: [
+        { key: 'integrations' as TabKey, label: 'Integraties', icon: Link2 },
         { key: 'prijzen' as TabKey, label: 'Pricing & Pro', icon: Zap },
         { key: 'roadmap' as TabKey, label: 'Feature Requests', icon: MessageSquare },
         { key: 'mobiel' as TabKey, label: 'Download Center', icon: Smartphone },
