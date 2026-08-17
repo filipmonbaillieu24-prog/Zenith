@@ -25,7 +25,7 @@ export interface FeatureRequestItem {
 }
 
 interface FeatureRequestsPageProps {
-  onBack: () => void;
+  onBack?: () => void;
   userId?: string;
   userName?: string;
   userEmail?: string;
@@ -33,7 +33,6 @@ interface FeatureRequestsPageProps {
 }
 
 export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
-  onBack,
   userId = '',
   userName = '',
   userEmail = '',

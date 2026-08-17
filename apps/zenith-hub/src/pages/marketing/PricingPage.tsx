@@ -10,7 +10,7 @@ import {
 import { PayPalModal } from '../../components/PayPalModal';
 
 interface PricingPageProps {
-  onBack: () => void;
+  onBack?: () => void;
   isPro?: boolean;
   onActivatePro?: () => Promise<void>;
 }
