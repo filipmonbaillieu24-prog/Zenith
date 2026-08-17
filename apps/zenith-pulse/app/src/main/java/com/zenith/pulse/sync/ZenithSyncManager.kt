@@ -41,11 +41,17 @@ object ZenithSyncManager {
 
     suspend fun performSync(context: Context): Boolean = withContext(Dispatchers.IO) {
         try {
+            if (!UserAuthManager.isLoggedIn(context)) {
+                lastSyncStatus = "⛔ Inloggen verplicht: Geen gekoppeld Zenith account"
+                Log.w("ZenithSyncManager", "Sync aborted: user not logged in.")
+                return@withContext false
+            }
+
             val manager = HealthConnectManager(context)
             val data = manager.fetchLatestHealthData()
             cachedPayload = data
 
-            val userEmail = UserAuthManager.getUserEmail(context) ?: "anonymous@zenith.app"
+            val userEmail = UserAuthManager.getUserEmail(context) ?: ""
             val userId = UserAuthManager.getUserId(context) ?: ""
 
             val jsonBody = buildJsonObject {

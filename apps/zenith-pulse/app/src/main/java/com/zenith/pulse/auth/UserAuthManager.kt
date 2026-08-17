@@ -86,6 +86,7 @@ object UserAuthManager {
                 contentType(ContentType.Application.Json)
                 headers {
                     append("apikey", SUPABASE_ANON_KEY)
+                    append("Authorization", "Bearer $SUPABASE_ANON_KEY")
                 }
                 setBody(jsonBody)
             }

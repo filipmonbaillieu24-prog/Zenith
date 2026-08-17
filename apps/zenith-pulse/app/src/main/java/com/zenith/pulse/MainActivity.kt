@@ -322,9 +322,9 @@ fun ZenithPulseScreen(
                         }
                     } else {
                         Text(
-                            text = "Meld je aan met je Zenith account om biometrische data direct aan jouw profiel te koppelen.",
+                            text = "Meld je verplicht aan met je Zenith account (e-mailadres & wachtwoord) om je biometrische data te synchroniseren.",
                             fontSize = 12.sp,
-                            color = Color(0xFFCBD5E1)
+                            color = Color(0xFFF87171)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -347,7 +347,7 @@ fun ZenithPulseScreen(
                         OutlinedTextField(
                             value = passwordInput.value,
                             onValueChange = { passwordInput.value = it },
-                            label = { Text("Wachtwoord (Optioneel for Supabase Auth)") },
+                            label = { Text("Wachtwoord") },
                             singleLine = true,
                             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -366,62 +366,37 @@ fun ZenithPulseScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                onClick = {
-                                    coroutineScope.launch {
-                                        isLoggingIn.value = true
-                                        authMessage.value = null
-                                        val (success, msg) = com.zenith.pulse.auth.UserAuthManager.loginWithSupabase(
-                                            context,
-                                            emailInput.value,
-                                            passwordInput.value
-                                        )
-                                        isLoggingIn.value = false
-                                        if (success) {
-                                            isLoggedIn.value = true
-                                            userEmail.value = com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: emailInput.value
-                                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            authMessage.value = msg
-                                        }
-                                    }
-                                },
-                                enabled = !isLoggingIn.value,
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = if (isLoggingIn.value) "Inloggen..." else "Inloggen op Zenith",
-                                    color = Color(0xFF090D16),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                            }
-
-                            Button(
-                                onClick = {
-                                    if (emailInput.value.isNotBlank()) {
-                                        com.zenith.pulse.auth.UserAuthManager.saveUserAccount(context, emailInput.value)
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    isLoggingIn.value = true
+                                    authMessage.value = null
+                                    val (success, msg) = com.zenith.pulse.auth.UserAuthManager.loginWithSupabase(
+                                        context,
+                                        emailInput.value,
+                                        passwordInput.value
+                                    )
+                                    isLoggingIn.value = false
+                                    if (success) {
                                         isLoggedIn.value = true
-                                        userEmail.value = emailInput.value.trim().lowercase()
-                                        Toast.makeText(context, "Gekoppeld aan ${emailInput.value}", Toast.LENGTH_SHORT).show()
+                                        userEmail.value = com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: emailInput.value
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     } else {
-                                        authMessage.value = "Voer een geldig emailadres in."
+                                        authMessage.value = msg
                                     }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334155)),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "Direct Koppelen",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                            }
+                                }
+                            },
+                            enabled = !isLoggingIn.value,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = if (isLoggingIn.value) "Inloggen..." else "INLOGGEN OP ZENITH ACCOUNT",
+                                color = Color(0xFF090D16),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
@@ -582,8 +557,11 @@ fun ZenithPulseScreen(
                         isSyncing = false
                     }
                 },
-                enabled = !isSyncing && hasPermissions,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF38BDF8)),
+                enabled = !isSyncing && hasPermissions && isLoggedIn.value,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isLoggedIn.value) Color(0xFF38BDF8) else Color(0xFF334155),
+                    disabledContainerColor = Color(0xFF1E293B)
+                ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -597,10 +575,10 @@ fun ZenithPulseScreen(
                     )
                 } else {
                     Text(
-                        text = "Sync Now with Zenith",
-                        fontSize = 16.sp,
+                        text = if (!isLoggedIn.value) "🔐 EERST INLOGGEN MET ZENITH ACCOUNT" else "Sync Now with Zenith",
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF090D16)
+                        color = if (isLoggedIn.value) Color(0xFF090D16) else Color(0xFF94A3B8)
                     )
                 }
             }
