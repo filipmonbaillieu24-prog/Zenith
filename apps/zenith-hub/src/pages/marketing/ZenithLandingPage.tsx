@@ -7,9 +7,7 @@ import {
   ChefHat, 
   Footprints,
   Smartphone,
-  ArrowRight,
-  ShieldCheck,
-  Zap
+  ArrowRight
 } from 'lucide-react';
 
 interface ZenithLandingPageProps {
