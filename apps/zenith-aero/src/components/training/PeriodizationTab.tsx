@@ -69,7 +69,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, color: phase.color, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>
-                Huidige Fase
+                Current Phase
               </div>
               <div style={{ fontSize: 28, fontWeight: 900, fontFamily: 'Outfit, sans-serif', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span>{phase.emoji}</span> {phase.label}
@@ -110,12 +110,12 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
         {/* Recommended weekly focus — with completed rides */}
         <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ padding: '8px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.7px', display: 'flex', gap: 6, alignItems: 'center' }}>
-            <Star size={11} color={phase.color} /> Aanbevolen Weekfocus — {phase.label}
+            <Star size={11} color={phase.color} /> Recommended Weekly Focus — {phase.label}
           </div>
 
           {weekTSSgoal > 0 && (
             <div style={{ padding: '6px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 10, color: '#475569' }}>Week TSS voortgang:</span>
+              <span style={{ fontSize: 10, color: '#475569' }}>Weekly TSS Progress:</span>
               <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
                 <div style={{ height: '100%', width: `${Math.min(100, (weekTSSactual / weekTSSgoal) * 100).toFixed(0)}%`, background: `linear-gradient(90deg, ${phase.color}, #cbd5e1)`, borderRadius: 2, transition: 'width 0.5s' }} />
               </div>
@@ -156,7 +156,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
         {/* Phase-specific guidance based on real rides */}
         <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <AlertCircle size={11} /> Gepersonaliseerd advies — {rides.length} rideten geanalyseerd
+            <AlertCircle size={11} /> Gepersonaliseerd advies — {rides.length} rides geanalyseerd
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -175,13 +175,13 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
               const ctlBuildTarget = Math.round(pmcData.ctl + (weeksInBuild * 1.2));
               return [
                 { icon: '🏋️', text: 'Increase intensity: more sweet spot and threshold workouts.' },
-                { icon: '📊', text: `CTL-doel: ${ctlBuildTarget} before tapering (nu: ${Math.round(pmcData.ctl)}). That requires +${Math.round(1.2)} CTL/week needed.` },
-                { icon: '😴', text: `ATL nu: ${Math.round(pmcData.atl)}. Keep TSB above -30 to prevent overtraining.` },
+                { icon: '📊', text: `CTL Target: ${ctlBuildTarget} before tapering (now: ${Math.round(pmcData.ctl)}). That requires +${Math.round(1.2)} CTL/week needed.` },
+                { icon: '😴', text: `ATL now: ${Math.round(pmcData.atl)}. Keep TSB above -30 to prevent overtraining.` },
               ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>);
             })()}
 
             {phaseInfo.phase === 'peak' && [
-              { icon: '⬇️', text: `Reduce volume by 40-50% (from ~${Math.round(pmcData.atl * 7)} naar ~${Math.round(pmcData.atl * 7 * 0.5)} TSS/week).` },
+              { icon: '⬇️', text: `Reduce volume by 40-50% (from ~${Math.round(pmcData.atl * 7)} to ~${Math.round(pmcData.atl * 7 * 0.5)} TSS/week).` },
               { icon: '⚡', text: 'Maintain 2–3 short sharp intervals per week to keep your system primed.' },
               { icon: '😴', text: `TSB nu: ${Math.round(pmcData.tsb)}. Target TSB of +10 to +20 on race day.` },
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}

@@ -314,7 +314,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       exercisesWithDates: { name: string; dateMs: number }[];
     }> = {
       chest: { name: 'Borstspieren (Pectoralis Major)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      deltoids: { name: 'Schouders (Deltoideus)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      deltoids: { name: 'Shoulders (Deltoids)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
       biceps: { name: 'Biceps (Biceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
       triceps: { name: 'Triceps (Triceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
       abs: { name: 'Buikspieren (Rectus Abdominis)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
@@ -366,7 +366,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
           addImpact(exMeta.primary_muscle, baseFatigue, dateMs, exName);
           if (Array.isArray(exMeta.secondary_muscles)) {
             exMeta.secondary_muscles.forEach((secSlug: string) => {
-              addImpact(secSlug, baseFatigue * 0.5, dateMs, `${exName} (Secundair)`);
+              addImpact(secSlug, baseFatigue * 0.5, dateMs, `${exName} (Secondary)`);
             });
           }
         } else if (
@@ -382,7 +382,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
           }
         } else if (
           exCategory === 'shoulders' ||
-          exCategory === 'schouders' ||
+          exCategory === 'shoulders' ||
           nameLower.includes('shoulder') ||
           nameLower.includes('schouder') ||
           nameLower.includes('deltoid') ||
@@ -400,14 +400,14 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
           addImpact('deltoids', baseFatigue * 0.4, dateMs, exName);
         } else if (
           exCategory === 'chest' ||
-          exCategory === 'borst' ||
+          exCategory === 'chest' ||
           nameLower.includes('chest') ||
           nameLower.includes('bench') ||
           nameLower.includes('pushup')
         ) {
           addImpact('chest', baseFatigue, dateMs, exName);
           addImpact('deltoids', baseFatigue * 0.4, dateMs, exName);
-          addImpact('triceps', baseFatigue * 0.4, dateMs, `${exName} (Secundair)`);
+          addImpact('triceps', baseFatigue * 0.4, dateMs, `${exName} (Secondary)`);
         } else if (
           exCategory === 'triceps' ||
           nameLower.includes('tricep') ||
@@ -426,7 +426,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
           addImpact('gluteal', baseFatigue * 0.4, dateMs, exName);
         } else if (
           exCategory === 'quads' ||
-          exCategory === 'dijen' ||
+          exCategory === 'quads' ||
           nameLower.includes('quad') ||
           nameLower.includes('squat') ||
           nameLower.includes('leg press') ||
@@ -479,7 +479,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
           addImpact('obliques', baseFatigue * 0.5, dateMs, exName);
         } else if (
           exCategory === 'calves' ||
-          exCategory === 'kuiten' ||
+          exCategory === 'calves' ||
           nameLower.includes('calf') ||
           nameLower.includes('kuit')
         ) {

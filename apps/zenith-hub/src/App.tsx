@@ -650,7 +650,7 @@ function App() {
         });
 
       if (uploadError) {
-        throw new Error(`Schermafbeelding uploaden mislukt: ${uploadError.message}`);
+        throw new Error(`Screenshot upload failed: ${uploadError.message}`);
       }
 
       const { data: { publicUrl } } = supabase.storage
@@ -688,7 +688,7 @@ function App() {
 
     let logsMarkdown = '';
     if (logsFormatted.trim()) {
-      logsMarkdown = `### 📋 System & Console Logs (${capturedLogs.length} lines)\n<details>\n<summary>Click to view automaticallye console logs te bekijken</summary>\n\n\`\`\`log\n${logsFormatted}\n\`\`\`\n</details>\n`;
+      logsMarkdown = `### 📋 System & Console Logs (${capturedLogs.length} lines)\n<details>\n<summary>Click to view automatically captured console logs</summary>\n\n\`\`\`log\n${logsFormatted}\n\`\`\`\n</details>\n`;
     }
 
     const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';

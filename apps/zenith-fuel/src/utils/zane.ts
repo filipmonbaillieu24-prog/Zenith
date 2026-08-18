@@ -194,7 +194,7 @@ export function runZaneCalibration(
     }
   }
 
-  // Calculate regression coefficients if we have at least 5 equations (minimum required for a clean 5-parawither solve)
+  // Calculate regression coefficients if we have at least 5 equations (minimum required for a clean 5-parameter solve)
   if (X.length >= 5) {
     const lambda = 15.0; // Higher regularization to prevent day-to-day scale noise spikes
     const coefficients = solveRidgeRegression(X, Y, lambda);
@@ -327,7 +327,7 @@ function interpolateWeights(logs: DailyLogData[], latestWeight: number | null): 
 function solveRidgeRegression(X: number[][], Y: number[], lambda: number): number[] {
   const N = X.length;
   if (N === 0) return [];
-  const M = X[0].length; // number of features (parawithers)
+  const M = X[0].length; // number of features (parameters)
 
   // Initialize XtX (MxM matrix)
   const XtX: number[][] = Array.from({ length: M }, () => Array(M).fill(0));
@@ -414,7 +414,7 @@ function solveLinearSystem(A: number[][], B: number[]): number[] | null {
 }
 
 /**
- * Generates nutritional macro targets based on TDEE, weight, and user profile parawithers.
+ * Generates nutritional macro targets based on TDEE, weight, and user profile parameters.
  */
 function generateTargets(
   tdee: number,

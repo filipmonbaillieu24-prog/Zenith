@@ -82,7 +82,7 @@ export const PacingScatterPlot: React.FC<PacingScatterPlotProps> = ({ rides }) =
       {/* Quadrants Uitleg */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: 10, borderTop: '1px solid rgba(255, 255, 255, 0.03)', paddingTop: 8 }}>
         <div style={{ fontSize: 9, color: '#94a3b8' }}>
-          <strong style={{ color: '#ff7675' }}>Linksboven:</strong> Egaal & Intensief (Tijdrideten, klimmen)
+          <strong style={{ color: '#ff7675' }}>Linksboven:</strong> Egaal & Intensief (Tijdrides, klimmen)
         </div>
         <div style={{ fontSize: 9, color: '#94a3b8' }}>
           <strong style={{ color: '#fdcb6e' }}>Rechtsboven:</strong> Variabel & Intensief (Wedstrijden, intervals)

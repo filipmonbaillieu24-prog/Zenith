@@ -29,7 +29,7 @@ function ridePrimaryMetric(r: RideSummaryWithBests): { label: string; value: str
 }
 
 function cleanRideName(name: string, dateMs: number): string {
-  let clean = name.replace(/_Cycle_Cyclewither$/i, '').replace(/_Cycle$/i, '').replace(/_Cyclewither$/i, '');
+  let clean = name.replace(/_Cycle_Cyclemeter$/i, '').replace(/_Cycle$/i, '').replace(/_Cyclemeter$/i, '');
   
   if (/^GEOID_/i.test(clean) || /^\d{4}-\d{2}-\d{2}/.test(clean) || clean.length > 30) {
     const hour = new Date(dateMs).getHours();
@@ -96,7 +96,7 @@ export const RideRow: React.FC<RideRowProps> = ({ ride, selected, comparing, onO
           className="wd-ride-row__del-btn"
           onClick={e => { e.stopPropagation(); onDelete(); }}
           disabled={deleting}
-          title="Rit verwijderen"
+          title="Delete Ride"
         >
           ✕
         </button>

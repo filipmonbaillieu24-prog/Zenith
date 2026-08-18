@@ -144,7 +144,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
                     }]);
                     if (sleepError) throw sleepError;
                     sleepSaved++;
-                    addLog(`Slaap ${dateStr}: ${s.duration_minutes}min totaal, ${s.deep_minutes}min diep, ${s.light_minutes}min licht, ${s.rem_minutes}min REM`);
+                    addLog(`Sleep ${dateStr}: ${s.duration_minutes}min total, ${s.deep_minutes}min deep, ${s.light_minutes}min light, ${s.rem_minutes}min REM`);
                   }
                   addLog(`Success: ${sleepSaved} nights of sleep data saved.`);
                 } else {
@@ -354,9 +354,9 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
           {/* Information Notice */}
           {status === 'idle' && (
             <div style={{ background: 'rgba(92, 124, 250, 0.05)', border: '1px solid rgba(92, 124, 250, 0.15)', borderRadius: '10px', padding: '12px', textAlign: 'left', marginBottom: '20px' }}>
-              <h4 style={{ fontSize: 12, fontWeight: 800, color: '#5c7cfa', marginBottom: 4 }}>Hoe werkt Ring synchronisatie?</h4>
+              <h4 style={{ fontSize: 12, fontWeight: 800, color: '#5c7cfa', marginBottom: 4 }}>How does Ring synchronization work?</h4>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                The Colmi R02 Smart Ring stores up to 7 days of activity, steps, and sleep data locally. Using the sync button maakt de app verbinding via Bluetooth en haalt deze gegevens automatisch op.
+                The Colmi R02 Smart Ring stores up to 7 days of activity, steps, and sleep data locally. Using the sync button connects the app via Bluetooth and retrieves this data automatically.
                 <br />
                 <span style={{ color: '#fff', fontWeight: 600 }}>Instruction:</span> Ensure Bluetooth is enabled on your computer and the ring is nearby.
               </p>
@@ -365,13 +365,13 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
 
           {status === 'error' && (
             <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: '10px', padding: '12px', color: '#ef4444', fontSize: 12, marginBottom: '20px', textAlign: 'left' }}>
-              <strong>Koppeling mislukt:</strong> {errorMsg}
+              <strong>Connection failed:</strong> {errorMsg}
             </div>
           )}
 
           {status === 'completed' && (
             <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)', borderRadius: '10px', padding: '12px', textAlign: 'left', marginBottom: '20px' }}>
-              <h4 style={{ fontSize: 12, fontWeight: 800, color: '#10b981', marginBottom: 4 }}>Synchronisatie Geslaagd!</h4>
+              <h4 style={{ fontSize: 12, fontWeight: 800, color: '#10b981', marginBottom: 4 }}>Synchronization Successful!</h4>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
                 Your Colmi R02 ring has successfully synchronized. Steps and sleep data have been saved to your profile.
                 <br /><br />

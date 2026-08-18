@@ -244,7 +244,7 @@ export const RunModal: React.FC<RunModalProps> = ({
             <div className="form-group flex-1">
               <label>Running Shoes / Gear</label>
               <select value={shoeId} onChange={e => setShoeId(e.target.value)}>
-                <option value="">-- Geen specifieke schoen --</option>
+                <option value="">-- No specific shoe --</option>
                 {shoes.map(shoe => (
                   <option key={shoe.id} value={shoe.id}>
                     {shoe.brand} {shoe.model} ({shoe.totalDistanceKm} / {shoe.maxDistanceKm} km)

@@ -84,7 +84,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
 
   const zonesPower = [
     { label: 'Z1 - Recovery', range: `< ${Math.round(activeFTP * 0.55)} W`, desc: 'Recoveryridejes', color: '#74b9ff' },
-    { label: 'Z2 - Duurvermogen', range: `${Math.round(activeFTP * 0.55)} - ${Math.round(activeFTP * 0.75)} W`, desc: 'Vetverbranding', color: '#00b894' },
+    { label: 'Z2 - Endurance', range: `${Math.round(activeFTP * 0.55)} - ${Math.round(activeFTP * 0.75)} W`, desc: 'Vetverbranding', color: '#00b894' },
     { label: 'Z3 - Tempo', range: `${Math.round(activeFTP * 0.76)} - ${Math.round(activeFTP * 0.90)} W`, desc: 'Aerobe basis', color: '#fdcb6e' },
     { label: 'Z4 - Threshold', range: `${Math.round(activeFTP * 0.91)} - ${Math.round(activeFTP * 1.05)} W`, desc: 'Lactaatdrempel', color: '#e17055' },
     { label: 'Z5 - VO2max', range: `${Math.round(activeFTP * 1.06)} - ${Math.round(activeFTP * 1.20)} W`, desc: 'Zuurstofopname', color: '#d63031' },
@@ -94,7 +94,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
 
   const zonesHR = [
     { label: 'Z1 - Recovery', range: `< ${Math.round(activeLTHR * 0.81)} bpm`, desc: 'Lichte inspanning', color: '#74b9ff' },
-    { label: 'Z2 - Duurvermogen', range: `${Math.round(activeLTHR * 0.81)} - ${Math.round(activeLTHR * 0.89)} bpm`, desc: 'Basis conditie', color: '#00b894' },
+    { label: 'Z2 - Endurance', range: `${Math.round(activeLTHR * 0.81)} - ${Math.round(activeLTHR * 0.89)} bpm`, desc: 'Aerobic Base', color: '#00b894' },
     { label: 'Z3 - Tempo', range: `${Math.round(activeLTHR * 0.90)} - ${Math.round(activeLTHR * 0.93)} bpm`, desc: 'Stevig tempo', color: '#fdcb6e' },
     { label: 'Z4 - Threshold', range: `${Math.round(activeLTHR * 0.94)} - ${Math.round(activeLTHR * 0.99)} bpm`, desc: 'Zware ademhaling', color: '#e17055' },
     { label: 'Z5 - VO2max', range: `>= ${Math.round(activeLTHR * 1.00)} bpm`, desc: 'Maximale inspanning', color: '#d63031' }
@@ -227,7 +227,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
                 style={{ accentColor:'#cbd5e1', width:14, height:14 }} />
               <span>
                 <strong style={{ color: gdriveRoutesAuto && gdrivePath ? '#cbd5e1' : undefined }}>Routes</strong>
-                {' '}— auto-export gegenereerde routes naar
+                {' '}— auto-export generated routes to
                 <code style={{ fontSize:10, marginLeft:4, color:'#cbd5e1' }}>{GDRIVE_ROUTES_FOLDER}/</code>
               </span>
             </label>
@@ -238,7 +238,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
                 style={{ accentColor:'#cbd5e1', width:14, height:14 }} />
               <span>
                 <strong style={{ color: gdriveRidesAuto && gdrivePath ? '#cbd5e1' : undefined }}>Rides</strong>
-                {' '}— auto-export importede rideten naar
+                {' '}— auto-export imported rides to
                 <code style={{ fontSize:10, marginLeft:4, color:'#cbd5e1' }}>{GDRIVE_RIDES_FOLDER}/</code>
               </span>
             </label>

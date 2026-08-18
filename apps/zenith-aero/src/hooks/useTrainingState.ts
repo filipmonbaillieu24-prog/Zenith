@@ -81,12 +81,12 @@ export function useTrainingState(
     { id: '4', name: 'Interval 2', durationMin: 15, powerPct: 88, zone: 3 },
     { id: '5', name: 'Cool-down',  durationMin: 10, powerPct: 45, zone: 1 },
   ]);
-  const [customTitle, setCustomTitle] = useState('Mijn Sweet Spot Training');
+  const [customTitle, setCustomTitle] = useState('My Sweet Spot Workout');
   const [buildPlanned, setBuildPlanned] = useState(false);
 
   const addCustomBlock = () => {
     setCustomBlocks(prev => [...prev, {
-      id: Date.now().toString(), name: 'Nieuw Blok', durationMin: 5, powerPct: 70, zone: 2,
+      id: Date.now().toString(), name: 'New Block', durationMin: 5, powerPct: 70, zone: 2,
     }]);
   };
 
@@ -109,7 +109,7 @@ export function useTrainingState(
     return d.toISOString().slice(0, 10);
   });
   const [eventName, setEventName] = useState(() => {
-    return localStorage.getItem('zenith_event_name') ?? 'Mijn Event';
+    return localStorage.getItem('zenith_event_name') ?? 'My Event';
   });
   const [goalType, setGoalType] = useState<'event' | 'continuous'>(() => {
     return (localStorage.getItem('zenith_goal_type') as any) ?? 'event';
@@ -135,7 +135,7 @@ export function useTrainingState(
       return {
         phase: mappedPhase,
         daysToEvent: 0,
-        weekLabel: 'Doorlopende focus'
+        weekLabel: 'Continuous focus'
       };
     }
     return getPhase(eventDate);
@@ -147,17 +147,17 @@ export function useTrainingState(
         return {
           color: '#fdcb6e',
           emoji: '⚡',
-          label: 'FTP Verhogen',
+          label: 'Increase FTP',
           description: 'Targeted progression of your FTP and threshold power.',
-          weekFocus: ['Duur', 'Sweet Spot', 'Rust', 'Threshold', 'Duur', 'Sweet Spot', 'Rust']
+          weekFocus: ['Endurance', 'Sweet Spot', 'Rest', 'Threshold', 'Endurance', 'Sweet Spot', 'Rest']
         };
       } else if (activeFocus === 'recovery') {
         return {
           color: '#94a3b8',
           emoji: '💤',
-          label: 'Actief Recovery',
+          label: 'Active Recovery',
           description: 'Recovery and base maintenance without stress.',
-          weekFocus: ['Rust', 'Recovery', 'Rust', 'Recovery', 'Rust', 'Recovery', 'Rust']
+          weekFocus: ['Rest', 'Recovery', 'Rest', 'Recovery', 'Rest', 'Recovery', 'Rest']
         };
       } else if (activeFocus === 'vo2max') {
         return {
@@ -165,16 +165,16 @@ export function useTrainingState(
           emoji: '🚀',
           label: 'VO2max Focus',
           description: 'Short explosive efforts to raise your aerobic ceiling.',
-          weekFocus: ['VO2max', 'Rust', 'VO2max', 'Rust', 'Duur', 'Rust', 'Rust']
+          weekFocus: ['VO2max', 'Rest', 'VO2max', 'Rest', 'Endurance', 'Rest', 'Rest']
         };
       } else {
         // endurance
         return {
           color: '#00b894',
           emoji: '🌱',
-          label: 'Fitnessopbouw',
+          label: 'Fitness Building',
           description: 'Targeted build of aerobic fitness and endurance.',
-          weekFocus: ['Duur (Z2)', 'Duur (Z2)', 'Rust', 'Duur (Z2)', 'Recovery', 'Duur (Z2)', 'Rust']
+          weekFocus: ['Endurance (Z2)', 'Endurance (Z2)', 'Rest', 'Endurance (Z2)', 'Recovery', 'Endurance (Z2)', 'Rest']
         };
       }
     }
@@ -344,7 +344,7 @@ export function useTrainingState(
     for (const r of recentRidesWithNotes) {
       const analysis = analyzeNotesLocally(r.notes!);
       if (analysis.illness >= 0.5) {
-        return { type: 'rest' as const, reason: `Ziekte of acute pijn gedetecteerd in je ridenotities. Neem today volledige rust.`, score: analysis.illness };
+        return { type: 'rest' as const, reason: `Illness or acute pain detected in your ride notes. Take complete rest today.`, score: analysis.illness };
       }
       if (analysis.fatigue >= 0.65) {
         return { type: 'recovery' as const, reason: `Increased muscle fatigue detected in ride notes. Workout adjusted to recoveryride.`, score: analysis.fatigue };
@@ -429,7 +429,7 @@ export function useTrainingState(
     const monday = new Date(now);
     monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
 
-    return ['Ma','Di','Wo','Do','Vr','Za','Zo'].map((d, i) => {
+    return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d, i) => {
       const date = new Date(monday); date.setDate(monday.getDate() + i);
       const key = date.toISOString().slice(0, 10);
       const rideInfo = ridesByDay.get(key);
@@ -484,7 +484,7 @@ export function useTrainingState(
     const now = new Date(); now.setHours(0, 0, 0, 0);
     const monday = new Date(now);
     monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-    const days = ['Ma','Di','Wo','Do','Vr','Za','Zo'].map((label, i) => {
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((label, i) => {
       const date = new Date(monday); date.setDate(monday.getDate() + i);
       const key = date.toISOString().slice(0, 10);
       const rideInfo = ridesByDay.get(key);
@@ -523,7 +523,7 @@ export function useTrainingState(
     );
   }, [pmcData, dailySteps, gymVolume7d]);
 
-  const overtrainingRisk = injuryRiskScore > 0.7 ? 'hoog' : injuryRiskScore > 0.4 ? 'matig' : null;
+  const overtrainingRisk = injuryRiskScore > 0.7 ? 'high' : injuryRiskScore > 0.4 ? 'moderate' : null;
 
   // ── Type counts ──
   const weekTypeCount = useMemo(() => {

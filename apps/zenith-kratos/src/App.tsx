@@ -622,7 +622,7 @@ export default function App() {
 
   const fatigueSummaryText = useMemo(() => {
     const parts: string[] = [];
-    if (isSleepFatigued) parts.push(`Slaap: ${todaySleepQuality}%`);
+    if (isSleepFatigued) parts.push(`Sleep: ${todaySleepQuality}%`);
     if (isStepsFatigued) parts.push(`Stappen: ${todaySteps?.toLocaleString()}`);
     if (isCardioFatigued) parts.push(`TSB: ${currentPMC.tsb}`);
     if (isZScoreFatigued && !isCardioFatigued) parts.push(`Z-Score: +${aiStressConfig.zScore}`);
@@ -794,7 +794,7 @@ export default function App() {
   const handleAddExerciseToLog = (exerciseId: string) => {
     if (!exerciseId) return;
     if (workoutForm.sets.some(s => s.exercise_id === exerciseId)) {
-      alert("Deze oefening zit al in deze training!");
+      alert("This exercise is already in this workout!");
       return;
     }
     const newExLog: WorkoutExerciseLog = {
@@ -1192,11 +1192,11 @@ export default function App() {
         } else if (rValue > -0.3) {
           rStatus = 'Zwakke Correlatie / Plateau';
           rColor = '#94a3b8';
-          rExplanation = 'Weinig verandering in spieromtrek ten opzichte van volume stijging. Mogelijk is de intensiteit (RIR) te laag of herstel (slaap/eiwit) onvoldoende.';
+          rExplanation = 'Little change in muscle circumference relative to volume increase. Intensity (RIR) may be too low or recovery (sleep/protein) insufficient.';
         } else {
           rStatus = 'Krimp / Atrofie';
           rColor = '#ef4444';
-          rExplanation = 'Negatieve correlatie: spieromtrek neemt af ondanks volume stijging. Let goed op overtraining of extreme calorietekorten.';
+          rExplanation = 'Negative correlation: muscle circumference decreases despite volume increase. Pay close attention to overtraining or extreme calorie deficits.';
         }
       }
     }
@@ -1205,11 +1205,11 @@ export default function App() {
       body_fat_pct: 'Vetpercentage (%)',
       muscle_mass_kg: 'Muscle Mass (kg)',
       waist_cm: 'Tailleomtrek (cm)',
-      chest_cm: 'Borstomtrek (cm)',
+      chest_cm: 'Chestomtrek (cm)',
       shoulders_cm: 'Schouderomtrek (cm)',
       hips_cm: 'Heupomtrek (cm)',
-      biceps_l_cm: 'Biceps Links (cm)',
-      biceps_r_cm: 'Biceps Rechts (cm)',
+      biceps_l_cm: 'Left Biceps (cm)',
+      biceps_r_cm: 'Right Biceps (cm)',
       thigh_l_cm: 'Bovenbeen Links (cm)',
       thigh_r_cm: 'Bovenbeen Rechts (cm)',
       calves_l_cm: 'Kuit Links (cm)',
@@ -1236,9 +1236,9 @@ export default function App() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
             <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', padding: 16, borderRadius: 12 }}>
-              <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Huidige Meting</span>
+              <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Current Measurement</span>
               <strong style={{ fontSize: 20, color: '#fff', display: 'block', marginTop: 4 }}>
-                {dataPoints.length > 0 ? `${dataPoints[dataPoints.length - 1].measurement} cm/%` : 'Geen data'}
+                {dataPoints.length > 0 ? `${dataPoints[dataPoints.length - 1].measurement} cm/%` : 'No data'}
               </strong>
             </div>
 
@@ -1265,14 +1265,14 @@ export default function App() {
           <div style={{ height: 300, width: '100%' }}>
             {dataPoints.length < 2 ? (
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
-                Te weinig data om de grafiek te plotten. Voeg withingen toe in Zenith Vigor.
+                Not enough data to plot the chart. Add measurements in Zenith Vigor.
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dataPoints} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="dateStr" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} stroke="var(--border-color)" />
-                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} stroke="rgba(255,255,255,0.15)" domain={['auto', 'auto']} label={{ value: 'Meting', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 10 }} />
+                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} stroke="rgba(255,255,255,0.15)" domain={['auto', 'auto']} label={{ value: 'Measurement', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 10 }} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} stroke="rgba(57, 255, 20, 0.15)" domain={['auto', 'auto']} label={{ value: 'Cumulatief Volume (kg)', angle: 90, position: 'insideRight', fill: 'var(--accent-neon)', fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{ background: '#1c1c23', border: '1px solid var(--border-color)', borderRadius: 10 }}
@@ -1316,7 +1316,7 @@ export default function App() {
               ZENITH <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '16px' }}>KRATOS</span>
             </h1>
             <p className="zh-hub-subtitle" style={{ fontSize: '9px', color: 'var(--text-muted)', margin: '4px 0 0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-              Strength & Conditioning voor {userName}
+              Strength & Conditioning for {userName}
             </p>
           </div>
         </div>
@@ -1588,7 +1588,7 @@ export default function App() {
               // Builder/Edit View
               <div className="kratos-card animate-slide-up">
                 <div className="kratos-card-header">
-                  <h3 className="kratos-card-title">{editingTemplate ? 'Template bewerken' : 'Nieuw template maken'}</h3>
+                  <h3 className="kratos-card-title">{editingTemplate ? 'Edit Template' : 'Create New Template'}</h3>
                   <button className="kratos-btn kratos-btn-secondary" onClick={() => setIsTemplateModalOpen(false)}>
                     <X size={14} /> Cancel
                   </button>
@@ -1614,7 +1614,7 @@ export default function App() {
                     className="kratos-input" 
                     value={exerciseSearchQuery} 
                     onChange={(e) => setExerciseSearchQuery(e.target.value)}
-                    placeholder="Zoek oefening..."
+                    placeholder="Search exercise..."
                     style={{ width: '100%', boxSizing: 'border-box' }}
                   />
                   {exerciseSearchQuery && (
@@ -1634,7 +1634,7 @@ export default function App() {
                         ))}
                       {exercises.filter(ex => ex.name.toLowerCase().includes(exerciseSearchQuery.toLowerCase())).length === 0 && (
                         <div style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: 11 }}>
-                          Geen oefeningen gevonden. Maak deze eerst aan in de 'Exercises' tab!
+                          No exercises found. Create them first in the 'Exercises' tab!
                         </div>
                       )}
                     </div>
@@ -1733,7 +1733,7 @@ export default function App() {
                           </tbody>
                         </table>
                         <button className="kratos-btn kratos-btn-secondary" style={{ marginTop: 10, fontSize: 10, padding: '6px 12px' }} onClick={() => addSetToTemplateExercise(exIndex)}>
-                          <Plus size={10} /> Set Toevoegen
+                          <Plus size={10} /> Add Set
                         </button>
                       </div>
                     );
@@ -1777,13 +1777,13 @@ export default function App() {
                       setIsExerciseModalOpen(true);
                     }}
                   >
-                    <Plus size={14} /> Oefening Toevoegen
+                    <Plus size={14} /> Add Exercise
                   </button>
                 </div>
 
                 {exercises.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: 13 }}>
-                    Geen oefeningen gevonden. Voeg er een toe om te beginnen with het bouwen van routines!
+                    No exercises found. Add one to start building routines!
                   </div>
                 ) : (
                   <table className="kratos-table">
@@ -1816,12 +1816,12 @@ export default function App() {
                           // Round to nearest valid hardware step per side (minimum 1 step)
                           const multiplier = Math.max(1, Math.round(targetPerSideRaw / step));
                           const aiIncrementPerSide = multiplier * step;
-                          aiIncrementText = `[AI: +${aiIncrementPerSide} ${ex.weight_unit} per kant]`;
+                          aiIncrementText = `[AI: +${aiIncrementPerSide} ${ex.weight_unit} per side]`;
                         } else {
                           // Total increment: round raw AI total increment to valid hardware step
                           const multiplier = Math.max(1, Math.round(rawAiIncrement / step));
                           const aiIncrementTotal = multiplier * step;
-                          aiIncrementText = `[AI: +${aiIncrementTotal} ${ex.weight_unit} totaal]`;
+                          aiIncrementText = `[AI: +${aiIncrementTotal} ${ex.weight_unit} total]`;
                         }
 
                         return (
@@ -1831,7 +1831,7 @@ export default function App() {
                               <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: 4 }}>{ex.category}</span>
                             </td>
                             <td>
-                              +{ex.increment_weight} {ex.increment_per_side ? '(per kant)' : '(totaal)'}{' '}
+                              +{ex.increment_weight} {ex.increment_per_side ? '(per side)' : '(total)'}{' '}
                               <span style={{ color: 'var(--accent-neon)', fontSize: 11, marginLeft: 4 }}>
                                 {aiIncrementText}
                               </span>
@@ -1846,7 +1846,7 @@ export default function App() {
                                 <Edit3 size={11} /> Edit
                               </button>
                               <button className="kratos-btn kratos-btn-danger" style={{ padding: '6px 12px', fontSize: 10 }} onClick={() => handleDeleteExercise(ex.id)}>
-                                <Trash2 size={11} /> Verwijder
+                                <Trash2 size={11} /> Delete
                               </button>
                             </td>
                           </tr>
@@ -1860,7 +1860,7 @@ export default function App() {
               // Add/Edit Modal Form
               <div className="kratos-card animate-slide-up" style={{ maxWidth: 600, margin: '0 auto' }}>
                 <div className="kratos-card-header">
-                  <h3 className="kratos-card-title">{editingExercise ? 'Oefening bewerken' : 'Nieuwe oefening toevoegen'}</h3>
+                  <h3 className="kratos-card-title">{editingExercise ? 'Edit Exercise' : 'Add New Exercise'}</h3>
                   <button className="kratos-btn kratos-btn-secondary" onClick={() => setIsExerciseModalOpen(false)}>
                     <X size={14} />
                   </button>
@@ -1868,7 +1868,7 @@ export default function App() {
 
                 <form onSubmit={handleSaveExercise}>
                   <div className="kratos-input-group">
-                    <label className="kratos-label">Oefening Naam</label>
+                    <label className="kratos-label">Exercise Name</label>
                     <input 
                       type="text" 
                       className="kratos-input" 
@@ -1887,19 +1887,19 @@ export default function App() {
                         value={exerciseForm.category} 
                         onChange={(e) => setExerciseForm({ ...exerciseForm, category: e.target.value as any })}
                       >
-                        <option value="Chest">Chest (Borst)</option>
-                        <option value="Shoulders">Shoulders (Schouders)</option>
-                        <option value="Biceps">Biceps (Bovenarmen)</option>
-                        <option value="Triceps">Triceps (Achterkant Armen)</option>
+                        <option value="Chest">Chest</option>
+                        <option value="Shoulders">Shoulders</option>
+                        <option value="Biceps">Biceps (Upper Arms)</option>
+                        <option value="Triceps">Triceps (Back of Arms)</option>
                         <option value="Forearms">Forearms (Onderarmen)</option>
                         <option value="Upper Back">Upper Back (Bovenrug)</option>
                         <option value="Lats">Lats (Latissimus Dorsi / Zijkant Rug)</option>
                         <option value="Lower Back">Lower Back (Lendenrug / Onderrug)</option>
                         <option value="Traps">Traps (Monnikskapspier)</option>
-                        <option value="Quads">Quads (Voorkant Dijen)</option>
-                        <option value="Hamstrings">Hamstrings (Achterkant Dijen)</option>
+                        <option value="Quads">Quads (Front Thighs)</option>
+                        <option value="Hamstrings">Hamstrings (Back Thighs)</option>
                         <option value="Glutes">Glutes (Zitvlak / Bilspieren)</option>
-                        <option value="Calves">Calves (Kuiten)</option>
+                        <option value="Calves">Calves</option>
                         <option value="Abs">Abs (Buikspieren)</option>
                         <option value="Obliques">Obliques (Schuine Buikspieren)</option>
                       </select>
@@ -1925,12 +1925,12 @@ export default function App() {
                   <div className="kratos-input-group" style={{ marginBottom: 16 }}>
                     <label className="kratos-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>Secundaire Muscle Groupen (Optioneel)</span>
-                      <span style={{ color: 'var(--accent-neon)', fontSize: 10 }}>Koppeling Heatmap (50% impact)</span>
+                      <span style={{ color: 'var(--accent-neon)', fontSize: 10 }}>Heatmap Coupling (50% impact)</span>
                     </label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                       {[
-                        { key: 'chest', label: 'Borst' },
-                        { key: 'deltoids', label: 'Schouders' },
+                        { key: 'chest', label: 'Chest' },
+                        { key: 'deltoids', label: 'Shoulders' },
                         { key: 'biceps', label: 'Biceps' },
                         { key: 'triceps', label: 'Triceps' },
                         { key: 'upperBack', label: 'Bovenrug / Lats' },
@@ -1939,7 +1939,7 @@ export default function App() {
                         { key: 'quadriceps', label: 'Quads' },
                         { key: 'hamstring', label: 'Hamstrings' },
                         { key: 'gluteal', label: 'Zitvlak' },
-                        { key: 'calves', label: 'Kuiten' },
+                        { key: 'calves', label: 'Calves' },
                         { key: 'abs', label: 'Buikspieren' },
                         { key: 'obliques', label: 'Schuine Buik' },
                         { key: 'forearm', label: 'Onderarmen' }
@@ -1975,7 +1975,7 @@ export default function App() {
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     <div className="kratos-input-group">
-                      <label className="kratos-label">Kleinste Stap (gewicht)</label>
+                      <label className="kratos-label">Smallest Step (weight)</label>
                       <input 
                         type="number" 
                         step="0.1" 
@@ -2062,7 +2062,7 @@ export default function App() {
 
               {workouts.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: 13 }}>
-                  No voltooide workouts logged. Start Kratos Pilot op je Android en log je eerste training!
+                  No completed workouts logged. Start Kratos Pilot on your Android and log your first workout!
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -2080,17 +2080,17 @@ export default function App() {
                               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-secondary)' }} />
                               <button onClick={() => handleEditWorkoutClick(w)} style={{ background: 'none', border: 'none', color: 'var(--accent-neon)', cursor: 'pointer', padding: 0, fontSize: 11, fontWeight: 'bold' }}>Wijzig</button>
                               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-secondary)' }} />
-                              <button onClick={() => handleDeleteWorkout(w.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 11, fontWeight: 'bold' }}>Verwijder</button>
+                              <button onClick={() => handleDeleteWorkout(w.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 11, fontWeight: 'bold' }}>Delete</button>
                             </div>
                           </div>
 
                           <div style={{ display: 'flex', gap: 16, textAlign: 'right' }}>
                             <div>
-                              <span style={{ fontSize: 9, textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800, display: 'block' }}>Totaal Volume</span>
+                              <span style={{ fontSize: 9, textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800, display: 'block' }}>Total Volume</span>
                               <strong style={{ fontSize: 14, color: 'var(--accent-neon)' }}>{w.volume} kg</strong>
                             </div>
                             <div>
-                              <span style={{ fontSize: 9, textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800, display: 'block' }}>Cardio Herstel</span>
+                              <span style={{ fontSize: 9, textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800, display: 'block' }}>Cardio Recovery</span>
                               <strong style={{ fontSize: 14, color: '#fff' }}>
                                 {w.cardio_stress_factor > 1.0 ? `+${Math.round((w.cardio_stress_factor - 1) * 100)}% rust` : 'Normaal'}
                               </strong>
@@ -2162,7 +2162,7 @@ export default function App() {
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottom: '1px solid var(--border-color)' }}>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#fff' }}>Training Log Edit</h3>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#fff' }}>Edit Training Log</h3>
               <button 
                 onClick={() => setIsWorkoutModalOpen(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 18 }}
@@ -2223,7 +2223,7 @@ export default function App() {
                             onClick={() => handleRemoveExerciseFromLog(exIdx)}
                             style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 10, fontWeight: 'bold', padding: 0 }}
                           >
-                            Verwijder Oefening
+                            Delete Exercise
                           </button>
                         </div>
                         
@@ -2231,7 +2231,7 @@ export default function App() {
                           {exLog.sets.map((s, sIdx) => (
                             <div key={sIdx} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11 }}>
                               <span style={{ color: 'var(--text-secondary)', width: 60 }}>
-                                Set {sIdx + 1} ({s.type === 'warmup' ? 'W' : 'Werk'}):
+                                Set {sIdx + 1} ({s.type === 'warmup' ? 'W' : 'Work'}):
                               </span>
                               
                               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -2297,7 +2297,7 @@ export default function App() {
                           className="kratos-btn kratos-btn-secondary"
                           style={{ marginTop: 8, padding: '4px 10px', fontSize: 10, alignSelf: 'flex-start' }}
                         >
-                          + Set toevoegen
+                          + Add Set
                         </button>
                       </div>
                     );
@@ -2306,7 +2306,7 @@ export default function App() {
 
                 {/* Dropdown to add new exercise */}
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16, marginTop: 16 }}>
-                  <label className="kratos-label" style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800 }}>Oefening Toevoegen</label>
+                  <label className="kratos-label" style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800 }}>Add Exercise</label>
                   <select 
                     className="kratos-input" 
                     defaultValue=""
@@ -2317,7 +2317,7 @@ export default function App() {
                       }
                     }}
                   >
-                    <option value="" disabled>Selecteer een oefening om toe te voegen...</option>
+                    <option value="" disabled>Select an exercise to add...</option>
                     {exercises
                       .filter(ex => !ex.deleted)
                       .map(ex => (

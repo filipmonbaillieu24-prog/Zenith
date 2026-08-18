@@ -198,7 +198,7 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
                                 </span>
                               )}
                               {aiAnalysis.fatigue >= 0.5 && (
-                                <span title={`Vermoeidheid gedetecteerd: ${Math.round(aiAnalysis.fatigue * 100)}%`} style={{ display: 'flex', alignItems: 'center', color: '#fdcb6e', background: 'rgba(253, 203, 110, 0.1)', padding: 3, borderRadius: 5 }}>
+                                <span title={`Fatigue detected: ${Math.round(aiAnalysis.fatigue * 100)}%`} style={{ display: 'flex', alignItems: 'center', color: '#fdcb6e', background: 'rgba(253, 203, 110, 0.1)', padding: 3, borderRadius: 5 }}>
                                   <AlertTriangle size={10} />
                                 </span>
                               )}

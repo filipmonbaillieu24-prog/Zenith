@@ -56,7 +56,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
     } else if (tsb > 5) {
       return `Hello ${name}. You are well rested and your form is excellent (TSB: +${Math.round(tsb)}). Today is a great day for an intensive workoutrvaltraining of een lange duurride!`;
     } else {
-      return `Hello ${name}. Your training build is steady and controlled. Keep respecting your zones and follow guidance to prevent injuryn.`;
+      return `Hello ${name}. Your training build is steady and controlled. Keep respecting your zones and follow guidance to prevent injury.`;
     }
   };
 
@@ -204,7 +204,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
       const ctlBuildTarget = Math.round(state.pmcData.ctl + (weeksInBuild * 1.2));
       items.push(
         { icon: '🏋️', title: 'Increase Intensity', text: 'Add more sweet spot & threshold sessions to elevate FTP.', action: 'Voeg intervallen toe' },
-        { icon: '📊', title: 'Build Workload Capacity', text: `Target CTL-doel van ~${ctlBuildTarget} before taperingperiode.`, action: 'Bouw CTL op' },
+        { icon: '📊', title: 'Build Workload Capacity', text: `Target CTL of ~${ctlBuildTarget} before tapering period.`, action: 'Build CTL' },
         { icon: '😴', title: 'Overtraining Risk Check', text: 'Monitor TSB (keep above -30) to prevent overfatigue.', action: 'Check TSB' }
       );
     } else if (phaseKey === 'peak') {
@@ -215,7 +215,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
       );
     } else if (phaseKey === 'race') {
       items.push(
-        { icon: '🏁', title: 'Race Day Focus', text: 'No new training stimulus. Rest and recovery is your sole focus.', action: 'Neem rust' },
+        { icon: '🏁', title: 'Race Day Focus', text: 'No new training stimulus. Rest and recovery is your sole focus.', action: 'Take rest' },
         { icon: '🚴', title: 'Opener Ride', text: 'Do max 1 short opener ride (30-45 min) with brief surges.', action: 'Korte activering' },
         { icon: '🍝', title: 'Carbs laden', text: 'Carbo-load 2–3 days prior to event (7–10g per kg lichaamsgewicht).', action: 'Carb-loading' }
       );
@@ -223,13 +223,13 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
       items.push(
         { icon: '🎉', title: 'Complete Recovery', text: 'Take at least 1-2 weeks complete rest for physical and mental recovery.', action: 'Rustperiode' },
         { icon: '🚶', title: 'Active Recovery', text: 'Walking, swimming or light yoga is fine. Avoid hard rides.', action: 'Lichte activiteit' },
-        { icon: '🎯', title: 'Set New Goal', text: `You completed ${rides.length} rides with a CTL of ${Math.round(state.pmcData.ctl)}. Plan een nieuw doel!`, action: 'Stel doel in' }
+        { icon: '🎯', title: 'Set New Goal', text: `You completed ${rides.length} rides with a CTL of ${Math.round(state.pmcData.ctl)}. Plan a new goal!`, action: 'Set Goal' }
       );
     }
     return items;
   }, [state.phaseInfo.phase, state.phaseInfo.daysToEvent, state.pmcData, rides.length]);
 
-  const agendaTitles = ['belasting', 'zone 2', 'frequentie', 'rideten', 'agenda', 'wekelijkse'];
+  const agendaTitles = ['belasting', 'zone 2', 'frequentie', 'rides', 'agenda', 'wekelijkse'];
 
   const agendaInsights = useMemo(() => {
     return advice.filter(a => agendaTitles.some(term => a.title.toLowerCase().includes(term)));
@@ -275,7 +275,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                   color: state.todaySleepQuality >= 80 ? '#00b894' : state.todaySleepQuality >= 50 ? '#fdcb6e' : '#ff7675'
                 }}>
                   <Moon size={10} />
-                  Slaap: {state.todaySleepQuality}%
+                  Sleep: {state.todaySleepQuality}%
                 </div>
               )}
               <div style={{
@@ -318,7 +318,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                 <span style={{ fontSize: 24, fontWeight: 900, color: '#fff', fontFamily: 'Outfit, sans-serif' }}>
                   {Math.round(state.pmcData.ctl)}
                 </span>
-                <span style={{ fontSize: 9, color: '#475569' }}>Chronische belasting</span>
+                <span style={{ fontSize: 9, color: '#475569' }}>Chronic Training Load</span>
               </div>
 
               {/* ATL */}
@@ -326,7 +326,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                 background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: 12, padding: '12px 10px', textAlign: 'center',
                 display: 'flex', flexDirection: 'column', gap: 4, borderLeft: '3px solid #ff7675'
               }}>
-                <span style={{ fontSize: 9, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>ATL (Vermoeidheid)</span>
+                <span style={{ fontSize: 9, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>ATL (Fatigue)</span>
                 <span style={{ fontSize: 24, fontWeight: 900, color: '#fff', fontFamily: 'Outfit, sans-serif' }}>
                   {Math.round(state.pmcData.atl)}
                 </span>
@@ -456,7 +456,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                           <span style={{ color: '#cbd5e1' }}>{Math.round(step.duration_seconds / 60)} min</span>
                           <span style={{ color: '#475569' }}>|</span>
                           <span style={{ color: '#94a3b8' }}>
-                            Doel: {step.target_power_min > 0 ? `${step.target_power_min}-${step.target_power_max}W` : 'Maximum'}
+                            Target: {step.target_power_min > 0 ? `${step.target_power_min}-${step.target_power_max}W` : 'Maximum'}
                             {step.target_hr_min > 0 && ` (${step.target_hr_min}-${step.target_hr_max} bpm)`}
                           </span>
                         </div>
@@ -517,7 +517,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
           {/* Card: Target Event & Trainingsfase */}
           <div className="wd-section-card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <h4 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 900, color: '#f8fafc', margin: 0, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Target size={14} style={{ color: '#cbd5e1' }} /> Doel & Trainingsfase
+              <Target size={14} style={{ color: '#cbd5e1' }} /> Goal & Training Phase
             </h4>
 
             {/* Target Select Buttons */}
@@ -567,7 +567,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                 <select value={state.activeFocus} onChange={e => state.setActiveFocus(e.target.value as any)}
                   style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6, color: '#f8fafc', padding: '6px 8px', fontSize: 11, fontFamily: 'inheride', boxSizing: 'border-box', outline: 'none' }}>
                   <option value="endurance">🌱 Fitnessopbouw & Endurance</option>
-                  <option value="ftp">⚡ FTP verhogen (Threshold Training)</option>
+                  <option value="ftp">⚡ Increase FTP (Threshold Training)</option>
                   <option value="vo2max">🚀 VO2max & Hoge Intensiteit</option>
                   <option value="recovery">💤 Actief Recovery & Rust</option>
                 </select>
@@ -647,13 +647,13 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
           {/* Card: Wekelijkse Agenda & Voortgang */}
           <div className="wd-section-card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <h4 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 900, color: '#f8fafc', margin: 0, textTransform: 'uppercase', letterSpacing: '0.6px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Calendar size={14} style={{ color: '#cbd5e1' }} /> Wekelijkse Agenda & Focus
+              <Calendar size={14} style={{ color: '#cbd5e1' }} /> Weekly Schedule & Focus
             </h4>
 
             {weekTSSgoal > 0 && (
               <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, marginBottom: 6 }}>
-                  <span style={{ color: '#64748b' }}>Wekelijkse TSS Voortgang:</span>
+                  <span style={{ color: '#64748b' }}>Weekly TSS Progress:</span>
                   <span style={{ fontWeight: 800, color: state.phase.color }}>{Math.round(weekTSSactual)} / {weekTSSgoal} TSS</span>
                 </div>
                 <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>

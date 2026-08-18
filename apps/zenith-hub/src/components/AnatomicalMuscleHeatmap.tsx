@@ -23,7 +23,7 @@ const defaultMuscleDataMap: MuscleDataMap = {
     primaryExercises: ['Barbell Bench Press', 'Incline Dumbbell Press', 'Chest Flyes']
   },
   deltoids: {
-    name: 'Schouders (Deltoideus)',
+    name: 'Shoulders (Deltoids)',
     fatiguePercent: 65,
     lastTrained: 'Yesterday (Overhead Press)',
     primaryExercises: ['Overhead Press', 'Lateral Raises', 'Arnold Press']
@@ -31,7 +31,7 @@ const defaultMuscleDataMap: MuscleDataMap = {
   biceps: {
     name: 'Biceps (Biceps Brachii)',
     fatiguePercent: 55,
-    lastTrained: '2 dagen geleden',
+    lastTrained: '2 days ago',
     primaryExercises: ['Barbell Curls', 'Hammer Curls', 'Incline Dumbbell Curls']
   },
   triceps: {
@@ -43,13 +43,13 @@ const defaultMuscleDataMap: MuscleDataMap = {
   abs: {
     name: 'Buikspieren (Rectus Abdominis)',
     fatiguePercent: 35,
-    lastTrained: '3 dagen geleden',
+    lastTrained: '3 days ago',
     primaryExercises: ['Hanging Leg Raises', 'Cable Crunches', 'Plank']
   },
   obliques: {
     name: 'Schuine Buikspieren (Obliques)',
     fatiguePercent: 20,
-    lastTrained: '3 dagen geleden',
+    lastTrained: '3 days ago',
     primaryExercises: ['Russian Twists', 'Side Planks']
   },
   quadriceps: {
@@ -61,13 +61,13 @@ const defaultMuscleDataMap: MuscleDataMap = {
   upperBack: {
     name: 'Bovenrug (Rhomboids & Trapezius)',
     fatiguePercent: 40,
-    lastTrained: '2 dagen geleden',
+    lastTrained: '2 days ago',
     primaryExercises: ['Pull-ups', 'Barbell Rows', 'T-Bar Rows']
   },
   lowerBack: {
     name: 'Lendenrug (Erector Spinae)',
     fatiguePercent: 50,
-    lastTrained: '2 dagen geleden',
+    lastTrained: '2 days ago',
     primaryExercises: ['Deadlift', 'Hyperextensions']
   },
   gluteal: {
@@ -91,13 +91,13 @@ const defaultMuscleDataMap: MuscleDataMap = {
   forearm: {
     name: 'Onderarmen (Forearms)',
     fatiguePercent: 30,
-    lastTrained: '2 dagen geleden',
+    lastTrained: '2 days ago',
     primaryExercises: ['Wrist Curls', 'Farmer Walk']
   },
   trapezius: {
     name: 'Monnikskapspier (Trapezius)',
     fatiguePercent: 30,
-    lastTrained: '2 dagen geleden',
+    lastTrained: '2 days ago',
     primaryExercises: ['Barbell Shrugs', 'Deadlift']
   }
 };

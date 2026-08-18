@@ -29,7 +29,7 @@ export async function parseFIT(buffer: ArrayBuffer): Promise<RidePoint[]> {
 
     parser.parse(buffer, (error: any, data: any) => {
       if (error) {
-        reject(new Error(`FIT parse fout: ${error.message}`));
+        reject(new Error(`FIT parse error: ${error.message}`));
         return;
       }
 
@@ -85,7 +85,7 @@ export async function parseFIT(buffer: ArrayBuffer): Promise<RidePoint[]> {
 
         resolve(points);
       } catch (e: any) {
-        reject(new Error(`FIT verwerking fout: ${e.message}`));
+        reject(new Error(`FIT processing error: ${e.message}`));
       }
     });
   });

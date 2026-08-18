@@ -377,14 +377,14 @@ function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // ── Parse openRide query parawither on startup ───────────────────────────────
+  // ── Parse openRide query parameter on startup ───────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const rideId = params.get('openRide');
     if (rideId) {
       setSelectedRide(rideId);
       setActiveTab('dashboard');
-      // Clean up URL query parawithers
+      // Clean up URL query parameters
       const url = new URL(window.location.href);
       url.searchParams.delete('openRide');
       window.history.replaceState({}, '', url.pathname + url.search + url.hash);
@@ -820,7 +820,7 @@ function App() {
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9' }}>Maximum Heart Rate (Max HR)</span>
-                    <span style={{ fontSize: 10, color: '#64748b' }}>Nieuwe hartslagpiek geregistreerd</span>
+                    <span style={{ fontSize: 10, color: '#64748b' }}>New peak heart rate registered</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: 12, color: '#64748b', textDecoration: 'line-through' }}>{activeProposal.maxHR.current} bpm</span>

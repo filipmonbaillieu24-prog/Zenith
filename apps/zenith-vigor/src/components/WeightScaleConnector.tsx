@@ -130,7 +130,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
   const [rawPacket, setRawPacket] = useState<string | null>(null);
   const [detectedWeight, setDetectedWeight] = useState<number | null>(activeWeight);
   const [decodingInfo, setDecodingInfo] = useState<string | null>(
-    activeWeight ? "Native BLE Weegschaal Meting" : null
+    activeWeight ? "Native BLE Scale Measurement" : null
   );
 
 
@@ -141,7 +141,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
       setTempWeight(weightToUse);
       setDetectedWeight(weightToUse);
       setStatus('connected');
-      setDecodingInfo("Native BLE Weegschaal Meting");
+      setDecodingInfo("Native BLE Scale Measurement");
     }
   }, [initialWeight]);
 
@@ -348,7 +348,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
         );
         server = await Promise.race([connectionPromise, timeoutPromise]) as any;
       }
-      if (!server) throw new Error("GATT serververbinding mislukt.");
+      if (!server) throw new Error("GATT server connection failed.");
 
       let service;
       let characteristic;
@@ -458,21 +458,21 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
               const w34 = (bytes[3] << 8 | bytes[4]) / 100;
               if (w34 >= 40 && w34 <= 150) {
                 foundWeight = w34;
-                methodUsed = "Live Meting (bytes 3-4, big-endian / 100)";
+                methodUsed = "Live Measurement (bytes 3-4, big-endian / 100)";
               }
             }
             if (!foundWeight && bytes.length >= 3) {
               const w12 = (bytes[1] << 8 | bytes[2]) / 100;
               if (w12 >= 40 && w12 <= 150) {
                 foundWeight = w12;
-                methodUsed = "Live Meting (bytes 1-2, big-endian / 100)";
+                methodUsed = "Live Measurement (bytes 1-2, big-endian / 100)";
               }
             }
             if (!foundWeight && bytes.length >= 4) {
               const w23 = (bytes[2] << 8 | bytes[3]) / 100;
               if (w23 >= 40 && w23 <= 150) {
                 foundWeight = w23;
-                methodUsed = "Live Meting (bytes 2-3, big-endian / 100)";
+                methodUsed = "Live Measurement (bytes 2-3, big-endian / 100)";
               }
             }
           }
@@ -707,7 +707,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                 <HelpCircle size={28} style={{ color: '#ef4444', marginBottom: 12 }} />
                 <h4 style={{ fontSize: 12, color: '#ef4444', fontWeight: 800, marginBottom: 4 }}>Web Bluetooth Not Supported</h4>
                 <p style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                  Uw browser ondersteunt de Web Bluetooth API niet. Gebruik Google Chrome of MS Edge.
+                  Your browser does not support the Web Bluetooth API. Use Google Chrome or MS Edge.
                 </p>
               </div>
             )}

@@ -79,7 +79,7 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
               />
             </div>
             <div>
-              <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Type Training</label>
+              <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Workout Type</label>
               <select
                 value={workoutType}
                 onChange={(e) => setWorkoutType(e.target.value)}
@@ -113,7 +113,7 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
             <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Notities</label>
             <input
               type="text"
-              placeholder="Hoe voelde de training?"
+              placeholder="How did the workout feel?"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               style={{ width: '100%', background: '#0d0d1a', border: '1px solid rgba(255,255,255,0.05)', color: '#fff', borderRadius: 6, padding: '6px 8px', fontSize: 11 }}
@@ -166,7 +166,7 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
               <button
                 onClick={() => onDeleteLog(item.id)}
                 style={{ background: 'transparent', border: 'none', color: '#ff7675', cursor: 'pointer', opacity: 0.7 }}
-                title="Verwijder log"
+                title="Delete log"
               >
                 <Trash2 size={12} />
               </button>

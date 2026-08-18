@@ -284,7 +284,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                     alignItems: 'center',
                     justifyContent: 'space-between'
                   }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Totale Berekende Slaap:</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Total Calculated Sleep:</span>
                     <span style={{ fontSize: 16, fontWeight: 900, color: '#a855f7' }}>
                       {calcHours}u {calcMins}m <span style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1' }}>({totalPhaseMinutes} min)</span>
                     </span>
@@ -501,7 +501,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
               Cancel
             </button>
             <button type="submit" className="btn-primary" disabled={loading} style={{ flex: 1 }}>
-              {loading ? 'Save...' : 'Meting Save'}
+              {loading ? 'Save...' : 'Save Measurement'}
             </button>
           </div>
         </form>

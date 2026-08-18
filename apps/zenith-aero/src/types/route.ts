@@ -29,8 +29,8 @@ export interface RouteStats {
 export interface RoutePoint {
   lat: number;
   lng: number;
-  ele: number;      // withers
-  distance: number; // cumulative withers from start
+  ele: number;      // meters
+  distance: number; // cumulative meters from start
 }
 
 export interface GeneratedRoute {

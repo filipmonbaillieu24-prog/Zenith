@@ -470,7 +470,7 @@ function App() {
       setActiveCaloriesMap(activeCalMap);
       setGymVolumeMap(gymVolMap);
 
-      // Parawither history is now calculated dynamically in fetchCalibrationLogs client-side.
+      // Parameter history is now calculated dynamically in fetchCalibrationLogs client-side.
 
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -657,7 +657,7 @@ function App() {
       const zOutput = runZaneCalibration(Object.values(logsMap), activeProfile, latestWeight, selectedDateStr);
       setZaneResult(zOutput);
 
-      // Calculate dynamic day-by-day parawither evolution and confidence intervals
+      // Calculate dynamic day-by-day parameter evolution and confidence intervals
       const sortedLogs = Object.values(logsMap).sort((a, b) => a.date.localeCompare(b.date));
       const formattedHist = [];
 
@@ -753,9 +753,9 @@ function App() {
       if (error) throw error;
       triggerNotification(newIsCompleteStatus ? "Daily log marked as complete!" : "Daily log marked as incomplete (excluded from Zenith).");
     } catch (err) {
-      console.error("Incompleetheid toggle mislukt:", err);
+      console.error("Incompleteness toggle failed:", err);
       setWeeklyDayStates(weeklyDayStates);
-      triggerNotification("Actie mislukt. Probeer opnieuw.", true);
+      triggerNotification("Action failed. Please try again.", true);
     }
   };
 
@@ -807,9 +807,9 @@ function App() {
         
         if (prod.serving_size) {
           setIngPortionName("Portie");
-          const sizeGrams = parseFloat(prod.serving_size);
-          if (!isNaN(sizeGrams)) {
-            setIngPortionWeight(sizeGrams.toString());
+          const sizeGramss = parseFloat(prod.serving_size);
+          if (!isNaN(sizeGramss)) {
+            setIngPortionWeight(sizeGramss.toString());
           }
         }
         triggerNotification("Product gevonden en geladen!");
@@ -817,7 +817,7 @@ function App() {
         triggerNotification("Product not found on Open Food Facts.", true);
       }
     } catch (err) {
-      console.error("EAN lookup mislukt:", err);
+      console.error("EAN lookup failed:", err);
       triggerNotification("Error in barcode network request.", true);
     } finally {
       setBarcodeSearching(false);
@@ -854,7 +854,7 @@ function App() {
 
         if (error) throw error;
         setIngredients(ingredients.map(i => i.id === editingIngredientId ? data : i).sort((a, b) => a.name.localeCompare(b.name)));
-        triggerNotification("Ingrediënt bijgewerkt!");
+        triggerNotification("Ingredient updated!");
       } else {
         const { data, error } = await supabase
           .from('fuel_ingredients')
@@ -864,7 +864,7 @@ function App() {
 
         if (error) throw error;
         setIngredients([...ingredients, data].sort((a, b) => a.name.localeCompare(b.name)));
-        triggerNotification("Ingrediënt toegevoegd!");
+        triggerNotification("Ingredient toegevoegd!");
       }
 
       setShowIngredientModal(false);
@@ -902,10 +902,10 @@ function App() {
 
       if (error) throw error;
       setIngredients(ingredients.filter(i => i.id !== id));
-      triggerNotification("Ingrediënt verwijderd.");
+      triggerNotification("Ingredient verwijderd.");
     } catch (err) {
       console.error("Error deleting ingredient:", err);
-      triggerNotification("Delete mislukt.", true);
+      triggerNotification("Delete failed.", true);
     }
   };
 
@@ -931,16 +931,16 @@ function App() {
 
     const qty = parseFloat(recipeIngQty) || 0;
     
-    let finalGrams = qty;
+    let finalGramss = qty;
     if (recipeIngMode === 'portions' && ing.portion_weight_grams) {
-      finalGrams = qty * ing.portion_weight_grams;
+      finalGramss = qty * ing.portion_weight_grams;
     }
 
-    const ratio = finalGrams / 100;
+    const ratio = finalGramss / 100;
     const item = {
       ingredient_id: ing.id,
       name: ing.name,
-      amount_g: finalGrams,
+      amount_g: finalGramss,
       portion_count: recipeIngMode === 'portions' ? qty : 0,
       use_portion: recipeIngMode === 'portions',
       calories: Math.round(ing.calories_per_100g * ratio),
@@ -1000,7 +1000,7 @@ function App() {
 
         if (error) throw error;
         setRecipes(recipes.map(r => r.id === editingRecipeId ? data : r).sort((a, b) => a.name.localeCompare(b.name)));
-        triggerNotification("Recept bijgewerkt!");
+        triggerNotification("Recipe updated!");
       } else {
         const { data, error } = await supabase
           .from('fuel_recipes')
@@ -1044,10 +1044,10 @@ function App() {
 
       if (error) throw error;
       setRecipes(recipes.filter(r => r.id !== id));
-      triggerNotification("Recept verwijderd.");
+      triggerNotification("Recipe verwijderd.");
     } catch (err) {
       console.error("Error deleting recipe:", err);
-      triggerNotification("Delete mislukt.", true);
+      triggerNotification("Delete failed.", true);
     }
   };
 
@@ -1112,7 +1112,7 @@ function App() {
       triggerNotification(`${newLogs.length} meals copied to ${new Date(copyTargetDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}!`);
     } catch (err) {
       console.error("Error copying day:", err);
-      triggerNotification("Kopiëren mislukt. Probeer opnieuw.", true);
+      triggerNotification("Copy failed. Please try again.", true);
     }
   };
 
@@ -1183,7 +1183,7 @@ function App() {
         setShowLogModal(false);
         setEditingLogEntry(null);
         resetLogForm();
-        triggerNotification("Log gewijzigd!");
+        triggerNotification("Log changed!");
       } else {
         const { data, error } = await supabase
           .from('fuel_logs')
@@ -1195,10 +1195,10 @@ function App() {
         setWeeklyFoodLogs([...weeklyFoodLogs, data].sort((a, b) => a.logged_at.localeCompare(b.logged_at)));
         setShowLogModal(false);
         resetLogForm();
-        triggerNotification("Maaltijd geregistreerd!");
+        triggerNotification("Meal logged!");
       }
     } catch (err) {
-      console.error("Loggen mislukt:", err);
+      console.error("Logging failed:", err);
       triggerNotification("Error saving log.", true);
     }
   };
@@ -1230,7 +1230,7 @@ function App() {
       triggerNotification("Log verwijderd.");
     } catch (err) {
       console.error("Error deleting:", err);
-      triggerNotification("Actie mislukt.", true);
+      triggerNotification("Action failed.", true);
     }
   };
 
@@ -1283,7 +1283,7 @@ function App() {
       setLogSuppAmount(logSuppType === 'creatine' ? '5' : '80');
     } catch (err) {
       console.error("Error saving supplement log:", err);
-      triggerNotification("Actie mislukt.", true);
+      triggerNotification("Action failed.", true);
     }
   };
 
@@ -1299,7 +1299,7 @@ function App() {
       triggerNotification("Log verwijderd.");
     } catch (err) {
       console.error("Error deleting:", err);
-      triggerNotification("Actie mislukt.", true);
+      triggerNotification("Action failed.", true);
     }
   };
 
@@ -1398,12 +1398,12 @@ function App() {
     });
 
     const activeDateCaffeine = intakeMap[selectedDateStr] || 0;
-    const withabolicBoost = Math.round(activeDateCaffeine * (zaneResult.caffeineCoeff || 0.15));
+    const metabolicBoost = Math.round(activeDateCaffeine * (zaneResult.caffeineCoeff || 0.15));
 
     return {
       chartData,
       activeDateCaffeine,
-      withabolicBoost
+      metabolicBoost
     };
   }, [supplementsLogs, thirtyDayFoodLogs, sleepLogs, selectedDateStr, zaneResult.caffeineCoeff]);
 
@@ -1712,7 +1712,7 @@ function App() {
       }}>
         {[
           { id: 'dashboard', label: 'Dashboard', icon: <Sparkles size={14} /> },
-          { id: 'logbook', label: 'Logboek', icon: <BookOpen size={14} /> },
+          { id: 'logbook', label: 'Logbook', icon: <BookOpen size={14} /> },
           { id: 'ingredients', label: 'Ingredients', icon: <Barcode size={14} /> },
           { id: 'recipes', label: 'Recipes', icon: <ChefHat size={14} /> },
           { id: 'supplements', label: 'Supplements', icon: <Activity size={14} /> }
@@ -1745,7 +1745,7 @@ function App() {
           {/* Main Calorie Ring */}
           <div className="fuel-card col-6">
             <h3 className="fuel-card-title">
-              <Activity size={14} style={{ color: 'var(--color-primary)' }} /> Caloriebalans ({new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })})
+              <Activity size={14} style={{ color: 'var(--color-primary)' }} /> Calorie Balance ({new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })})
             </h3>
             <div className="cal-balance-wrap">
               <div className="cal-circle-container">
@@ -1784,7 +1784,7 @@ function App() {
                   <span className="cal-detail-val">{zaneResult.dailyCalorieTarget} kcal</span>
                 </div>
                 <div className="cal-detail-row">
-                  <span style={{ color: 'var(--text-muted)' }}>Inname Totaal</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Total Intake</span>
                   <span className="cal-detail-val">{intakeCalories} kcal</span>
                 </div>
                 <div className="cal-detail-row">
@@ -1877,43 +1877,43 @@ function App() {
                   </div>
                 </div>
                 <div className="zane-stat-item">
-                  <span className="zane-stat-lbl">Slaap Kwaliteit</span>
+                  <span className="zane-stat-lbl">Sleep Quality</span>
                   <div className="zane-stat-val" style={{ color: '#a855f7' }}>
                     {zaneResult.isCalibrated 
                       ? `${zaneResult.sleepQualityCoeff >= 0 ? '+' : ''}${zaneResult.sleepQualityCoeff} kcal/%` 
                       : (todaySleepQuality !== null ? `${todaySleepQuality}%` : `${Math.round(sleepQualityAvg)}%`)}
                   </div>
                   <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Coëfficiënt' : 'Actuele withing'}
+                    {zaneResult.isCalibrated ? 'Coefficient' : 'Current measurement'}
                   </span>
                 </div>
                 <div className="zane-stat-item">
-                  <span className="zane-stat-lbl">Slaap Duur</span>
+                  <span className="zane-stat-lbl">Sleep Duration</span>
                   <div className="zane-stat-val" style={{ color: '#a855f7' }}>
                     {zaneResult.isCalibrated 
                       ? `${zaneResult.sleepDurationCoeff >= 0 ? '+' : ''}${zaneResult.sleepDurationCoeff} kcal/u` 
                       : (todaySleepDuration !== null ? `${Math.floor(todaySleepDuration)}u ${Math.round((todaySleepDuration % 1) * 60)}m` : `${Math.floor(sleepDurationAvg)}u`)}
                   </div>
                   <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Coëfficiënt' : 'Actuele withing'}
+                    {zaneResult.isCalibrated ? 'Coefficient' : 'Current measurement'}
                   </span>
                 </div>
                 <div className="zane-stat-item">
-                  <span className="zane-stat-lbl">Gym Coëff</span>
+                  <span className="zane-stat-lbl">Gym Coeff</span>
                   <div className="zane-stat-val" style={{ color: 'var(--color-protein)' }}>
                     {zaneResult.isCalibrated ? `${zaneResult.gymVolumeCoeff.toFixed(3)}` : '0.150'}
                   </div>
                   <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Geleerd' : 'Prior baseline'}
+                    {zaneResult.isCalibrated ? 'Learned' : 'Prior baseline'}
                   </span>
                 </div>
                 <div className="zane-stat-item">
-                  <span className="zane-stat-lbl">Cafeïne Coëff</span>
+                  <span className="zane-stat-lbl">Caffeine Coeff</span>
                   <div className="zane-stat-val" style={{ color: 'var(--color-carb)' }}>
                     {zaneResult.isCalibrated ? `${zaneResult.caffeineCoeff.toFixed(3)}` : '0.150'}
                   </div>
                   <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Geleerd' : 'Prior baseline'}
+                    {zaneResult.isCalibrated ? 'Learned' : 'Prior baseline'}
                   </span>
                 </div>
               </div>
@@ -1922,12 +1922,12 @@ function App() {
                 {zaneResult.isCalibrated ? (
                   <>
                     Zenith is fully calibrated based on <strong>{zaneResult.calibrationDays} days</strong> of data. 
-                    The algorithm directly adjusts your energy needs based on your actual withabolic variance and sleep quality.
+                    The algorithm directly adjusts your energy needs based on your actual metabolic variance and sleep quality.
                   </>
                 ) : (
                   <>
-                    Kalibratie status: <strong>{zaneResult.calibrationDays}/14 days</strong> compleet logged. 
-                    Sleep quality and duration factor into recovery matrices. After 14 days Zenith adapts to your personalized model.sonaliseerde slaapcoëfficiënten.
+                    Calibration status: <strong>{zaneResult.calibrationDays}/14 days</strong> completely logged. 
+                    Sleep quality and duration factor into recovery matrices. After 14 days Zenith adapts to your personalized personalized sleep coefficients.
                   </>
                 )}
               </div>
@@ -1950,7 +1950,7 @@ function App() {
           {/* Zenith Evolution Chart Card */}
           <div className="fuel-card col-7">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Zenith Parawither Evolutie
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Zenith Parameter Evolution
             </h3>
             {zaneHistory.length === 0 ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12, minHeight: 180, textAlign: 'center' }}>
@@ -1968,15 +1968,15 @@ function App() {
                       labelStyle={{ fontWeight: 800, color: 'var(--color-primary)' }}
                       formatter={(value: any, name: any) => {
                         if (name && typeof name === 'string' && name.includes("Foutmarge") && Array.isArray(value)) {
-                          return [`${value[0]} tot ${value[1]} kcal`, "BMR Offset Bereik"];
+                          return [`${value[0]} tot ${value[1]} kcal`, "BMR Offset Range"];
                         }
                         return [value, name];
                       }}
                     />
-                    <Area name="BMR Offset Foutmarge" type="monotone" dataKey="offsetRange" stroke="none" fill="rgba(255, 159, 67, 0.08)" />
+                    <Area name="BMR Offset Margin of Error" type="monotone" dataKey="offsetRange" stroke="none" fill="rgba(255, 159, 67, 0.08)" />
                     <Line name="BMR Offset (kcal)" type="monotone" dataKey="offset" stroke="var(--color-primary)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line name="Kwaliteit Coeff" type="monotone" dataKey="quality" stroke="var(--color-protein)" strokeWidth={2} dot={false} />
-                    <Line name="Duur Coeff" type="monotone" dataKey="duration" stroke="var(--color-fat)" strokeWidth={2} dot={false} />
+                    <Line name="Sleep Quality Coeff" type="monotone" dataKey="quality" stroke="var(--color-protein)" strokeWidth={2} dot={false} />
+                    <Line name="Sleep Duration Coeff" type="monotone" dataKey="duration" stroke="var(--color-fat)" strokeWidth={2} dot={false} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -1986,7 +1986,7 @@ function App() {
           {/* Card 1: TDEE Energy Breakdown */}
           <div className="fuel-card col-4 animate-fade-in">
             <h3 className="fuel-card-title">
-              <Activity size={14} style={{ color: 'var(--color-primary)' }} /> TDEE Energieverbruik
+              <Activity size={14} style={{ color: 'var(--color-primary)' }} /> TDEE Energy Expenditure
             </h3>
             <div className="zane-insights-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
@@ -1994,15 +1994,15 @@ function App() {
                 <span style={{ fontWeight: 700, color: '#fff' }}>{baseBmr} kcal</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>PAL Activiteit (x1.25):</span>
+                <span style={{ color: 'var(--text-muted)' }}>PAL Activity (x1.25):</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>+{baseTdee - baseBmr} kcal</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Cardio & Hardlopen (Aero & Stride):</span>
+                <span style={{ color: 'var(--text-muted)' }}>Cardio & Running (Aero & Stride):</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>+{activeCalories} kcal</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Krachttraining (Kratos):</span>
+                <span style={{ color: 'var(--text-muted)' }}>Strength Training (Kratos):</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>
                   +{gymCalories} kcal <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
                     ({selectedDateGymVolume} kg{zaneResult.isCalibrated ? ` @ ${zaneResult.gymVolumeCoeff.toFixed(3)}/kg` : ''})
@@ -2010,23 +2010,23 @@ function App() {
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Zenith Metabolisme Offset:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Zenith Metabolism Offset:</span>
                 <span style={{ fontWeight: 700, color: bmrOffset >= 0 ? '#55efc4' : '#ff7675' }}>
                   {bmrOffset >= 0 ? `+${bmrOffset}` : bmrOffset} kcal
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Slaap Invloed:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Sleep Influence:</span>
                 <span style={{ fontWeight: 700, color: sleepAdjustment >= 0 ? '#55efc4' : '#ff7675' }}>
                   {sleepAdjustment >= 0 ? `+${sleepAdjustment}` : sleepAdjustment} kcal
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Voedings-Thermogeneratie (TEF):</span>
+                <span style={{ color: 'var(--text-muted)' }}>Thermic Effect of Food (TEF):</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>+{tef} kcal</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 900, paddingTop: '4px' }}>
-                <span style={{ color: 'var(--color-primary)' }}>Totaal TDEE verbruik:</span>
+                <span style={{ color: 'var(--color-primary)' }}>Total TDEE Expenditure:</span>
                 <span style={{ color: 'var(--color-primary)' }}>{totalTdee} kcal</span>
               </div>
             </div>
@@ -2035,27 +2035,27 @@ function App() {
           {/* Card 2: Weight Prediction Forecaster */}
           <div className="fuel-card col-4 animate-fade-in">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Weightsvoorspeller (4 weken)
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Weight Predictor (4 weeks)
             </h3>
             <div className="zane-insights-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Huidige Balans:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Current Balance:</span>
                 <span style={{ fontWeight: 700, color: netDailyBalance <= 0 ? '#55efc4' : '#ff7675' }}>
                   {netDailyBalance > 0 ? `+${netDailyBalance}` : netDailyBalance} kcal/day
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Wekelijkse verandering:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Weekly Change:</span>
                 <span style={{ fontWeight: 700, color: weeklyWeightRate <= 0 ? '#55efc4' : '#ff7675' }}>
                   {weeklyWeightRate > 0 ? `+${weeklyWeightRate.toFixed(2)}` : weeklyWeightRate.toFixed(2)} kg
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Huidig Weight:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Current Weight:</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>{latestWeight} kg</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Verwacht Weight (28d):</span>
+                <span style={{ color: 'var(--text-muted)' }}>Projected Weight (28d):</span>
                 <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{projectedWeight} kg</span>
               </div>
               <div className="zane-feedback-text" style={{ fontSize: '11px', marginTop: '4px', lineHeight: '1.4' }}>
@@ -2073,19 +2073,19 @@ function App() {
           {/* Card 3: Weekly Trends & Consistency */}
           <div className="fuel-card col-4 animate-fade-in">
             <h3 className="fuel-card-title">
-              <Check size={14} style={{ color: 'var(--color-primary)' }} /> Wekelijkse Trends & Consistentie
+              <Check size={14} style={{ color: 'var(--color-primary)' }} /> Weekly Trends & Consistency
             </h3>
             <div className="zane-insights-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Gemiddelde inname:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Average Intake:</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>{weeklyStats.averageIntakeCal} kcal/day</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Gemiddeld doel:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Average Target:</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>{weeklyStats.averageTargetCal} kcal/day</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Consistentie Score:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Consistency Score:</span>
                 <span style={{ fontWeight: 900, color: weeklyStats.consistencyScore >= 85 ? '#55efc4' : weeklyStats.consistencyScore >= 65 ? '#ff9f43' : '#ff7675' }}>
                   {weeklyStats.consistencyScore}%
                 </span>
@@ -2127,13 +2127,13 @@ function App() {
           {/* Week Selector Header */}
           <div className="fuel-card col-12" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row' }}>
             <button className="fuel-nav-btn" onClick={handlePrevWeek} style={{ padding: '8px 14px' }}>
-              <ChevronLeft size={16} /> Vorige Week
+              <ChevronLeft size={16} /> Previous Week
             </button>
             <strong style={{ fontSize: 14, color: 'var(--text-main)', letterSpacing: '0.5px' }}>
               {formattedWeekRange}
             </strong>
             <button className="fuel-nav-btn" onClick={handleNextWeek} style={{ padding: '8px 14px' }}>
-              Volgende Week <ChevronRight size={16} />
+              Next Week <ChevronRight size={16} />
             </button>
           </div>
 
@@ -2157,7 +2157,7 @@ function App() {
                   }}
                 >
                   {!day.isComplete && (
-                    <div style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: '50%', background: '#ff9f43' }} title="Zenith Uitgesloten (Onvolledig)" />
+                    <div style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: '50%', background: '#ff9f43' }} title="Zenith Excluded (Incomplete)" />
                   )}
                   <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>
                     {day.dayShortName}
@@ -2181,8 +2181,8 @@ function App() {
                   <Clock size={14} style={{ color: 'var(--color-primary)' }} /> {selectedDateLongName}
                 </h3>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>
-                  Geselecteerde day intake: <strong>{intakeCalories} kcal</strong>
-                  {!selectedDateComplete && <span style={{ color: '#ff9f43', marginLeft: 8 }}>⚠️ Zenith Uitgesloten (Onvolledig)</span>}
+                  Selected date intake: <strong>{intakeCalories} kcal</strong>
+                  {!selectedDateComplete && <span style={{ color: '#ff9f43', marginLeft: 8 }}>⚠️ Zenith Excluded (Incomplete)</span>}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -2193,7 +2193,7 @@ function App() {
                     onChange={handleToggleDayIncomplete}
                     style={{ width: 15, height: 15, accentColor: 'var(--color-primary)', cursor: 'pointer' }}
                   />
-                  Onvolledig registreren
+                  Mark as Incomplete
                 </label>
                 {filteredFoodLogs.length > 0 && (
                   <button 
@@ -2204,7 +2204,7 @@ function App() {
                       setShowCopyDayModal(true);
                     }}
                   >
-                    Kopieer day
+                    Copy Day
                   </button>
                 )}
                 <button className="btn-submit" style={{ padding: '6px 12px', fontSize: 11, margin: 0 }} onClick={() => { setEditingLogEntry(null); resetLogForm(); setLogSource('quick'); setShowLogModal(true); }}>
@@ -2263,20 +2263,20 @@ function App() {
                   Ingredients Database
                 </h2>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>
-                  Beheer uw eigen voedingsmiddelen en portiegroottes
+                  Manage your custom foods and portion sizes
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <input 
                   type="text" 
                   className="form-input" 
-                  placeholder="Zoek in database..." 
+                  placeholder="Search database..." 
                   value={ingDatabaseSearch} 
                   onChange={e => setIngDatabaseSearch(e.target.value)}
                   style={{ width: 220, height: 36, padding: '8px 12px', fontSize: 12 }}
                 />
                 <button className="btn-submit" style={{ padding: '8px 16px', fontSize: 11, margin: 0 }} onClick={() => { resetIngredientForm(); setShowIngredientModal(true); }}>
-                  <Plus size={12} /> Nieuw Ingrediënt
+                  <Plus size={12} /> New Ingredient
                 </button>
               </div>
             </div>
@@ -2301,7 +2301,7 @@ function App() {
                               EAN: {ing.barcode}
                             </span>
                           ) : (
-                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Geen barcode</span>
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>No barcode</span>
                           )}
                           {ing.portion_name && (
                             <span style={{ background: 'rgba(255, 159, 67, 0.1)', color: 'var(--color-primary)', border: '1px solid rgba(255,159,67,0.2)', fontSize: 9, padding: '2px 8px', borderRadius: 4, whiteSpace: 'nowrap', fontWeight: 800, textTransform: 'uppercase' }}>
@@ -2326,7 +2326,7 @@ function App() {
                         </div>
                         <div>
                           <div className="recipe-macro-val" style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-fat)' }}>{ing.fat_per_100g}g</div>
-                          <div className="recipe-macro-lbl" style={{ fontSize: 8, color: 'var(--text-muted)' }}>vet</div>
+                          <div className="recipe-macro-lbl" style={{ fontSize: 8, color: 'var(--text-muted)' }}>fat</div>
                         </div>
                       </div>
 
@@ -2373,7 +2373,7 @@ function App() {
         <div style={{ zIndex: 1, position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', margin: 0 }}>
-              Mijn Sportrecepten
+              My Sport Recipes
             </h2>
             <button className="btn-submit" style={{ padding: '8px 16px', fontSize: 11 }} onClick={() => { resetRecipeForm(); setShowRecipeModal(true); }}>
               <Plus size={14} /> New Recipe
@@ -2390,7 +2390,7 @@ function App() {
                 <div key={rec.id} className="recipe-card">
                   <span className="recipe-badge">{rec.category}</span>
                   <h4 className="recipe-title">{rec.name}</h4>
-                  <p className="recipe-desc">{rec.description || 'Geen beschrijving'}</p>
+                  <p className="recipe-desc">{rec.description || 'No description'}</p>
                   
                   <div className="recipe-macros" style={{ marginBottom: 12 }}>
                     <div>
@@ -2407,7 +2407,7 @@ function App() {
                     </div>
                     <div>
                       <div className="recipe-macro-val">{rec.fat}g</div>
-                      <div className="recipe-macro-lbl">vet</div>
+                      <div className="recipe-macro-lbl">fat</div>
                     </div>
                   </div>
 
@@ -2424,7 +2424,7 @@ function App() {
                         setShowLogModal(true);
                       }}
                     >
-                      Log Recept
+                      Log Recipe
                     </button>
                     <button 
                       className="btn-barcode-lookup" 
@@ -2454,13 +2454,13 @@ function App() {
           {/* Week Selector Header */}
           <div className="fuel-card col-12" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', marginBottom: 0 }}>
             <button className="fuel-nav-btn" onClick={handlePrevWeek} style={{ padding: '8px 14px' }}>
-              <ChevronLeft size={16} /> Vorige Week
+              <ChevronLeft size={16} /> Previous Week
             </button>
             <strong style={{ fontSize: 14, color: 'var(--text-main)', letterSpacing: '0.5px' }}>
               {formattedWeekRange}
             </strong>
             <button className="fuel-nav-btn" onClick={handleNextWeek} style={{ padding: '8px 14px' }}>
-              Volgende Week <ChevronRight size={16} />
+              Next Week <ChevronRight size={16} />
             </button>
           </div>
 
@@ -2509,15 +2509,15 @@ function App() {
           {/* QUICK LOG SUPPLEMENTS */}
           <div className="fuel-card col-4">
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', marginBottom: 20 }}>
-              Snel Loggen ({new Date(selectedDateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })})
+              Quick Log ({new Date(selectedDateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })})
             </h2>
             <form onSubmit={handleAddSupplementLog}>
               <div className="form-group">
                 <label className="form-label">Supplement Type</label>
                 <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                   {[
-                    { id: 'creatine', label: 'Creatine Monohydraat' },
-                    { id: 'caffeine', label: 'Cafeïne' }
+                    { id: 'creatine', label: 'Creatine Monohydrate' },
+                    { id: 'caffeine', label: 'Caffeine' }
                   ].map(t => (
                     <button
                       key={t.id}
@@ -2555,7 +2555,7 @@ function App() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Tijdstip</label>
+                <label className="form-label">Time</label>
                 <input
                   type="time"
                   className="form-input"
@@ -2566,7 +2566,7 @@ function App() {
               </div>
 
               <button type="submit" className="btn-submit" style={{ width: '100%', marginTop: 8 }}>
-                Log Inname
+                Log Intake
               </button>
             </form>
           </div>
@@ -2574,7 +2574,7 @@ function App() {
           {/* CREATINE SATURATION CARD */}
           <div className="fuel-card col-4">
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', marginBottom: 20 }}>
-              Creatine Verzadiging
+              Creatine Saturation
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 0' }}>
               <div style={{ position: 'relative', width: 100, height: 100, marginBottom: 16 }}>
@@ -2613,25 +2613,25 @@ function App() {
           {/* CAFFEINE METABOLIC BOOST CARD */}
           <div className="fuel-card col-4">
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', marginBottom: 20 }}>
-              Metabole Impact Cafeïne
+              Metabole Impact Caffeine
             </h2>
             <div style={{ padding: '10px 0' }}>
               <div style={{ background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '10px', marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Today ingenomen:</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Ingested today:</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', margin: '4px 0' }}>
                   {caffeineStats.activeDateCaffeine} mg
                 </div>
               </div>
 
               <div style={{ background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '10px', marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Extra energieverbruik (ML):</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Extra energy expenditure:</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--color-primary)', margin: '4px 0' }}>
-                  +{caffeineStats.withabolicBoost} kcal
+                  +{caffeineStats.metabolicBoost} kcal
                 </div>
               </div>
 
               <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: '14px', textAlign: 'center' }}>
-                Geleerde coëfficiënt: <strong>{zaneResult.caffeineCoeff || 0.15} kcal</strong> per mg cafeïne.
+                Learnede coëfficiënt: <strong>{zaneResult.caffeineCoeff || 0.15} kcal</strong> per mg cafeïne.
               </div>
             </div>
           </div>
@@ -2639,22 +2639,22 @@ function App() {
           {/* CREATINE CHART */}
           <div className="fuel-card col-6">
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', marginBottom: 20 }}>
-              Creatine Oplaadcurve & Verzadiging (30 Dagen)
+              Creatine Loading & Saturation (30 Days)
             </h2>
             <div style={{ height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={creatineStats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="dateStr" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" />
-                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" label={{ value: 'Inname (g)', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 9 }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" label={{ value: 'Verzadiging (%)', angle: 90, position: 'insideRight', fill: 'var(--text-muted)', fontSize: 9 }} />
+                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" label={{ value: 'Intake (g)', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 9 }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" label={{ value: 'Saturation (%)', angle: 90, position: 'insideRight', fill: 'var(--text-muted)', fontSize: 9 }} />
                   <Tooltip 
                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 10 }}
                     labelStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
                     itemStyle={{ fontSize: 11 }}
                   />
-                  <Area yAxisId="right" type="monotone" dataKey="saturation" fill="rgba(255, 159, 67, 0.15)" stroke="var(--color-primary)" strokeWidth={2} name="Verzadiging (%)" />
-                  <Line yAxisId="left" type="monotone" dataKey="intake" stroke="var(--color-carb)" strokeWidth={1.5} dot={{ r: 2 }} name="Inname (g)" />
+                  <Area yAxisId="right" type="monotone" dataKey="saturation" fill="rgba(255, 159, 67, 0.15)" stroke="var(--color-primary)" strokeWidth={2} name="Saturation (%)" />
+                  <Line yAxisId="left" type="monotone" dataKey="intake" stroke="var(--color-carb)" strokeWidth={1.5} dot={{ r: 2 }} name="Intake (g)" />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -2663,22 +2663,22 @@ function App() {
           {/* CAFFEINE CHART */}
           <div className="fuel-card col-6">
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', marginBottom: 20 }}>
-              Cafeïne vs. Rusthartslag Trend (30 Dagen)
+              Caffeine vs. Resting Heart Rate Trend (30 Days)
             </h2>
             <div style={{ height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={caffeineStats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="dateStr" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" />
-                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" label={{ value: 'Cafeïne (mg)', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 9 }} />
-                  <YAxis yAxisId="right" orientation="right" domain={[50, 75]} tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" label={{ value: 'Hartslag (bpm)', angle: 90, position: 'insideRight', fill: 'var(--text-muted)', fontSize: 9 }} />
+                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" label={{ value: 'Caffeine (mg)', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 9 }} />
+                  <YAxis yAxisId="right" orientation="right" domain={[50, 75]} tick={{ fill: 'var(--text-muted)', fontSize: 9 }} stroke="rgba(255,255,255,0.1)" label={{ value: 'Heart Rate (bpm)', angle: 90, position: 'insideRight', fill: 'var(--text-muted)', fontSize: 9 }} />
                   <Tooltip 
                     contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 10 }}
                     labelStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
                     itemStyle={{ fontSize: 11 }}
                   />
-                  <Area yAxisId="left" type="monotone" dataKey="caffeine" fill="rgba(84, 160, 255, 0.1)" stroke="var(--color-carb)" strokeWidth={1} name="Cafeïne (mg)" />
-                  <Line yAxisId="right" type="monotone" dataKey="heartRate" stroke="rgba(255, 107, 107, 1)" strokeWidth={2} dot={{ r: 2 }} name="Rusthartslag (bpm)" />
+                  <Area yAxisId="left" type="monotone" dataKey="caffeine" fill="rgba(84, 160, 255, 0.1)" stroke="var(--color-carb)" strokeWidth={1} name="Caffeine (mg)" />
+                  <Line yAxisId="right" type="monotone" dataKey="heartRate" stroke="rgba(255, 107, 107, 1)" strokeWidth={2} dot={{ r: 2 }} name="Resting Heart Rate (bpm)" />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -2702,7 +2702,7 @@ function App() {
                       <div className="timeline-time">{timeStr}</div>
                       <div className="timeline-content">
                         <div className="timeline-title" style={{ textTransform: 'capitalize' }}>
-                          {s.supplement_type === 'creatine' ? 'Creatine Monohydraat' : 'Cafeïne'}
+                          {s.supplement_type === 'creatine' ? 'Creatine Monohydrate' : 'Caffeine'}
                         </div>
                         <div className="timeline-desc">
                           Hoeveelheid: <strong>{s.amount} {s.supplement_type === 'creatine' ? 'g' : 'mg'}</strong>
@@ -2728,14 +2728,14 @@ function App() {
           <div className="modal-content animate-slide-up">
             <div className="modal-header">
               <h3 className="modal-title">
-                <Clock size={16} /> {editingLogEntry ? 'Voeding Wijzigen' : 'Voeding Loggen'}
+                <Clock size={16} /> {editingLogEntry ? 'Edit Food Log' : 'Log Food Log'}
               </h3>
               <button className="modal-close" onClick={() => setShowLogModal(false)}>Close</button>
             </div>
             <form onSubmit={handleAddFoodLog}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Eetmoment</label>
+                  <label className="form-label">Meal Type</label>
                   <select 
                     className="form-select" 
                     value={logMealType} 
@@ -2743,11 +2743,11 @@ function App() {
                   >
                     <option value="breakfast">Breakfast</option>
                     <option value="lunch">Lunch</option>
-                    <option value="dinner">Avondeten</option>
-                    <option value="snack">Tussendoortje</option>
+                    <option value="dinner">Dinner</option>
+                    <option value="snack">Snack</option>
                     <option value="pre-ride">Pre-Ride Carb loading</option>
                     <option value="on-the-bike">Intra-Workout Fuel</option>
-                    <option value="post-ride">Post-Ride Herstel</option>
+                    <option value="post-ride">Post-Ride Recovery</option>
                   </select>
                 </div>
 
@@ -2763,12 +2763,12 @@ function App() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Logbron</label>
+                  <label className="form-label">Log Source</label>
                   <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                     {[
-                      { id: 'quick', label: 'Snel Invoeren' },
-                      { id: 'ingredient', label: 'Ingrediënt' },
-                      { id: 'recipe', label: 'Recept' }
+                      { id: 'quick', label: 'Quick Entry' },
+                      { id: 'ingredient', label: 'Ingredient' },
+                      { id: 'recipe', label: 'Recipe' }
                     ].map(src => (
                       <button
                         key={src.id}
@@ -2801,7 +2801,7 @@ function App() {
                       <input 
                         type="text" 
                         className="form-input" 
-                        placeholder="Atv. Energiereep, Banaan" 
+                        placeholder="e.g. Energy bar, Banana" 
                         value={quickName}
                         onChange={e => setQuickName(e.target.value)}
                         required
@@ -2833,7 +2833,7 @@ function App() {
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label className="form-label">Proteinten (g)</label>
+                        <label className="form-label">Protein (g)</label>
                         <input 
                           type="number" 
                           className="form-input" 
@@ -2859,7 +2859,7 @@ function App() {
                 {logSource === 'ingredient' && (
                   <>
                     <div className="form-group">
-                      <label className="form-label">Zoek Ingrediënt</label>
+                      <label className="form-label">Zoek Ingredient</label>
                       <div className="search-dropdown-wrap">
                         <input 
                           type="text" 
@@ -2901,16 +2901,16 @@ function App() {
                     {selectedLogIngredient && (
                       <div className="form-row" style={{ alignItems: 'flex-end', marginTop: 8 }}>
                         <div className="form-group">
-                          <label className="form-label">Invoermethode</label>
+                          <label className="form-label">Input Method</label>
                           <select 
                             className="form-select"
                             value={logIngredientWeightMode}
                             onChange={e => setLogIngredientWeightMode(e.target.value as any)}
                           >
-                            <option value="grams">Grammen</option>
+                            <option value="grams">Gramss</option>
                             {ingredients.find(i => i.id === selectedLogIngredient)?.portion_name && (
                               <option value="portions">
-                                Porties ({ingredients.find(i => i.id === selectedLogIngredient)?.portion_name})
+                                Portions ({ingredients.find(i => i.id === selectedLogIngredient)?.portion_name})
                               </option>
                             )}
                           </select>
@@ -2934,7 +2934,7 @@ function App() {
                 {logSource === 'recipe' && (
                   <>
                     <div className="form-group">
-                      <label className="form-label">Zoek Recept</label>
+                      <label className="form-label">Zoek Recipe</label>
                       <div className="search-dropdown-wrap">
                         <input 
                           type="text" 
@@ -2975,7 +2975,7 @@ function App() {
 
                     {selectedLogRecipe && (
                       <div className="form-group" style={{ marginTop: 8 }}>
-                        <label className="form-label">Porties / Factor</label>
+                        <label className="form-label">Portions / Factor</label>
                         <input 
                           type="number" 
                           step="any"
@@ -2991,7 +2991,7 @@ function App() {
               </div>
               <div style={{ padding: '0 24px 24px' }}>
                 <button type="submit" className="btn-submit" style={{ width: '100%' }}>
-                  {editingLogEntry ? 'Wijziging Save' : 'Voeg toe aan Logboek'}
+                  {editingLogEntry ? 'Save Changes' : 'Add to Logbook'}
                 </button>
               </div>
             </form>
@@ -3005,19 +3005,19 @@ function App() {
           <div className="modal-content animate-slide-up">
             <div className="modal-header">
               <h3 className="modal-title">
-                <Barcode size={16} /> {editingIngredientId ? 'Ingrediënt Edit' : 'Nieuw Ingrediënt Aanmaken'}
+                <Barcode size={16} /> {editingIngredientId ? 'Ingredient Edit' : 'New Ingredient Aanmaken'}
               </h3>
               <button className="modal-close" onClick={() => setShowIngredientModal(false)}>Close</button>
             </div>
             <form onSubmit={handleSaveIngredient}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Barcode Scannen / Opzoeken via OFF</label>
+                  <label className="form-label">Scan Barcode / Search via OFF</label>
                   <div className="barcode-lookup-group">
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="Streepjescode (EAN)" 
+                      placeholder="Barcode (EAN)" 
                       value={ingBarcode}
                       onChange={e => setIngBarcode(e.target.value)}
                     />
@@ -3027,17 +3027,17 @@ function App() {
                       disabled={barcodeSearching}
                       onClick={handleBarcodeLookup}
                     >
-                      {barcodeSearching ? 'Zoeken...' : 'Zoeken'}
+                      {barcodeSearching ? 'Search...' : 'Search'}
                     </button>
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Naam Ingrediënt</label>
+                  <label className="form-label">Naam Ingredient</label>
                   <input 
                     type="text" 
                     className="form-input" 
-                    placeholder="Atv. Havermout, Pindakaas" 
+                    placeholder="e.g. Oatmeal, Peanut Butter" 
                     value={ingName}
                     onChange={e => setIngName(e.target.value)}
                     required
@@ -3045,12 +3045,12 @@ function App() {
                 </div>
 
                 <h4 style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: 'var(--color-primary)', letterSpacing: '0.5px', marginTop: 10 }}>
-                  Voedingswaarden per 100 gram
+                  Nutrition facts per 100g
                 </h4>
                 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Energie (kcal)</label>
+                    <label className="form-label">Energy (kcal)</label>
                     <input 
                       type="number" 
                       className="form-input" 
@@ -3076,7 +3076,7 @@ function App() {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Proteinten (g)</label>
+                    <label className="form-label">Protein (g)</label>
                     <input 
                       type="number" 
                       step="any"
@@ -3102,22 +3102,22 @@ function App() {
                 </div>
 
                 <h4 style={{ fontSize: 10, fontWeight: 900, textTransform: 'uppercase', color: 'var(--color-primary)', letterSpacing: '0.5px', marginTop: 10 }}>
-                  Portion sizes & Verpakking (Optioneel)
+                  Portion sizes & Packaging (Optional)
                 </h4>
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Naam Portie</label>
+                    <label className="form-label">Portion Name</label>
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="Atv. Snee, Banaan, Stuk" 
+                      placeholder="Atv. Slice, Banana, Piece" 
                       value={ingPortionName}
                       onChange={e => setIngPortionName(e.target.value)}
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Portiegewicht (g)</label>
+                    <label className="form-label">Portion weight (g)</label>
                     <input 
                       type="number" 
                       className="form-input" 
@@ -3129,7 +3129,7 @@ function App() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Porties per Verpakking</label>
+                  <label className="form-label">Servings per Package</label>
                   <input 
                     type="number" 
                     className="form-input" 
@@ -3140,7 +3140,7 @@ function App() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Cafeïne Gehalte (mg per 100g/ml)</label>
+                  <label className="form-label">Caffeine Gehalte (mg per 100g/ml)</label>
                   <input 
                     type="number" 
                     className="form-input" 
@@ -3152,7 +3152,7 @@ function App() {
               </div>
               <div style={{ padding: '0 24px 24px' }}>
                 <button type="submit" className="btn-submit" style={{ width: '100%' }}>
-                  {editingIngredientId ? 'Ingrediënt Atwerken' : 'Sla ingrediënt op'}
+                  {editingIngredientId ? 'Ingredient Atwerken' : 'Save ingredient'}
                 </button>
               </div>
             </form>
@@ -3166,18 +3166,18 @@ function App() {
           <div className="modal-content animate-slide-up" style={{ maxWidth: 660 }}>
             <div className="modal-header">
               <h3 className="modal-title">
-                <ChefHat size={16} /> {editingRecipeId ? 'Recept Edit' : 'Nieuw Sportrecept Aanmaken'}
+                <ChefHat size={16} /> {editingRecipeId ? 'Recipe Edit' : 'Create New Sport Recipe'}
               </h3>
               <button className="modal-close" onClick={() => setShowRecipeModal(false)}>Close</button>
             </div>
             <form onSubmit={handleSaveRecipe}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Naam Recept</label>
+                  <label className="form-label">Naam Recipe</label>
                   <input 
                     type="text" 
                     className="form-input" 
-                    placeholder="Atv. Zenith Rice Cakes" 
+                    placeholder="e.g. Zenith Rice Cakes" 
                     value={recName}
                     onChange={e => setRecName(e.target.value)}
                     required
@@ -3185,10 +3185,10 @@ function App() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Description / Notities</label>
+                  <label className="form-label">Description / Notes</label>
                   <textarea 
                     className="form-textarea" 
-                    placeholder="Korte beschrijving..." 
+                    placeholder="Short description..." 
                     value={recDesc}
                     onChange={e => setRecDesc(e.target.value)}
                   />
@@ -3204,16 +3204,16 @@ function App() {
                     >
                       <option value="pre-ride">Pre-Ride Carb-loading</option>
                       <option value="on-the-bike">On-the-Bike Fuel</option>
-                      <option value="post-ride">Post-Ride Herstel</option>
-                      <option value="baseline">Baseline Gezond</option>
+                      <option value="post-ride">Post-Ride Recovery</option>
+                      <option value="baseline">Baseline Healthy</option>
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Portion size (tekstueel)</label>
+                    <label className="form-label">Portion size (textual)</label>
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="Atv. 4 repen" 
+                      placeholder="e.g. 4 bars" 
                       value={recServingSize}
                       onChange={e => setRecServingSize(e.target.value)}
                       required
@@ -3222,7 +3222,7 @@ function App() {
                 </div>
 
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16, marginTop: 10 }}>
-                  <h4 className="form-label" style={{ marginBottom: 10 }}>Ingredients toevoegen</h4>
+                  <h4 className="form-label" style={{ marginBottom: 10 }}>Add Ingredients</h4>
                   
                   {recIngredients.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
@@ -3285,7 +3285,7 @@ function App() {
                     </div>
 
                     <div className="form-group">
-                      <label className="form-label" style={{ fontSize: 9 }}>Eenheid</label>
+                      <label className="form-label" style={{ fontSize: 9 }}>Unit</label>
                       <select 
                         className="form-select"
                         value={recipeIngMode}
@@ -3293,7 +3293,7 @@ function App() {
                         disabled={!selectedRecipeIngId}
                         style={{ height: 38 }}
                       >
-                        <option value="grams">Gram</option>
+                        <option value="grams">Grams</option>
                         {ingredients.find(i => i.id === selectedRecipeIngId)?.portion_name && (
                           <option value="portions">
                             {ingredients.find(i => i.id === selectedRecipeIngId)?.portion_name}
@@ -3321,13 +3321,13 @@ function App() {
                       style={{ height: 38 }}
                       disabled={!selectedRecipeIngId}
                     >
-                      Voeg toe
+                      Add
                     </button>
                   </div>
                 </div>
 
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16, marginTop: 10 }}>
-                  <h4 className="form-label" style={{ marginBottom: 10 }}>Bereidingsstappen</h4>
+                  <h4 className="form-label" style={{ marginBottom: 10 }}>Preparation Steps</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {recInstructions.map((step, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: 10 }}>
@@ -3338,7 +3338,7 @@ function App() {
                           type="text"
                           className="form-input"
                           style={{ flex: 1 }}
-                          placeholder="Stap omschrijving..."
+                          placeholder="Step description..."
                           value={step}
                           onChange={e => {
                             const copy = [...recInstructions];
@@ -3363,14 +3363,14 @@ function App() {
                       style={{ alignSelf: 'flex-start', padding: '6px 12px', fontSize: 11 }}
                       onClick={() => setRecInstructions([...recInstructions, ''])}
                     >
-                      <Plus size={12} /> Voeg stap toe
+                      <Plus size={12} /> Add step
                     </button>
                   </div>
                 </div>
               </div>
               <div style={{ padding: '0 24px 24px' }}>
                 <button type="submit" className="btn-submit" style={{ width: '100%' }}>
-                  {editingRecipeId ? 'Recept Atwerken' : 'Sla recept op'}
+                  {editingRecipeId ? 'Recipe Atwerken' : 'Save recipe'}
                 </button>
               </div>
             </form>
@@ -3384,17 +3384,17 @@ function App() {
           <div className="modal-content animate-slide-up" style={{ maxWidth: 400 }}>
             <div className="modal-header">
               <h3 className="modal-title">
-                <Clock size={16} /> Dag Kopiëren
+                <Clock size={16} /> Copy Day
               </h3>
               <button className="modal-close" onClick={() => setShowCopyDayModal(false)}>Close</button>
             </div>
             <form onSubmit={handleCopyDay}>
               <div className="modal-body">
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, lineHeight: '1.4' }}>
-                  Copy all <strong>{filteredFoodLogs.length}</strong> meals from <strong>{new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</strong> naar een andere datum. De tijdstippen van nuttigen blijven behouden.
+                  Copy all <strong>{filteredFoodLogs.length}</strong> meals from <strong>{new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</strong> to another date. The consumption times will be preserved.
                 </p>
                 <div className="form-group">
-                  <label className="form-label">Kies Goaldatum</label>
+                  <label className="form-label">Select Target Date</label>
                   <input 
                     type="date" 
                     className="form-input" 

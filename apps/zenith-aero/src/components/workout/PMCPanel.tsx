@@ -55,7 +55,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
         </div>
         <div className="wd-pmc-kpi" style={{ borderColor: '#e17055' }}>
           <span className="wd-pmc-kpi__val" style={{ color: '#e17055' }}>{today.atl}</span>
-          <span className="wd-pmc-kpi__lbl">ATL · Vermoeidheid</span>
+          <span className="wd-pmc-kpi__lbl">ATL · Fatigue</span>
         </div>
         <div className="wd-pmc-kpi" style={{ borderColor: '#a29bfe' }}>
           <span className="wd-pmc-kpi__val" style={{ color: '#a29bfe' }}>{today.tsb > 0 ? '+' : ''}{today.tsb}</span>
@@ -68,7 +68,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
           <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#64748b' }} interval={13} />
           <YAxis tick={{ fontSize: 9, fill: '#64748b' }} width={28} />
           <Tooltip contentStyle={{ background: '#0d0d1a', border: 'none', borderRadius: 8, fontSize: 11 }}
-            formatter={(v: any, name: any) => [v, name === 'ctl' ? 'Fitheid (CTL)' : name === 'atl' ? 'Vermoeidheid (ATL)' : 'Vorm (TSB)']} />
+            formatter={(v: any, name: any) => [v, name === 'ctl' ? 'Fitness (CTL)' : name === 'atl' ? 'Fatigue (ATL)' : 'Form (TSB)']} />
           <ReferenceLine y={50} stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
           <ReferenceLine y={25} stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
           <ReferenceLine y={0} stroke="rgba(255,255,255,0.12)" />
@@ -88,9 +88,9 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
         </ComposedChart>
       </ResponsiveContainer>
       <div className="wd-pmc-legend" style={{ display: 'flex', gap: 16, fontSize: 10, marginTop: 8, justifyContent: 'center' }}>
-        <span style={{ color: '#00b894', fontWeight: 600 }}>— Fitheid (CTL)</span>
+        <span style={{ color: '#00b894', fontWeight: 600 }}>— Fitness (CTL)</span>
         <span style={{ color: '#e17055', fontWeight: 600 }}>— Fatigue (ATL)</span>
-        <span style={{ color: '#a29bfe', fontWeight: 600 }}>- - Vorm (TSB)</span>
+        <span style={{ color: '#a29bfe', fontWeight: 600 }}>- - Form (TSB)</span>
       </div>
     </div>
   );

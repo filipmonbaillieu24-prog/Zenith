@@ -186,7 +186,7 @@ export const SystemConsolePage: React.FC = () => {
             }}
           >
             {copied ? <Check size={14} /> : <Copy size={14} />}
-            {copied ? 'Gekopieerd!' : 'Kopieer Logs'}
+            {copied ? 'Copied!' : 'Copy Logs'}
           </button>
 
           <button
@@ -286,7 +286,7 @@ export const SystemConsolePage: React.FC = () => {
                 cursor: 'pointer'
               }}
             >
-              {cat === 'ALL' ? 'Alle' : cat}
+              {cat === 'ALL' ? 'All' : cat}
             </button>
           ))}
         </div>
@@ -338,7 +338,7 @@ export const SystemConsolePage: React.FC = () => {
           {filteredLogs.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
               <Terminal size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
-              <div>Geen logmessages gevonden.</div>
+              <div>No log messages found.</div>
             </div>
           ) : (
             filteredLogs.map((log) => {

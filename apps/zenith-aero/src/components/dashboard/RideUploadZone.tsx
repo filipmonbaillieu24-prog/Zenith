@@ -71,9 +71,9 @@ export const RideUploadZone: React.FC<RideUploadZoneProps> = ({
           marginTop: 10, 
           padding: '8px 12px', 
           borderRadius: 8, 
-          background: uploadMsg.includes('succes') ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)', 
-          border: `1px solid ${uploadMsg.includes('succes') ? 'rgba(46, 204, 113, 0.2)' : 'rgba(231, 76, 60, 0.2)'}`, 
-          color: uploadMsg.includes('succes') ? '#2ecc71' : '#e74c3c', 
+          background: uploadMsg.toLowerCase().includes('success') ? 'rgba(46, 204, 113, 0.1)' : 'rgba(231, 76, 60, 0.1)', 
+          border: `1px solid ${uploadMsg.toLowerCase().includes('success') ? 'rgba(46, 204, 113, 0.2)' : 'rgba(231, 76, 60, 0.2)'}`, 
+          color: uploadMsg.toLowerCase().includes('success') ? '#2ecc71' : '#e74c3c', 
           fontSize: 10, 
           fontWeight: 700, 
           textAlign: 'center' 

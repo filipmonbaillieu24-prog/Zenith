@@ -51,14 +51,14 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
 
     // Classificeer model
     let model = "Ongebalanceerd";
-    let desc = "Your training distribution does not yet fit a classic pattern. Normal when just starting out fietst.";
+    let desc = "Your training distribution does not yet fit a classic pattern. Normal when just starting to ride.";
     let tip = "Try keeping endurance rides consciously in Zone 2 and make hard days count.";
     let color = "#ffeaa7";
 
     if (pctLID >= 75 && pctMID <= 12 && pctHID >= 5) {
       model = "Gepolariseerd (Polarized)";
       color = "#34d399";
-      desc = "Classic 80/20 distribution! You do most work in easy endurance zones (Zone 1-2). vol voor te gaan op intensieve dagen.";
+      desc = "Classic 80/20 distribution! You do most work in easy endurance zones (Zone 1-2) to save energy for intensive days.";
       tip = "Most efficient method to elevate your aerobic threshold without fatigue.";
     } else if (pctLID >= 60 && pctMID >= 15 && pctMID <= 30 && pctHID < pctMID) {
       model = "Piramide (Pyramidal)";
@@ -69,7 +69,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
       model = "Threshold / Sweet Spot Focus";
       color = "#fbbf24";
       desc = "High volume in Sweet Spot/Threshold. Effective but can lead to plateau.dat je constant licht vermoeid bent.";
-      tip = "Probeer more rides echt rustig te rijden (Zone 2) om je vetverbranding op te bouwen, zodat je frisser bent voor gerichte intervallen.";
+      tip = "Try to ride more rides easy (Zone 2) to build your aerobic base so you are fresher for targeted intervals.";
     } else if (pctLID >= 85 && pctHID < 3) {
       model = "Basis & Recovery";
       color = "#a29bfe";
@@ -78,7 +78,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
     } else if (pctHID >= 25) {
       model = "Hoge Intensiteit (HIIT)";
       color = "#f87171";
-      desc = "Extremely intensive training! More than 25% spent in Zone 5+.maar vergroot de kans op overtraining aanzienlijk.";
+      desc = "Extremely intensive training! More than 25% spent in Zone 5+, which significantly increases overtraining risk.";
       tip = "Schedule a deload week and replace half of intensive sessions with Zone 2 rides.";
     }
 

@@ -52,7 +52,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     } else if (tsb > 5) {
       return `Hello ${name}. You are well rested and your form is excellent (TSB: +${Math.round(tsb)}). Today is a great day for an intensive workoutrvaltraining of een lange duurride!`;
     } else {
-      return `Hello ${name}. Your training build is steady and controlled. Keep respecting your zones and follow guidance to prevent injuryn.`;
+      return `Hello ${name}. Your training build is steady and controlled. Keep respecting your zones and follow guidance to prevent injury.`;
     }
   };
 
@@ -224,12 +224,12 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
               style={{ background: 'rgba(0, 0, 0, 0.3)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', borderRadius: 8, padding: '8px 12px', fontSize: 12, fontFamily: 'inheride', outline: 'none' }}
             >
               <option value={45}>45 minuten</option>
-              <option value={60}>60 minuten (1 uur)</option>
+              <option value={60}>60 minutes (1 hour)</option>
               <option value={75}>75 minuten (1u 15m)</option>
-              <option value={90}>90 minuten (1,5 uur)</option>
-              <option value={120}>120 minuten (2 uur)</option>
-              <option value={150}>150 minuten (2,5 uur)</option>
-              <option value={180}>180 minuten (3 uur)</option>
+              <option value={90}>90 minutes (1.5 hours)</option>
+              <option value={120}>120 minutes (2 hours)</option>
+              <option value={150}>150 minutes (2.5 hours)</option>
+              <option value={180}>180 minutes (3 hours)</option>
             </select>
           </div>
 
@@ -319,7 +319,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
                       <span style={{ color: '#cbd5e1' }}>{Math.round(step.duration_seconds / 60)} min</span>
                       <span style={{ color: '#64748b' }}>|</span>
                       <span style={{ color: '#94a3b8' }}>
-                        Doel: {step.target_power_min > 0 ? `${step.target_power_min}-${step.target_power_max}W` : 'Maximum'}
+                        Target: {step.target_power_min > 0 ? `${step.target_power_min}-${step.target_power_max}W` : 'Maximum'}
                         {step.target_hr_min > 0 && ` (${step.target_hr_min}-${step.target_hr_max} bpm)`}
                       </span>
                     </div>
@@ -357,7 +357,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       {advice.length === 0 ? (
         <div className="wd-coach-empty-state">
           <CheckCircle2 size={24} strokeWidth={1.5} style={{ color: '#cbd5e1', marginBottom: 8 }} />
-          <p>Geen openstaande adviezen. Goed bezig!</p>
+          <p>No pending advice. Keep up the good work!</p>
         </div>
       ) : (
         <div className="wd-coach-list">

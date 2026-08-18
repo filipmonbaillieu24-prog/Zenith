@@ -390,7 +390,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
                     <div>
                       <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Sensor Integration</h4>
                       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                        Connects directly with Bluetooth (BLE) heart rate, cadence, and power withers.
+                        Connects directly with Bluetooth (BLE) heart rate, cadence, and power meters.
                       </p>
                     </div>
                   </div>

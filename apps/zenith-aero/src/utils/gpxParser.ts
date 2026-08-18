@@ -100,7 +100,7 @@ export function parseGPX(content: string): RidePoint[] {
     return points;
   }
 
-  throw new Error('Geen geldige GPX of TCX data gevonden in het bestand.');
+  throw new Error('No valid GPX or TCX data found in the file.');
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

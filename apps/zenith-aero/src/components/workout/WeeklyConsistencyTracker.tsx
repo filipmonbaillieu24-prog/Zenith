@@ -54,7 +54,7 @@ export const WeeklyConsistencyTracker: React.FC<WeeklyConsistencyTrackerProps> =
       <div className="wd-section-card__head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="wd-section-card__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Calendar size={13} style={{ color: '#6c5ce7' }} />
-          Wekelijkse Consistentie (12 Weken)
+          Weekly Consistency (12 Weeks)
         </span>
       </div>
 

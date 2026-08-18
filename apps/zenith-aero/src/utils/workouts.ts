@@ -84,7 +84,7 @@ export function generateWorkout(
   switch (type) {
     case 'recovery':
       title = 'Actief Recovery (Active Recovery)';
-      description = 'Een korte, zeer lichte ride gericht op het stimuleren van de doorbloeding om spierherstel te bevorderen.';
+      description = 'A short, very light ride aimed at stimulating blood flow to promote muscle recovery.';
       
       // Warm-up: 15% of duration
       const recWu = Math.round(durationSeconds * 0.15);
@@ -99,7 +99,7 @@ export function generateWorkout(
 
     case 'endurance':
       title = 'Aerobe Basisduur (Endurance)';
-      description = 'De klassieke duurride. Essentieel voor de opbouw van je aerobe basissysteem en vetverbranding.';
+      description = 'The classic endurance ride. Essential for building your aerobic baseline system and fat oxidation.';
       
       // Warm-up: 10 min
       const endWu = Math.min(600, Math.round(durationSeconds * 0.15));
@@ -114,7 +114,7 @@ export function generateWorkout(
 
     case 'sweetspot':
       title = 'Sweet Spot Intervallen';
-      description = 'Rijden op 88% van je FTP. Dit levert maximale aerobe winst op with minimale opbouw van vermoeidheid.';
+      description = 'Riding at 88% of your FTP. This delivers maximal aerobic gains with minimal fatigue build-up.';
       
       // Warm-up: 15%
       const ssWu = Math.min(600, Math.round(durationSeconds * 0.15));
@@ -145,7 +145,7 @@ export function generateWorkout(
 
     case 'threshold':
       title = 'Threshold Intervallen (FTP)';
-      description = 'Zware intervallen exact op je anaerobe drempel (FTP) om je vermogen om verzuring te verdragen te vergroten.';
+      description = 'Hard intervals exactly at your anaerobic threshold (FTP) to increase your ability to tolerate lactate.';
       
       // Warm-up: Ramping up to 70%
       const thWu = Math.min(720, Math.round(durationSeconds * 0.18));
@@ -171,7 +171,7 @@ export function generateWorkout(
       break;
     case 'vo2max': {
       title = 'VO2max Intervallen';
-      description = 'Korte, explosieve intervals op 110–120% FTP om je maximale zuurstofopname te verhogen. Deze training geeft de sterkste aanpassing van je aerobe systeem.';
+      description = 'Short, explosive intervals at 110-120% FTP to increase your maximal oxygen uptake. This workout provides the strongest adaptation of your aerobic system.';
 
       const voWu = Math.min(720, Math.round(durationSeconds * 0.20));
       const voCd = Math.min(480, Math.round(durationSeconds * 0.12));

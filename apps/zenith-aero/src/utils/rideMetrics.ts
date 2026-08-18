@@ -58,7 +58,7 @@ export function calcBestPowerEfforts(points: RidePoint[]): BestEfforts {
 
 /**
  * Finds the best average speed (km/h) for each standard duration.
- * Used as a progression metric for riders without a power wither.
+ * Used as a progression metric for riders without a power meter.
  */
 export function calcBestSpeedEfforts(points: RidePoint[]): BestSpeedEfforts {
   const withSpeed = points.filter(p => p.speed != null && p.time != null);
@@ -228,7 +228,7 @@ export function calcTSS(durationSec: number, normPower: number, ftp: number): nu
 
 /**
  * Zoekt het gewicht van de gebruiker op voor een specifieke datum.
- * Kijkt in de weightHistory array van het profiel naar de meest recente withing
+ * Kijkt in de weightHistory array van het profiel naar de meest recente measurement
  * die op of vóór de meegegeven datum (in milliseconds) ligt.
  */
 export function getWeightForDate(profile: any, dateMs: number): number | undefined {
@@ -236,7 +236,7 @@ export function getWeightForDate(profile: any, dateMs: number): number | undefin
     // Sorteer historie op datum (nieuw naar oud)
     const sorted = [...profile.weightHistory].sort((a, b) => b.date.localeCompare(a.date));
     const targetDate = new Date(dateMs).toISOString().slice(0, 10);
-    // Zoek de eerste withing die <= targetDate is
+    // Zoek de eerste measurement die <= targetDate is
     const entry = sorted.find(e => e.date <= targetDate);
     if (entry) return entry.weight;
   }
@@ -274,7 +274,7 @@ export function cyclingCategory(wpkg: number): { label: string; color: string } 
  *   Without power: EF = avgSpeed / avgHR   (km/h per bpm — normalized)
  *
  * Increasing EF over time is the clearest sign of aerobic improvement
- * for riders without a power wither.
+ * for riders without a power meter.
  */
 export function calcEfficiencyFactor(
   normPowerOrSpeed: number,
@@ -415,7 +415,7 @@ export function calcPowerUnderFatigue(
     const count = right - left + 1;
     const avg = sum / count;
 
-    // Dynamische vermoeidheidsthreshold: 1000 kJ voor lange rideten, 50% van totaal kJ voor kortere rideten
+    // Dynamische vermoeidheidsthreshold: 1000 kJ voor lange rides, 50% van totaal kJ voor kortere rides
     const fatigueThreshold = kjAccum > 1200 ? 1000 : (kjAccum * 0.5);
     const startKJ = kjAtPoint[left];
     if (startKJ < fatigueThreshold) {
@@ -758,7 +758,7 @@ export function computeRide(
   // 3. Phenotype
   const phenotype = determinePhenotype(bestEfforts, opts.weight);
 
-  // 4. Cardiac Cost (beats per wither)
+  // 4. Cardiac Cost (beats per meter)
   const cardiacCost = avgHR && duration > 0 && distance > 0
     ? parseFloat(((avgHR * (duration / 60)) / (distance * 1000)).toFixed(4))
     : undefined;

@@ -26,7 +26,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const navItems = [
     { key: 'gear',        icon: <Bike size={13} />, label: 'Mijn Gear' },
-    { key: 'zones',       icon: <UserCog size={13} />, label: 'Profiel & Zones' },
+    { key: 'zones',       icon: <UserCog size={13} />, label: 'Profile & Zones' },
   ] as const;
 
   return (
@@ -68,7 +68,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         {activeSubTab === 'zones' && (
           <div className="wd-main-single">
             <div className="wd-coach-header" style={{ marginBottom: 16 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>Profiel & Zones</h2>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>Profile & Zones</h2>
               <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Beheer je fysiologische grenzen, trainingszones en persoonsgegevens.</p>
             </div>
             <ProfilePanel

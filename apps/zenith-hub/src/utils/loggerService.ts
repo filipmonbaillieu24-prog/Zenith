@@ -47,7 +47,7 @@ class LoggerService {
       if (event.data && typeof event.data === 'object') {
         const { type } = event.data;
         if (type === 'native-weight-received') {
-          this.addLog('ble', 'Scale', `[Weegschaal] Gewicht ontvangen: ${event.data.weight} kg (Stabiel: ${event.data.is_stable ? 'Ja' : 'Nee'})`, event.data);
+          this.addLog('ble', 'Scale', `[Weegschaal] Weight received: ${event.data.weight} kg (Stable: ${event.data.is_stable ? 'Yes' : 'No'})`, event.data);
         } else if (type === 'native-metrics-received') {
           this.addLog('ble', 'Scale', `[Weegschaal] Lichaamsanalyse metrics ontvangen`, event.data);
         } else if (type === 'colmi-sync-status-update') {
@@ -56,7 +56,7 @@ class LoggerService {
           if (event.data.success) {
             this.addLog('sync', 'Colmi', `[Colmi] Synchronisatie succesvol afgerond`, event.data);
           } else {
-            this.addLog('error', 'Colmi', `[Colmi] Synchronisatie fout: ${event.data.error || 'Onbekend'}`, event.data);
+            this.addLog('error', 'Colmi', `[Colmi] Synchronization error: ${event.data.error || 'Unknown'}`, event.data);
           }
         }
       }
@@ -90,7 +90,7 @@ class LoggerService {
         listen<any>('native-weight-received', (event) => {
           const payload = event.payload;
           if (payload && payload.weight) {
-            this.addLog('ble', 'Scale', `[Weegschaal] Native BLE Gewichtswithing: ${payload.weight} kg (Stabiel: ${payload.is_stable ? 'JA' : 'Nee'})`, payload);
+            this.addLog('ble', 'Scale', `[Weegschaal] Native BLE Gewichtsmeasurement: ${payload.weight} kg (Stabiel: ${payload.is_stable ? 'JA' : 'Nee'})`, payload);
           }
         });
 
@@ -102,7 +102,7 @@ class LoggerService {
           }
         });
       }).catch((err) => {
-        console.error("Fout bij registreren van globale Tauri event listeners in LoggerService:", err);
+        console.error("Error registering global Tauri event listeners in LoggerService:", err);
       });
     }
   }

@@ -56,7 +56,7 @@ async function fetchUrl(url: string): Promise<string> {
     return await invoke<string>('fetch_route', { url });
   } catch {
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Server fout (${res.status})`);
+    if (!res.ok) throw new Error(`Server error (${res.status})`);
     return res.text();
   }
 }

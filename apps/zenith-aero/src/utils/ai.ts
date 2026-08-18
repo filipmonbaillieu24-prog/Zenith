@@ -36,7 +36,7 @@ export async function sendAIChat(
   const settings = getAISettings();
 
   if (settings.provider === 'disabled') {
-    throw new Error('AI assistent is uitgeschakeld in de instellingen.');
+    throw new Error('AI assistant is disabled in settings.');
   }
 
   const systemMessage: AIChatMessage = {
@@ -61,7 +61,7 @@ export async function sendAIChat(
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama fout: ${response.statusText}. Controleer of Ollama lokaal actief is.`);
+      throw new Error(`Ollama error: ${response.statusText}. Make sure Ollama is running locally.`);
     }
 
     const data = await response.json();
@@ -86,7 +86,7 @@ export async function sendAIChat(
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `OpenAI API fout: ${response.statusText}`);
+      throw new Error(errData.error?.message || `OpenAI API error: ${response.statusText}`);
     }
 
     const data = await response.json();

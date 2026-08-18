@@ -15,7 +15,7 @@ export interface RidePoint {
   lat?:      number;
   lng?:      number;
   ele?:      number;   // m
-  distance?: number;   // cumulative withers
+  distance?: number;   // cumulative meters
   power?:    number;   // watts
   hr?:       number;   // bpm
   cadence?:  number;   // rpm
@@ -56,7 +56,7 @@ export interface RideSummary {
   avgSpeed:         number;   // km/h
   maxSpeed?:        number;   // km/h
 
-  // Power (optional — only if device has power wither)
+  // Power (optional — only if device has power meter)
   avgPower?:        number;   // W
   normPower?:       number;   // W — Normalized Power
   maxPower?:        number;   // W
@@ -107,7 +107,7 @@ export interface RideSummary {
   fatigued5minPower?:     number;    // Beste 5 min vermogen (vermoeid, >=1000 kJ)
   fresh20minPower?:       number;    // Beste 20 min vermogen (fris, <1000 kJ)
   fatigued20minPower?:    number;    // Beste 20 min vermogen (vermoeid, >=1000 kJ)
-  cardiacCost?:           number;    // Cardiale kosten per wither (beats/wither)
+  cardiacCost?:           number;    // Cardiale kosten per meter (beats/meter)
   climbingAvgHR?:         number;    // Averagee hartslag tijdens beklimmingen
   activeHRDecayRate?:     number;    // Speed van hartslagherstel tijdens actieve rust (bpm/min)
   cadenceEfficiencySweetspot?: number; // Optimale cadans with laagste hartslag/vermogen ratio

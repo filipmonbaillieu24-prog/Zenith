@@ -83,36 +83,36 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
 
     let type = "All-rounder";
     let icon = "🚴";
-    let desc = "You completed een gebalanceerd profiel. Je bent veelzijdig inzetbaar en kunt zowel op het vlakke als in korte heuvels goed uit de voeten.";
-    let strength = "Veelzijdigheid en aanpassingsvermogen.";
-    let weaknessTip = "Focus op drempeltraining (FTP) om je algehele motor groter te maken, of sprintwerk om een echt wapen te ontwikkelen.";
+    let desc = "You have a balanced profile. You are highly versatile and perform well on flat roads as well as short hills.";
+    let strength = "Versatility and adaptability.";
+    let weaknessTip = "Focus on threshold training (FTP) to increase your aerobic engine, or sprint work to develop a real weapon.";
 
     const maxIdx = Math.max(sprintIdx, anaerobicIdx, vo2maxIdx, ftpIdx);
 
     if (maxIdx === sprintIdx && sprintIdx > ftpIdx + 15) {
       type = "Sprinter";
       icon = "⚡";
-      desc = "Jouw fysiologie is gebouwd op pure snelheid en explosiviteit. Je beschikt over een uitstekende spiermassa with snelle spiervezels.";
-      strength = "Explosieve eindsprint en korte demarrages.";
-      weaknessTip = "Rijd langere rideten op een rustig tempo om je aerobe motor te vergroten, zodat je fris aan de eindsprint begint.";
+      desc = "Your physiology is built on pure speed and explosiveness. You have excellent muscle mass with fast-twitch muscle fibers.";
+      strength = "Explosive final sprint and short accelerations.";
+      weaknessTip = "Ride longer rides at a relaxed pace to grow your aerobic engine, so you start the final sprint fresh.";
     } else if (maxIdx === anaerobicIdx && anaerobicIdx > ftpIdx + 10) {
       type = "Puncheur";
       icon = "⛰️";
-      desc = "Korte, steile hellingen zijn jouw absolute favoriet. Je kunt extreem diep gaan in het anaerobe gebied (1 tot 2 minuten voluit).";
-      strength = "Demarrages op heuvels en korte, intensieve inspanningen.";
-      weaknessTip = "Train je vetverbranding with rustige duurrideten om je herstel tussen opeenvolgende heuvels te versnellen.";
+      desc = "Short, steep hills are your absolute favorite. You can go extremely deep into the anaerobic zone (1 to 2 minutes all-out).";
+      strength = "Accelerations on hills and short, intensive efforts.";
+      weaknessTip = "Train your fat oxidation with relaxed endurance rides to speed up your recovery between consecutive hills.";
     } else if (maxIdx === vo2maxIdx && vo2maxIdx > sprintIdx + 10) {
-      type = "Klimmer";
+      type = "Climber";
       icon = "🧗";
-      desc = "You completed een uitstekende verhouding tussen je VO2max en je gewicht. Je blinkt uit zodra de weg langere tijd omhoog loopt.";
-      strength = "Langere beklimmingen en opeenvolgende tempoversnellingen.";
-      weaknessTip = "Doe krachttraining op de fiets (lage cadans, hoog vermogen) om meer spierkracht te ontwikkelen voor vlakkere stukken.";
+      desc = "You have an excellent ratio between VO2max and weight. You excel as soon as the road goes uphill for longer periods.";
+      strength = "Longer climbs and successive tempo accelerations.";
+      weaknessTip = "Do strength training on the bike (low cadence, high power) to develop more muscular force for flatter sections.";
     } else if (maxIdx === ftpIdx && ftpIdx > sprintIdx + 10) {
-      type = "Tijdridespecialist";
+      type = "Time Trialist";
       icon = "⏱️";
-      desc = "Jij bent een dieselmotor. Je kunt een hoog vermogen urenlang vasthouden en bent perfect in staat om een strak tempo te pacen.";
-      strength = "Lange solorideten, hard rijden op het vlakke en tempohardheid.";
-      weaknessTip = "Voeg korte, explosieve sprintjes toe aan je trainingen om je spieren te leren reageren op abrupte tempowisselingen.";
+      desc = "You are a diesel engine. You can maintain high power for hours and are perfectly capable of pacing a steady tempo.";
+      strength = "Long solo rides, riding fast on the flats, and tempo resilience.";
+      weaknessTip = "Add short, explosive sprints to your workouts to teach your muscles to respond to abrupt tempo changes.";
     }
 
     const catSprint = getCategoryLabel(wkg.s5, thresholds.s5);
@@ -138,7 +138,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
   if (!profile) {
     return (
       <div className="pp-pheno-card">
-        <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center' }}>Upload rides with power wither data to calculate your phenotype.</p>
+        <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center' }}>Upload rides with power data to calculate your phenotype.</p>
       </div>
     );
   }
@@ -146,7 +146,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
   return (
     <div className="pp-pheno-card">
       <div className="pp-pheno-header">
-        <h3 className="pp-pheno-title">🧬 Fysiologische Profilering (Fenotype)</h3>
+        <h3 className="pp-pheno-title">🧬 Physiological Profiling (Phenotype)</h3>
         <span className="pp-pheno-subtitle">Classification based on your all-time power profile ({gender === 'female' ? 'Female' : 'Male'})</span>
       </div>
 
@@ -197,7 +197,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
                   boxShadow: '0 0 6px rgba(255,255,255,0.9)',
                   zIndex: 10
                 }} 
-                title={`Jouw score: ${s.val} W/kg (${s.category})`}
+                title={`Your score: ${s.val} W/kg (${s.category})`}
               />
             </div>
           </div>
@@ -206,7 +206,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
 
       <div className="pp-pheno-insights">
         <div className="pp-insight-block">
-          <span className="pp-insight-lbl">💪 Grootste kracht:</span>
+          <span className="pp-insight-lbl">💪 Greatest strength:</span>
           <p className="pp-insight-val">{profile.strength}</p>
         </div>
         <div className="pp-insight-block" style={{ marginTop: 8 }}>

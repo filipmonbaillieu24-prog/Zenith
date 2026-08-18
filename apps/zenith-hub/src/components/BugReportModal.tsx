@@ -81,11 +81,11 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
     
     Array.from(files).forEach(file => {
       if (!file.type.startsWith('image/')) {
-        alert(`Bestand "${file.name}" is not an image file.`);
+        alert(`File "${file.name}" is not an image file.`);
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        alert(`Afbeelding "${file.name}" is te groot (max 5MB).`);
+        alert(`Image "${file.name}" is too large (max 5MB).`);
         return;
       }
       newFiles.push(file);
@@ -127,7 +127,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) {
-      alert('Vul a.u.b. alle verplichte velden in.');
+      alert('Please fill out all required fields.');
       return;
     }
 
@@ -217,26 +217,26 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                     <option value="vigor">Zenith Vigor (Extensie)</option>
                     <option value="kratos">Zenith Kratos (Extensie)</option>
                     <option value="fuel">Zenith Fuel (Extensie)</option>
-                    <option value="mobiel">Zenith Mobiel (APK)</option>
-                    <option value="other">Overig</option>
+                    <option value="mobiel">Zenith Mobile (APK)</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
 
                 <div className="bug-form-group">
-                  <label htmlFor="problemType">Type probleem *</label>
+                  <label htmlFor="problemType">Problem Type *</label>
                   <select 
                     id="problemType" 
                     value={problemType} 
                     onChange={(e) => setProblemType(e.target.value)}
                     required
                   >
-                    <option value="ui">UI / Visuele Bug</option>
-                    <option value="functional">Functionaliteit / Crash</option>
-                    <option value="performance">Prestaties / Traagheid</option>
-                    <option value="sync">Data-synchronisatie</option>
-                    <option value="bluetooth">Bluetooth / BLE Koppeling</option>
+                    <option value="ui">UI / Visual Bug</option>
+                    <option value="functional">Functionality / Crash</option>
+                    <option value="performance">Performance / Sluggishness</option>
+                    <option value="sync">Data-synchronization</option>
+                    <option value="bluetooth">Bluetooth / BLE Coupling</option>
                     <option value="feature">Suggestie / Feature Request</option>
-                    <option value="other">Overig</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
               </div>
@@ -244,7 +244,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
               {/* Form Row: Severity & Title */}
               <div className="bug-form-row">
                 <div className="bug-form-group severity-group">
-                  <label htmlFor="severity">Urgentie *</label>
+                  <label htmlFor="severity">Severity *</label>
                   <div className="severity-selector">
                     {['low', 'medium', 'high', 'critical'].map((sev) => (
                       <button
@@ -253,10 +253,10 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                         className={`severity-btn ${sev} ${severity === sev ? 'active' : ''}`}
                         onClick={() => setSeverity(sev)}
                       >
-                        {sev === 'low' && 'Laag'}
+                        {sev === 'low' && 'Low'}
                         {sev === 'medium' && 'Medium'}
-                        {sev === 'high' && 'Hoog'}
-                        {sev === 'critical' && 'Kritiek'}
+                        {sev === 'high' && 'High'}
+                        {sev === 'critical' && 'Critical'}
                       </button>
                     ))}
                   </div>
@@ -264,7 +264,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
               </div>
 
               <div className="bug-form-group">
-                <label htmlFor="title">Titel / Korte omschrijving *</label>
+                <label htmlFor="title">Title / Short description *</label>
                 <input 
                   type="text" 
                   id="title" 
@@ -277,7 +277,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
               </div>
 
               <div className="bug-form-group">
-                <label htmlFor="description">Gedetailleerde beschrijving *</label>
+                <label htmlFor="description">Detailed description *</label>
                 <textarea 
                   id="description" 
                   placeholder="Describe the issue, steps to reproduce, and expected outcome..."
@@ -290,7 +290,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
 
               {/* Image Upload Zone */}
               <div className="bug-form-group">
-                <label>Screenshots / Foto's uploaden (optioneel, meerdere toegestaan)</label>
+                <label>Upload Screenshots / Photos (optional, multiple allowed)</label>
                 
                 {screenshotPreviews.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
@@ -335,7 +335,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                 >
                   <Upload size={20} className="bug-upload-icon" style={{ marginBottom: 6 }} />
                   <p style={{ margin: '0 0 4px', fontSize: 11 }}>Drag & drop images here or click to browse</p>
-                  <span style={{ fontSize: 9, opacity: 0.6 }}>Maximale grootte: 5MB per bestand (PNG, JPG, GIF)</span>
+                  <span style={{ fontSize: 9, opacity: 0.6 }}>Max size: 5MB per file (PNG, JPG, GIF)</span>
                   <input 
                     type="file" 
                     ref={fileInputRef}

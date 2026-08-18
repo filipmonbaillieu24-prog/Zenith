@@ -40,9 +40,9 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
         {/* Tijdspanne Filter */}
         <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.02)', padding: '3px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)', width: 'fit-content' }}>
           {([
-            { label: '30 Dagen', value: 30 },
-            { label: '90 Dagen', value: 90 },
-            { label: '365 Dagen', value: 365 },
+            { label: '30 Days', value: 30 },
+            { label: '90 Days', value: 90 },
+            { label: '365 Days', value: 365 },
             { label: 'All-Time', value: 'all' },
           ] as const).map((opt) => (
             <button
@@ -121,7 +121,7 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Vermoeidheid (ATL)</span>
+              <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Fatigue (ATL)</span>
               <span style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 700 }}>Recente stress</span>
             </div>
           </div>

@@ -71,7 +71,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
   const [targetDate, setTargetDate] = useState<string>(toLocalYYYYMMDD(new Date()));
 
   // Form State
-  const [formTitle, setFormTitle] = useState('Sweet Spot Training');
+  const [formTitle, setFormTitle] = useState('Sweet Spot Workout');
   const [formType, setFormType] = useState<PlannedWorkoutItem['type']>('sweetspot');
   const [formDuration, setFormDuration] = useState(60);
   const [formTSS, setFormTSS] = useState(65);
@@ -220,7 +220,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
     return days;
   }, [year, month]);
 
-  // Map voltooide rideten en geplande workouts per dag
+  // Map voltooide rides en geplande workouts per dag
   const ridesByDate = useMemo(() => {
     const map = new Map<string, RideSummaryWithBests[]>();
     for (const r of rides) {
@@ -376,7 +376,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
               </strong>
             </div>
             <div className="wd-calendar-kpi">
-              <span className="wd-calendar-kpi__label">Vermoeidheid (ATL +35d)</span>
+              <span className="wd-calendar-kpi__label">Fatigue (ATL +35d)</span>
               <strong className="wd-calendar-kpi__val" style={{ color: '#ff7675' }}>
                 {Math.round(latestSimPoint.atl)}
               </strong>
@@ -403,7 +403,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
               <ReferenceLine x={new Date().toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} stroke="#cbd5e1" strokeDasharray="3 3" label={{ value: 'Today', fill: '#cbd5e1', fontSize: 10 }} />
               <Bar dataKey="tss" fill="rgba(255,255,255,0.08)" radius={[2, 2, 0, 0]} name="Dagelijkse TSS" />
               <Line type="monotone" dataKey="ctl" stroke="#cbd5e1" strokeWidth={2} dot={false} name="Fitheid (CTL)" />
-              <Line type="monotone" dataKey="atl" stroke="#ff7675" strokeWidth={1.5} dot={false} name="Vermoeidheid (ATL)" />
+              <Line type="monotone" dataKey="atl" stroke="#ff7675" strokeWidth={1.5} dot={false} name="Fatigue (ATL)" />
               <Line type="monotone" dataKey="tsb" stroke="#fdcb6e" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Vorm (TSB)" />
             </ComposedChart>
           </ResponsiveContainer>
@@ -494,7 +494,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                     draggable
                     onDragStart={(e) => handleDragStart(e, p.id)}
                     onClick={() => handleOpenEditModal(p)}
-                    title={`Planned: ${p.title}\nDuration: ${p.durationMinutes} min\nWorkload: ${p.plannedTSS} TSS\nNotes: ${p.notes || 'none'}\nClick to edit, sleep om te verplaatsen.`}
+                    title={`Planned: ${p.title}\nDuration: ${p.durationMinutes} min\nWorkload: ${p.plannedTSS} TSS\nNotes: ${p.notes || 'none'}\nClick to edit, drag to reschedule.`}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '2px', padding: '6px 8px' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -520,7 +520,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
         <div className="wd-modal-backdrop animate-fade-in" onClick={() => setIsModalOpen(false)}>
           <div className="wd-modal-card" onClick={e => e.stopPropagation()}>
             <div className="wd-modal-header">
-              <h3>{editingWorkout ? 'Workout Edit' : 'Nieuwe Workout Plannen'}</h3>
+              <h3>{editingWorkout ? 'Edit Workout' : 'Plan New Workout'}</h3>
               <button className="wd-modal-close" onClick={() => setIsModalOpen(false)}>✕</button>
             </div>
 
@@ -545,7 +545,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
               </div>
 
               <div className="wd-form-group">
-                <label>Type Training</label>
+                <label>Workout Type</label>
                 <select
                   value={formType}
                   onChange={e => {
@@ -564,7 +564,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                   <option value="sweetspot">🟡 Sweet Spot Intervallen (Z3/Z4)</option>
                   <option value="threshold">🔴 Threshold / FTP (Z4)</option>
                   <option value="vo2max">💜 VO2Max Intervallen (Z5)</option>
-                  <option value="custom">⚡ Aangepast</option>
+                  <option value="custom">⚡ Custom</option>
                 </select>
               </div>
 

@@ -112,7 +112,7 @@ export const CriticalPowerCurve: React.FC<CriticalPowerCurveProps> = ({ rides, w
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Geen rideten with vermogenswithergegevens gevonden in de geselecteerde range.
+          No rides with power metrics data found in the selected range.
         </p>
       </div>
     );

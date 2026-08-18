@@ -44,7 +44,7 @@ interface RoadNode {
 }
 
 /**
- * From way geowithries returned by Overpass, build a map of road nodes
+ * From way geometrics returned by Overpass, build a map of road nodes
  * keyed by rounded coordinates. Nodes shared between multiple ways
  * (intersections) receive a higher count.
  */

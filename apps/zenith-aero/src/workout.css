@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   WORKOUT.CSS — Globale App Shell en Page Layouts
-   Uitgeschreven klassennamen ter voorkoming van parseringsfouten in de browser
+   WORKOUT.CSS — Global App Shell and Page Layouts
+   Explicit class names to prevent browser parsing errors
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
   --text-main: #f8fafc;

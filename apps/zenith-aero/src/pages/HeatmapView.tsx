@@ -94,12 +94,12 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ isPro = false, onRequestProMo
     <div className="wd-section-card wd-heatmap-card">
       <div className="wd-heatmap-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="wd-section-card__title">
-          🗺️ {isPro ? `Alle routes (${tracks.length})` : `Routes afgelopen 30d (${tracks.length})`}
+          🗺️ {isPro ? `All routes (${tracks.length})` : `Routes last 30d (${tracks.length})`}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {!isPro && (
             <button
-              onClick={() => onRequestProModal && onRequestProModal('All-Time Heatmap', 'Upgrade naar Zenith Pro om al je gereden wegen ooit samen te voegen op 1 glowing kaart.')}
+              onClick={() => onRequestProModal && onRequestProModal('All-Time Heatmap', 'Upgrade to Zenith Pro to merge all your ridden roads into 1 glowing map.')}
               style={{
                 background: 'linear-gradient(135deg, #cbd5e1 0%, #64748b 100%)',
                 border: 'none', borderRadius: 6, color: '#09090b', fontSize: 10, fontWeight: 900,
@@ -110,7 +110,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ isPro = false, onRequestProMo
             </button>
           )}
           <span style={{ fontSize: 11, color: '#94a3b8' }}>
-            Blauwer = recenter · Hover voor naam
+            Bluer = more recent · Hover for name
           </span>
         </div>
       </div>
@@ -149,7 +149,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ isPro = false, onRequestProMo
             <span>{fmtDate(hovered.date)}</span>
           </>
         ) : (
-          <span style={{ color: '#3a3a4a' }}>Beweeg over een route om details te zien</span>
+          <span style={{ color: '#3a3a4a' }}>Hover over a route to view details</span>
         )}
       </div>
     </div>

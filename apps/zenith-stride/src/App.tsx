@@ -361,7 +361,7 @@ export function App() {
 
           <div className="filter-chips">
             {[
-              { id: 'all', label: 'Alle Lopen' },
+              { id: 'all', label: 'All Runs' },
               { id: 'treadmill', label: 'Loopband' },
               { id: 'long_run', label: 'Lange Duurloop' },
               { id: 'intervals', label: 'Intervallen' },
@@ -579,10 +579,10 @@ export function App() {
 
               {selectedRunDetail.splits && selectedRunDetail.splits.length > 0 && (
                 <div className="detail-splits-section">
-                  <h4>Kilowither Splits Breakdown</h4>
+                  <h4>Kilometer Splits Breakdown</h4>
                   <div className="splits-table">
                     <div className="split-header">
-                      <span>Kilowither</span>
+                      <span>Kilometer</span>
                       <span>Pace min/km</span>
                       <span>Avg Heart Rate</span>
                       <span>Hoogte</span>

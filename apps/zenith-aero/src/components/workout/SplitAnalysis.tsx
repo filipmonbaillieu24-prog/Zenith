@@ -17,15 +17,15 @@ export const SplitAnalysis: React.FC<SplitAnalysisProps> = ({ ride }) => {
 
   if (ride.firstHalfPower != null && ride.secondHalfPower != null) {
     const diff = ride.secondHalfPower - ride.firstHalfPower;
-    rows.push({ label: 'Gem. vermogen', first: `${ride.firstHalfPower}W`, second: `${ride.secondHalfPower}W`, diff, unit: 'W' });
+    rows.push({ label: 'Avg. Power', first: `${ride.firstHalfPower}W`, second: `${ride.secondHalfPower}W`, diff, unit: 'W' });
   }
   if (ride.firstHalfHR != null && ride.secondHalfHR != null) {
     const diff = ride.secondHalfHR - ride.firstHalfHR;
-    rows.push({ label: 'Gem. hartslag', first: `${ride.firstHalfHR} bpm`, second: `${ride.secondHalfHR} bpm`, diff, unit: 'bpm', invertGood: true });
+    rows.push({ label: 'Avg. Heart Rate', first: `${ride.firstHalfHR} bpm`, second: `${ride.secondHalfHR} bpm`, diff, unit: 'bpm', invertGood: true });
   }
   if (ride.firstHalfSpeed != null && ride.secondHalfSpeed != null) {
     const diff = ride.secondHalfSpeed - ride.firstHalfSpeed;
-    rows.push({ label: 'Gem. snelheid', first: `${ride.firstHalfSpeed} km/h`, second: `${ride.secondHalfSpeed} km/h`, diff, unit: 'km/h' });
+    rows.push({ label: 'Avg. Speed', first: `${ride.firstHalfSpeed} km/h`, second: `${ride.secondHalfSpeed} km/h`, diff, unit: 'km/h' });
   }
 
   if (rows.length === 0) return null;
@@ -44,7 +44,7 @@ export const SplitAnalysis: React.FC<SplitAnalysisProps> = ({ ride }) => {
             background: Math.abs(fatigueScore) < 3 ? 'rgba(0,184,148,0.15)' : fatigueScore > 5 ? 'rgba(214,48,49,0.15)' : 'rgba(253,203,110,0.15)',
             color:      Math.abs(fatigueScore) < 3 ? '#55efc4'              : fatigueScore > 5 ? '#ff7675'              : '#fdcb6e',
           }}>
-            {Math.abs(fatigueScore) < 3 ? '✅ Goed gepacet' : fatigueScore > 5 ? `⚠️ ${fatigueScore.toFixed(1)}% vermoeidheid` : `⚡ ${fatigueScore.toFixed(1)}% daling`}
+            {Math.abs(fatigueScore) < 3 ? '✅ Well paced' : fatigueScore > 5 ? `⚠️ ${fatigueScore.toFixed(1)}% fatigue` : `⚡ ${fatigueScore.toFixed(1)}% decay`}
           </span>
         )}
       </div>

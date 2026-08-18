@@ -8,7 +8,7 @@ export const GDRIVE_RIDES_AUTO_KEY  = 'cyclo_gdrive_rides_auto';
 
 /** Submapnamen in de Google Drive root */
 export const GDRIVE_ROUTES_FOLDER = 'Gegenereerde routes';
-export const GDRIVE_RIDES_FOLDER  = 'Afgelegde rideten';
+export const GDRIVE_RIDES_FOLDER  = 'Afgelegde rides';
 
 /** Bouw pad naar een subfolder (werkt zowel with / als \ als separator). */
 export function gdriveSubPath(root: string, sub: string): string {
@@ -101,7 +101,7 @@ export async function saveExportFile(
 }
 
 /**
- * Auto-sla een ride-GPX op in 'Afgelegde rideten' (als auto aan staat).
+ * Auto-sla een ride-GPX op in 'Afgelegde rides' (als auto aan staat).
  * Faalt stil — mag de import niet onderbreken.
  */
 export async function autoSaveRideToGDrive(

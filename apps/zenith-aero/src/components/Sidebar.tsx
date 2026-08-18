@@ -399,7 +399,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="toggle-info">
                 <Mountain size={15} className="toggle-icon" strokeWidth={1.6} />
                 <div>
-                  <span className="toggle-label">Vermijd steile hellingen</span>
+                  <span className="toggle-label">Avoid steep hills</span>
                   <span className="toggle-desc">Hogere heuvelkostenpenalty</span>
                 </div>
               </div>
@@ -416,7 +416,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Max elevation gain */}
           <div className="form-group">
             <div className="label-with-value">
-              <label>Max. hoogtewithers</label>
+              <label>Max. hoogtemeters</label>
               <span className="value-display">
                 {maxElevationGain === 0 ? 'No limit' : `${maxElevationGain} m`}
               </span>

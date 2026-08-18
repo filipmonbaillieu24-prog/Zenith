@@ -113,7 +113,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
     loadData();
   };
 
-  // Fiets verwijderen
+  // Delete Bike
   const handleDeleteGear = async (id: string) => {
     if (confirm('Are you sure you want to deze fiets wilt delete?')) {
       await deleteGear(id);
@@ -162,7 +162,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
     loadData();
   };
 
-  // Component kilowitherstand resetten (vervangen)
+  // Component kilometerstand resetten (vervangen)
   const handleResetComponent = async (gearId: string, compId: string) => {
     const gear = gears.find(g => g.id === gearId);
     if (!gear) return;
@@ -214,14 +214,14 @@ export const GearPage: React.FC<GearPageProps> = () => {
         {/* Action Bar */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
           <button className="gp-add-bike-btn" onClick={() => setShowAddGear(!showAddGear)}>
-            <Plus size={14} style={{ marginRight: 6 }} /> Fiets toevoegen
+            <Plus size={14} style={{ marginRight: 6 }} /> Add Bike
           </button>
         </div>
 
         {/* Add bike form */}
         {showAddGear && (
           <form onSubmit={handleAddGear} className="gp-bike-form animate-slide-up">
-            <h3>Nieuwe Fiets Add</h3>
+            <h3>Add New Bike</h3>
             <div className="gp-form-grid">
               <div className="gp-form-group">
                 <label>Naam *</label>
@@ -245,7 +245,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                 <input type="text" placeholder="bijv. SL8 Pro" value={gearModel} onChange={e => setGearModel(e.target.value)} />
               </div>
               <div className="gp-form-group">
-                <label>Gewicht (kg)</label>
+                <label>Weight (kg)</label>
                 <input type="number" step="0.1" placeholder="bijv. 7.2" value={gearWeight} onChange={e => setGearWeight(e.target.value)} />
               </div>
             </div>
@@ -284,7 +284,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                       🔄 Sync all km
                     </button>
                   )}
-                  <button className="gp-delete-btn" onClick={() => handleDeleteGear(g.id)} title="Fiets verwijderen">
+                  <button className="gp-delete-btn" onClick={() => handleDeleteGear(g.id)} title="Delete Bike">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -295,7 +295,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                 <div className="gp-comp-header">
                   <h4>Componenten & Slijtage</h4>
                   <button className="gp-add-comp-toggle-btn" onClick={() => setActiveGearForAddComp(activeGearForAddComp === g.id ? null : g.id)}>
-                    <Plus size={12} style={{ marginRight: 4 }} /> Onderdeel toevoegen
+                    <Plus size={12} style={{ marginRight: 4 }} /> Add Component
                   </button>
                 </div>
 
@@ -348,7 +348,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                                 type="button"
                                 className="gp-comp-reset-btn"
                                 onClick={() => handleResetComponent(g.id, c.id)}
-                                title="Onderdeel vervangen (kilowitherstand resetten)"
+                                title="Onderdeel vervangen (kilometerstand resetten)"
                               >
                                 🔧 Vervang
                               </button>

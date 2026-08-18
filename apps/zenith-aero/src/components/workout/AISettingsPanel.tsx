@@ -28,7 +28,7 @@ export const AISettingsPanel: React.FC = () => {
     setTestResult(null);
     try {
       const response = await sendAIChat(
-        [{ role: 'user', content: 'Zeg "Verbinding geslaagd!"' }],
+        [{ role: 'user', content: 'Say "Connection successful!"' }],
         'You are a test agent.'
       );
       setTestResult({
@@ -50,7 +50,7 @@ export const AISettingsPanel: React.FC = () => {
       
       {/* Provider Selector */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>AI Koppeling Type</label>
+        <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>AI Connection Type</label>
         <select
           value={settings.provider}
           onChange={e => handleChange('provider', e.target.value as any)}
@@ -200,7 +200,7 @@ export const AISettingsPanel: React.FC = () => {
                 color: testResult.success ? '#34d399' : '#f87171',
               }}
             >
-              <strong>{testResult.success ? 'Succes!' : 'Fout:'}</strong> {testResult.message}
+              <strong>{testResult.success ? 'Success!' : 'Error:'}</strong> {testResult.message}
             </div>
           )}
         </div>

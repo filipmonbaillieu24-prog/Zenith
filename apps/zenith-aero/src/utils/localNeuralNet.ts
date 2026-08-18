@@ -699,20 +699,20 @@ export function predictPacingStrategy(
   if (pacedRides.length === 0) {
     return {
       ratio: 1.0,
-      tip: "Paceadvies: Bouw je ride gelijkmatig op. Probeer in het begin niet te hard te vertrekken."
+      tip: "Pacing Advice: Build up your ride evenly. Try not to start too hard."
     };
   }
 
   const ratios = pacedRides.map(r => r.secondHalfPower! / r.firstHalfPower!);
   const avgRatio = ratios.reduce((a, b) => a + b, 0) / ratios.length;
 
-  let tip = "Paceadvies: Je houdt je vermogen goed constant verdeeld over je rideten.";
+  let tip = "Pacing Advice: You keep your power well distributed across your rides.";
   if (avgRatio < 0.90) {
-    tip = "Paceadvies: You completed de neiging om in de tweede helft veel vermogen te verliezen (>10% verval). Probeer de eerste 30% van je ride 10-15 Watt onder je streefvermogen te starten (een 'negative split' strategie).";
+    tip = "Pacing Advice: You have a tendency to drop power in the second half (>10% decay). Try starting the first 30% of your ride 10-15 Watts below target power (a negative split strategy).";
   } else if (avgRatio > 1.03) {
-    tip = "Paceadvies: Je eindigt je rideten erg sterk with reserve over. Je kunt gerust 5-10 Watt intensiever starten tijdens je volgende duurride.";
+    tip = "Pacing Advice: You finish your rides very strong with reserve left. You can start 5-10 Watts more intensively during your next endurance ride.";
   } else if (avgRatio >= 0.95 && avgRatio <= 1.02) {
-    tip = "Paceadvies: Uitstekende pacing! Je gemiddelde verval is minimaal. Houd deze vlakke pacingstrategie aan.";
+    tip = "Pacing Advice: Excellent pacing! Your average decay is minimal. Keep up this flat pacing strategy.";
   }
 
   return {
@@ -903,20 +903,20 @@ export interface ClimbingStyleAdvice {
 export function classifyClimbingStyle(climbCadence: number): ClimbingStyleAdvice {
   if (!climbCadence || climbCadence <= 0) {
     return {
-      style: "Onbekend",
-      desc: "No klimgegevens with cadans beschikbaar."
+      style: "Unknown",
+      desc: "No climbing data with cadence available."
     };
   }
 
   if (climbCadence > 82) {
     return {
-      style: "Cadence-klimmer (Froome-stijl)",
-      desc: "Je klimt with een hoge trapfrequentie. Dit ontlast je spieren en legt de nadruk op je hart-longsysteem. Zorg voor een licht verzet."
+      style: "Cadence Climber (Froome style)",
+      desc: "You climb with a high cadence. This unloads your muscles and shifts emphasis to your cardiovascular system. Choose a light gear."
     };
   } else {
     return {
-      style: "Kracht-klimmer (Ullrich-stijl)",
-      desc: "Je klimt op pure kracht with een lagere trapfrequentie. Dit vraagt veel van je spieren en glycononevoorraad. Let op verzuring!"
+      style: "Power Climber (Ullrich style)",
+      desc: "You climb on pure power with a lower cadence. This demands a lot from your muscles and glycogen stores. Watch out for fatigue!"
     };
   }
 }
@@ -959,9 +959,9 @@ export function classifyRiderType(
     type: 'All-Rounder',
     emoji: '⚡',
     confidence: 0.4,
-    description: 'Je vermogensprofiel is gebalanceerd over alle duurcategorieën.',
-    strengths: ['Veelzijdigheid', 'Stabiel vermogen'],
-    focusTip: 'Upload more rides with wattage voor een preciezere profilering.'
+    description: 'Your power profile is balanced across all duration categories.',
+    strengths: ['Versatility', 'Stable Power'],
+    focusTip: 'Upload more rides with wattage for a more precise profiling.'
   };
 
   if (!bestEfforts) return defaults;
@@ -986,9 +986,9 @@ export function classifyRiderType(
       type: 'Sprinter',
       emoji: '🚀',
       confidence: Math.min(0.95, (sprintIndex - 3.5) / 2 + 0.6),
-      description: `Je 5-seconden piek (${wkg5s.toFixed(1)} W/kg) is uitzonderlijk hoog t.o.v. je FTP. Typisch profiel van een sprinter of crideeriumspecialist.`,
-      strengths: ['Explosiviteit', 'Sprint', 'Kortse klimwithjes'],
-      focusTip: 'Versterk je drempeluithoudingsvermogen with langere sweet-spot trainingen om je FTP te verhogen.'
+      description: `Your 5-second peak (${wkg5s.toFixed(1)} W/kg) is exceptionally high compared to your FTP. Typical profile of a sprinter or criterium specialist.`,
+      strengths: ['Explosiveness', 'Sprint', 'Short Hills'],
+      focusTip: 'Strengthen your threshold endurance with longer sweet spot workouts to raise your FTP.'
     };
   }
 
@@ -997,9 +997,9 @@ export function classifyRiderType(
       type: 'Klimmer',
       emoji: '⛰️',
       confidence: Math.min(0.92, (vo2Index - 1.35) / 0.4 + 0.6),
-      description: `Je VO2max vermogen (5 min: ${wkg5m.toFixed(1)} W/kg) is hoog ten opzichte van je drempel. Perfect voor lange klimmen en bergrideten.`,
-      strengths: ['VO2max', 'Klimvermogen', 'Aerobe efficiëntie'],
-      focusTip: 'Werk aan je sprint en 1-minuut vermogen om ook op vlak terrein en in spurts mee te gaan.'
+      description: `Your VO2max power (5 min: ${wkg5m.toFixed(1)} W/kg) is high relative to your threshold. Perfect for long climbs and mountain rides.`,
+      strengths: ['VO2max', 'Climbing Ability', 'Aerobic Efficiency'],
+      focusTip: 'Work on your sprint and 1-minute power to follow moves on flat terrain and in sprints.'
     };
   }
 
@@ -1008,9 +1008,9 @@ export function classifyRiderType(
       type: 'Diesel',
       emoji: '🛞',
       confidence: Math.min(0.88, 0.65 + (1.25 - vo2Index) * 0.5),
-      description: `Je vermogen is zeer stabiel over lange duur. Je FTP (${wkg20m.toFixed(1)} W/kg) is je sterkste wapen — je bent een duuratleet van het zuiverste water.`,
-      strengths: ['Duurvermogen', 'TSS-capaciteit', 'Lange rideten'],
-      focusTip: 'Voeg VO2max-intervallen toe (4–6 min aan 110–120% FTP) om je plafond te verhogen.'
+      description: `Your power is very stable over long durations. Your FTP (${wkg20m.toFixed(1)} W/kg) is your strongest weapon — you are a pure endurance athlete.`,
+      strengths: ['Endurance', 'TSS Capacity', 'Long Rides'],
+      focusTip: 'Add VO2max intervals (4-6 min at 110-120% FTP) to raise your ceiling.'
     };
   }
 
@@ -1018,9 +1018,9 @@ export function classifyRiderType(
     type: 'All-Rounder',
     emoji: '⚡',
     confidence: 0.65,
-    description: `Je vermogensprofiel (${wkg20m.toFixed(1)} W/kg FTP) is evenwichtig — je kunt mee in klimmen én op het vlakke. Je bent een veelzijdige renner.`,
-    strengths: ['Veelzijdigheid', 'Aanpassingsvermogen'],
-    focusTip: 'Kies een seizoensdoelstelling (berg, crideerium of granfondo) en verdiep je profiel in die richting.'
+    description: `Your power profile (${wkg20m.toFixed(1)} W/kg FTP) is balanced — you can follow on climbs and on the flat. You are a versatile rider.`,
+    strengths: ['Versatility', 'Adaptability'],
+    focusTip: 'Choose a seasonal goal (climbing, criteriums or granfondos) and shape your profile in that direction.'
   };
 }
 
@@ -1028,7 +1028,7 @@ export function classifyRiderType(
 // Volume-atleet vs intensiteitsatleet op basis van TSS-verdeling
 
 export interface TrainingProfileResult {
-  profile: 'Volume-atleet' | 'Intensiteitsatleet' | 'Gemengd';
+  profile: 'Volume Athlete' | 'Intensity Athlete' | 'Mixed';
   emoji: string;
   avgWeeklyHours: number;
   avgIntensityFactor: number;
@@ -1041,12 +1041,12 @@ export function analyzeTrainingProfile(
 ): TrainingProfileResult {
   if (rides.length < 3) {
     return {
-      profile: 'Gemengd',
+      profile: 'Mixed',
       emoji: '📊',
       avgWeeklyHours: 0,
       avgIntensityFactor: 0,
-      description: 'Upload minimaal 3 rideten om je trainingstype te bepalen.',
-      tip: 'Blijf rideten uploaden voor nauwkeurigere analyse.'
+      description: 'Upload at least 3 rides to determine your training type.',
+      tip: 'Keep uploading rides for a more accurate analysis.'
     };
   }
 
@@ -1066,33 +1066,33 @@ export function analyzeTrainingProfile(
 
   if (avgWeeklyHours >= 8 && avgIf < 0.72) {
     return {
-      profile: 'Volume-atleet',
+      profile: 'Volume Athlete',
       emoji: '🏔️',
       avgWeeklyHours,
       avgIntensityFactor: parseFloat(avgIf.toFixed(2)),
-      description: `Je traint veel uren per week (${avgWeeklyHours}u) op een relatief lage intensiteit (IF ≈ ${avgIf.toFixed(2)}). Typisch profiel van een duuratleet die veel basiskilowithers rijdt.`,
-      tip: 'Voeg 1–2 intensieve sessies per week toe (threshold, VO2max) om sneller te verbeteren.'
+      description: `You train many hours per week (${avgWeeklyHours}h) at a relatively low intensity (IF ≈ ${avgIf.toFixed(2)}). Typical profile of an endurance athlete logging big base mileage.`,
+      tip: 'Add 1-2 intense sessions per week (threshold, VO2max) to improve faster.'
     };
   }
 
   if (avgIf > 0.78) {
     return {
-      profile: 'Intensiteitsatleet',
+      profile: 'Intensity Athlete',
       emoji: '⚡',
       avgWeeklyHours,
       avgIntensityFactor: parseFloat(avgIf.toFixed(2)),
-      description: `Je rijdt relatief kort maar hard (IF ≈ ${avgIf.toFixed(2)}). Typisch profiel van iemand die focust op intervaltraining en hoge inspanningen.`,
-      tip: 'Voeg meer rustige Zone 2 rideten toe voor een betere aerobe basis en sneller herstel.'
+      description: `You ride relatively short but hard (IF ≈ ${avgIf.toFixed(2)}). Typical profile of someone focusing on interval training and high efforts.`,
+      tip: 'Add more easy Zone 2 rides for a better aerobic base and faster recovery.'
     };
   }
 
   return {
-    profile: 'Gemengd',
+    profile: 'Mixed',
     emoji: '⚖️',
     avgWeeklyHours,
     avgIntensityFactor: parseFloat(avgIf.toFixed(2)),
-    description: `Je training is goed uitgebalanceerd tussen volume (${avgWeeklyHours}u/week) en intensiteit (IF ≈ ${avgIf.toFixed(2)}). Een gezonde mix voor progressie.`,
-    tip: 'Hou deze balans aan en varieer je trainingsblokken seizoensgewijs.'
+    description: `Your training is well balanced between volume (${avgWeeklyHours}h/week) and intensity (IF ≈ ${avgIf.toFixed(2)}). A healthy mix for progression.`,
+    tip: 'Maintain this balance and vary your training blocks seasonally.'
   };
 }
 

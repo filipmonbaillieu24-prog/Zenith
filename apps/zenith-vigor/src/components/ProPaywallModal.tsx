@@ -77,7 +77,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Ruler size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Lichaamsomtrekken (Alle 8 Zones)</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Body Circumferences (All 8 Zones)</div>
               <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Track measurements for Chest, Biceps, Thighs, Hips, Shoulders, Neck, Calves, and Waist over time.</div>
             </div>
           </div>
@@ -138,7 +138,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             }} 
             style={{ flex: 2, height: '44px', fontSize: 13, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', color: '#ffffff', fontWeight: 900 }}
           >
-            Start Gratis Proefperiode
+            Start Free Trial
           </button>
         </div>
       </div>

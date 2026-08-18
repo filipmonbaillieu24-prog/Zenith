@@ -176,10 +176,10 @@ export function computeSimulatedPMC(
  *   > 300 → 48–72h
  */
 export function recoveryAdvice(tss: number): { hours: string; color: string; tip: string } {
-  if (tss < 50)  return { hours: '< 12u',  color: '#00b894', tip: 'Morgen weer volledig fit.' };
-  if (tss < 150) return { hours: '12–24u', color: '#fdcb6e', tip: 'Neem het morgen rustig aan.' };
-  if (tss < 300) return { hours: '24–48u', color: '#e17055', tip: 'Minimum één rustdag inplannen.' };
-  return               { hours: '48–72u', color: '#d63031', tip: 'Zware rit — twee à drie rustdagen.' };
+  if (tss < 50)  return { hours: '< 12h',  color: '#00b894', tip: 'Fully fit tomorrow.' };
+  if (tss < 150) return { hours: '12–24h', color: '#fdcb6e', tip: 'Take it easy tomorrow.' };
+  if (tss < 300) return { hours: '24–48h', color: '#e17055', tip: 'Plan at least one rest day.' };
+  return               { hours: '48–72h', color: '#d63031', tip: 'Heavy ride — two to three rest days.' };
 }
 
 /**
@@ -188,14 +188,14 @@ export function recoveryAdvice(tss: number): { hours: string; color: string; tip
  *   5–25   → Piekconditie 🏆
  *   -10–5  → Goed trainingsblok
  *   -25–-10 → Opbouw / vermoeidheid
- *   < -25  → Overtraining risico ⚠️
+ *   < -25  → Overtraining risk ⚠️
  */
 export function interpretTSB(tsb: number): { label: string; color: string; emoji: string } {
-  if (tsb >  25)  return { label: 'Vers / te weinig prikkels', color: '#74b9ff', emoji: '😴' };
-  if (tsb >   5)  return { label: 'Piekconditie',             color: '#55efc4', emoji: '🏆' };
-  if (tsb >  -10) return { label: 'Goede trainingsperiode',   color: '#00b894', emoji: '💪' };
-  if (tsb >  -25) return { label: 'Opbouwfase / vermoeid',    color: '#fdcb6e', emoji: '📈' };
-  return                  { label: 'Overtraining risico',     color: '#d63031', emoji: '⚠️' };
+  if (tsb >  25)  return { label: 'Fresh / too little stimulus', color: '#74b9ff', emoji: '😴' };
+  if (tsb >   5)  return { label: 'Peak condition',             color: '#55efc4', emoji: '🏆' };
+  if (tsb >  -10) return { label: 'Optimal training period',   color: '#00b894', emoji: '💪' };
+  if (tsb >  -25) return { label: 'Build phase / fatigued',    color: '#fdcb6e', emoji: '📈' };
+  return                  { label: 'Overtraining risk',     color: '#d63031', emoji: '⚠️' };
 }
 
 function toDateKey(ms: number): string {

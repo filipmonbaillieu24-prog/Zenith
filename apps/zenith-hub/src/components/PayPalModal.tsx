@@ -125,7 +125,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
               <CheckCircle2 size={36} color="#39ff14" />
             </div>
             <h3 style={{ fontSize: 20, fontWeight: 900, color: '#fff', marginBottom: 8 }}>
-              Betaling geslaagd!
+              Payment successful!
             </h3>
             <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>
               Thank you for your payment via PayPal. Your <strong>Zenith Pro</strong> subscription is now active.

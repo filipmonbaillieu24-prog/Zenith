@@ -25,15 +25,15 @@ describe('PMC Physiological Calculations', () => {
   });
 
   it('should provide accurate recovery advice for TSS levels', () => {
-    expect(recoveryAdvice(30).hours).toBe('< 12u');
-    expect(recoveryAdvice(100).hours).toBe('12–24u');
-    expect(recoveryAdvice(200).hours).toBe('24–48u');
-    expect(recoveryAdvice(350).hours).toBe('48–72u');
+    expect(recoveryAdvice(30).hours).toBe('< 12h');
+    expect(recoveryAdvice(100).hours).toBe('12–24h');
+    expect(recoveryAdvice(200).hours).toBe('24–48h');
+    expect(recoveryAdvice(350).hours).toBe('48–72h');
   });
 
   it('should interpret TSB scores with correct labels', () => {
-    expect(interpretTSB(10).label).toBe('Piekconditie');
-    expect(interpretTSB(0).label).toBe('Goede trainingsperiode');
-    expect(interpretTSB(-30).label).toBe('Overtraining risico');
+    expect(interpretTSB(10).label).toBe('Peak condition');
+    expect(interpretTSB(0).label).toBe('Optimal training period');
+    expect(interpretTSB(-30).label).toBe('Overtraining risk');
   });
 });

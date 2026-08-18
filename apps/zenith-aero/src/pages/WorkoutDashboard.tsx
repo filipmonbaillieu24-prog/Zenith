@@ -229,7 +229,7 @@ const WorkoutDashboard: React.FC<Props> = ({
   }, [rides]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Rit verwijderen?')) return;
+    if (!confirm('Delete ride?')) return;
     setDeleting(id);
     await deleteRide(id);
     await reload();
@@ -240,7 +240,7 @@ const WorkoutDashboard: React.FC<Props> = ({
     if (rides.length === 0 && !loading) return (
       <div className="wd-empty-state">
         <div className="wd-empty-icon"><Bike size={52} color="#cbd5e1" strokeWidth={1.5} /></div>
-        <h2>No rideten</h2>
+        <h2>No rides</h2>
         <p style={{ marginBottom: 16, color: '#94a3b8', fontSize: 13 }}>
           Import a FIT, GPX or TCX file via the button <strong style={{ color: '#fff' }}>Import Ride</strong> in the header bar above to view your activitytiviteitengeschiedenis te laden.
         </p>
@@ -253,7 +253,7 @@ const WorkoutDashboard: React.FC<Props> = ({
         const getLatestRideAISummary = (r: RideSummaryWithBests) => {
           const isZwaar = (r.tss ?? r.hrTSS ?? 0) > 150;
           const labelStr = r.label ? `een ${r.label.toLowerCase()}` : 'een fietstraining';
-          return `Your last ride was ${labelStr} van ${r.distance.toFixed(0)} km with ${r.elevGain}m hoogtewithers. ${isZwaar ? 'This was a heavy workload.sting voor je lichaam - zorg voor voldoende herstel!' : 'Dit was een uitstekende actieve training.'}`;
+          return `Your last ride was ${labelStr} of ${r.distance.toFixed(0)} km with ${r.elevGain}m elevation meters. ${isZwaar ? 'This was a heavy workload for your body - make sure to get adequate recovery!' : 'This was an excellent active workout.'}`;
         };
         return (
           <div className="wd-main-grid animate-slide-up">
@@ -273,7 +273,7 @@ const WorkoutDashboard: React.FC<Props> = ({
               </div>
               <div className="wd-dashboard-card">
                 <span className="wd-dashboard-card__label">Tijd</span>
-                <span className="wd-dashboard-card__value">{Math.round(totalDur / 3600)} uur</span>
+                <span className="wd-dashboard-card__value">{Math.round(totalDur / 3600)} hours</span>
               </div>
               <div className="wd-dashboard-card">
                 <span className="wd-dashboard-card__label">Elevation Gain</span>
@@ -311,7 +311,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                         <div style={{ fontSize: 13, fontWeight: 800, color: '#fdcb6e' }}>{latestRide.hasPower ? `${latestRide.avgPower} W` : '--'}</div>
                       </div>
                       <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>TSS Belasting</div>
+                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>TSS Load</div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: '#ff7675' }}>{latestRide.tss ?? latestRide.hrTSS ?? '--'}</div>
                       </div>
                       <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
@@ -335,10 +335,10 @@ const WorkoutDashboard: React.FC<Props> = ({
             <div className="wd-dashboard-row" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '16px' }}>
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">📈 Wekelijkse TSS Belasting</span>
+                  <span className="wd-section-card__title">📈 Wekelijkse TSS Load</span>
                 </div>
                 {tssData.length === 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, fontSize: 11, color: '#555' }}>Niet genoeg data</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, fontSize: 11, color: '#555' }}>Not enough data</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={165}>
                     <AreaChart data={tssData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
@@ -365,7 +365,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', height: '100%', paddingBottom: 10 }}>
                   {globalZonePower.length === 0 ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140, fontSize: 11, color: '#555' }}>Geen vermogensdata</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 140, fontSize: 11, color: '#555' }}>No power data</div>
                   ) : (
                     globalZonePower.map((time, idx) => {
                       const total = globalZonePower.reduce((a, b) => a + b, 0);
@@ -399,7 +399,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                     Rising EF indicates improved aerobic fitness.
                   </p>
                   {efData.length < 3 ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, fontSize: 11, color: '#555' }}>Niet genoeg hartslag/vermogensdata</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, fontSize: 11, color: '#555' }}>Not enough heart rate/power data</div>
                   ) : (
                     <ResponsiveContainer width="100%" height={110}>
                       <AreaChart data={efData} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
@@ -461,7 +461,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                     Grafiek toont je gemiddelde trapfrequentie per ride. Optimale cadans ligt tussen 85–95 RPM.
                   </p>
                   {cadData.length < 3 ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, fontSize: 11, color: '#555' }}>Niet genoeg cadansdata</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, fontSize: 11, color: '#555' }}>Not enough cadence data</div>
                   ) : (
                     <ResponsiveContainer width="100%" height={110}>
                       <AreaChart data={cadData} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
@@ -617,7 +617,7 @@ const WorkoutDashboard: React.FC<Props> = ({
             animation: 'spin 1s linear infinite'
           }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>AI Modellen Kalibreren...</span>
-          <span style={{ fontSize: 10, color: '#64748b' }}>Historische rideten analyseren & zones bijwerken</span>
+          <span style={{ fontSize: 10, color: '#64748b' }}>Historische rides analyseren & zones bijwerken</span>
         </div>
       )}
     </div>

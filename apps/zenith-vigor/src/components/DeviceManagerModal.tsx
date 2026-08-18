@@ -226,7 +226,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
                         <div>
                           <div style={{ fontSize: 14, fontWeight: 800 }}>{device.brand} {device.model}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-                            {isScale ? 'Weegschaal (Metingen & Vetpercentage)' : 'Smart Ring (Stappen & Slaap)'}
+                            {isScale ? 'Scale (Measurements & Body Fat %)' : 'Smart Ring (Steps & Sleep)'}
                           </div>
                         </div>
                       </div>

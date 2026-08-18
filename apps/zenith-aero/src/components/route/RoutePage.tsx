@@ -153,7 +153,7 @@ export function RoutePage({
             borderRadius: 12, padding: 16, width: 300,
             boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
           }}>
-            <h4 style={{ margin: '0 0 4px', fontSize: 10, color: '#cbd5e1', textTransform: 'uppercase', fontWeight: 800 }}>Gekoppelde Training</h4>
+            <h4 style={{ margin: '0 0 4px', fontSize: 10, color: '#cbd5e1', textTransform: 'uppercase', fontWeight: 800 }}>Linked Training</h4>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc', marginBottom: 2 }}>{activeWorkout.title}</div>
             <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 12 }}>{activeWorkout.description}</div>
             

@@ -30,7 +30,7 @@ export const AICoachChatWidget: React.FC<AICoachChatWidgetProps> = ({ profile, r
       setMessages([
         {
           role: 'assistant',
-          content: `Hoi ${name}! I am your personal Zenith AI Coach. I have access to your fitness data and history. Feel free to ask me anything about your vragen over je rideten, trainingszones, voeding of hersteladviezen. Hoe voelen de benen today?`,
+          content: `Hi ${name}! I am your personal Zenith AI Coach. I have access to your fitness data and history. Feel free to ask me anything about your rides, training zones, nutrition or recovery advice. How do the legs feel today?`,
         },
       ]);
     }
@@ -73,14 +73,14 @@ export const AICoachChatWidget: React.FC<AICoachChatWidgetProps> = ({ profile, r
 Athlete data:
 - Naam: ${name}
 - Leeftijd: ${age}
-- Gewicht: ${weight} kg
+- Weight: ${weight} kg
 - FTP: ${ftp} Watt
 - LTHR (drempelhartslag): ${lthr} bpm
 
 Actuele fitheidscijfers:
 - CTL (Fitheid): ${Math.round(latest.ctl)}
-- ATL (Vermoeidheid): ${Math.round(latest.atl)}
-- TSB (Vorm/Frisheid): ${Math.round(latest.tsb)} (negative TSB indicates fatigue, below -20 is risky)
+- ATL (Fatigue): ${Math.round(latest.atl)}
+- TSB (Form/Freshness): ${Math.round(latest.tsb)} (negative TSB indicates fatigue, below -20 is risky)
 
 Recente trainingsgeschiedenis:
 ${recentRides}
@@ -129,7 +129,7 @@ Houd hier rekening mee in je adviezen. Geef korte, concrete, direct toepasbare c
           </h4>
         </div>
         <p style={{ margin: '0 0 14px', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-          De interactieve AI-coach is momenteel uitgeschakeld. Koppel een lokale **Ollama** server (gratis en 100% offline) of voeg een **OpenAI API-sleutel** toe in de instellingen om live advies te krijgen over je rideten en vermoeidheid.
+          The interactive AI coach is currently disabled. Connect a local **Ollama** server (free and 100% offline) or add an **OpenAI API key** in settings to receive live advice about your rides and fatigue.
         </p>
         {onGoToSettings && (
           <button

@@ -23,11 +23,11 @@ export interface PhaseConfig {
 }
 
 export const phaseConfig: Record<TrainingPhase, PhaseConfig> = {
-  base:     { color: '#00b894', emoji: '🌱', label: 'Basisopbouw',  description: 'Opbouw van aerobe basis. Veel Z2, minimale intensiteit. Volume is koning.', weekFocus: ['Duur (Z2)','Duur (Z2)','Rust','Duur (Z2)','Sweet Spot','Duur (Z2)','Rust'] },
-  build:    { color: '#fdcb6e', emoji: '🔨', label: 'Build Phase',   description: 'Opbouw van vermogen. Sweet spot en drempel centraal, volume stabiel.', weekFocus: ['Duur','Sweet Spot','Rust','Threshold','Duur','Sweet Spot','Rust'] },
-  peak:     { color: '#ff7675', emoji: '⚡', label: 'Piek / Taper', description: 'Verlaag volume, behoud intensiteit. Laat het lichaam supercompenseren.', weekFocus: ['Sweet Spot','Rust','Threshold','Rust','Duur','Rust','Rust'] },
-  race:     { color: '#6c5ce7', emoji: '🏁', label: 'Race Week',    description: 'Minimale belasting. Slechts 1 activeringsride. Rust is training.', weekFocus: ['Recovery','Rust','Recovery','Rust','Activering','Rust','RACE'] },
-  recovery: { color: '#94a3b8', emoji: '💤', label: 'Recovery',      description: 'Event voorbij. Neem minimaal 1-2 weken volledig herstel voor je weer opbouwt.', weekFocus: ['Rust','Recovery','Rust','Recovery','Rust','Recovery','Rust'] },
+  base:     { color: '#00b894', emoji: '🌱', label: 'Base Building',  description: 'Build aerobic base. Lots of Z2, minimal intensity. Volume is king.', weekFocus: ['Endurance (Z2)','Endurance (Z2)','Rest','Endurance (Z2)','Sweet Spot','Endurance (Z2)','Rest'] },
+  build:    { color: '#fdcb6e', emoji: '🔨', label: 'Build Phase',   description: 'Build power. Sweet spot and threshold are key, volume stable.', weekFocus: ['Endurance','Sweet Spot','Rest','Threshold','Endurance','Sweet Spot','Rest'] },
+  peak:     { color: '#ff7675', emoji: '⚡', label: 'Peak / Taper', description: 'Reduce volume, maintain intensity. Let the body supercompensate.', weekFocus: ['Sweet Spot','Rest','Threshold','Rest','Endurance','Rest','Rest'] },
+  race:     { color: '#6c5ce7', emoji: '🏁', label: 'Race Week',    description: 'Minimal workload. Just 1 activation ride. Rest is training.', weekFocus: ['Recovery','Rest','Recovery','Rest','Activation','Rest','RACE'] },
+  recovery: { color: '#94a3b8', emoji: '💤', label: 'Recovery',      description: 'Event finished. Take at least 1-2 weeks of full recovery before rebuilding.', weekFocus: ['Rest','Recovery','Rest','Recovery','Rest','Recovery','Rest'] },
 };
 
 export function getPhase(eventDate: string): { phase: TrainingPhase; daysToEvent: number; weekLabel: string } {
@@ -35,11 +35,11 @@ export function getPhase(eventDate: string): { phase: TrainingPhase; daysToEvent
   const event = new Date(eventDate); event.setHours(0,0,0,0);
   const days  = Math.round((event.getTime() - now.getTime()) / 86400000);
 
-  if (days < 0)   return { phase: 'recovery',   daysToEvent: days, weekLabel: 'Event voorbij' };
+  if (days < 0)   return { phase: 'recovery',   daysToEvent: days, weekLabel: 'Event finished' };
   if (days < 7)   return { phase: 'race',        daysToEvent: days, weekLabel: 'Race week!' };
   if (days < 21)  return { phase: 'peak',        daysToEvent: days, weekLabel: `Tapering (${days}d)` };
-  if (days < 63)  return { phase: 'build',       daysToEvent: days, weekLabel: `Build fase (${Math.ceil(days/7)}w)` };
-  return            { phase: 'base',        daysToEvent: days, weekLabel: `Basisopbouw (${Math.ceil(days/7)}w)` };
+  if (days < 63)  return { phase: 'build',       daysToEvent: days, weekLabel: `Build Phase (${Math.ceil(days/7)}w)` };
+  return            { phase: 'base',        daysToEvent: days, weekLabel: `Base Building (${Math.ceil(days/7)}w)` };
 }
 
 export interface CustomBlock {

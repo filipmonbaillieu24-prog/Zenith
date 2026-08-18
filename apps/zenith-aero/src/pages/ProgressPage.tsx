@@ -36,7 +36,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
 
   const handleTimeRangeChange = (range: 30 | 90 | 365 | 'all') => {
     if (!isPro && range !== 30 && onRequestProModal) {
-      onRequestProModal('PMC & Historische Progressie', 'Upgrade naar Zenith Pro om langetermijn conditie- en vermogensgrafieken (90 dagen, 1 jaar, All-time) in te zien.');
+      onRequestProModal('PMC & Historische Progressie', 'Upgrade to Zenith Pro to view long-term fitness and power charts (90 days, 1 year, All-time).');
       return;
     }
     setTimeRange(range);
@@ -205,27 +205,27 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
   const coachAnalysis = useMemo(() => {
     const name = profile.name ?? 'Atleet';
     if (filteredRides.length < 3) return {
-      intro: `Hoi ${name}! Upload minimaal 3 rideten om een analyse te ontvangen.`,
+      intro: `Hi ${name}! Upload at least 3 rides to receive an analysis.`,
       pillars: [
-        { title: 'Fitness & Efficiëntie', status: 'Stabiel', statusColor: '#0984e3', desc: 'We withen hoe hard je hart werkt voor je vermogen.', tip: 'Rijd duurrideten op comfortabel tempo.' },
-        { title: 'Recoverysnelheid',          status: 'Stabiel', statusColor: '#0984e3', desc: 'Hoe snel daalt je hartslag na inspanning?',        tip: 'Intervallen 30s sprint + 2 min uitrijden.' },
-        { title: 'Taaiheid',                 status: 'Stabiel', statusColor: '#0984e3', desc: 'Behoud je piekvermogen tot het einde?',            tip: 'Goed eten (koolhydraten) tijdens lange rideten.' },
+        { title: 'Fitness & Efficiency', status: 'Stabiel', statusColor: '#0984e3', desc: 'We measure how hard your heart works for your power.', tip: 'Ride endurance rides at a comfortable pace.' },
+        { title: 'Recovery Speed',          status: 'Stabiel', statusColor: '#0984e3', desc: 'How fast does your heart rate drop after effort?',        tip: 'Intervals: 30s sprint + 2 min easy spin.' },
+        { title: 'Resilience',                 status: 'Stabiel', statusColor: '#0984e3', desc: 'Behoud je piekvermogen tot het einde?',            tip: 'Goed eten (koolhydraten) tijdens lange rides.' },
       ]
     };
-    let effStatus = 'Stabiel', effColor = '#38bdf8', effDesc = 'Stabiele hartslag-vermogen verhouding.';
+    let effStatus = 'Stabiel', effColor = '#38bdf8', effDesc = 'Stable heart rate-to-power ratio.';
     if (progressMetrics?.ccChangePct) {
       if (progressMetrics.ccChangePct < 0) { effStatus = 'Verbeterd';     effColor = '#00b894'; effDesc = `Hart is ${Math.abs(progressMetrics.ccChangePct)}% efficiënter.`; }
-      if (progressMetrics.ccChangePct > 2) { effStatus = 'Aandachtspunt'; effColor = '#e17055'; effDesc = 'Hart werkt iets harder voor dezelfde inspanning.'; }
+      if (progressMetrics.ccChangePct > 2) { effStatus = 'Aandachtspunt'; effColor = '#e17055'; effDesc = 'Heart works slightly harder for the same effort.'; }
     }
     let recStatus = 'Stabiel', recColor = '#38bdf8', recDesc = 'Normale herstelsnelheid.';
     if (progressMetrics?.hrrChange && progressMetrics.hrrChange > 1) { recStatus = 'Verbeterd'; recColor = '#00b894'; recDesc = `+${progressMetrics.hrrChange} bpm sneller hersteld.`; }
     let fatStatus = 'Stabiel', fatColor = '#38bdf8', fatDesc = 'Normaal krachtverloop.';
     if (progressMetrics?.avgRetention) {
       if (progressMetrics.avgRetention > 90) { fatStatus = 'Uitstekend';    fatColor = '#00b894'; fatDesc = `${progressMetrics.avgRetention}% piekbehoud na 1000 kJ!`; }
-      if (progressMetrics.avgRetention < 80) { fatStatus = 'Aandachtspunt'; fatColor = '#e17055'; fatDesc = '>20% vermogensverlies bij vermoeidheid.'; }
+      if (progressMetrics.avgRetention < 80) { fatStatus = 'Aandachtspunt'; fatColor = '#e17055'; fatDesc = '>20% power loss under fatigue.'; }
     }
     let intro = `Hoi ${name}! `;
-    if (effStatus === 'Verbeterd' && recStatus === 'Verbeterd') intro += 'Fantastisch: je conditie en herstel verbeteren. Je bent fitter!';
+    if (effStatus === 'Verbeterd' && recStatus === 'Verbeterd') intro += 'Fantastic: your fitness and recovery are improving. You are getting fitter!';
     else if (effStatus === 'Verbeterd') intro += 'Je basisconditie gaat vooruit.';
     else if (recStatus === 'Verbeterd') intro += 'Je herstelvermogen verbetert.';
     else if (effStatus === 'Aandachtspunt') intro += 'Je hart werkt momenteel iets harder — wat extra rust kan helpen.';
@@ -233,9 +233,9 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
     return {
       intro,
       pillars: [
-        { title: 'Fitness & Efficiëntie', status: effStatus, statusColor: effColor, desc: effDesc, tip: 'Langere duurrideten op rustig tempo verbeteren je aerobe basis.' },
-        { title: 'Recoverysnelheid',          status: recStatus, statusColor: recColor, desc: recDesc, tip: 'Korte intervallen (30s sprint, 2 min uitbollen).' },
-        { title: 'Taaiheid',                 status: fatStatus, statusColor: fatColor, desc: fatDesc, tip: 'Eet voldoende koolhydraten bij rideten langer dan 2 uur.' },
+        { title: 'Fitness & Efficiency', status: effStatus, statusColor: effColor, desc: effDesc, tip: 'Langere duurrides op rustig tempo verbeteren je aerobe basis.' },
+        { title: 'Recovery Speed',          status: recStatus, statusColor: recColor, desc: recDesc, tip: 'Korte intervallen (30s sprint, 2 min uitbollen).' },
+        { title: 'Resilience',                 status: fatStatus, statusColor: fatColor, desc: fatDesc, tip: 'Eat enough carbs during rides longer than 2 hours.' },
       ]
     };
   }, [filteredRides, progressMetrics, profile.name]);
@@ -368,13 +368,13 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                   {lthrDrift.decoupling < 3.5
                     ? 'Uitstekende aerobe efficiëntie.'
                     : lthrDrift.decoupling < 8.0
-                      ? 'Lichte drift - normaal bij langere rideten.'
-                      : 'Hoge drift - meer Zone 2 trainen.'}
+                      ? 'Light drift - normal on longer rides.'
+                      : 'High drift - train more in Zone 2.'}
                 </p>
               </>
             ) : (
               <p style={{ fontSize: 10, color: '#64748b', margin: '4px 0 0', lineHeight: 1.5 }}>
-                Upload HR-rideten langer dan 1 uur voor LTHR drift analyse.
+                Upload HR rides longer than 1 hour for LTHR drift analysis.
               </p>
             )}
           </div>
@@ -386,10 +386,10 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
             <div className="wd-section-card__head">
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Brain size={14} color="#cbd5e1" />
-                <span className="wd-section-card__title">AI eFTP Prognose — Volgende 8 Weken</span>
+                <span className="wd-section-card__title">AI eFTP Forecast — Next 8 Weeks</span>
               </div>
               <span style={{ fontSize: 10, color: '#94a3b8' }}>
-                Doel: <strong style={{ color: '#cbd5e1' }}>{aiFTPForecast.targetFTP}W</strong>{' '}
+                Goal: <strong style={{ color: '#cbd5e1' }}>{aiFTPForecast.targetFTP}W</strong>{' '}
                 ({aiFTPForecast.diff >= 0 ? '+' : ''}{aiFTPForecast.diff}W - {aiFTPForecast.consistency} workouts/week)
               </span>
             </div>
@@ -469,7 +469,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
               </div>
               <span className="wd-kpi__val">{progressMetrics.avgRecentHRR ?? '--'} bpm</span>
               <span className="wd-kpi__trend" style={{ color: progressMetrics.hrrChange >= 0 ? '#cbd5e1' : '#ff7675' }}>
-                {progressMetrics.hrrChange >= 0 ? 'Stijging' : 'Descent'} {Math.abs(progressMetrics.hrrChange)} bpm
+                {progressMetrics.hrrChange >= 0 ? 'Increase' : 'Decrease'} {Math.abs(progressMetrics.hrrChange)} bpm
               </span>
             </div>
             <div className="wd-kpi" style={{ borderLeftColor: '#6c5ce7' }}>
@@ -487,7 +487,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
               </div>
               <span className="wd-kpi__val">{progressMetrics.avgRecentCC ? progressMetrics.avgRecentCC.toFixed(3) : '--'} b/m</span>
               <span className="wd-kpi__trend" style={{ color: progressMetrics.ccChangePct <= 0 ? '#cbd5e1' : '#ff7675' }}>
-                {progressMetrics.ccChangePct <= 0 ? 'Descent' : 'Stijging'} {Math.abs(progressMetrics.ccChangePct)}%
+                {progressMetrics.ccChangePct <= 0 ? 'Decrease' : 'Increase'} {Math.abs(progressMetrics.ccChangePct)}%
               </span>
             </div>
           </div>
@@ -506,7 +506,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                     <PolarGrid stroke="rgba(255,255,255,0.05)" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 9 }} />
                     <PolarRadiusAxis tick={{ fill: '#64748b', fontSize: 8 }} angle={30} domain={[0, 100]} />
-                    <Radar name="Profiel" dataKey="A" stroke="#cbd5e1" fill="#cbd5e1" fillOpacity={0.15} />
+                    <Radar name="Profile" dataKey="A" stroke="#cbd5e1" fill="#cbd5e1" fillOpacity={0.15} />
                   </RadarChart>
                 </ResponsiveContainer>
               ) : (
@@ -543,7 +543,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                     ))}
                   </div>
                 ) : (
-                  <p style={{ color: '#64748b', fontSize: 11, margin: '6px 0 0', textAlign: 'center' }}>Geen PR data gevonden.</p>
+                  <p style={{ color: '#64748b', fontSize: 11, margin: '6px 0 0', textAlign: 'center' }}>No PR data found.</p>
                 )}
               </div>
             )}

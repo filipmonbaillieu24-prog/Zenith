@@ -60,7 +60,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             {featureName ? `Unlock ${featureName}` : 'Upgrade to Zenith Pro'}
           </h2>
           <p style={{ fontSize: 13, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
-            {featureDescription || 'Krijg toegang tot geavanceerde trainingsleer, AI-routegeneratie en diepgaande prestatie-analyses.'}
+            {featureDescription || 'Get access to advanced training science, AI route generation, and in-depth performance analysis.'}
           </p>
         </div>
 
@@ -70,15 +70,15 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Compass size={18} color="#cbd5e1" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>AI Route Generator & GPX Export</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Generate custom GPX routes and view elevation & wind profileslen. Download direct voor Garmin & Wahoo.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Generate custom GPX routes and view elevation & wind profiles. Download directly for Garmin & Wahoo.</div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Activity size={18} color="#cbd5e1" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>PMC Fitnessgrafiek (CTL / ATL / TSB)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Complete Fitness, Fatigue, and Form history (30d, 90d, 1 jaar) en toekomst-tapering voor doelwedstrijden.</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>PMC Fitness Chart (CTL / ATL / TSB)</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Complete Fitness, Fatigue, and Form history (30d, 90d, 1 year) and future tapering for target events.</div>
             </div>
           </div>
 
@@ -86,7 +86,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Zap size={18} color="#cbd5e1" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Power Duration Curve & W' Balance</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Compare your max power outputs across seasons and analyze fatigue resistancenelheid van je anaerobe batterij.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Compare your max power outputs across seasons and analyze fatigue resistance and anaerobic battery reconstitution.</div>
             </div>
           </div>
 
@@ -138,7 +138,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             }} 
             style={{ flex: 2, height: '44px', fontSize: 13, background: 'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)', color: '#09090b', fontWeight: 900 }}
           >
-            Start Gratis Proefperiode
+            Start Free Trial
           </button>
         </div>
       </div>

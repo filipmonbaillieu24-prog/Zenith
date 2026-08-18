@@ -54,7 +54,7 @@ export function calcHRZoneTime(
  * Cycling mechanical efficiency is ~22–26%. We use 0.239 as the conversion
  * factor, which is the standard used by Garmin, TrainingPeaks, etc.
  * (1 kJ mechanical = 1 kcal food energy, because efficiency losses are
- *  already accounted for by the power wither measuring actual output.)
+ *  already accounted for by the power meter measuring actual output.)
  *
  * In practice: 1 kJ of measured power ≈ 1 kcal consumed.
  */

@@ -205,71 +205,71 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
       const activeCategory = label ?? aiPredictedLabel;
       const activeRpe = rpe ?? aiPredictedRpe;
 
-      let title = "Duurtraining";
-      let desc = "Een rustige ride die helpt om je aerobe basissysteem te versterken en vetverbranding te stimuleren.";
-      let category = "Aerobe Fitness";
+      let title = "Endurance Training";
+      let desc = "A relaxed ride that helps strengthen your aerobic base system and stimulate fat oxidation.";
+      let category = "Aerobic Fitness";
       let color = "#38bdf8"; // Cyaan
 
       // Priorideize activeCategory (user selected or AI predicted)
       if (activeCategory === 'herstel' || (activeRpe != null && activeRpe <= 3 && activeCategory !== 'interval' && activeCategory !== 'wedstrijd')) {
-        title = "Actief Recovery";
-        desc = "Lichte herstelride. Perfect om afvalstoffen uit je spieren af te voeren en actief herstel te bevorderen zonder extra vermoeidheid op te bouwen.";
+        title = "Active Recovery";
+        desc = "Light recovery ride. Perfect to clear waste products from your muscles and promote active recovery without building extra fatigue.";
         category = "Recovery";
         color = "#a29bfe"; // Lilac
       } else if (activeCategory === 'berg') {
-        title = "Klimtraining";
-        desc = "Gerichte training op hellingen en heuvels. Perfect voor het verbeteren van je klimkracht en klimuithoudingsvermogen.";
-        category = "Klimvermogen";
+        title = "Climbing Workout";
+        desc = "Targeted training on hills. Perfect for improving climbing strength and endurance.";
+        category = "Climbing Power";
         color = "#fd79a8"; // Roze
       } else if (activeCategory === 'interval') {
-        title = "Intervaltraining";
-        desc = "Intensieve intervallen with wisselende tempo's. Ideaal voor het verhogen van je maximale zuurstofopname (VO2max) en anaerobe capaciteit.";
+        title = "Interval Training";
+        desc = "Intense intervals with variable paces. Ideal for increasing max oxygen uptake (VO2max) and anaerobic capacity.";
         category = "Interval / VO2max";
         color = "#a29bfe"; // Lilac
       } else if (activeCategory === 'wedstrijd') {
-        title = "Wedstrijd / Intensief";
-        desc = "Zeer intensieve ride of wedstrijd-simulatie op of boven de drempel. Veroorzaakt diepe vermoeidheid en traint de maximale inspanning.";
-        category = "Wedstrijd";
+        title = "Race / Intensive";
+        desc = "Very intensive ride or race simulation at or above threshold. Causes deep fatigue and trains maximal effort.";
+        category = "Race";
         color = "#ff7675"; // Rood
       } else if (activeCategory === 'groepsride') {
-        title = "Groepsride";
-        desc = "Samen rijden in een peloton of groep. Goed voor het trainen van drafting, stuurvaardigheid en wisselende tempo's.";
-        category = "Duurvermogen";
+        title = "Group Ride";
+        desc = "Riding in a peloton or group. Great for training drafting, bike handling, and changing paces.";
+        category = "Endurance";
         color = "#00b894"; // Groen
       } else if (activeCategory === 'pendel') {
-        title = "Pendelride / Woon-werk";
-        desc = "Functionele verplaatsingsride. Handig om extra wekelijks trainingsvolume en basisconditie op te bouwen.";
-        category = "Basisconditie";
+        title = "Commute Ride / Commuting";
+        desc = "Commuting ride. Useful for building weekly training volume and baseline fitness.";
+        category = "Base Fitness";
         color = "#ffeaa7"; // Geel
       } else {
         // Fallback to intensity & duration (classical zones)
         if (durationMins < 45) {
           if (intensity < 0.60) {
-            title = "Actief Recovery";
-            desc = "Korte, zeer lichte ride. Perfect om afvalstoffen uit je spieren af te voeren en herstel te bevorderen na zware inspanningen.";
+            title = "Active Recovery";
+            desc = "Short, very light ride. Perfect to flush muscles and promote recovery after heavy efforts.";
             category = "Recovery";
             color = "#a29bfe";
           } else {
-            title = "Korte Kwaliteitsprikkel";
-            desc = "Een korte ride with wat intensiteit. Goed om de benen wakker te schudden zonder diepe vermoeidheid op te bouwen.";
+            title = "Short Quality Stimulus";
+            desc = "A short ride with some intensity. Great to wake up the legs without building deep fatigue.";
             category = "Tempo";
             color = "#fdcb6e";
           }
         } else {
           if (intensity >= 0.85) {
             title = "Threshold Training (FTP)";
-            desc = "Zeer zware training rond je anaerobe drempel. Dit vergroot je vermogen om langdurig een hoog tempo vol te houden.";
+            desc = "Very heavy training around your anaerobic threshold. This increases your ability to sustain a high pace.";
             category = "Threshold / FTP";
             color = "#ff7675";
           } else if (intensity >= 0.75) {
-            title = "Tempo & Tempohardheid";
-            desc = "Een stevige tempo-ride. Dit traint je vermogen om gedurende langere tijd druk op de pedalen te houden en verbetert je aerobe uithoudingsvermogen.";
+            title = "Tempo & Pacework";
+            desc = "A solid tempo ride. This trains your ability to maintain pressure on the pedals for extended periods and improves aerobic endurance.";
             category = "Tempo";
             color = "#fdcb6e";
           } else {
-            title = "Duurtraining (Vetverbranding)";
+            title = "Endurance Training (Fat Oxidation)";
             desc = "A classic endurance ride. Improves muscular efficiency and promotes fat oxidation for long distances.";
-            category = "Duurvermogen";
+            category = "Endurance";
             color = "#00b894";
           }
         }
@@ -279,27 +279,27 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
       if (hasHR && ride.decoupling != null) {
         const dec = ride.decoupling;
         if (Math.abs(dec) <= 5) {
-          points.push(`Your heart rate remained very stable throughout the ride (drift of only ${dec.toFixed(1)}%). This shows an excellent aerobic base.nde aerobe basis hebt.`);
+          points.push(`Your heart rate remained very stable throughout the ride (drift of only ${dec.toFixed(1)}%). This shows an excellent aerobic base.`);
         } else if (dec > 5) {
-          points.push(`Your heart rate rose by ${dec.toFixed(1)}% in the second half of the ride at equal intensity. Indicates cardiac drift. opbouwende aerobe vermoeidheid.`);
+          points.push(`Your heart rate rose by ${dec.toFixed(1)}% in the second half of the ride at equal intensity. Indicates cardiac drift. accumulating aerobic fatigue.`);
         } else if (dec < -5) {
-          points.push(`Your heart rate dropped by ${Math.abs(dec).toFixed(1)}% in the second half of the ride, reflecting reduced intensity.oeling of uitstekende aerobe efficiëntie.`);
+          points.push(`Your heart rate dropped by ${Math.abs(dec).toFixed(1)}% in the second half of the ride, reflecting reduced intensity.`);
         }
       }
 
       if (hasPower && (ride as any).variabilityIndex) {
         const vi = (ride as any).variabilityIndex;
         if (vi < 1.05) {
-          points.push(`With a Variability Index of ${vi} you paced extremely steadily. Ideal for efficient energy expenditure.en.`);
+          points.push(`With a Variability Index of ${vi} you paced extremely steadily. Ideal for efficient energy expenditure.`);
         } else if (vi > 1.10) {
-          points.push(`Your power output was highly variable (VI: ${vi}). Indicates surges or hilly terrain, demanding more energy.spieren.`);
+          points.push(`Your power output was highly variable (VI: ${vi}). Indicates surges or hilly terrain, putting extra stress on your muscles.`);
         }
       }
 
       if (hasHR && (ride as any).hrRecovery60) {
         const hrr = (ride as any).hrRecovery60;
         if (hrr >= 30) {
-          points.push(`Your heart rate recovered by an impressive ${hrr} bpm in the first minute after your peak. Sign of strong cardiovascular recovery.re reactie!`);
+          points.push(`Your heart rate recovered by an impressive ${hrr} bpm in the first minute after your peak. Sign of strong cardiovascular recovery.`);
         }
       }
 
@@ -310,7 +310,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
     }
   }, [ride, maxHR, label, rpe, aiPredictedLabel, aiPredictedRpe]);
 
-  if (!ride) return <div className="rp-loading"><span className="wd-spinner" /> Rit laden…</div>;
+  if (!ride) return <div className="rp-loading"><span className="wd-spinner" /> Loading ride…</div>;
 
   const gpsPts      = ride.points.filter(p => p.lat != null && p.lng != null);
   const mapPositions: [number, number][] = gpsPts.map(p => [p.lat!, p.lng!]);
@@ -373,10 +373,10 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             <StatCard label="Distance"      value={ride.distance}         unit="km"   typeClass="rp-stat-card--gps" />
             <StatCard label="Tijd"         value={formatRideDuration(ride.duration)}         typeClass="rp-stat-card--gps" />
             <StatCard label="Elevation Gain" value={ride.elevGain}         unit="m"    typeClass="rp-stat-card--gps" />
-            <StatCard label="Gem. snelheid" value={ride.avgSpeed}        unit="km/h" typeClass="rp-stat-card--gps" />
+            <StatCard label="Avg. Speed" value={ride.avgSpeed}        unit="km/h" typeClass="rp-stat-card--gps" />
             {ride.calories    && <StatCard label="Calories"     value={ride.calories}    unit="kcal" color="#fdcb6e"
-              sub={ride.hasPower ? (ride.isEstimatedPower ? 'HR-schatting (Keytel)' : 'Powerswithing') : ride.hasHR ? 'HR-schatting (Keytel)' : 'MET-schatting'} />}
-            {ride.avgPower    && <StatCard label="Gem. vermogen" value={ride.avgPower}    unit="W"    color="#a29bfe" typeClass="rp-stat-card--power"
+              sub={ride.hasPower ? (ride.isEstimatedPower ? 'HR-schatting (Keytel)' : 'Powersmeasurement') : ride.hasHR ? 'HR-schatting (Keytel)' : 'MET-schatting'} />}
+            {ride.avgPower    && <StatCard label="Avg. Power" value={ride.avgPower}    unit="W"    color="#a29bfe" typeClass="rp-stat-card--power"
               sub={ride.isEstimatedPower ? 'Berekend (Natuurkundig/HR)' : undefined} />}
             {ride.normPower   && <StatCard label="NP"            value={ride.normPower}   unit="W"    color="var(--color-primary,#cbd5e1)" typeClass="rp-stat-card--power"
               sub={ride.isEstimatedPower ? 'Berekend NP' : (ftp ? `IF ${ride.intensityFactor?.toFixed(2)}` : undefined)} />}
@@ -384,8 +384,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               sub={ride.isEstimatedPower ? 'Berekend TSS' : recover?.tip} />}
             {ride.eFTP        && <StatCard label="eFTP"          value={ride.eFTP}        unit="W"    color="var(--color-primary,#cbd5e1)" typeClass="rp-stat-card--power"
               sub={ride.isEstimatedPower ? 'Berekende eFTP' : (profile.weight ? `${(ride.eFTP / profile.weight).toFixed(1)} W/kg` : undefined)} />}
-            {ride.avgHR       && <StatCard label="Gem. hartslag" value={ride.avgHR}       unit="bpm"  color="#ff7675" typeClass="rp-stat-card--hr" />}
-            {ride.maxHR       && <StatCard label="Max hartslag"  value={ride.maxHR}       unit="bpm"  typeClass="rp-stat-card--hr"
+            {ride.avgHR       && <StatCard label="Avg. Heart Rate" value={ride.avgHR}       unit="bpm"  color="#ff7675" typeClass="rp-stat-card--hr" />}
+            {ride.maxHR       && <StatCard label="Max Heart Rate"  value={ride.maxHR}       unit="bpm"  typeClass="rp-stat-card--hr"
               sub={maxHR ? `${Math.round((ride.maxHR / maxHR) * 100)}% max HR` : undefined} />}
             {ride.hrTSS       && <StatCard label="hrTSS"         value={ride.hrTSS}                   color="#ff7675" typeClass="rp-stat-card--hr"
               sub={recover?.tip} />}
@@ -394,7 +394,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             {ride.decoupling != null && (
               <StatCard label="Cardiac drift" value={`${ride.decoupling}%`}
                 color={Math.abs(ride.decoupling) < 5 ? '#00b894' : '#fdcb6e'} typeClass="rp-stat-card--hr"
-                sub={Math.abs(ride.decoupling) < 5 ? 'Goede aerobe basis' : 'Lichte vermoeidheid'} />
+                sub={Math.abs(ride.decoupling) < 5 ? 'Good aerobic base' : 'Light fatigue'} />
             )}
             {ride.vam              && <StatCard label="VAM"             value={ride.vam}              unit="m/h" sub="Klimsnelheid" typeClass="rp-stat-card--gps" />}
             {ride.avgCadence       && <StatCard label="Gem. cadans"     value={ride.avgCadence}       unit="rpm" typeClass="rp-stat-card--power" sub={ride.avgPower ? `AI advies: ${predictOptimalCadence(ride.avgPower)} rpm 🤖` : undefined} />}
@@ -402,7 +402,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               label="Variability Index"
               value={(ride as any).variabilityIndex}
               color={(ride as any).variabilityIndex < 1.05 ? '#00b894' : (ride as any).variabilityIndex < 1.10 ? '#fdcb6e' : '#ff7675'}
-              sub={(ride as any).variabilityIndex < 1.05 ? 'Consistent gepacet' : 'Variabel vermogen'}
+              sub={(ride as any).variabilityIndex < 1.05 ? 'Consistently paced' : 'Variable power'}
               typeClass="rp-stat-card--power"
             />}
             {(ride as any).hrRecovery60 && <StatCard
@@ -414,7 +414,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             />}
             {weather && <>
               <StatCard
-                label={`${weatherIcon(weather.weatherCode)} Weer`}
+                label={`${weatherIcon(weather.weatherCode)} Weather`}
                 value={`${weather.tempC}°C`}
                 sub={weather.description}
                 color="var(--color-primary,#cbd5e1)"
@@ -576,7 +576,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                     {/* Fatigue */}
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, color: '#94a3b8' }}>
-                        <span>Spierspanning / Vermoeidheid</span>
+                        <span>Muscle Tension / Fatigue</span>
                         <span style={{ color: aiScores.fatigue > 0.6 ? '#ff7675' : '#cbd5e1', fontWeight: 700 }}>{Math.round(aiScores.fatigue * 100)}%</span>
                       </div>
                       <div style={{ height: 5, background: 'rgba(255,255,255,0.03)', borderRadius: 2.5, overflow: 'hidden' }}>
@@ -662,7 +662,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                       {/* Fatigue */}
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>
-                          <span>Vermoeidheid:</span>
+                          <span>Fatigue:</span>
                           <span>{Math.round(customFatigue * 100)}%</span>
                         </div>
                         <input
@@ -972,7 +972,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               {ride.hasPower && <PowerHistogram points={ride.points} ftp={ftp} />}
               {!ride.hasPower && (
                 <div className="rp-chart-card" style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 11, margin: 0 }}>
-                  Power charts only available for rides recorded with a power wither.
+                  Power charts only available for rides recorded with a power meter.
                 </div>
               )}
             </div>

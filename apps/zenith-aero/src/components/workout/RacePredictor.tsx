@@ -81,7 +81,7 @@ export const RacePredictor: React.FC<RacePredictorProps> = ({ ftp, weight = 75, 
         <div className="pp-predictor-warning">
           <ShieldAlert size={14} className="pp-warning-icon" />
           <span>
-            <strong>Drift Penalty toegepast:</strong> Door een recente cardiac drift van {avgDrift.toFixed(1)}% on longer rides, is de prognose voor 100k+ rideten conservatiever berekend. Werk aan je aerobe duurvermogen om je tijden te verbeteren!
+            <strong>Drift Penalty applied:</strong> Due to a recent cardiac drift of {avgDrift.toFixed(1)}% on longer rides, the prognosis for 100k+ rides has been calculated more conservatively. Work on your aerobic endurance to improve your times!
           </span>
         </div>
       )}
