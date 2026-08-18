@@ -1,9 +1,9 @@
-/* ==========================================================
- * ZENITH ECOSYSTEM - SHARED DESIGN SYSTEM CSS TOKENS
- * Generated from shared/design-tokens.json
- * ========================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
 :root {
+  --zenith-font-heading: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --zenith-font-body: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+
   --zenith-color-bg: #09090b;
   --zenith-color-surface: rgba(28, 28, 35, 0.65);
   --zenith-color-primary: #cbd5e1;
@@ -25,6 +25,70 @@
   --zenith-radius-md: 12px;
   --zenith-radius-lg: 16px;
   --zenith-radius-xl: 20px;
+}
+
+/* ==========================================================
+ * LAYOUT CONTAINERS & SPACING GRID
+ * ========================================================== */
+
+.zenith-page-container {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 24px;
+  box-sizing: border-box;
+}
+
+.zenith-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.zenith-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 20px;
+}
+
+.zenith-section-header {
+  margin-bottom: 24px;
+}
+
+.zenith-section-title {
+  font-family: var(--zenith-font-heading);
+  font-size: 22px;
+  font-weight: 900;
+  color: #f8fafc;
+  letter-spacing: -0.015em;
+  text-transform: uppercase;
+}
+
+.zenith-section-subtitle {
+  font-family: var(--zenith-font-body);
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* ==========================================================
+ * SMOOTH PAGE & TAB TRANSITION ANIMATION
+ * ========================================================== */
+
+@keyframes zenithFadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.zenith-page-transition {
+  animation: zenithFadeInSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
 }
 
 /* ==========================================================

@@ -899,6 +899,7 @@ ${logsMarkdown}
         />
         <div style={{ flex: 1, height: isTauri ? 'calc(100vh - 32px)' : '100vh', marginTop: 0, overflowY: 'auto', position: 'relative' }}>
           <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+          <div key={activeTab} className="zenith-page-transition" style={{ width: '100%', height: '100%' }}>
           {activeTab === 'hub' && (
             <ZenithHubPage
               fitnessProfile={fitnessProfile}
@@ -1012,6 +1013,7 @@ ${logsMarkdown}
               />
             </div>
           )}
+          </div>
           </Suspense>
         </div>
       </div>

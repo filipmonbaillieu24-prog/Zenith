@@ -15,3 +15,6 @@ export * from './ml/RecoveryScore';
 export * from './pmc';
 export * from './gpxParser';
 export * from './components/ZenithModuleHeader';
+export * from './components/ZenithCard';
+export * from './components/ZenithStatWidget';
+export * from './components/ZenithTabs';
