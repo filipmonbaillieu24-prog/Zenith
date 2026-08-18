@@ -58,7 +58,7 @@ export function calcBestPowerEfforts(points: RidePoint[]): BestEfforts {
 
 /**
  * Finds the best average speed (km/h) for each standard duration.
- * Used as a progression withric for riders without a power wither.
+ * Used as a progression metric for riders without a power wither.
  */
 export function calcBestSpeedEfforts(points: RidePoint[]): BestSpeedEfforts {
   const withSpeed = points.filter(p => p.speed != null && p.time != null);
@@ -434,7 +434,7 @@ export function calcPowerUnderFatigue(
 // ─── Full ride computation ────────────────────────────────────────────────────
 
 /**
- * Computes all withrics from raw RidePoint[] and returns a complete Ride object.
+ * Computes all metrics from raw RidePoint[] and returns a complete Ride object.
  * Profile fields (gender, age, weight) improve TRIMP, VO₂max, and W/kg accuracy.
  */
 /**
@@ -616,7 +616,7 @@ export function computeRide(
     ? parseFloat((Math.max(...speedPts.map(p => p.speed!)) * 3.6).toFixed(1))
     : undefined;
 
-  // ── Power withrics ────────────────────────────────────────────────────────
+  // ── Power metrics ────────────────────────────────────────────────────────
   const bestEfforts     = calcBestPowerEfforts(points);
   const normPower       = hasPower ? calcNormalizedPower(points) : undefined;
   const avgPower        = hasPower
@@ -634,7 +634,7 @@ export function computeRide(
     ? parseFloat((normPower / (ftp ?? eFTP!)).toFixed(3))
     : undefined;
 
-  // ── HR withrics ───────────────────────────────────────────────────────────
+  // ── HR metrics ───────────────────────────────────────────────────────────
   const hrPts    = points.filter(p => p.hr != null && p.hr! > 40);
   const avgHR    = hrPts.length > 0
     ? Math.round(hrPts.reduce((s, p) => s + p.hr!, 0) / hrPts.length)
@@ -736,7 +736,7 @@ export function computeRide(
     }
   }
 
-  // ── Geavanceerde progressie withrics (Fase 2) ───────────────────────────────
+  // ── Geavanceerde progressie metrics (Fase 2) ───────────────────────────────
 
   // 1. Totale kJ
   const pwrPts = points.filter(p => p.power != null && p.time != null);

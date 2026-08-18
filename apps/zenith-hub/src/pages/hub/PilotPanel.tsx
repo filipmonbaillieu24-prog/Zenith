@@ -310,7 +310,7 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
                   <div style={{ display: 'flex', gap: 10 }}>
                     <ShieldCheck size={16} style={{ color: '#a855f7', flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Comprehensive Biowithrics</h4>
+                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Comprehensive Biometrics</h4>
                       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
                         Background tracking for steps, heart rate, HRV (RMSSD), sleep stages, active calories, weight, and SpO2.
                       </p>

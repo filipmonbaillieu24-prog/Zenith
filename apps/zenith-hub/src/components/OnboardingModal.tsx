@@ -24,7 +24,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [birthDate, setBirthDate] = useState('1995-01-01');
   
   // Unit System State
-  const [unitSystem, setUnitSystem] = useState<'withric' | 'imperial'>('withric');
+  const [unitSystem, setUnitSystem] = useState<'metric' | 'imperial'>('metric');
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>('kg');
   
   const [height, setHeight] = useState('180'); // cm or inches
@@ -269,14 +269,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     <div style={{ display: 'flex', background: '#09090b', borderRadius: 8, padding: 3, border: '1px solid rgba(255,255,255,0.08)' }}>
                       <button
                         type="button"
-                        onClick={() => setUnitSystem('withric')}
+                        onClick={() => setUnitSystem('metric')}
                         style={{
                           flex: 1,
                           padding: '6px',
                           border: 'none',
                           borderRadius: 6,
-                          background: unitSystem === 'withric' ? '#38bdf8' : 'transparent',
-                          color: unitSystem === 'withric' ? '#09090b' : '#94a3b8',
+                          background: unitSystem === 'metric' ? '#38bdf8' : 'transparent',
+                          color: unitSystem === 'metric' ? '#09090b' : '#94a3b8',
                           fontWeight: 800,
                           fontSize: 12,
                           cursor: 'pointer'
@@ -324,14 +324,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
                 <div>
                   <label style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 800, display: 'block', marginBottom: 6 }}>
-                    Height ({unitSystem === 'withric' ? 'cm' : 'inches'})
+                    Height ({unitSystem === 'metric' ? 'cm' : 'inches'})
                   </label>
                   <input 
                     type="number" 
                     className="zh-profile-input" 
                     value={height} 
                     onChange={e => setHeight(e.target.value)} 
-                    placeholder={unitSystem === 'withric' ? '180' : '71'}
+                    placeholder={unitSystem === 'metric' ? '180' : '71'}
                     style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '10px 14px', borderRadius: 10, color: '#fff', fontSize: 13 }}
                   />
                 </div>

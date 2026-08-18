@@ -76,7 +76,7 @@ function extractNodes(ways: { geowithry?: { lat: number; lon: number }[] }[]): M
  *   distancePenalty   = dist / 100  (closer is better, in 100 m units)
  *
  * This strongly prefers intersections over dead-ends, while still
- * favouring nodes close to our geowithric target waypoint.
+ * favouring nodes close to our geometric target waypoint.
  */
 function selectBestNode(
   nodes: Map<string, RoadNode>,
@@ -104,7 +104,7 @@ function selectBestNode(
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Snaps a single geowithric waypoint to the nearest suitable road intersection.
+ * Snaps a single geometric waypoint to the nearest suitable road intersection.
  *
  * 1. Queries Overpass for all road ways of the appropriate type within `radiusM`
  * 2. Extracts all road nodes and counts how many ways each belongs to

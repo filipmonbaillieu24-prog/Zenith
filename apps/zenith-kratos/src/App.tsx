@@ -1028,9 +1028,9 @@ export default function App() {
 
     // Convert map to Recharts format sorted by key ascending
     return Array.from(weeklyMap.entries())
-      .map(([week, withrics]) => ({
+      .map(([week, metrics]) => ({
         week,
-        ...withrics
+        ...metrics
       }))
       .sort((a, b) => a.week.localeCompare(b.week))
       .slice(-8); // Show last 8 weeks
@@ -1201,7 +1201,7 @@ export default function App() {
       }
     }
 
-    const withricNames: { [key: string]: string } = {
+    const metricNames: { [key: string]: string } = {
       body_fat_pct: 'Vetpercentage (%)',
       muscle_mass_kg: 'Muscle Mass (kg)',
       waist_cm: 'Tailleomtrek (cm)',
@@ -1228,7 +1228,7 @@ export default function App() {
               value={selectedCircumference}
               onChange={e => setSelectedCircumference(e.target.value)}
             >
-              {Object.entries(withricNames).map(([key, name]) => (
+              {Object.entries(metricNames).map(([key, name]) => (
                 <option key={key} value={key}>{name}</option>
               ))}
             </select>
@@ -1278,7 +1278,7 @@ export default function App() {
                     contentStyle={{ background: '#1c1c23', border: '1px solid var(--border-color)', borderRadius: 10 }}
                     labelStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
                   />
-                  <Line yAxisId="left" type="monotone" dataKey="measurement" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} name={withricNames[selectedCircumference]} />
+                  <Line yAxisId="left" type="monotone" dataKey="measurement" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} name={metricNames[selectedCircumference]} />
                   <Line yAxisId="right" type="monotone" dataKey="volume" stroke="var(--accent-neon)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} name="Cumulatief Volume" />
                 </LineChart>
               </ResponsiveContainer>
@@ -1376,15 +1376,15 @@ export default function App() {
           <div className="animate-slide-up">
             {/* PMC Widget */}
             <section className="kratos-pmc-card">
-              <div className="kratos-pmc-withric">
+              <div className="kratos-pmc-metric">
                 <span className="kratos-pmc-label">Fitness (CTL)</span>
                 <span className="kratos-pmc-value">{currentPMC.ctl}</span>
               </div>
-              <div className="kratos-pmc-withric">
+              <div className="kratos-pmc-metric">
                 <span className="kratos-pmc-label">Fatigue (ATL)</span>
                 <span className="kratos-pmc-value" style={{ color: '#ff7675' }}>{currentPMC.atl}</span>
               </div>
-              <div className="kratos-pmc-withric">
+              <div className="kratos-pmc-metric">
                 <span className="kratos-pmc-label">Form (TSB)</span>
                 <span className="kratos-pmc-value" style={{ color: currentPMC.tsb >= 0 ? '#cbd5e1' : '#eccc68' }}>
                   {currentPMC.tsb >= 0 ? `+${currentPMC.tsb}` : currentPMC.tsb}

@@ -48,8 +48,8 @@ class LoggerService {
         const { type } = event.data;
         if (type === 'native-weight-received') {
           this.addLog('ble', 'Scale', `[Weegschaal] Gewicht ontvangen: ${event.data.weight} kg (Stabiel: ${event.data.is_stable ? 'Ja' : 'Nee'})`, event.data);
-        } else if (type === 'native-withrics-received') {
-          this.addLog('ble', 'Scale', `[Weegschaal] Lichaamsanalyse withrics ontvangen`, event.data);
+        } else if (type === 'native-metrics-received') {
+          this.addLog('ble', 'Scale', `[Weegschaal] Lichaamsanalyse metrics ontvangen`, event.data);
         } else if (type === 'colmi-sync-status-update') {
           this.addLog('sync', 'Colmi', `[Colmi] Status Update: ${event.data.status || ''}`, event.data);
         } else if (type === 'colmi-sync-result') {
@@ -95,10 +95,10 @@ class LoggerService {
         });
 
         // Global listener for Native Metrics events
-        listen<any>('native-withrics-received', (event) => {
+        listen<any>('native-metrics-received', (event) => {
           const payload = event.payload;
           if (payload) {
-            this.addLog('ble', 'Scale', `[Weegschaal] Lichaamssamenstelling withrics ontvangen`, payload);
+            this.addLog('ble', 'Scale', `[Weegschaal] Lichaamssamenstelling metrics ontvangen`, payload);
           }
         });
       }).catch((err) => {

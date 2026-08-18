@@ -84,7 +84,7 @@ export const IntegrationsPage: React.FC = () => {
         lastSync: 'Today (Live background worker)',
         autoSync: true,
         description: 'Official active health & workout sync pathway for Zenith using the Zenith Pulse app. Automatically syncs steps, heart rate, HRV, sleep, calories, weight, and workouts.',
-        features: ['Steps & Heart Rate Sync', 'HRV & Sleep Stages Ingestion', 'Biowithric Weight Logging', 'Background WorkManager Sync']
+        features: ['Steps & Heart Rate Sync', 'HRV & Sleep Stages Ingestion', 'Biometric Weight Logging', 'Background WorkManager Sync']
       },
       {
         id: 'strava',
@@ -579,7 +579,7 @@ export const IntegrationsPage: React.FC = () => {
                       <li>Open the <strong>Onelapfit app</strong> on your phone or visit <a href="https://www.onelapfit.com" target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>onelapfit.com</a>.</li>
                       <li>Go to <strong>Settings ➔ Third-Party Apps</strong>.</li>
                       <li>Select <strong>Strava</strong> and authorize the link.</li>
-                      <li>When your indoor workout finishes, Onelapfit syncs to Strava, and Zenith ingests it into <strong>Zenith Aero</strong> with all power withrics!</li>
+                      <li>When your indoor workout finishes, Onelapfit syncs to Strava, and Zenith ingests it into <strong>Zenith Aero</strong> with all power metrics!</li>
                     </ol>
                   </div>
 
@@ -595,7 +595,7 @@ export const IntegrationsPage: React.FC = () => {
               ) : (
                 <>
                   <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>
-                    Enter your Client Credentials for <strong>{selectedService.name}</strong>. Zenith will automatically fetch your workout data and recovery withrics.
+                    Enter your Client Credentials for <strong>{selectedService.name}</strong>. Zenith will automatically fetch your workout data and recovery metrics.
                   </p>
 
                   <div className="form-group">

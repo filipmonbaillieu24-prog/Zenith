@@ -8,7 +8,7 @@ export interface NeuralAnalysis {
 
 /**
  * One data sample from a ride (typically 1-second resolution from FIT/GPX).
- * All fields are optional — not every device records all withrics.
+ * All fields are optional — not every device records all metrics.
  */
 export interface RidePoint {
   time:      number;   // Unix timestamp (ms)
@@ -100,7 +100,7 @@ export interface RideSummary {
   // Heart rate recovery
   hrRecovery60?:    number;    // bpm drop in 60s after peak HR — higher = fitter
 
-  // Geavanceerde progressie withrics (Fase 2)
+  // Geavanceerde progressie metrics (Fase 2)
   phenotype?:             string;    // Fysiologische classificatie: Sprinter, Puncheur, Tijdridespecialist, Climber
   kjTotal?:               number;    // Totale energieverbruik in kJ
   fresh5minPower?:        number;    // Beste 5 min vermogen (fris, <1000 kJ)

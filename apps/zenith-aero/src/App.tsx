@@ -741,7 +741,7 @@ function App() {
             </div>
 
             <p style={{ fontSize: 12, color: '#cbd5e1', margin: 0, lineHeight: 1.5 }}>
-              Your latest activity demonstrates improved physiological withrics. Would you like to update your athlete profile and heart rate/power zones?
+              Your latest activity demonstrates improved physiological metrics. Would you like to update your athlete profile and heart rate/power zones?
             </p>
 
             {/* Proposals List */}

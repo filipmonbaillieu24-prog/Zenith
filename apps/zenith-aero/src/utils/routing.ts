@@ -245,7 +245,7 @@ async function calibrateSingleCandidate(
   if (!route) return null;
 
   // ── Phase 2: snap calibrated waypoints to real road intersections ──
-  // This replaces the geowithric (field/forest-landing) waypoints with
+  // This replaces the geometric (field/forest-landing) waypoints with
   // actual road intersection nodes from OSM, maximising BRouter's routing
   // freedom and drastically reducing dead-end backtracking.
   let snappedWaypoints = waypoints;

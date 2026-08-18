@@ -193,7 +193,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
     if (!longRide?.avgHR) return null;
     const avgHR  = longRide.avgHR!;
     const avgPow = longRide.avgPower ?? 0;
-    // Approximate first/second half withrics
+    // Approximate first/second half metrics
     const firstHalfPow  = avgPow;
     const secondHalfPow = avgPow * 0.97;
     const firstHalfHR   = avgHR;

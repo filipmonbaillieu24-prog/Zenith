@@ -267,7 +267,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     return computeSimulatedPMC(tssList, plannedWorkouts, 35);
   }, [allRides, allKratos, plannedWorkouts]);
 
-  // Find today's point in the simulation to show unified withrics (Aero + Kratos)
+  // Find today's point in the simulation to show unified metrics (Aero + Kratos)
   const todayPoint = useMemo(() => {
     if (simPMC.length === 0) return { ctl: fitnessMetrics.ctl, atl: fitnessMetrics.atl, tsb: fitnessMetrics.tsb };
     const todayKey = new Date().setHours(0,0,0,0);
@@ -596,7 +596,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       return null;
     }
     const sQual = sleepAnalysis.score;
-    const sDur = sleepAnalysis.withrics.totalHours;
+    const sDur = sleepAnalysis.metrics.totalHours;
     const weightVal = latestWeight?.weight ?? fitnessProfile.weight ?? 75;
     
     return predictRecoveryScore(
@@ -803,7 +803,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                       <div>
                         <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>ML Sleep Score</span>
                         <strong style={{ fontSize: 13, color: '#f8fafc' }}>
-                          {latestSleep ? `${sleepAnalysis.withrics.totalHours} hrs` : '--'}
+                          {latestSleep ? `${sleepAnalysis.metrics.totalHours} hrs` : '--'}
                         </strong>
                       </div>
                     </div>
