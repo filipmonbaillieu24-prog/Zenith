@@ -14,10 +14,12 @@ import { autoSaveRideToGDrive } from './utils/export';
 
 import { RideSummaryWithBests } from './types/workout';
 import { computeRide, getWeightForDate, estimateGlobalFTP } from './utils/rideMetrics';
-import WorkoutDashboard from './pages/WorkoutDashboard';
-import RidePage from './pages/RidePage';
-import { SettingsPage } from './pages/SettingsPage';
-import { CalendarPage } from './pages/CalendarPage';
+import { lazy, Suspense } from 'react';
+
+const WorkoutDashboard = lazy(() => import('./pages/WorkoutDashboard'));
+const RidePage = lazy(() => import('./pages/RidePage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const CalendarPage = lazy(() => import('./pages/CalendarPage').then(m => ({ default: m.CalendarPage })));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { ProPaywallModal } from './components/common/ProPaywallModal';
@@ -1000,6 +1002,7 @@ function App() {
 
           {/* Dynamic Content Switching */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: (activeTab === 'route' || selectedRide) ? 'hidden' : 'auto' }}>
+            <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
             {/* ── Zenith Ecosystem Hub View & Pilot View are handled in Zenith Hub ── */}
 
             {/* ── Analytics & History Views ── */}
@@ -1152,6 +1155,7 @@ function App() {
                 />
               </div>
             )}
+            </Suspense>
           </div>
         </main>
       </div>

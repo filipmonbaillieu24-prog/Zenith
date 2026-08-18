@@ -34,6 +34,18 @@ export interface Ride {
   created_at?: string;
 }
 
+export interface RidePoint {
+  time:     number;   // Unix ms
+  lat?:     number;
+  lng?:     number;
+  ele?:     number;   // meters
+  speed?:   number;   // m/s
+  power?:   number;   // Watts
+  hr?:      number;   // bpm
+  cadence?: number;   // rpm
+  distance?: number;  // cumulative meters
+}
+
 export interface WeightLog {
   id?: string;
   user_id: string;

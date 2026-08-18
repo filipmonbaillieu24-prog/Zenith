@@ -1,1 +1,1 @@
-export { supabase } from '../../../../shared/supabaseClient';
+export { supabase } from '@zenith/shared';

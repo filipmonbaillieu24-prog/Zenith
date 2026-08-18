@@ -1,130 +1,38 @@
-import { RouteCoordinate, KmSplit, RunActivity } from '../types/stride';
+import { parseGPX, RidePoint } from '@zenith/shared';
+import { RunActivity } from '../types/stride';
 
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth radius in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
+export function parseGpxFile(content: string, filename?: string): Partial<RunActivity> {
+  const points: RidePoint[] = parseGPX(content);
+  if (points.length === 0) throw new Error('No GPS points found');
 
-export function parseGpxFile(xmlString: string, filename: string): Partial<RunActivity> {
-  const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
-  
-  const trkpts = xmlDoc.getElementsByTagName('trkpt');
-  const coordinates: RouteCoordinate[] = [];
-  
-  let totalDistanceKm = 0;
-  let totalElevationGain = 0;
-  let heartRateSum = 0;
-  let heartRateCount = 0;
-  let maxHeartRate = 0;
-  let startTime: Date | null = null;
-  let endTime: Date | null = null;
+  const startMs = points[0].time;
+  const endMs = points[points.length - 1].time;
+  const durationSec = Math.max(1, Math.round((endMs - startMs) / 1000));
+  const lastPoint = points[points.length - 1];
+  const distanceKm = lastPoint.distance ? parseFloat((lastPoint.distance / 1000).toFixed(2)) : 0;
+  const avgPaceMinKm = distanceKm > 0 ? parseFloat(((durationSec / 60) / distanceKm).toFixed(2)) : 0;
 
-  let currentKmIndex = 1;
-  let currentKmStartDist = 0;
-  let currentKmStartTime: Date | null = null;
-  let currentKmStartEle = 0;
-  let currentKmEleGain = 0;
-  let currentKmHrSum = 0;
-  let currentKmHrCount = 0;
-  const splits: KmSplit[] = [];
+  const validPts = points.filter(p => p.lat != null && p.lng != null);
+  const routeCoordinates = validPts.map(p => ({ lat: p.lat!, lng: p.lng!, ele: p.ele }));
 
-  for (let i = 0; i < trkpts.length; i++) {
-    const pt = trkpts[i];
-    const lat = parseFloat(pt.getAttribute('lat') || '0');
-    const lng = parseFloat(pt.getAttribute('lon') || '0');
-    const eleNode = pt.getElementsByTagName('ele')[0];
-    const timeNode = pt.getElementsByTagName('time')[0];
-    const ele = eleNode ? parseFloat(eleNode.textContent || '0') : undefined;
-    const timeStr = timeNode ? timeNode.textContent : null;
-    const ptTime = timeStr ? new Date(timeStr) : null;
+  const hrs = points.map(p => p.hr).filter((h): h is number => h != null && h > 0);
+  const avgHeartRate = hrs.length > 0 ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : undefined;
+  const maxHeartRate = hrs.length > 0 ? Math.max(...hrs) : undefined;
 
-    // Heart rate extraction from extensions (garmin / strava GPX extension)
-    let hr: number | undefined = undefined;
-    const hrNode = pt.getElementsByTagName('hr')[0] || pt.getElementsByTagName('gpxtpx:hr')[0] || pt.getElementsByTagName('ns3:hr')[0];
-    if (hrNode && hrNode.textContent) {
-      hr = parseInt(hrNode.textContent, 10);
-      if (!isNaN(hr) && hr > 0) {
-        heartRateSum += hr;
-        heartRateCount++;
-        if (hr > maxHeartRate) maxHeartRate = hr;
-      }
-    }
-
-    if (i === 0) {
-      startTime = ptTime;
-      currentKmStartTime = ptTime;
-      if (ele !== undefined) currentKmStartEle = ele;
-    }
-    endTime = ptTime;
-
-    if (i > 0) {
-      const prevPt = coordinates[coordinates.length - 1];
-      const dist = haversineDistance(prevPt.lat, prevPt.lng, lat, lng);
-      totalDistanceKm += dist;
-
-      if (ele !== undefined && prevPt.ele !== undefined && ele > prevPt.ele) {
-        const diff = ele - prevPt.ele;
-        totalElevationGain += diff;
-        currentKmEleGain += diff;
-      }
-    }
-
-    if (hr !== undefined) {
-      currentKmHrSum += hr;
-      currentKmHrCount++;
-    }
-
-    // Check if 1 km mark completed
-    if (totalDistanceKm >= currentKmIndex) {
-      const splitTimeSec = ptTime && currentKmStartTime ? (ptTime.getTime() - currentKmStartTime.getTime()) / 1000 : 300;
-      const paceMinKm = splitTimeSec / 60;
-      splits.push({
-        km: currentKmIndex,
-        paceMinKm: parseFloat(paceMinKm.toFixed(2)),
-        hr: currentKmHrCount > 0 ? Math.round(currentKmHrSum / currentKmHrCount) : undefined,
-        elevationGain: Math.round(currentKmEleGain)
-      });
-      currentKmIndex++;
-      currentKmStartDist = totalDistanceKm;
-      currentKmStartTime = ptTime;
-      currentKmEleGain = 0;
-      currentKmHrSum = 0;
-      currentKmHrCount = 0;
-    }
-
-    coordinates.push({ lat, lng, ele, hr, time: timeStr || undefined });
-  }
-
-  const durationSec = startTime && endTime ? Math.max(1, (endTime.getTime() - startTime.getTime()) / 1000) : Math.round(totalDistanceKm * 330);
-  const avgPaceMinKm = totalDistanceKm > 0 ? (durationSec / 60) / totalDistanceKm : 5.0;
-  const avgHeartRate = heartRateCount > 0 ? Math.round(heartRateSum / heartRateCount) : undefined;
-  
-  const cleanTitle = filename.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+  const cads = points.map(p => p.cadence).filter((c): c is number => c != null && c > 0);
+  const avgCadenceSpm = cads.length > 0 ? Math.round(cads.reduce((a, b) => a + b, 0) / cads.length) : 170;
 
   return {
-    title: cleanTitle || 'GPX Hardloopsessie',
-    date: startTime ? startTime.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-    timeOfDay: startTime ? startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:00',
-    type: 'easy',
-    isTreadmill: false,
-    distanceKm: parseFloat(totalDistanceKm.toFixed(2)),
-    durationSec: Math.round(durationSec),
-    avgPaceMinKm: parseFloat(avgPaceMinKm.toFixed(2)),
-    elevationGainM: Math.round(totalElevationGain),
+    title: filename ? filename.replace(/\.(gpx|xml|tcx)$/i, '') : 'Geïmporteerde Loop',
+    date: new Date(startMs).toISOString().slice(0, 10),
+    distanceKm,
+    durationSec,
+    avgPaceMinKm,
     avgHeartRate,
-    maxHeartRate: maxHeartRate > 0 ? maxHeartRate : undefined,
-    avgCadenceSpm: 172,
-    calories: Math.round(totalDistanceKm * 65),
-    source: 'gpx',
-    routeCoordinates: coordinates,
-    splits
+    maxHeartRate,
+    avgCadenceSpm,
+    routeCoordinates,
   };
 }
+
+export { parseGPX };

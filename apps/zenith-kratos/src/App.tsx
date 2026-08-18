@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel } from '../../../shared/ml/SharedModels';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import { 
   Dumbbell, 

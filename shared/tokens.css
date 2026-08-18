@@ -1,0 +1,27 @@
+/* ==========================================================
+ * ZENITH ECOSYSTEM - SHARED DESIGN SYSTEM CSS TOKENS
+ * Generated from shared/design-tokens.json
+ * ========================================================== */
+
+:root {
+  --zenith-color-bg: #09090b;
+  --zenith-color-surface: #1c1c23;
+  --zenith-color-primary: #cbd5e1;
+  --zenith-color-secondary: #94a3b8;
+  --zenith-color-dark: #475569;
+  --zenith-color-accent: #4ade80;
+  --zenith-color-accent-neon: #39ff14;
+  --zenith-color-error: #ef4444;
+  --zenith-color-border: #27272a;
+
+  --zenith-space-xs: 4px;
+  --zenith-space-sm: 8px;
+  --zenith-space-md: 16px;
+  --zenith-space-lg: 24px;
+  --zenith-space-xl: 32px;
+
+  --zenith-radius-sm: 4px;
+  --zenith-radius-md: 8px;
+  --zenith-radius-lg: 12px;
+  --zenith-radius-xl: 16px;
+}

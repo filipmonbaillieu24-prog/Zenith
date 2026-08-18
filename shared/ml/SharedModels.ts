@@ -1,4 +1,11 @@
 import { SimpleMLP } from './SimpleMLP';
+import { MinMaxScaler } from './MinMaxScaler';
+
+export const volumeScaler = new MinMaxScaler(0, 5000);
+export const progressionScaler = new MinMaxScaler(-10, 10);
+export const sleepScaler = new MinMaxScaler(0, 100);
+export const tsbScaler = new MinMaxScaler(-50, 50);
+export const repsScaler = new MinMaxScaler(0, 20);
 
 // ==========================================================
 // 1. KRATOS PROGRESSIVE OVERLOAD MODEL
@@ -44,14 +51,12 @@ export function predictProgressiveOverload(
   cardioTsb: number, // -50..+50
   targetReps: number // e.g. 10 reps
 ): number {
-  const scaledTsb = Math.max(0, Math.min(1, (cardioTsb + 50) / 100)); // scale -50..+50 to 0..1
-  
   const x = [
-    Math.min(1.5, pastSetsVolume / 5000),
-    Math.min(1.5, Math.max(-1.5, weightProgression / 10)),
-    Math.min(1.0, sleepQuality / 100),
-    scaledTsb,
-    Math.min(1.5, targetReps / 20)
+    volumeScaler.scale(pastSetsVolume),
+    progressionScaler.scale(weightProgression),
+    sleepScaler.scale(sleepQuality),
+    tsbScaler.scale(cardioTsb),
+    repsScaler.scale(targetReps)
   ];
 
   const y = kratosOverloadModel.predict(x);

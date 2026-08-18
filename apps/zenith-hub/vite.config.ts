@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import path from "path";
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -8,6 +9,11 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   base: "./",
   plugins: [react()],
+  resolve: {
+    alias: {
+      "@zenith/shared": path.resolve(__dirname, "../../shared/index.ts"),
+    },
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -35,7 +41,16 @@ export default defineConfig(async () => ({
       external: [
         '@tauri-apps/plugin-updater',
         '@tauri-apps/plugin-process'
-      ]
+      ],
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          supabase: ["@supabase/supabase-js"],
+          lucide: ["lucide-react"],
+          recharts: ["recharts"],
+          leaflet: ["leaflet", "react-leaflet"]
+        }
+      }
     }
   }
 }));

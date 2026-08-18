@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, recoveryModel } from '../../../../../shared/ml/RecoveryScore';
-import { calculateZenithSleepScore } from '../../../../../shared/services/zenithSleepEngine';
+import { predictRecoveryScore, recoveryModel, calculateZenithSleepScore } from '@zenith/shared';
 import { computeSimulatedPMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,

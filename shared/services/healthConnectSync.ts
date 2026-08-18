@@ -221,11 +221,14 @@ export async function syncPhoneDataToEcosystem(userId?: string): Promise<{ succe
     return { success: false, stepsCount: 0, exerciseCount: 0, sleepCount: 0 };
   }
 
-  // Determine current user ID if not explicitly passed
   let activeUserId = userId;
   if (!activeUserId) {
     const { data: userData } = await supabase.auth.getUser();
-    activeUserId = userData?.user?.id || '94dc94f3-d8b0-4682-887f-c1fb04c98520';
+    activeUserId = userData?.user?.id;
+  }
+  if (!activeUserId) {
+    console.warn('[HealthConnectSync] Aborting sync: User is not authenticated.');
+    return { success: false, stepsCount: 0, exerciseCount: 0, sleepCount: 0 };
   }
 
   const stepsTransformed = data.steps ? transformStepsForVigor(data.steps) : [];

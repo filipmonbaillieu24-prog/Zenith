@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "shared"
   ],
   "scripts": {
     "zenith": "concurrently \"npm run dev --workspace=apps/zenith-aero\" \"npm run tauri --workspace=apps/zenith-hub dev\" \"npm run dev --workspace=apps/zenith-vigor\" \"npm run dev --workspace=apps/zenith-kratos\" \"npm run dev --workspace=apps/zenith-fuel\" \"npm run dev --workspace=apps/zenith-stride\"",

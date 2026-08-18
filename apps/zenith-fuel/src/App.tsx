@@ -4,6 +4,7 @@ import {
   ShieldAlert, Clock, Barcode, Activity, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
+import { calculateZenithSleepScore } from '@zenith/shared';
 import { runZaneCalibration, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, calculateMifflinBmr, calculateAge } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
@@ -1432,19 +1433,23 @@ function App() {
   const bmrOffset = zaneResult.isCalibrated ? (zaneResult.bmrOffset || 0) : 0;
   const activeCalories = selectedDateActiveCalories;
   
-  // Sleep average
-  const validSleepQualities = sleepLogs.map(s => Number(s.quality_score)).filter(q => !isNaN(q));
+  // Sleep average (excluding unrated 0 quality_score entries)
+  const validSleepQualities = sleepLogs.map(s => Number(s.quality_score)).filter(q => !isNaN(q) && q > 0);
   const sleepQualityAvg = validSleepQualities.length > 0
     ? validSleepQualities.reduce((sum, q) => sum + q, 0) / validSleepQualities.length
-    : 75;
-  const validSleepDurations = sleepLogs.map(s => Number(s.duration_minutes) / 60).filter(d => !isNaN(d));
+    : 80;
+  const validSleepDurations = sleepLogs.map(s => Number(s.duration_minutes) / 60).filter(d => !isNaN(d) && d > 0);
   const sleepDurationAvg = validSleepDurations.length > 0
     ? validSleepDurations.reduce((sum, d) => sum + d, 0) / validSleepDurations.length
     : 8;
 
-  // Today's sleep
+  // Today's sleep & Zenith ML Sleep Score Calculation
   const todaySleep = sleepLogs.find(s => s.logged_at.split('T')[0] === selectedDateStr);
-  const todaySleepQuality = todaySleep ? Number(todaySleep.quality_score) : null;
+  const todaySleepScoreResult = todaySleep ? calculateZenithSleepScore(todaySleep, sleepLogs) : null;
+  const rawQuality = todaySleep ? Number(todaySleep.quality_score) : 0;
+  const todaySleepQuality = todaySleep 
+    ? (rawQuality > 0 ? rawQuality : (todaySleepScoreResult ? todaySleepScoreResult.score : 80))
+    : null;
   const todaySleepDuration = todaySleep ? Number(todaySleep.duration_minutes) / 60 : null;
 
   // Sleep adjustment
@@ -1884,7 +1889,7 @@ function App() {
                       : (todaySleepQuality !== null ? `${todaySleepQuality}%` : `${Math.round(sleepQualityAvg)}%`)}
                   </div>
                   <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Coefficient' : 'Current measurement'}
+                    {zaneResult.isCalibrated ? 'Coefficient' : (todaySleepQuality !== null ? 'Current measurement' : 'Baseline average')}
                   </span>
                 </div>
                 <div className="zane-stat-item">

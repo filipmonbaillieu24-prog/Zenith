@@ -208,7 +208,11 @@ export function App() {
     // Persist to Supabase stride_activities
     try {
       const { data: userData } = await supabase.auth.getUser();
-      const userId = userData?.user?.id || '94dc94f3-d8b0-4682-887f-c1fb04c98520';
+      const userId = userData?.user?.id;
+      if (!userId) {
+        console.warn('Cannot persist stride activity: User is not authenticated.');
+        return;
+      }
 
       await supabase.from('stride_activities').insert({
         user_id: userId,

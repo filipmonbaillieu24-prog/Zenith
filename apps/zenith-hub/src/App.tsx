@@ -1,25 +1,26 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { supabase } from './utils/supabaseClient';
-import { LoginPage } from './pages/LoginPage';
-import { ZenithHubPage } from './pages/hub/ZenithHubPage';
-import { CalendarPage } from './pages/hub/CalendarPage';
-import { PilotPanel } from './pages/hub/PilotPanel';
-import { ProfilePage } from './pages/hub/ProfilePage';
-import { SystemConsolePage } from './pages/hub/SystemConsolePage';
+
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const ZenithHubPage = lazy(() => import('./pages/hub/ZenithHubPage').then(m => ({ default: m.ZenithHubPage })));
+const CalendarPage = lazy(() => import('./pages/hub/CalendarPage').then(m => ({ default: m.CalendarPage })));
+const PilotPanel = lazy(() => import('./pages/hub/PilotPanel').then(m => ({ default: m.PilotPanel })));
+const ProfilePage = lazy(() => import('./pages/hub/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const SystemConsolePage = lazy(() => import('./pages/hub/SystemConsolePage').then(m => ({ default: m.SystemConsolePage })));
+const IntegrationsPage = lazy(() => import('./pages/hub/IntegrationsPage').then(m => ({ default: m.IntegrationsPage })));
+const ZenithLandingPage = lazy(() => import('./pages/marketing/ZenithLandingPage').then(m => ({ default: m.ZenithLandingPage })));
+const PricingPage = lazy(() => import('./pages/marketing/PricingPage').then(m => ({ default: m.PricingPage })));
+const FeatureRequestsPage = lazy(() => import('./pages/community/FeatureRequestsPage').then(m => ({ default: m.FeatureRequestsPage })));
+
 import { loggerService } from './utils/loggerService';
-import { IntegrationsPage } from './pages/hub/IntegrationsPage';
 import { Sidebar, TabKey } from './components/Sidebar';
 import { computePMC } from './utils/pmc';
-import { recoveryModel } from '../../../shared/ml/RecoveryScore';
-import { syncPhoneDataToEcosystem } from '../../../shared/services/healthConnectSync';
+import { recoveryModel, syncPhoneDataToEcosystem } from '@zenith/shared';
 import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { AccountConfirmedModal } from './components/AccountConfirmedModal';
-import { ZenithLandingPage } from './pages/marketing/ZenithLandingPage';
-import { PricingPage } from './pages/marketing/PricingPage';
-import { FeatureRequestsPage } from './pages/community/FeatureRequestsPage';
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -814,7 +815,7 @@ ${logsMarkdown}
   if (!session) {
     if (publicView === 'auth') {
       return (
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
           <button
             onClick={() => setPublicView('landing')}
             style={{
@@ -834,27 +835,37 @@ ${logsMarkdown}
           >
             ← Back to Website
           </button>
-          <LoginPage />
+          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+            <LoginPage />
+          </Suspense>
         </div>
       );
     }
     if (publicView === 'prijzen') {
-      return <PricingPage onBack={() => setPublicView('landing')} isPro={false} />;
+      return (
+        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+          <PricingPage onBack={() => setPublicView('landing')} isPro={false} />
+        </Suspense>
+      );
     }
     if (publicView === 'roadmap') {
       return (
-        <FeatureRequestsPage 
-          onBack={() => setPublicView('landing')} 
-          onRequireLogin={() => setPublicView('auth')}
-        />
+        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+          <FeatureRequestsPage 
+            onBack={() => setPublicView('landing')} 
+            onRequireLogin={() => setPublicView('auth')}
+          />
+        </Suspense>
       );
     }
     return (
-      <ZenithLandingPage
-        onLogin={() => setPublicView('auth')}
-        onRegister={() => setPublicView('auth')}
-        onNavigateTab={(tab) => setPublicView(tab as any)}
-      />
+      <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+        <ZenithLandingPage
+          onLogin={() => setPublicView('auth')}
+          onRegister={() => setPublicView('auth')}
+          onNavigateTab={(tab) => setPublicView(tab as any)}
+        />
+      </Suspense>
     );
   }
 
@@ -887,6 +898,7 @@ ${logsMarkdown}
           }}
         />
         <div style={{ flex: 1, height: isTauri ? 'calc(100vh - 32px)' : '100vh', marginTop: 0, overflowY: 'auto', position: 'relative' }}>
+          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
           {activeTab === 'hub' && (
             <ZenithHubPage
               fitnessProfile={fitnessProfile}
@@ -1000,6 +1012,7 @@ ${logsMarkdown}
               />
             </div>
           )}
+          </Suspense>
         </div>
       </div>
 

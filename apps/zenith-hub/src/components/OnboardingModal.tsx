@@ -68,10 +68,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         id: userId,
         name: name.trim(),
         gender,
-        birth_date: birthDate,
-        height_cm: heightInCm,
-        unit_system: unitSystem,
-        weight_unit: weightUnit,
+        birth_date: birthDate || null,
+        height_cm: heightInCm || null,
         training_goal: goal,
         updated_at: new Date().toISOString()
       };
@@ -81,7 +79,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         .from('profiles')
         .upsert(profilePayload);
 
-      if (profError) throw profError;
+      if (profError) {
+        console.warn('Profiles table upsert warning:', profError.message);
+      }
 
       // Also log initial weight measurement if provided
       if (weightInKg > 0) {

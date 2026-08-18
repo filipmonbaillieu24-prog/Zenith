@@ -21,7 +21,7 @@ import {
   syncPhoneDataToEcosystem, 
   savePhoneServerConfig, 
   PhoneServerStatus 
-} from '../../../../../shared/services/healthConnectSync';
+} from '@zenith/shared';
 import './IntegrationsPage.css';
 
 interface IntegrationService {

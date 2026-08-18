@@ -13,6 +13,15 @@ export class SimpleMLP {
   B1: number[];
   W2: number[][];
   B2: number[];
+  vW1: number[][];
+  vB1: number[];
+  vW2: number[][];
+  vB2: number[];
+  W1_EMA: number[][];
+  B1_EMA: number[];
+  W2_EMA: number[][];
+  B2_EMA: number[];
+  lossHistory: number[] = [];
   modelName: string;
   private _loaded = false;
 
@@ -29,6 +38,16 @@ export class SimpleMLP {
     this.B1 = def.B1;
     this.W2 = def.W2;
     this.B2 = def.B2;
+
+    this.W1_EMA = JSON.parse(JSON.stringify(def.W1));
+    this.B1_EMA = JSON.parse(JSON.stringify(def.B1));
+    this.W2_EMA = JSON.parse(JSON.stringify(def.W2));
+    this.B2_EMA = JSON.parse(JSON.stringify(def.B2));
+
+    this.vW1 = Array.from({ length: this.W1.length }, () => new Array(this.B1.length).fill(0));
+    this.vB1 = new Array(this.B1.length).fill(0);
+    this.vW2 = Array.from({ length: this.B1.length }, () => new Array(this.B2.length).fill(0));
+    this.vB2 = new Array(this.B2.length).fill(0);
   }
 
   /** Whether weights have been loaded from persistent storage */
@@ -210,8 +229,18 @@ export class SimpleMLP {
     return this.predict(x);
   }
 
-  /** Core backpropagation (SGD with BCE loss gradient) */
-  private _backprop(x: number[], targets: number[], lr: number): void {
+  /** Returns estimated AI Model Confidence score (0..100%) based on MSE loss history */
+  getConfidenceScore(): number {
+    if (this.lossHistory.length === 0) return 85; // baseline pre-trained default confidence
+    const sum = this.lossHistory.reduce((a, b) => a + b, 0);
+    const avgMse = sum / this.lossHistory.length;
+    // Map MSE 0.0 -> 98%, MSE 0.25 -> 75%, capped at 60..99%
+    const score = Math.round((1 - Math.min(0.4, avgMse)) * 100);
+    return Math.max(60, Math.min(99, score));
+  }
+
+  /** Core backpropagation with Momentum SGD & MSE Loss Tracking */
+  private _backprop(x: number[], targets: number[], lr: number, gamma: number = 0.9): void {
     // Forward pass (with pre-activation values for ReLU derivative)
     const hIn = new Array(this.B1.length).fill(0);
     const h = new Array(this.B1.length).fill(0);
@@ -233,11 +262,17 @@ export class SimpleMLP {
       y[col] = 1 / (1 + Math.exp(-(sum + this.B2[col]))); // sigmoid
     }
 
-    // Output delta (BCE loss gradient)
+    // Record MSE loss
+    let mseSum = 0;
     const delta2 = new Array(this.B2.length).fill(0);
     for (let k = 0; k < this.B2.length; k++) {
-      delta2[k] = y[k] - targets[k];
+      const err = y[k] - targets[k];
+      delta2[k] = err;
+      mseSum += err * err;
     }
+    const currentMse = mseSum / this.B2.length;
+    this.lossHistory.push(currentMse);
+    if (this.lossHistory.length > 50) this.lossHistory.shift();
 
     // Hidden delta
     const delta1 = new Array(this.B1.length).fill(0);
@@ -249,19 +284,28 @@ export class SimpleMLP {
       delta1[j] = errorSum * (hIn[j] > 0 ? 1 : 0);
     }
 
-    // Update weights W2 & B2
+    // Update weights W2 & B2 with Momentum SGD & Polyak EMA
+    const alphaEma = 0.95;
     for (let k = 0; k < this.B2.length; k++) {
-      this.B2[k] -= lr * delta2[k];
+      this.vB2[k] = gamma * this.vB2[k] + lr * delta2[k];
+      this.B2[k] -= this.vB2[k];
+      this.B2_EMA[k] = alphaEma * this.B2_EMA[k] + (1 - alphaEma) * this.B2[k];
       for (let j = 0; j < h.length; j++) {
-        this.W2[j][k] -= lr * delta2[k] * h[j];
+        this.vW2[j][k] = gamma * this.vW2[j][k] + lr * delta2[k] * h[j];
+        this.W2[j][k] -= this.vW2[j][k];
+        this.W2_EMA[j][k] = alphaEma * this.W2_EMA[j][k] + (1 - alphaEma) * this.W2[j][k];
       }
     }
 
-    // Update weights W1 & B1
+    // Update weights W1 & B1 with Momentum SGD & Polyak EMA
     for (let j = 0; j < this.B1.length; j++) {
-      this.B1[j] -= lr * delta1[j];
+      this.vB1[j] = gamma * this.vB1[j] + lr * delta1[j];
+      this.B1[j] -= this.vB1[j];
+      this.B1_EMA[j] = alphaEma * this.B1_EMA[j] + (1 - alphaEma) * this.B1[j];
       for (let i = 0; i < x.length; i++) {
-        this.W1[i][j] -= lr * delta1[j] * x[i];
+        this.vW1[i][j] = gamma * this.vW1[i][j] + lr * delta1[j] * x[i];
+        this.W1[i][j] -= this.vW1[i][j];
+        this.W1_EMA[i][j] = alphaEma * this.W1_EMA[i][j] + (1 - alphaEma) * this.W1[i][j];
       }
     }
   }

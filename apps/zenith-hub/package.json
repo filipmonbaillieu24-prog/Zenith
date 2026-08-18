@@ -11,6 +11,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@zenith/shared": "*",
     "@supabase/supabase-js": "^2.111.0",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",

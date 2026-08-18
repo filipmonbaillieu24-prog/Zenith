@@ -1,6 +1,4 @@
-import { SimpleMLP } from '../../../../shared/ml/SimpleMLP';
-import { kratosOverloadModel, dualSportFatigueModel } from '../../../../shared/ml/SharedModels';
-import { recoveryModel } from '../../../../shared/ml/RecoveryScore';
+import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel } from '@zenith/shared';
 import { computePMC } from './pmc';
 
 // ==========================================================

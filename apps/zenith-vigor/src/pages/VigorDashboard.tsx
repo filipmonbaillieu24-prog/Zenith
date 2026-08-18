@@ -34,7 +34,7 @@ import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
 import { DeviceManagerModal } from '../components/DeviceManagerModal';
 import { ProPaywallModal } from '../components/ProPaywallModal';
-import { calculateZenithSleepScore } from '../../../../shared/services/zenithSleepEngine';
+import { calculateZenithSleepScore } from '@zenith/shared';
 
 interface VigorDashboardProps {
   session: any;

@@ -18,7 +18,7 @@ import { detectClimbs } from './climbDetector';
 
 // ─── GENERIEKE NEURAAL NETWERK KLASSE ──────────────────────────────────────────
 
-import { SimpleMLP } from '../../../../shared/ml/SimpleMLP';
+import { SimpleMLP } from '@zenith/shared';
 
 // ─── MODEL 1: RITNOTITIE SENTIMENT ANALYSE ──────────────────────────────────────
 

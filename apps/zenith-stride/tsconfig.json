@@ -10,6 +10,10 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "paths": {
+      "@zenith/shared": ["../../shared/index.ts"],
+      "@zenith/shared/*": ["../../shared/*"]
+    },
     "noEmit": true,
     "jsx": "react-jsx",
 
@@ -18,5 +22,6 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src", "../../shared/**/*.ts"],
+  "exclude": ["**/__tests__/**", "../../shared/**/__tests__/**"]
 }
