@@ -108,7 +108,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
     <div className="modal-overlay">
       <div className="modal-content animate-slide-up" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
-          <h2 className="modal-title">Handmatig Loggen</h2>
+          <h2 className="modal-title">Manual Logging</h2>
           <button className="modal-close" onClick={onClose}>
             <X size={20} />
           </button>
@@ -146,7 +146,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
               color: activeTab === 'steps' ? '#fff' : 'var(--text-muted)'
             }}
           >
-            <Footprints size={14} style={{ color: activeTab === 'steps' ? '#cbd5e1' : 'inherit' }} /> Stappen
+            <Footprints size={14} style={{ color: activeTab === 'steps' ? '#cbd5e1' : 'inherit' }} /> Steps
           </button>
           <button
             type="button"
@@ -197,7 +197,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
         <form onSubmit={handleSubmit}>
           {/* Shared Date field */}
           <div className="form-group">
-            <label className="form-label">Datum</label>
+            <label className="form-label">Date</label>
             <input
               type="date"
               className="form-input"
@@ -210,7 +210,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
           {/* Steps Form */}
           {activeTab === 'steps' && (
             <div className="form-group animate-fade-in">
-              <label className="form-label">Aantal Stappen</label>
+              <label className="form-label">Aantal Steps</label>
               <input
                 type="number"
                 className="form-input"
@@ -240,7 +240,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <SlidersHorizontal size={15} style={{ color: '#a855f7' }} />
                   <span style={{ fontSize: 12, fontWeight: 700, color: '#e9d5ff' }}>
-                    Slaapfases per type specificeren
+                    Specify sleep phases by type
                   </span>
                 </div>
                 <label style={{ position: 'relative', display: 'inline-block', width: 40, height: 22, cursor: 'pointer' }}>
@@ -286,7 +286,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                   }}>
                     <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Total Calculated Sleep:</span>
                     <span style={{ fontSize: 16, fontWeight: 900, color: '#a855f7' }}>
-                      {calcHours}u {calcMins}m <span style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1' }}>({totalPhaseMinutes} min)</span>
+                      {calcHours}h {calcMins}m <span style={{ fontSize: 11, fontWeight: 600, color: '#cbd5e1' }}>({totalPhaseMinutes} min)</span>
                     </span>
                   </div>
 
@@ -294,11 +294,11 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                   {/* 1. Deep Sleep */}
                   <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: 12, borderRadius: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      🟣 Deep Sleep <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Fysiek & spierherstel)</span>
+                      🟣 Deep Sleep <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Physical & muscle recovery)</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
                         <input
                           type="number"
                           className="form-input"
@@ -309,7 +309,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minutes</label>
                         <input
                           type="number"
                           className="form-input"
@@ -325,11 +325,11 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                   {/* 2. Light Sleep */}
                   <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: 12, borderRadius: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      🔵 Light Sleep <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Geheugenverwerking)</span>
+                      🔵 Light Sleep <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Memory processing)</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
                         <input
                           type="number"
                           className="form-input"
@@ -340,7 +340,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minutes</label>
                         <input
                           type="number"
                           className="form-input"
@@ -356,11 +356,11 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                   {/* 3. REM Sleep */}
                   <div style={{ background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', padding: 12, borderRadius: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      💖 REM Sleep <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Mentale energie & dromen)</span>
+                      💖 REM Sleep <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Mental energy & dreaming)</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
                         <input
                           type="number"
                           className="form-input"
@@ -371,7 +371,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minutes</label>
                         <input
                           type="number"
                           className="form-input"
@@ -384,14 +384,14 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                     </div>
                   </div>
 
-                  {/* 4. Wakker */}
+                  {/* 4. Awake */}
                   <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: 12, borderRadius: 12 }}>
                     <div style={{ fontSize: 11, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      🟡 Wakker <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Micro-ontwakingen)</span>
+                      🟡 Awake <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>(Micro-awakenings)</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
                         <input
                           type="number"
                           className="form-input"
@@ -402,7 +402,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minutes</label>
                         <input
                           type="number"
                           className="form-input"
@@ -419,7 +419,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                 /* SIMPLE TOTAL SLEEP DURATION MODE */
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div className="form-group">
-                    <label className="form-label">Totale Duur (Uren)</label>
+                    <label className="form-label">Totale Duur (Hours)</label>
                     <input
                       type="number"
                       className="form-input"
@@ -431,7 +431,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Totale Duur (Minuten)</label>
+                    <label className="form-label">Totale Duur (Minutes)</label>
                     <input
                       type="number"
                       className="form-input"
@@ -481,13 +481,13 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Vetpercentage % (Optioneel)</label>
+                <label className="form-label">Body Fat % (Optional)</label>
                 <input
                   type="number"
                   step="0.1"
                   className="form-input"
                   value={bodyFat}
-                  placeholder="Atv. 14.5"
+                  placeholder="e.g. 14.5"
                   onChange={(e) => setBodyFat(e.target.value)}
                   min="2"
                   max="60"

@@ -668,7 +668,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       
       setPhotoFile(null);
       setPhotoNotes('');
-      alert('Progressiefoto succesvol geüpload!');
+      alert('Progressfoto succesvol geüpload!');
     } catch (err) {
       console.error('Error uploading photo:', err);
       alert('Error uploading photo.');
@@ -754,7 +754,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     
     // Target date forecast
     const forecastDate = new Date(new Date(newest.logged_at).getTime() + weeksNeeded * oneWeekMs);
-    const forecastDateStr = forecastDate.toLocaleDateString('nl-NL', {
+    const forecastDateStr = forecastDate.toLocaleDateString('en-US', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
@@ -807,36 +807,36 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   const chartWeightData = useMemo(() => {
     return weights.map(w => {
       const weight = parseFloat(w.weight);
-      const vet = w.body_fat ? parseFloat(w.body_fat) : null;
-      const vocht = w.water_percent ? parseFloat(w.water_percent) : null;
-      const spier = w.muscle_mass ? parseFloat(w.muscle_mass) : null;
-      let overig = null;
-      if (vet !== null && vocht !== null) {
-        overig = Math.max(0, Math.round((100 - vet - vocht) * 10) / 10);
+      const fat = w.body_fat ? parseFloat(w.body_fat) : null;
+      const water = w.water_percent ? parseFloat(w.water_percent) : null;
+      const muscle = w.muscle_mass ? parseFloat(w.muscle_mass) : null;
+      let other = null;
+      if (fat !== null && water !== null) {
+        other = Math.max(0, Math.round((100 - fat - water) * 10) / 10);
       }
       return {
-        date: new Date(w.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' }),
+        date: new Date(w.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
         weight,
-        vet,
-        vocht,
-        spier,
-        overig
+        fat,
+        water,
+        muscle,
+        other
       };
     });
   }, [weights]);
 
   const chartSleepData = useMemo(() => {
     return sleeps.map(s => ({
-      date: new Date(s.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' }),
-      uren: Math.round((s.duration_minutes / 60) * 10) / 10,
-      kwaliteit: s.quality_score || 0,
+      date: new Date(s.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+      hours: Math.round((s.duration_minutes / 60) * 10) / 10,
+      quality: s.quality_score || 0,
     }));
   }, [sleeps]);
 
   const chartStepData = useMemo(() => {
     return steps.map(s => ({
-      date: new Date(s.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' }),
-      stappen: s.step_count,
+      date: new Date(s.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+      steps: s.step_count,
     }));
   }, [steps]);
 
@@ -885,10 +885,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     let bmiCategory = '';
     let bmiColor = '';
     if (bmi) {
-      if (bmi < 18.5) { bmiCategory = 'Ondergewicht'; bmiColor = '#3b82f6'; }
+      if (bmi < 18.5) { bmiCategory = 'Underweight'; bmiColor = '#3b82f6'; }
       else if (bmi < 25.0) { bmiCategory = 'Healthy Weight'; bmiColor = '#cbd5e1'; }
-      else if (bmi < 30.0) { bmiCategory = 'Overgewicht'; bmiColor = '#f59e0b'; }
-      else { bmiCategory = 'Obesitas'; bmiColor = '#ef4444'; }
+      else if (bmi < 30.0) { bmiCategory = 'Overweight'; bmiColor = '#f59e0b'; }
+      else { bmiCategory = 'Obese'; bmiColor = '#ef4444'; }
     }
 
     return (
@@ -910,8 +910,8 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             </div>
             {latestWeight && latestWeight.body_fat && (
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12, display: 'flex', gap: 12 }}>
-                <span>Vet: <strong>{latestWeight.body_fat}%</strong></span>
-                {latestWeight.muscle_mass && <span>Spier: <strong>{latestWeight.muscle_mass}%</strong></span>}
+                <span>Fat: <strong>{latestWeight.body_fat}%</strong></span>
+                {latestWeight.muscle_mass && <span>Muscle: <strong>{latestWeight.muscle_mass}%</strong></span>}
               </div>
             )}
             <div className="metric-footer" style={{ marginTop: latestWeight && latestWeight.body_fat ? 0 : 20 }}>
@@ -927,7 +927,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           {/* Card 2: Steps */}
           <div className="vigor-card col-4" style={{ cursor: 'pointer' }} onClick={() => setCurrentTab('steps')}>
             <div className="metric-header">
-              <span className="metric-title">Dagelijkse Stappen</span>
+              <span className="metric-title">Daily Steps</span>
               <div className="metric-icon-wrap" style={{ background: 'rgba(92, 124, 250, 0.08)', border: '1px solid rgba(92, 124, 250, 0.2)' }}>
                 <Footprints size={18} style={{ color: '#5c7cfa' }} />
               </div>
@@ -941,7 +941,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <div style={{ width: `${stepsProgress}%`, height: '100%', background: '#5c7cfa', borderRadius: 2 }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-muted)', marginTop: 4 }}>
-                <span>Progressie</span>
+                <span>Progress</span>
                 <span>{stepsProgress}%</span>
               </div>
             </div>
@@ -949,7 +949,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               <Sparkles size={12} style={{ color: '#5c7cfa' }} />
               <span style={{ fontSize: 10 }}>
                 {isTodayStepsPresent 
-                  ? `Vandaag (${new Date().toLocaleDateString('en-US')})`
+                  ? `Today (${new Date().toLocaleDateString('en-US')})`
                   : `Today: 0 steps ${latestStepsItem ? `(Last: ${latestStepsItem.step_count.toLocaleString()} on ${new Date(latestStepsItem.logged_at).toLocaleDateString('en-US')})` : ''}`}
               </span>
             </div>
@@ -967,11 +967,11 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               <span className="metric-value">
                 {latestSleep ? Math.floor(latestSleep.duration_minutes / 60) : '--'}
               </span>
-              <span className="metric-unit">u {latestSleep ? latestSleep.duration_minutes % 60 : ''}m</span>
+              <span className="metric-unit">h {latestSleep ? latestSleep.duration_minutes % 60 : ''}m</span>
             </div>
             {latestSleep && latestSleep.quality_score && (
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
-                Kwaliteit: <strong style={{ color: '#a855f7' }}>{latestSleep.quality_score}/100</strong>
+                Quality: <strong style={{ color: '#a855f7' }}>{latestSleep.quality_score}/100</strong>
               </div>
             )}
             <div className="metric-footer" style={{ marginTop: latestSleep && latestSleep.quality_score ? 0 : 20 }}>
@@ -981,7 +981,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           </div>
         </div>
 
-        {/* Vitaliteit Doelen & BMI */}
+        {/* Vitality Goals & BMI */}
         <div className="vigor-grid">
           <div className="vigor-card col-6">
             <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 16 }}>
@@ -1008,19 +1008,19 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
           <div className="vigor-card col-6">
             <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 16 }}>
-              Vitaliteitstargeten Status
+              Vitality Targets Status
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Doelgewicht:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Target Weight:</span>
                 <span style={{ fontWeight: 800, color: '#cbd5e1' }}>{profile.target_weight ? profile.target_weight + ' kg' : '--'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Stappentarget:</span>
-                <span style={{ fontWeight: 800, color: '#5c7cfa' }}>{profile.target_steps ? profile.target_steps.toLocaleString() : '10.000'} stappen</span>
+                <span style={{ color: 'var(--text-muted)' }}>Steps Target:</span>
+                <span style={{ fontWeight: 800, color: '#5c7cfa' }}>{profile.target_steps ? profile.target_steps.toLocaleString() : '10.000'} steps</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                <span style={{ color: 'var(--text-muted)' }}>Sleeptarget:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Sleep Target:</span>
                 <span style={{ fontWeight: 800, color: '#a855f7' }}>{profile.target_sleep_hours || 8} hours/night</span>
               </div>
             </div>
@@ -1043,22 +1043,22 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             <div style={{ flex: '1.2', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: 'var(--color-primary)', letterSpacing: '1.5px' }}>
-                  Doelvoortgang
+                  Goal Progress
                 </span>
                 {goalProgress.isFallbackRate && (
                   <span style={{ fontSize: 9, padding: '3px 8px', borderRadius: 6, background: 'var(--color-primary-dim)', color: 'var(--color-primary)', border: '1px solid rgba(203, 213, 225, 0.2)', fontWeight: 600 }}>
-                    Schatting (Standaard tempo)
+                    Estimate (Default rate)
                   </span>
                 )}
               </div>
               <h2 style={{ fontSize: 24, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.3px', lineHeight: 1.2 }}>
-                Geschatte streefdatum:<br />
+                Estimated target date:<br />
                 <span style={{ color: 'var(--color-primary-bright)', fontSize: 28, display: 'inline-block', marginTop: 4 }}>{goalProgress.forecastDateStr}</span>
               </h2>
               <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
                 {goalProgress.isWeightLoss 
-                  ? `You completed al ${Math.round((goalProgress.oldestWeight - goalProgress.currentWeight) * 10) / 10} kg verloren! Remaining ${goalProgress.remainingWeight} kg to reach your target weight of ${goalProgress.targetWeight} kg.`
-                  : `You completed al ${Math.round((goalProgress.currentWeight - goalProgress.oldestWeight) * 10) / 10} kg gewonnen! Remaining ${goalProgress.remainingWeight} kg to reach your target weight of ${goalProgress.targetWeight} kg.`
+                  ? `You have already lost ${Math.round((goalProgress.oldestWeight - goalProgress.currentWeight) * 10) / 10} kg! Remaining ${goalProgress.remainingWeight} kg to reach your target weight of ${goalProgress.targetWeight} kg.`
+                  : `You have already gained ${Math.round((goalProgress.currentWeight - goalProgress.oldestWeight) * 10) / 10} kg! Remaining ${goalProgress.remainingWeight} kg to reach your target weight of ${goalProgress.targetWeight} kg.`
                 }
               </p>
             </div>
@@ -1070,11 +1070,11 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <strong style={{ fontSize: 16, color: '#fff', fontWeight: 800 }}>{goalProgress.oldestWeight} <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)' }}>kg</span></strong>
               </div>
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'center' }}>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Huidig</span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Current</span>
                 <strong style={{ fontSize: 16, color: '#fff', fontWeight: 800 }}>{goalProgress.currentWeight} <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)' }}>kg</span></strong>
               </div>
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'center' }}>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Tempo</span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Rate</span>
                 <strong style={{ fontSize: 16, color: 'var(--color-primary-bright)', fontWeight: 800 }}>{goalProgress.ratePerWeek} <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)' }}>kg/wk</span></strong>
               </div>
             </div>
@@ -1119,7 +1119,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           <div className="vigor-card col-6" style={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
-                Weightsverloop (kg)
+                Weight Progress (kg)
               </h3>
               <button 
                 onClick={() => {
@@ -1204,11 +1204,11 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                       contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 12, color: '#fff' }}
                     />
                     {/* Areas stacked to exactly 100% */}
-                    <Area type="monotone" name="Vet %" dataKey="vet" stackId="1" stroke="#ef4444" strokeWidth={1.5} fill="url(#colorVet)" />
-                    <Area type="monotone" name="Vocht %" dataKey="vocht" stackId="1" stroke="#00f5ff" strokeWidth={1.5} fill="url(#colorVocht)" />
-                    <Area type="monotone" name="Overig %" dataKey="overig" stackId="1" stroke="#64748b" strokeWidth={1.5} fill="url(#colorOverig)" />
+                    <Area type="monotone" name="Fat %" dataKey="fat" stackId="1" stroke="#ef4444" strokeWidth={1.5} fill="url(#colorVet)" />
+                    <Area type="monotone" name="Water %" dataKey="water" stackId="1" stroke="#00f5ff" strokeWidth={1.5} fill="url(#colorVocht)" />
+                    <Area type="monotone" name="Other %" dataKey="other" stackId="1" stroke="#64748b" strokeWidth={1.5} fill="url(#colorOverig)" />
                     {/* Muscle % as a line overlaying the areas */}
-                    <Line type="monotone" name="Spier %" dataKey="spier" stroke="#cbd5e1" strokeWidth={2.5} dot={{ r: 4, stroke: '#cbd5e1', strokeWidth: 1.5, fill: '#09090b' }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" name="Muscle %" dataKey="muscle" stroke="#cbd5e1" strokeWidth={2.5} dot={{ r: 4, stroke: '#cbd5e1', strokeWidth: 1.5, fill: '#09090b' }} activeDot={{ r: 6 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               )}
@@ -1219,37 +1219,37 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         {/* Weight history table */}
         <div className="vigor-card col-12">
           <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
-            Weightsmeasurementen geschiedenis
+            Weight Measurements History
           </h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <th style={{ padding: '8px 12px' }}>Datum</th>
+                  <th style={{ padding: '8px 12px' }}>Date</th>
                   <th style={{ padding: '8px 12px' }}>Weight</th>
                   <th style={{ padding: '8px 12px' }}>Vet %</th>
                   <th style={{ padding: '8px 12px' }}>Vocht %</th>
                   <th style={{ padding: '8px 12px' }}>Spier %</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Acties</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {[...weights].reverse().slice(0, 15).map((w: any) => (
                   <tr key={w.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(w.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                    <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(w.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                     <td style={{ padding: '10px 12px', fontWeight: 800, color: '#cbd5e1' }}>{w.weight} kg</td>
                     <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{w.body_fat ? w.body_fat + '%' : '--'}</td>
                     <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{w.water_percent ? w.water_percent + '%' : '--'}</td>
                     <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{w.muscle_mass ? w.muscle_mass + '%' : '--'}</td>
                     <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                      <button onClick={() => handleEditClick('weight', w)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Wijzig</button>
+                      <button onClick={() => handleEditClick('weight', w)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Edit</button>
                       <button onClick={() => handleDeleteLog('weight', w.id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', height: 'auto' }}>Delete</button>
                     </td>
                   </tr>
                 ))}
                 {weights.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No gewichtsmeasurementen geregistreerd.</td>
+                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No weight measurements logged.</td>
                   </tr>
                 )}
               </tbody>
@@ -1283,7 +1283,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     };
 
     const chartData = measurements.map(m => {
-      const formattedDate = new Date(m.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' });
+      const formattedDate = new Date(m.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
       return {
         dateStr: formattedDate,
         value: m[chartMetric] !== null ? Number(m[chartMetric]) : null
@@ -1308,7 +1308,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               transition: 'all 0.2s'
             }}
           >
-            Lichaamsmeasurementen
+            Body Measurements
           </button>
           <button
             onClick={() => setProgressSubTab('photos')}
@@ -1324,7 +1324,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               transition: 'all 0.2s'
             }}
           >
-            Progressiefoto's
+            Progressfoto's
           </button>
         </div>
 
@@ -1343,7 +1343,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 className="btn-primary" 
                 style={{ padding: '10px 24px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}
               >
-                🔒 Unlock Lichaamsomtrekken (PRO)
+                🔒 Unlock Body Measurements (PRO)
               </button>
             </div>
           ) : (
@@ -1356,7 +1356,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               <form onSubmit={handleSaveMeasurement} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Logdatum</label>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Log Date</label>
                     <input 
                       type="date" 
                       className="form-input" 
@@ -1370,7 +1370,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <input 
                       type="number" 
                       step="any"
-                      placeholder="Atv. 12.5"
+                      placeholder="e.g. 12.5"
                       className="form-input" 
                       value={newMeasurement.body_fat_pct}
                       onChange={e => setNewMeasurement({ ...newMeasurement, body_fat_pct: e.target.value })}
@@ -1384,7 +1384,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <input 
                       type="number" 
                       step="any"
-                      placeholder="Atv. 80"
+                      placeholder="e.g. 80"
                       className="form-input" 
                       value={newMeasurement.waist_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, waist_cm: e.target.value })}
@@ -1395,7 +1395,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <input 
                       type="number" 
                       step="any"
-                      placeholder="Atv. 65"
+                      placeholder="e.g. 65"
                       className="form-input" 
                       value={newMeasurement.muscle_mass_kg}
                       onChange={e => setNewMeasurement({ ...newMeasurement, muscle_mass_kg: e.target.value })}
@@ -1455,7 +1455,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Bovenbeen L (cm)</label>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Left Thigh (cm)</label>
                     <input 
                       type="number" 
                       step="any"
@@ -1466,7 +1466,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Bovenbeen R (cm)</label>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Right Thigh (cm)</label>
                     <input 
                       type="number" 
                       step="any"
@@ -1480,7 +1480,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Kuit L (cm)</label>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Left Calf (cm)</label>
                     <input 
                       type="number" 
                       step="any"
@@ -1491,7 +1491,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Kuit R (cm)</label>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Right Calf (cm)</label>
                     <input 
                       type="number" 
                       step="any"
@@ -1584,23 +1584,23 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-muted)' }}>
-                      <th style={{ padding: '10px 12px', textAlign: 'left' }}>Datum</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left' }}>Date</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Vet %</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Spier (kg)</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Muscle (kg)</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Waist</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Chest</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Shoulders</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Left Biceps/R</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Bovenbeen L/R</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Kuit L/R</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Acties</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Left Biceps L/R</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Thigh L/R</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Calf L/R</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {[...measurements].reverse().map(m => (
                       <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                         <td style={{ padding: '10px 12px', color: '#cbd5e1', fontWeight: 600 }}>
-                          {new Date(m.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {new Date(m.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </td>
                         <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>{m.body_fat_pct ? `${m.body_fat_pct}%` : '—'}</td>
                         <td style={{ padding: '10px 12px', textAlign: 'center', color: '#fff' }}>{m.muscle_mass_kg ? `${m.muscle_mass_kg} kg` : '—'}</td>
@@ -1644,14 +1644,14 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 Progress Photos & Comparison is a Pro Feature
               </h3>
               <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 24px', maxWidth: 440, lineHeight: 1.6 }}>
-                Upload maandelijks foto's (Voorkant, Zijkant, Achterkant) en vergelijk je fysieke transformatie direct Side-by-Side with de interactieve slider.
+                Upload photos monthly (Front, Side, Back) and compare your physical transformation directly side-by-side with the interactive slider.
               </p>
               <button 
-                onClick={() => handleRequestProModal("Voortgangsfoto's & Vergelijker", "Upload maandelijks foto's en vergelijk je fysieke transformatie direct Side-by-Side with de interactieve slider.")} 
+                onClick={() => handleRequestProModal("Progress Photos & Comparer", "Upload maandelijks foto's en vergelijk je fysieke transformatie direct Side-by-Side with de interactieve slider.")} 
                 className="btn-primary" 
                 style={{ padding: '10px 24px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}
               >
-                🔒 Unlock Voortgangsfoto's (PRO)
+                🔒 Unlock Progress Photos (PRO)
               </button>
             </div>
           ) : (
@@ -1659,11 +1659,11 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             {/* Photo Uploader Card */}
             <div className="vigor-card col-4">
               <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
-                Foto Uploaden
+                Upload Photo
               </h3>
               <form onSubmit={handleUploadPhoto} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
-                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Selecteer Foto</label>
+                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Select Photo</label>
                   <input 
                     type="file" 
                     accept="image/*"
@@ -1674,15 +1674,15 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 </div>
                 
                 <div>
-                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Aanzicht / Hoek</label>
+                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>View / Angle</label>
                   <select
                     className="form-select"
                     value={photoAngle}
                     onChange={e => setPhotoAngle(e.target.value as any)}
                   >
-                    <option value="front">Voorkant (Front)</option>
-                    <option value="side">Zijkant (Side)</option>
-                    <option value="back">Achterkant (Back)</option>
+                    <option value="front">Front</option>
+                    <option value="side">Side</option>
+                    <option value="back">Back</option>
                   </select>
                 </div>
 
@@ -1698,10 +1698,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Opmerkingen</label>
+                  <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Notes</label>
                   <textarea 
                     className="form-input" 
-                    placeholder="Atv. Vrij nuchtere maag, koude pomp..."
+                    placeholder="e.g. Empty stomach, cold pump..."
                     value={photoNotes}
                     onChange={e => setPhotoNotes(e.target.value)}
                     style={{ height: 60, resize: 'none', fontSize: 11 }}
@@ -1709,7 +1709,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 </div>
 
                 <button type="submit" className="btn-primary" disabled={uploadingPhoto}>
-                  {uploadingPhoto ? 'Uploaden...' : 'Foto Save'}
+                  {uploadingPhoto ? 'Uploading...' : 'Save Photo'}
                 </button>
               </form>
             </div>
@@ -1717,12 +1717,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             {/* Photo Library Grid */}
             <div className="vigor-card col-8" style={{ minHeight: 350 }}>
               <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
-                Foto Bibliotheek
+                Photo Library
               </h3>
               
               {photos.length === 0 ? (
                 <div style={{ height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-                  No progressiefoto's geüpload.
+                  No progress photos uploaded.
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxHeight: 300, overflowY: 'auto' }}>
@@ -1745,7 +1745,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                       <div style={{ padding: 8 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-primary)' }}>{p.angle}</span>
-                          <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{new Date(p.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' })}</span>
+                          <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{new Date(p.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}</span>
                         </div>
                         {p.notes && <p style={{ fontSize: 9, color: 'var(--text-muted)', margin: '4px 0 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.notes}</p>}
                         <button 
@@ -1779,7 +1779,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             <div className="vigor-card col-12" style={{ marginTop: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', margin: 0 }}>
-                  Side-by-Side Progressie Vergelijker
+                  Side-by-Side Progress Vergelijker
                 </h3>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <select
@@ -1792,9 +1792,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                       setComparePhoto2('');
                     }}
                   >
-                    <option value="front">Voorkant (Front)</option>
-                    <option value="side">Zijkant (Side)</option>
-                    <option value="back">Achterkant (Back)</option>
+                    <option value="front">Front</option>
+                    <option value="side">Side</option>
+                    <option value="back">Back</option>
                   </select>
                 </div>
               </div>
@@ -1807,7 +1807,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <div>
                   <div style={{ display: 'flex', gap: 16, marginBottom: 16, justifyContent: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Foto 1 (Oud):</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Photo 1 (Old):</span>
                       <select 
                         className="form-select"
                         value={photo1Url}
@@ -1816,14 +1816,14 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                       >
                         {anglePhotos.map(p => (
                           <option key={p.id} value={p.image_url}>
-                            {new Date(p.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })} {p.notes ? `(${p.notes.substring(0,15)}...)` : ''}
+                            {new Date(p.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })} {p.notes ? `(${p.notes.substring(0,15)}...)` : ''}
                           </option>
                         ))}
                       </select>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Foto 2 (Nieuw):</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Photo 2 (New):</span>
                       <select 
                         className="form-select"
                         value={photo2Url}
@@ -1832,7 +1832,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                       >
                         {anglePhotos.map(p => (
                           <option key={p.id} value={p.image_url}>
-                            {new Date(p.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' })} {p.notes ? `(${p.notes.substring(0,15)}...)` : ''}
+                            {new Date(p.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })} {p.notes ? `(${p.notes.substring(0,15)}...)` : ''}
                           </option>
                         ))}
                       </select>
@@ -1845,7 +1845,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                         {photo1Url && <img src={photo1Url} alt="Foto 1 comparison" style={{ width: '100%', height: 350, objectFit: 'contain' }} />}
                       </div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8 }}>
-                        Oudere status
+                        Older status
                       </div>
                     </div>
                     <div style={{ flex: 1, maxWidth: 450, textAlign: 'center' }}>
@@ -1853,7 +1853,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                         {photo2Url && <img src={photo2Url} alt="Foto 2 comparison" style={{ width: '100%', height: 350, objectFit: 'contain' }} />}
                       </div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8 }}>
-                        Nieuwere status
+                        Newer status
                       </div>
                     </div>
                   </div>
@@ -1936,29 +1936,29 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             {!isPro ? (
               <div style={{ padding: '16px', background: 'rgba(168, 85, 247, 0.06)', borderRadius: 12, border: '1px solid rgba(168, 85, 247, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 2 }}>Totale Nachtrust: {Math.floor(durMins / 60)}u {durMins % 60}m</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Sluit je Colmi Smart Ring aan en ontgrendel je Deep Sleep, REM & Recovery Scores (PRO).</div>
+                  <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 2 }}>Total Sleep: {Math.floor(durMins / 60)}h {durMins % 60}m</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Connect your Colmi Smart Ring and unlock your Deep Sleep, REM & Recovery Scores (PRO).</div>
                 </div>
                 <button 
                   onClick={() => handleRequestProModal('Sleep Stages Breakdown', 'View your exact deep sleep, REM sleep, and light sleep percentages from your Colmi Smart Ring.')} 
                   className="btn-primary" 
                   style={{ padding: '8px 16px', fontSize: 11, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900, flexShrink: 0 }}
                 >
-                  🔒 Unlock Slaapfases (PRO)
+                  🔒 Unlock Sleep Stages (PRO)
                 </button>
               </div>
             ) : (
               <>
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 6, color: 'var(--text-muted)' }}>
-                    <span>Totale nachtrust: <strong style={{ color: '#fff' }}>{Math.floor(durMins / 60)}u {durMins % 60}m</strong></span>
+                    <span>Total sleep: <strong style={{ color: '#fff' }}>{Math.floor(durMins / 60)}h {durMins % 60}m</strong></span>
                     <span>Physical & mental recovery</span>
                   </div>
                   <div style={{ height: 14, width: '100%', borderRadius: 8, overflow: 'hidden', display: 'flex', background: '#1c1c23' }}>
                     <div style={{ width: `${deepPct}%`, background: 'linear-gradient(90deg, #8b5cf6, #a855f7)', transition: 'width 0.5s ease' }} title={`Deep sleep: ${deepPct}%`} />
                     <div style={{ width: `${lightPct}%`, background: 'linear-gradient(90deg, #3b82f6, #60a5fa)', transition: 'width 0.5s ease' }} title={`Light sleep: ${lightPct}%`} />
                     <div style={{ width: `${remPct}%`, background: 'linear-gradient(90deg, #ec4899, #f472b6)', transition: 'width 0.5s ease' }} title={`REM sleep: ${remPct}%`} />
-                    <div style={{ width: `${Math.max(awakePct, 2)}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', transition: 'width 0.5s ease' }} title={`Wakker: ${awakePct}%`} />
+                    <div style={{ width: `${Math.max(awakePct, 2)}%`, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', transition: 'width 0.5s ease' }} title={`Awake: ${awakePct}%`} />
                   </div>
                 </div>
 
@@ -1966,26 +1966,26 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
                   <div style={{ background: 'rgba(139, 92, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                     <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#a855f7', marginBottom: 4 }}>🟣 Deep Sleep</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(deepMins / 60)}u {deepMins % 60}m</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{deepPct}% (Spierherstel)</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(deepMins / 60)}h {deepMins % 60}m</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{deepPct}% (Muscle recovery)</div>
                   </div>
 
                   <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.2)' }}>
                     <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4 }}>🔵 Light Sleep</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(lightMins / 60)}u {lightMins % 60}m</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{lightPct}% (Geheugen)</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(lightMins / 60)}h {lightMins % 60}m</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{lightPct}% (Memory)</div>
                   </div>
 
                   <div style={{ background: 'rgba(236, 72, 153, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(236, 72, 153, 0.2)' }}>
                     <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#f472b6', marginBottom: 4 }}>💖 REM Sleep</div>
-                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(remMins / 60)}u {remMins % 60}m</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{remPct}% (Mentale Energie)</div>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(remMins / 60)}h {remMins % 60}m</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{remPct}% (Mental Energy)</div>
                   </div>
 
                   <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#fbbf24', marginBottom: 4 }}>🟡 Wakker</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#fbbf24', marginBottom: 4 }}>🟡 Awake</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{awakeMins}m</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{awakePct}% (Micro-ontwakingen)</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{awakePct}% (Micro-awakenings)</div>
                   </div>
                 </div>
               </>
@@ -1997,7 +1997,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         <div className="vigor-card col-12" style={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
-              Slaapduur & Kwaliteitstrend
+              Sleep Duration & Quality Trend
             </h3>
             <button 
               onClick={() => {
@@ -2027,7 +2027,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   {profile.target_sleep_hours && (
                     <ReferenceLine y={profile.target_sleep_hours} stroke="rgba(168, 85, 247, 0.4)" strokeDasharray="3 3" label={{ value: `Goal: ${profile.target_sleep_hours}h`, fill: '#a855f7', fontSize: 9, position: 'right' }} />
                   )}
-                  <Bar dataKey="uren" fill="#a855f7" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  <Bar dataKey="hours" fill="#a855f7" radius={[4, 4, 0, 0]} maxBarSize={30} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -2037,17 +2037,17 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         {/* Sleep history table */}
         <div className="vigor-card col-12">
           <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
-            Slaapmeasurementen & Fases Geschiedenis
+            Sleep Measurements & Stages History
           </h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <th style={{ padding: '8px 12px' }}>Datum</th>
+                  <th style={{ padding: '8px 12px' }}>Date</th>
                   <th style={{ padding: '8px 12px' }}>Total Sleep</th>
-                  <th style={{ padding: '8px 12px' }}>Diep / Licht / REM</th>
-                  <th style={{ padding: '8px 12px' }}>Kwaliteit</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Acties</th>
+                  <th style={{ padding: '8px 12px' }}>Deep / Light / REM</th>
+                  <th style={{ padding: '8px 12px' }}>Quality</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -2058,14 +2058,14 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   const sRem = s.rem_minutes || Math.round(sDur * 0.18);
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(s.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 800, color: '#a855f7' }}>{Math.floor(sDur / 60)}u {sDur % 60}m</td>
+                      <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(s.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: 800, color: '#a855f7' }}>{Math.floor(sDur / 60)}h {sDur % 60}m</td>
                       <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: 11 }}>
-                        <span style={{ color: '#a855f7', fontWeight: 700 }}>{Math.floor(sDeep/60)}u{sDeep%60}m</span> / <span style={{ color: '#60a5fa' }}>{Math.floor(sLight/60)}u{sLight%60}m</span> / <span style={{ color: '#f472b6' }}>{Math.floor(sRem/60)}u{sRem%60}m</span>
+                        <span style={{ color: '#a855f7', fontWeight: 700 }}>{Math.floor(sDeep/60)}h{sDeep%60}m</span> / <span style={{ color: '#60a5fa' }}>{Math.floor(sLight/60)}h{sLight%60}m</span> / <span style={{ color: '#f472b6' }}>{Math.floor(sRem/60)}h{sRem%60}m</span>
                       </td>
                       <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{s.quality_score ? s.quality_score + '/100' : '82/100'}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                        <button onClick={() => handleEditClick('sleep', s)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Wijzig</button>
+                        <button onClick={() => handleEditClick('sleep', s)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Edit</button>
                         <button onClick={() => handleDeleteLog('sleep', s.id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', height: 'auto' }}>Delete</button>
                       </td>
                     </tr>
@@ -2073,7 +2073,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 })}
                 {sleeps.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No slaapmeasurementen geregistreerd.</td>
+                    <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No sleep measurements logged.</td>
                   </tr>
                 )}
               </tbody>
@@ -2093,7 +2093,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         <div className="vigor-card col-12" style={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
-              Stappentrend per dag
+              Daily Steps Trend
             </h3>
             <button 
               onClick={() => {
@@ -2102,7 +2102,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               className="btn-secondary" 
               style={{ padding: '6px 12px', fontSize: 11, height: 'auto', background: 'rgba(92, 124, 250, 0.08)', borderColor: '#5c7cfa', color: '#5c7cfa' }}
             >
-              <Plus size={12} /> Log Stappen
+              <Plus size={12} /> Log Steps
             </button>
           </div>
           <div style={{ height: 240, width: '100%' }}>
@@ -2123,7 +2123,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   {profile.target_steps && (
                     <ReferenceLine y={profile.target_steps} stroke="rgba(92, 124, 250, 0.4)" strokeDasharray="3 3" />
                   )}
-                  <Bar dataKey="stappen" fill="#5c7cfa" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  <Bar dataKey="steps" fill="#5c7cfa" radius={[4, 4, 0, 0]} maxBarSize={30} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -2133,31 +2133,31 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         {/* Steps history table */}
         <div className="vigor-card col-12">
           <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
-            Stappenmeasurementen geschiedenis
+            Steps Measurements History
           </h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <th style={{ padding: '8px 12px' }}>Datum</th>
-                  <th style={{ padding: '8px 12px' }}>Stappen</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Acties</th>
+                  <th style={{ padding: '8px 12px' }}>Date</th>
+                  <th style={{ padding: '8px 12px' }}>Steps</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {[...steps].reverse().slice(0, 15).map((s: any) => (
                   <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                    <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(s.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                    <td style={{ padding: '10px 12px', fontWeight: 800, color: '#5c7cfa' }}>{s.step_count.toLocaleString()} stappen</td>
+                    <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(s.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    <td style={{ padding: '10px 12px', fontWeight: 800, color: '#5c7cfa' }}>{s.step_count.toLocaleString()} steps</td>
                     <td style={{ padding: '10px 12px', textAlign: 'right' }}>
-                      <button onClick={() => handleEditClick('steps', s)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Wijzig</button>
+                      <button onClick={() => handleEditClick('steps', s)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Edit</button>
                       <button onClick={() => handleDeleteLog('steps', s.id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', height: 'auto' }}>Delete</button>
                     </td>
                   </tr>
                 ))}
                 {steps.length === 0 && (
                   <tr>
-                    <td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No stappenlogs geregistreerd.</td>
+                    <td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No step logs recorded.</td>
                   </tr>
                 )}
               </tbody>
@@ -2199,11 +2199,11 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button onClick={() => setShowSettings(true)} className="vigor-nav-btn" style={{ background: 'rgba(255, 255, 255, 0.03)', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
-            <Settings size={15} /> Doelen Instellen
+            <Settings size={15} /> Set Goals
           </button>
           
           <button onClick={() => setShowManualLog(true)} className="btn-secondary" style={{ padding: '10px 18px', fontSize: 13, height: '40px' }}>
-            <Plus size={16} /> Log Handmatig
+            <Plus size={16} /> Log Manually
           </button>
         </div>
       </header>
@@ -2239,7 +2239,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             color: currentTab === 'home' ? '#fff' : 'var(--text-muted)'
           }}
         >
-          <Sparkles size={16} style={{ color: currentTab === 'home' ? '#cbd5e1' : 'inherit' }} /> Overzicht
+          <Sparkles size={16} style={{ color: currentTab === 'home' ? '#cbd5e1' : 'inherit' }} /> Overview
         </button>
         <button 
           onClick={() => setCurrentTab('weight')} 
@@ -2281,7 +2281,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             color: currentTab === 'steps' ? '#5c7cfa' : 'var(--text-muted)'
           }}
         >
-          <Footprints size={16} /> Stappen
+          <Footprints size={16} /> Steps
         </button>
         <button 
           onClick={() => setCurrentTab('sleep')} 
@@ -2323,13 +2323,13 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             color: currentTab === 'progress' ? '#ff9f43' : 'var(--text-muted)'
           }}
         >
-          <Camera size={16} /> Progressie
+          <Camera size={16} /> Progress
         </button>
       </nav>
 
       {loading ? (
         <div style={{ padding: '100px 0', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Outfit' }}>
-          Health data synchroniseren...
+          Synchronizing health data...
         </div>
       ) : (
         <>
@@ -2341,7 +2341,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         </>
       )}
 
-      {/* Wijzig Log Modal */}
+      {/* Edit Log Modal */}
       {editingLog && (
         <div className="modal-overlay">
           <div className="modal-content animate-slide-up" style={{ maxWidth: '420px' }}>
@@ -2354,7 +2354,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
             <form onSubmit={handleUpdateLog} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div className="form-group">
-                <label className="form-label">Datum</label>
+                <label className="form-label">Date</label>
                 <input
                   type="date"
                   className="form-input"
@@ -2378,7 +2378,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Vetpercentage % (Optioneel)</label>
+                    <label className="form-label">Body Fat % (Optional)</label>
                     <input
                       type="number"
                       step="0.1"
@@ -2392,7 +2392,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
               {editingLog.type === 'steps' && (
                 <div className="form-group">
-                  <label className="form-label">Aantal Stappen</label>
+                  <label className="form-label">Number of Steps</label>
                   <input
                     type="number"
                     className="form-input"
@@ -2406,7 +2406,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               {editingLog.type === 'sleep' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase' }}>
-                    Slaapfases per type aanpassen
+                    Adjust sleep phases by type
                   </div>
 
                   {/* 1. Deep Sleep */}
@@ -2414,7 +2414,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <div style={{ fontSize: 10, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase', marginBottom: 6 }}>🟣 Deep Sleep</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
                         <input
                           type="number"
                           className="form-input"
@@ -2424,7 +2424,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                         />
                       </div>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minutes</label>
                         <input
                           type="number"
                           className="form-input"
@@ -2442,7 +2442,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <div style={{ fontSize: 10, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 6 }}>🔵 Light Sleep</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
                         <input
                           type="number"
                           className="form-input"
@@ -2452,7 +2452,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                         />
                       </div>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minutes</label>
                         <input
                           type="number"
                           className="form-input"
@@ -2470,7 +2470,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <div style={{ fontSize: 10, fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', marginBottom: 6 }}>💖 REM Sleep</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
                         <input
                           type="number"
                           className="form-input"
@@ -2480,7 +2480,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                         />
                       </div>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minutes</label>
                         <input
                           type="number"
                           className="form-input"
@@ -2493,12 +2493,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     </div>
                   </div>
 
-                  {/* 4. Wakker */}
+                  {/* 4. Awake */}
                   <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: 10, borderRadius: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', marginBottom: 6 }}>🟡 Wakker</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', marginBottom: 6 }}>🟡 Awake</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Uren</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
                         <input
                           type="number"
                           className="form-input"
@@ -2508,7 +2508,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                         />
                       </div>
                       <div>
-                        <label className="form-label" style={{ fontSize: 10 }}>Minuten</label>
+                        <label className="form-label" style={{ fontSize: 10 }}>Minutes</label>
                         <input
                           type="number"
                           className="form-input"
@@ -2543,7 +2543,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   Cancel
                 </button>
                 <button type="submit" className="btn-primary" style={{ flex: 1 }}>
-                  Wijzigingen Save
+                  Save Changes
                 </button>
               </div>
             </form>

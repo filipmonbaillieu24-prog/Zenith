@@ -344,7 +344,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
         console.log("Connecting to GATT server...");
         const connectionPromise = device.gatt.connect();
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Verbindingstime-out (6s)")), 6000)
+          setTimeout(() => reject(new Error("Connection timeout (6s)")), 6000)
         );
         server = await Promise.race([connectionPromise, timeoutPromise]) as any;
       }
@@ -371,7 +371,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
           
           for (const s of services) {
             const uuid = s.uuid.toLowerCase();
-            let name = `Aangepaste Service (${uuid})`;
+            let name = `Custom Service (${uuid})`;
             if (uuid.includes('181d')) name = 'Weight Scale (0x181D)';
             else if (uuid.includes('181b')) name = 'Body Composition (0x181B)';
             else if (uuid.includes('180a')) name = 'Device Info (0x180A)';
@@ -392,7 +392,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
               charsList = ['Characteristics not accessible'];
             }
             
-            serviceList.push(`• ${name}\n    Kenmerken:\n    ` + charsList.map((ch: string) => `  - ${ch}`).join('\n    '));
+            serviceList.push(`• ${name}\n    Characteristics:\n    ` + charsList.map((ch: string) => `  - ${ch}`).join('\n    '));
           }
           
           throw new Error(
@@ -436,7 +436,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
             const water = 55 - (impedance - 600) * 0.01;
             if (fat >= 5 && fat <= 75) setBleFat(fat);
             if (water >= 20 && water <= 80) setBleWater(water);
-            setDecodingInfo("Metriek data ontvangen (vet & vocht via impedantie)");
+            setDecodingInfo("Metrics data received (fat & water via impedance)");
           } else if (bytes.length >= 17) {
             const w1516 = (bytes[15] << 8 | bytes[16]) / 100;
             if (w1516 >= 40 && w1516 <= 150) {
@@ -576,7 +576,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
         </div>
 
         <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 24 }}>
-          Pair your **Neo Health Bluetooth scale** to automatically log weight, body fat %, and vital metrics.gistreren.
+          Pair your **Neo Health Bluetooth scale** to automatically log weight, body fat %, and vital metrics.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 12 }}>
@@ -590,7 +590,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                       <Bluetooth size={32} style={{ color: '#94a3b8' }} />
                     </div>
                     <button onClick={startBluetoothScan} className="btn-primary" style={{ width: '100%' }}>
-                      Zoek Weegschaal
+                      Search Scale
                     </button>
                   </>
                 )}
@@ -628,11 +628,11 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                         {/* Live measurement label vs stable */}
                         {isStableMeasurement ? (
                           <span style={{ fontSize: 10, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, padding: '2px 10px', fontWeight: 700, textTransform: 'uppercase', display: 'inline-block', marginBottom: 8 }}>
-                            ✓ Stabiele measurement — accepteer of weiger
+                            ✓ Stable measurement — accept or reject
                           </span>
                         ) : (
                           <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 20, padding: '2px 10px', fontWeight: 700, textTransform: 'uppercase', display: 'inline-block', marginBottom: 8 }}>
-                            📡 Live measurement — stabilisering...
+                            📡 Live measurement — stabilizing...
                           </span>
                         )}
                         <div style={{ fontSize: 36, fontWeight: 900, color: '#cbd5e1', margin: '4px 0 16px', letterSpacing: '-1px' }}>{tempWeight} kg</div>
@@ -643,14 +643,14 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                               className="btn-secondary"
                               style={{ flex: 1, padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                             >
-                              <X size={14} /> Afwijzen
+                              <X size={14} /> Reject
                             </button>
                             <button
                               onClick={() => handleSave(tempWeight)}
                               className="btn-primary"
                               style={{ flex: 2, padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                             >
-                              ✓ Accepteren & Save
+                              ✓ Accept & Save
                             </button>
                           </div>
                         ) : (
@@ -672,15 +672,15 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                     {rawPacket && (
                       <div className="animate-fade-in" style={{ marginTop: 16, padding: '12px 14px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, width: '100%' }}>
                         <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 800, letterSpacing: '0.5px' }}>
-                          Ontvangen Bluetooth Data (Hex):
+                          Received Bluetooth Data (Hex):
                         </span>
                         <code style={{ fontSize: 10, wordBreak: 'break-all', fontFamily: 'monospace', color: '#ffb86c', display: 'block', lineHeight: 1.4 }}>
                           {rawPacket}
                         </code>
                         {decodingInfo && (
                           <div style={{ marginTop: 10, fontSize: 10, color: '#cbd5e1', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
-                            <strong>Gedecodeerd uit pakket:</strong> {detectedWeight} kg<br />
-                            <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>Methode: {decodingInfo}</span>
+                            <strong>Decoded from packet:</strong> {detectedWeight} kg<br />
+                            <span style={{ color: 'var(--text-muted)', fontSize: 9 }}>Method: {decodingInfo}</span>
                           </div>
                         )}
                       </div>
@@ -697,7 +697,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                       {errorMsg}
                     </p>
                     <button onClick={startBluetoothScan} className="btn-secondary" style={{ width: '100%' }}>
-                      Opnieuw Proberen
+                      Try Again
                     </button>
                   </>
                 )}
@@ -716,8 +716,8 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
 
         {measuredWeight && (
           <div className="animate-fade-in" style={{ background: 'rgba(203, 213, 225, 0.04)', border: '1px solid rgba(203, 213, 225, 0.15)', borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1' }}>Gewichtsmeasurement succesvol opgeslagen!</span>
-            <button className="btn-primary" onClick={onClose} style={{ padding: '6px 12px', fontSize: 11 }}>Sluiten</button>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1' }}>Weight measurement successfully saved!</span>
+            <button className="btn-primary" onClick={onClose} style={{ padding: '6px 12px', fontSize: 11 }}>Close</button>
           </div>
         )}
       </div>

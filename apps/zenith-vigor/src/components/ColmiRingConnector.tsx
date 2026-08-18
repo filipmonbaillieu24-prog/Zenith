@@ -44,9 +44,9 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
     setSyncLogs([]);
     setErrorMsg('');
     if (simulate) {
-      addLog('Simulatiemodus gestart...');
+      addLog('Simulation mode started...');
     } else {
-      addLog('Bluetooth-scan gestart...');
+      addLog('Bluetooth scan started...');
     }
 
     // Fetch paired ring settings to find target MAC address
@@ -85,7 +85,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               try {
                 const result = JSON.parse(event.data.data);
                 setStatus('syncing');
-                addLog(`Connected to device: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
+                addLog(`Connected to device: ${result.device_name} (${result.mac_address || 'unknown MAC'})`);
                 addLog('Syncing historical steps & sleep data started...');
 
                 // Process steps: upsert per day (replace existing entries for that day)
@@ -194,7 +194,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
         const result = JSON.parse(resultStr);
 
         setStatus('syncing');
-        addLog(`Connected to device: ${result.device_name} (${result.mac_address || 'onbekend MAC'})`);
+        addLog(`Connected to device: ${result.device_name} (${result.mac_address || 'unknown MAC'})`);
         addLog('Syncing historical steps & sleep data started...');
 
         // Process steps (1 record per day OVERWRITE)
@@ -311,7 +311,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               {status === 'completed' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#10b981' }}>
                   <Check size={40} className="animate-bounce" />
-                  <span style={{ fontSize: 10, fontWeight: 800, marginTop: 4, textTransform: 'uppercase' }}>Klaar</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, marginTop: 4, textTransform: 'uppercase' }}>Done</span>
                 </div>
               ) : status === 'error' ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#ef4444' }}>
@@ -393,7 +393,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
           
           {status === 'completed' ? (
             <button className="btn-primary" style={{ background: '#10b981', color: '#09090b', margin: 0 }} onClick={onClose}>
-              Sluiten
+              Close
             </button>
           ) : (
             <button 
@@ -411,10 +411,10 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
             >
               {(status === 'scanning' || status === 'connecting' || status === 'syncing') ? (
                 <>
-                  <RefreshCw size={14} className="animate-spin" /> Synchroniseren...
+                  <RefreshCw size={14} className="animate-spin" /> Syncing...
                 </>
               ) : (
-                'Start Synchronisatie'
+                'Start Sync'
               )}
             </button>
           )}

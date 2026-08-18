@@ -69,7 +69,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Camera size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Voortgangsfoto's & Visuele Vergelijker</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Progress Photos & Visual Comparer</div>
               <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Upload photos (Front, Side, Back) and compare your physical transformation side-by-side with a slider.</div>
             </div>
           </div>
@@ -85,15 +85,15 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Activity size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Lichaamssamenstelling (Vet% & Muscle Mass)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Automatic readings from smart scales: Body Fat Percentagege, Muscle Mass kg, Visderaal vet & Vocht %.</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Body Composition (Fat % & Muscle Mass)</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Automatic readings from smart scales: Body Fat %, Muscle Mass kg, Visceral Fat, and Water %.</div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Moon size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Sleepfases Breakdown (Smart Ring Sync)</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Sleep Stages Breakdown (Smart Ring Sync)</div>
               <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Full breakdown of Deep Sleep (%), REM Sleep (%), Light Sleep (%), and Awake time from your Colmi Smart Ring.</div>
             </div>
           </div>
@@ -108,7 +108,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
           textAlign: 'center',
           marginBottom: 20 
         }}>
-          <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#c084fc', fontWeight: 800, letterSpacing: '0.5px' }}>Zenith Pro Lidmaatschap</div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', color: '#c084fc', fontWeight: 800, letterSpacing: '0.5px' }}>Zenith Pro Membership</div>
           <div style={{ fontSize: 26, fontWeight: 900, color: '#ffffff', margin: '4px 0' }}>
             €9,99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ month</span>
           </div>
@@ -125,7 +125,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             onClick={onClose} 
             style={{ flex: 1, height: '44px', fontSize: 13 }}
           >
-            Sluiten
+            Close
           </button>
           <button 
             type="button" 

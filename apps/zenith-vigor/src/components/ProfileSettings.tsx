@@ -88,7 +88,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       <div className="modal-content animate-slide-up" style={{ maxWidth: '420px' }}>
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Target style={{ color: '#cbd5e1' }} /> Gezondheidsdoelen
+            <Target style={{ color: '#cbd5e1' }} /> Health Goals
           </h2>
           <button className="modal-close" onClick={onClose}>
             <X size={20} />
@@ -97,7 +97,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
 
         {loading ? (
           <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-            Doelen laden...
+            Loading goals...
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -105,18 +105,18 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
             <fieldset style={{ border: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Streefgewicht (kg)</label>
+                  <label className="form-label">Target Weight (kg)</label>
                   <input
                     type="number"
                     step="0.1"
                     className="form-input"
                     value={targetWeight}
-                    placeholder="Atv. 72.0"
+                    placeholder="e.g. 72.0"
                     onChange={(e) => setTargetWeight(e.target.value)}
                   />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Sleepdoel (Uren)</label>
+                  <label className="form-label">Sleep Goal (Hours)</label>
                   <input
                     type="number"
                     step="0.5"

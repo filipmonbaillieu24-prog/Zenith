@@ -78,7 +78,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
 
   // Remove/Unpair device
   const handleUnpairDevice = async (device: PairedDevice) => {
-    if (!window.confirm(`Are you sure you want to de ${device.brand} ${device.model} wilt ontkoppelen?`)) {
+    if (!window.confirm(`Are you sure you want to unpair the ${device.brand} ${device.model}?`)) {
       return;
     }
 
@@ -153,7 +153,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
       <>
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Bluetooth style={{ color: '#5c7cfa' }} /> Apparaten Beheer
+            <Bluetooth style={{ color: '#5c7cfa' }} /> Device Management
           </h2>
           <button className="modal-close" onClick={onClose}>
             <X size={20} />
@@ -167,7 +167,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
 
           {loading ? (
             <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-              Gekoppelde apparaten laden...
+              Loading paired devices...
             </div>
           ) : devices.length === 0 ? (
             <div 
@@ -187,7 +187,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
                 className="btn-primary" 
                 style={{ margin: '0 auto', fontSize: 13, padding: '10px 18px' }}
               >
-                <Plus size={16} /> Apparaat Pair
+                <Plus size={16} /> Pair Device
               </button>
             </div>
           ) : (
@@ -277,7 +277,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
                         className="btn-secondary"
                         style={{ padding: '6px 12px', fontSize: 11, borderRadius: '8px', gap: 6 }}
                       >
-                        <RefreshCw size={12} /> Sync / Verbinden
+                        <RefreshCw size={12} /> Sync / Connect
                       </button>
                     </div>
                   </div>
@@ -289,7 +289,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
                 className="btn-secondary" 
                 style={{ width: '100%', borderStyle: 'dashed', background: 'transparent', gap: 8 }}
               >
-                <Plus size={16} /> Apparaat Pair
+                <Plus size={16} /> Pair Device
               </button>
             </div>
           )}
@@ -297,7 +297,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
 
         <div className="modal-footer" style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
           <button className="btn-primary" onClick={onClose} style={{ margin: 0, padding: '10px 20px', fontSize: 13 }}>
-            Sluiten
+            Close
           </button>
         </div>
       </>
@@ -309,7 +309,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
       <>
         <div className="modal-header">
           <h2 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            Apparaat Pair
+            Pair Device
           </h2>
           <button className="modal-close" onClick={() => setView('list')}>
             <X size={20} />
@@ -320,7 +320,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
           
           {/* Step 1: Device Type */}
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">1. Kies type apparaat</label>
+            <label className="form-label">1. Choose device type</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div 
                 onClick={() => { setSelectedType('scale'); setSelectedModel('Onyx SE'); }}
@@ -339,7 +339,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
                 }}
               >
                 <Scale size={24} style={{ color: selectedType === 'scale' ? '#39ff14' : 'var(--text-muted)' }} />
-                <span style={{ fontSize: 13, fontWeight: 800, color: selectedType === 'scale' ? '#fff' : 'var(--text-muted)' }}>Weegschaal</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: selectedType === 'scale' ? '#fff' : 'var(--text-muted)' }}>Scale</span>
               </div>
 
               <div 
@@ -367,7 +367,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
           {/* Step 2: Model Selection */}
           {selectedType && (
             <div className="form-group animate-slide-up" style={{ marginBottom: 0 }}>
-              <label className="form-label">2. Kies model</label>
+              <label className="form-label">2. Choose model</label>
               <select 
                 className="form-input" 
                 value={selectedModel}
@@ -439,7 +439,7 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
               color: (!selectedType || !selectedModel) ? 'var(--text-muted)' : '#09090b'
             }}
           >
-            Pair Starten
+            Start Pairing
           </button>
         </div>
       </>
