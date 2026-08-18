@@ -41,7 +41,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
         width: '100%',
         maxWidth: '1200px',
         height: '600px',
-        background: 'radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.15) 0%, rgba(168, 85, 247, 0.08) 40%, transparent 75%)',
+        background: 'radial-gradient(circle at 50% 10%, rgba(203, 213, 225, 0.15) 0%, rgba(203, 213, 225, 0.04) 45%, transparent 75%)',
         pointerEvents: 'none',
         zIndex: 0
       }} />
@@ -62,20 +62,20 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
           <div style={{
-            background: 'linear-gradient(135deg, #38bdf8 0%, #a855f7 100%)',
+            background: 'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)',
             width: 38,
             height: 38,
             borderRadius: 12,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(56, 189, 248, 0.35)'
+            boxShadow: '0 0 20px rgba(203, 213, 225, 0.25)'
           }}>
             <Sparkles size={20} color="#09090b" />
           </div>
           <div>
             <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '1.5px', color: '#fff' }}>ZENITH</span>
-            <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#38bdf8', marginLeft: 8, fontWeight: 800, letterSpacing: '1px' }}>ECOSYSTEM</span>
+            <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#cbd5e1', marginLeft: 8, fontWeight: 800, letterSpacing: '1px' }}>ECOSYSTEM</span>
           </div>
         </div>
 

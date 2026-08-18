@@ -42,7 +42,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         {/* Top Bar Status */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#94a3b8', background: 'rgba(255,255,255,0.03)', padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
-            <ShieldCheck size={14} style={{ color: '#38bdf8' }} />
+            <ShieldCheck size={14} style={{ color: '#cbd5e1' }} />
             <span>PayPal Secure Subscription</span>
           </div>
         </div>
@@ -53,11 +53,11 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
-            background: 'rgba(56, 189, 248, 0.12)',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
+            background: 'rgba(203, 213, 225, 0.12)',
+            border: '1px solid rgba(203, 213, 225, 0.3)',
             padding: '4px 16px',
             borderRadius: 20,
-            color: '#38bdf8',
+            color: '#cbd5e1',
             fontSize: 11,
             fontWeight: 800,
             marginBottom: 16

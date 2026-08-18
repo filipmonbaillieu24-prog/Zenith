@@ -214,7 +214,7 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
             onClick={handleOpenSubmitModal}
             style={{
               background: isAuthenticated 
-                ? 'linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%)' 
+                ? 'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)' 
                 : 'rgba(255, 255, 255, 0.08)',
               border: isAuthenticated ? 'none' : '1px solid rgba(255, 255, 255, 0.15)',
               color: isAuthenticated ? '#09090b' : '#fff',

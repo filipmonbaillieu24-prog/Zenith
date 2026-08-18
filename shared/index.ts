@@ -14,3 +14,4 @@ export * from './ml/SharedModels';
 export * from './ml/RecoveryScore';
 export * from './pmc';
 export * from './gpxParser';
+export * from './components/ZenithModuleHeader';

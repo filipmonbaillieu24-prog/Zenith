@@ -279,17 +279,17 @@ export const LoginPage: React.FC = () => {
             type="submit"
             disabled={loading}
             style={{
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              background: 'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)',
               border: 'none',
               borderRadius: '10px',
-              color: '#fff',
+              color: '#09090b',
               fontWeight: 800,
               fontSize: '12px',
               padding: '12px',
               cursor: 'pointer',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
-              boxShadow: '0 4px 15px rgba(16, 185, 129, 0.25)',
+              boxShadow: '0 4px 15px rgba(203, 213, 225, 0.2)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

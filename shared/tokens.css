@@ -5,14 +5,15 @@
 
 :root {
   --zenith-color-bg: #09090b;
-  --zenith-color-surface: #1c1c23;
+  --zenith-color-surface: rgba(28, 28, 35, 0.65);
   --zenith-color-primary: #cbd5e1;
   --zenith-color-secondary: #94a3b8;
   --zenith-color-dark: #475569;
-  --zenith-color-accent: #4ade80;
-  --zenith-color-accent-neon: #39ff14;
+  --zenith-color-accent: #cbd5e1;
+  --zenith-color-accent-bright: #f8fafc;
+  --zenith-color-accent-glow: rgba(203, 213, 225, 0.12);
   --zenith-color-error: #ef4444;
-  --zenith-color-border: #27272a;
+  --zenith-color-border: rgba(255, 255, 255, 0.08);
 
   --zenith-space-xs: 4px;
   --zenith-space-sm: 8px;
@@ -20,8 +21,103 @@
   --zenith-space-lg: 24px;
   --zenith-space-xl: 32px;
 
-  --zenith-radius-sm: 4px;
-  --zenith-radius-md: 8px;
-  --zenith-radius-lg: 12px;
-  --zenith-radius-xl: 16px;
+  --zenith-radius-sm: 8px;
+  --zenith-radius-md: 12px;
+  --zenith-radius-lg: 16px;
+  --zenith-radius-xl: 20px;
+}
+
+/* ==========================================================
+ * SHARED PLATINUM GLASSMORPHISM UTILITY SUITE
+ * ========================================================== */
+
+.zenith-card {
+  background: var(--zenith-color-surface);
+  border: 1px solid var(--zenith-color-border);
+  border-radius: var(--zenith-radius-lg);
+  padding: 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.zenith-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(203, 213, 225, 0.25);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 20px rgba(203, 213, 225, 0.08);
+}
+
+.zenith-btn-primary {
+  background: var(--zenith-color-accent);
+  color: #09090b;
+  border: none;
+  padding: 10px 18px;
+  border-radius: var(--zenith-radius-md);
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(203, 213, 225, 0.15);
+}
+
+.zenith-btn-primary:hover {
+  background: var(--zenith-color-accent-bright);
+  box-shadow: 0 6px 20px rgba(203, 213, 225, 0.3);
+  transform: translateY(-1px);
+}
+
+.zenith-btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--zenith-color-border);
+  color: var(--zenith-color-primary);
+  padding: 10px 18px;
+  border-radius: var(--zenith-radius-md);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.zenith-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(203, 213, 225, 0.2);
+  color: #fff;
+}
+
+.zenith-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--zenith-color-accent-glow);
+  border: 1px solid rgba(203, 213, 225, 0.25);
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--zenith-color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.zenith-glow-ambient {
+  position: absolute;
+  top: -10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 1200px;
+  height: 600px;
+  background: radial-gradient(circle at 50% 10%, rgba(203, 213, 225, 0.12) 0%, rgba(203, 213, 225, 0.03) 45%, transparent 75%);
+  pointer-events: none;
+  z-index: 0;
 }
