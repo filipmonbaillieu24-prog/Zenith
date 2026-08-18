@@ -12,7 +12,7 @@ class SyncWorker(
 
     override suspend fun doWork(): Result {
         Log.i("SyncWorker", "Executing scheduled Zenith Pulse background sync...")
-        val success = ZenithSyncMaleager.performSync(applicationContext)
+        val success = ZenithSyncManager.performSync(applicationContext)
         return if (success) {
             Result.success()
         } else {

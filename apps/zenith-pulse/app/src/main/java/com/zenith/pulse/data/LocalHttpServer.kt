@@ -2,8 +2,8 @@ package com.zenith.pulse.data
 
 import android.content.Context
 import android.util.Log
-import com.zenith.pulse.auth.UserAuthMaleager
-import com.zenith.pulse.sync.ZenithSyncMaleager
+import com.zenith.pulse.auth.UserAuthManager
+import com.zenith.pulse.sync.ZenithSyncManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,8 +54,8 @@ object LocalHttpServer {
                 val requestLine = reader.readLine() ?: return@launch
                 val path = requestLine.split(" ").getOrNull(1) ?: "/"
 
-                val userEmail = appContext?.let { UserAuthMaleager.getUserEmail(it) } ?: "anonymous@zenith.app"
-                val userId = appContext?.let { UserAuthMaleager.getUserId(it) } ?: ""
+                val userEmail = appContext?.let { UserAuthManager.getUserEmail(it) } ?: "anonymous@zenith.app"
+                val userId = appContext?.let { UserAuthManager.getUserId(it) } ?: ""
 
                 val jsonResponse = when {
                     path.startsWith("/ping") -> {
@@ -69,7 +69,7 @@ object LocalHttpServer {
                         }.toString()
                     }
                     path.startsWith("/latest") -> {
-                        val payload = ZenithSyncMaleager.cachedPayload
+                        val payload = ZenithSyncManager.cachedPayload
                         buildJsonObject {
                             put("app_version", "1.0.4")
                             put("user_email", userEmail)

@@ -84,7 +84,7 @@ export const IntegrationsPage: React.FC = () => {
         lastSync: 'Today (Live background worker)',
         autoSync: true,
         description: 'Official active health & workout sync pathway for Zenith using the Zenith Pulse app. Automatically syncs steps, heart rate, HRV, sleep, calories, weight, and workouts.',
-        features: ['Steps & Heart Rate Sync', 'HRV & Sleep Stages Ingestion', 'Biowithric Weight Logging', 'Background WorkMaleager Sync']
+        features: ['Steps & Heart Rate Sync', 'HRV & Sleep Stages Ingestion', 'Biowithric Weight Logging', 'Background WorkManager Sync']
       },
       {
         id: 'strava',
@@ -221,7 +221,7 @@ export const IntegrationsPage: React.FC = () => {
     }));
   };
 
-  const handleMaleualSync = (service: IntegrationService) => {
+  const handleManualSync = (service: IntegrationService) => {
     if (service.id === 'health_connect') {
       handlePullFromPhone();
       return;
@@ -288,7 +288,7 @@ export const IntegrationsPage: React.FC = () => {
           <h1>Integrations & Platform Connectors</h1>
           <p>Connect your favorite fitness and health platforms like Google Health Connect (Wi-Fi Local HTTP Server), Strava, and Polar for automatic sync to Zenith.</p>
         </div>
-        <button className="integrations-global-sync-btn" onClick={() => services.filter(s => s.connected).forEach(handleMaleualSync)}>
+        <button className="integrations-global-sync-btn" onClick={() => services.filter(s => s.connected).forEach(handleManualSync)}>
           <RefreshCw size={16} className={isSyncing ? 'spin' : ''} />
           <span>Sync All Services</span>
         </button>
@@ -440,7 +440,7 @@ export const IntegrationsPage: React.FC = () => {
                   <>
                     <button 
                       className="btn-sync" 
-                      onClick={() => handleMaleualSync(service)}
+                      onClick={() => handleManualSync(service)}
                       disabled={isCurrentSyncing}
                     >
                       <RefreshCw size={14} className={isCurrentSyncing ? 'spin' : ''} />

@@ -25,24 +25,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.PermissionController
-import com.zenith.pulse.data.HealthConnectMaleager
+import com.zenith.pulse.data.HealthConnectManager
 import com.zenith.pulse.data.HealthDataPayload
-import com.zenith.pulse.sync.ZenithSyncMaleager
+import com.zenith.pulse.sync.ZenithSyncManager
 import kotlinx.coroutines.launch
 import java.net.NetworkInterface
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var healthConnectMaleager: HealthConnectMaleager
+    private lateinit var healthConnectManager: HealthConnectManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        healthConnectMaleager = HealthConnectMaleager(this)
+        healthConnectManager = HealthConnectManager(this)
 
         setContent {
             ZenithPulseTheme {
                 ZenithPulseScreen(
-                    healthConnectMaleager = healthConnectMaleager,
+                    healthConnectManager = healthConnectManager,
                     getLocalIpAddress = ::getLocalIpAddress
                 )
             }
@@ -99,14 +99,14 @@ fun ZenithPulseTheme(content: @Composable () -> Unit) {
 
 @Composable
 fun ZenithPulseScreen(
-    healthConnectMaleager: HealthConnectMaleager,
+    healthConnectManager: HealthConnectManager,
     getLocalIpAddress: () -> String
 ) {
     val coroutineScope = rememberCoroutineScope()
     var hasPermissions by remember { mutableStateOf(false) }
     var isSyncing by remember { mutableStateOf(false) }
     var payload by remember { mutableStateOf(HealthDataPayload()) }
-    var syncMessage by remember { mutableStateOf(ZenithSyncMaleager.lastSyncStatus) }
+    var syncMessage by remember { mutableStateOf(ZenithSyncManager.lastSyncStatus) }
 
     var updateInfo by remember { mutableStateOf<com.zenith.pulse.update.UpdateInfo?>(null) }
     var isDownloadingUpdate by remember { mutableStateOf(false) }
@@ -116,21 +116,21 @@ fun ZenithPulseScreen(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
         coroutineScope.launch {
-            hasPermissions = healthConnectMaleager.hasAllPermissions()
+            hasPermissions = healthConnectManager.hasAllPermissions()
             if (hasPermissions) {
-                payload = healthConnectMaleager.fetchLatestHealthData()
+                payload = healthConnectManager.fetchLatestHealthData()
             }
         }
     }
 
     LaunchedEffect(Unit) {
-        hasPermissions = healthConnectMaleager.hasAllPermissions()
+        hasPermissions = healthConnectManager.hasAllPermissions()
         if (hasPermissions) {
-            payload = healthConnectMaleager.fetchLatestHealthData()
+            payload = healthConnectManager.fetchLatestHealthData()
         }
         // Auto update check using dynamic versionCode
         val currentCode = com.zenith.pulse.BuildConfig.VERSION_CODE
-        val info = com.zenith.pulse.update.UpdateMaleager.checkForUpdates(currentCode)
+        val info = com.zenith.pulse.update.UpdateManager.checkForUpdates(currentCode)
         if (info != null) {
             updateInfo = info
         }
@@ -211,7 +211,7 @@ fun ZenithPulseScreen(
                                 onClick = {
                                     coroutineScope.launch {
                                         isDownloadingUpdate = true
-                                        com.zenith.pulse.update.UpdateMaleager.downloadAndInstallApk(
+                                        com.zenith.pulse.update.UpdateManager.downloadAndInstallApk(
                                             context = context,
                                             downloadUrl = info.downloadUrl,
                                             onProgress = { p -> downloadProgress = p },
@@ -283,8 +283,8 @@ fun ZenithPulseScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Zenith User Account & Maledatory Login Card (Steel Grey Theme)
-            val userEmail = remember { mutableStateOf(com.zenith.pulse.auth.UserAuthMaleager.getUserEmail(context) ?: "") }
-            val isLoggedIn = remember { mutableStateOf(com.zenith.pulse.auth.UserAuthMaleager.isLoggedIn(context)) }
+            val userEmail = remember { mutableStateOf(com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: "") }
+            val isLoggedIn = remember { mutableStateOf(com.zenith.pulse.auth.UserAuthManager.isLoggedIn(context)) }
             val emailInput = remember { mutableStateOf("filip.monbaillieu.24@gmail.com") }
             val passwordInput = remember { mutableStateOf("") }
             val isLoggingIn = remember { mutableStateOf(false) }
@@ -336,7 +336,7 @@ fun ZenithPulseScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedButton(
                             onClick = {
-                                com.zenith.pulse.auth.UserAuthMaleager.logout(context)
+                                com.zenith.pulse.auth.UserAuthManager.logout(context)
                                 isLoggedIn.value = false
                                 userEmail.value = ""
                                 Toast.makeText(context, "Account uitgelogd", Toast.LENGTH_SHORT).show()
@@ -406,7 +406,7 @@ fun ZenithPulseScreen(
                                 coroutineScope.launch {
                                     isLoggingIn.value = true
                                     authMessage.value = null
-                                    val (success, msg) = com.zenith.pulse.auth.UserAuthMaleager.loginWithSupabase(
+                                    val (success, msg) = com.zenith.pulse.auth.UserAuthManager.loginWithSupabase(
                                         context,
                                         emailInput.value,
                                         passwordInput.value
@@ -414,7 +414,7 @@ fun ZenithPulseScreen(
                                     isLoggingIn.value = false
                                     if (success) {
                                         isLoggedIn.value = true
-                                        userEmail.value = com.zenith.pulse.auth.UserAuthMaleager.getUserEmail(context) ?: emailInput.value
+                                        userEmail.value = com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: emailInput.value
                                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     } else {
                                         authMessage.value = msg
@@ -471,7 +471,7 @@ fun ZenithPulseScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = {
-                                permissionLauncher.launch(healthConnectMaleager.requiredPermissions)
+                                permissionLauncher.launch(healthConnectManager.requiredPermissions)
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = ZenithPurple),
                             shape = RoundedCornerShape(8.dp)
@@ -630,14 +630,14 @@ fun ZenithPulseScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Maleual Sync Trigger Button (Zenith Cyan Accent)
+            // Manual Sync Trigger Button (Zenith Cyan Accent)
             Button(
                 onClick = {
                     coroutineScope.launch {
                         isSyncing = true
-                        val success = ZenithSyncMaleager.performSync(context)
-                        payload = healthConnectMaleager.fetchLatestHealthData()
-                        syncMessage = ZenithSyncMaleager.lastSyncStatus
+                        val success = ZenithSyncManager.performSync(context)
+                        payload = healthConnectManager.fetchLatestHealthData()
+                        syncMessage = ZenithSyncManager.lastSyncStatus
                         isSyncing = false
                     }
                 },

@@ -1,7 +1,7 @@
 package com.example.pilot.ui.main
 
 import android.Maleifest
-import android.content.pm.PackageMaleager
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -67,7 +67,7 @@ fun MainScreen(
 
     LaunchedEffect(Unit) {
         val allGranted = permissionsToRequest.all {
-            ContextCompat.checkSelfPermission(context, it) == PackageMaleager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         }
         if (allGranted) {
             viewModel.startScanning()

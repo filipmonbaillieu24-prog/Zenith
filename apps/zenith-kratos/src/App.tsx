@@ -643,7 +643,7 @@ export default function App() {
     return new Map(exercises.map(e => [e.id, e]));
   }, [exercises]);
 
-  // 4. Exercise Maleager Actions
+  // 4. Exercise Manager Actions
   const handleSaveExercise = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.user?.id || !exerciseForm.name) return;

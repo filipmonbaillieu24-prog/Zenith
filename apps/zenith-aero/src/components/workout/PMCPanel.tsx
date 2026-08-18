@@ -42,7 +42,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
       <div className="wd-section-card__head">
         <span className="wd-section-card__title">
           <TrendingUp size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5, color: '#cbd5e1' }} />
-          Performance Maleagement
+          Performance Management
         </span>
         <span className="wd-trend" style={{ background: `${tsbInfo.color}22`, color: tsbInfo.color, padding: '2px 8px', borderRadius: 6 }}>
           {tsbInfo.emoji} {tsbInfo.label}

@@ -611,7 +611,7 @@ function App() {
     { id: 'nav-prs',       category: 'Navigation', icon: <Trophy size={14} />,          label: 'Progression & PRs',     description: 'eFTP trends, VO2max, and personal records',    shortcut: '3', action: () => setActiveTab('prs') },
     { id: 'nav-heatmap',   category: 'Navigation', icon: <MapIcon size={14} />,         label: 'Heatmap',               description: 'Geographic rides map',                         shortcut: '4', action: () => setActiveTab('heatmap') },
     { id: 'nav-route',     category: 'Navigation', icon: <Compass size={14} />,         label: 'Route Planner',         description: 'Generate and plan cycling routes',             shortcut: '5', action: () => setActiveTab('route') },
-    { id: 'nav-settings',  category: 'Navigation', icon: <Settings size={14} />,        label: 'Settings',              description: 'Maleage profile and gear',                      shortcut: '6', action: () => setActiveTab('settings') },
+    { id: 'nav-settings',  category: 'Navigation', icon: <Settings size={14} />,        label: 'Settings',              description: 'Manage profile and gear',                      shortcut: '6', action: () => setActiveTab('settings') },
     { id: 'action-recalc', category: 'Actions',    icon: <Activity size={14} />,        label: 'Recalculate all rides', description: 'Apply updated FTP/LTHR to all rides',          action: handleRecalculate },
   ], [handleRecalculate]);
 

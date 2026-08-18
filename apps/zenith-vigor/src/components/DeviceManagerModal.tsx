@@ -4,7 +4,7 @@ import { supabase } from '../utils/supabaseClient';
 import { WeightScaleConnector } from './WeightScaleConnector';
 import ColmiRingConnector from './ColmiRingConnector';
 
-interface DeviceMaleagerModalProps {
+interface DeviceManagerModalProps {
   userId: string;
   onClose: () => void;
   fitnessProfile: any;
@@ -22,7 +22,7 @@ interface PairedDevice {
   created_at: string;
 }
 
-export const DeviceMaleagerModal: React.FC<DeviceMaleagerModalProps> = ({
+export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
   userId,
   onClose,
   fitnessProfile,
@@ -162,7 +162,7 @@ export const DeviceMaleagerModal: React.FC<DeviceMaleagerModalProps> = ({
 
         <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '10px 0' }}>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 8 }}>
-            Maleage paired devices used for automatically syncing your health data.
+            Manage paired devices used for automatically syncing your health data.
           </p>
 
           {loading ? (

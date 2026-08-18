@@ -98,7 +98,7 @@ export const RunModal: React.FC<RunModalProps> = ({
         <div className="stride-modal-header">
           <div>
             <h3>{initialRun ? 'Edit Session' : 'Log New Run Session'}</h3>
-            <p className="subtitle">Maleual entry & Treadmill settings</p>
+            <p className="subtitle">Manual entry & Treadmill settings</p>
           </div>
           <button className="stride-close-btn" onClick={onClose}>
             <X size={18} />

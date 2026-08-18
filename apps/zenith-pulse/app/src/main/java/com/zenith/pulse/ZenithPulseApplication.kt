@@ -6,7 +6,7 @@ import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkMaleager
+import androidx.work.WorkManager
 import com.zenith.pulse.data.LocalHttpServer
 import com.zenith.pulse.sync.SyncWorker
 import java.util.concurrent.TimeUnit
@@ -33,7 +33,7 @@ class ZenithPulseApplication : Application() {
             .setConstraints(constraints)
             .build()
 
-        WorkMaleager.getInstance(this).enqueueUniquePeriodicWork(
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "ZenithPulseSyncWorker",
             ExistingPeriodicWorkPolicy.KEEP,
             syncRequest

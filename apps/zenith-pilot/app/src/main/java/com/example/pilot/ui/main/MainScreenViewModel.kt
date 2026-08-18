@@ -9,7 +9,7 @@ import android.os.IBinder
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pilot.ble.BleSensor
-import com.example.pilot.ble.BleSensorMaleager
+import com.example.pilot.ble.BleSensorManager
 import com.example.pilot.coaching.CoachingCue
 import com.example.pilot.data.PlannedWorkout
 import com.example.pilot.data.WorkoutRepository
@@ -55,7 +55,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     private val repository = WorkoutRepository()
     
     // We instantiate a backup sensor manager just in case the service isn't running yet
-    private val localSensorMaleager = BleSensorMaleager(application)
+    private val localSensorManager = BleSensorManager(application)
 
     private val _uiState = MutableStateFlow(PilotUiState())
     val uiState: StateFlow<PilotUiState> = _uiState.asStateFlow()
@@ -84,14 +84,14 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             try {
                 val context = getApplication<Application>().applicationContext
-                val pInfo = context.packageMaleager.getPackageInfo(context.packageName, 0)
+                val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
                 val currentVersionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                     pInfo.longVersionCode.toInt()
                 } else {
                     pInfo.versionCode
                 }
                 
-                val update = com.example.pilot.update.UpdateMaleager.checkForUpdates(currentVersionCode)
+                val update = com.example.pilot.update.UpdateManager.checkForUpdates(currentVersionCode)
                 if (update != null) {
                     _uiState.update { it.copy(updateInfo = update) }
                 }
@@ -105,7 +105,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         val update = uiState.value.updateInfo ?: return
         _uiState.update { it.copy(updateProgress = 0f, updateError = null) }
         viewModelScope.launch {
-            com.example.pilot.update.UpdateMaleager.downloadAndInstallApk(
+            com.example.pilot.update.UpdateManager.downloadAndInstallApk(
                 context = getApplication(),
                 downloadUrl = update.downloadUrl,
                 onProgress = { progress ->
@@ -141,12 +141,12 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     private fun observeLocalSensors() {
         viewModelScope.launch {
             combine(
-                localSensorMaleager.sensors,
-                localSensorMaleager.currentHR,
-                localSensorMaleager.currentPower,
-                localSensorMaleager.currentCadence,
-                localSensorMaleager.currentSpeed,
-                localSensorMaleager.isScanning
+                localSensorManager.sensors,
+                localSensorManager.currentHR,
+                localSensorManager.currentPower,
+                localSensorManager.currentCadence,
+                localSensorManager.currentSpeed,
+                localSensorManager.isScanning
             ) { array ->
                 @Suppress("UNCHECKED_CAST")
                 val sensorsList = array[0] as List<BleSensor>
@@ -235,12 +235,12 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         // Observe service sensor manager flows when bound
         serviceJobs.add(viewModelScope.launch {
             combine(
-                service.bleSensorMaleager.sensors,
-                service.bleSensorMaleager.currentHR,
-                service.bleSensorMaleager.currentPower,
-                service.bleSensorMaleager.currentCadence,
-                service.bleSensorMaleager.currentSpeed,
-                service.bleSensorMaleager.isScanning
+                service.bleSensorManager.sensors,
+                service.bleSensorManager.currentHR,
+                service.bleSensorManager.currentPower,
+                service.bleSensorManager.currentCadence,
+                service.bleSensorManager.currentSpeed,
+                service.bleSensorManager.isScanning
             ) { array ->
                 @Suppress("UNCHECKED_CAST")
                 val sensorsList = array[0] as List<BleSensor>
@@ -312,22 +312,22 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun startScanning() {
-        WorkoutService.activeService?.bleSensorMaleager?.startScanning() ?: localSensorMaleager.startScanning()
+        WorkoutService.activeService?.bleSensorManager?.startScanning() ?: localSensorManager.startScanning()
     }
 
     fun connectSensor(address: String) {
-        WorkoutService.activeService?.bleSensorMaleager?.connectSensor(address) ?: localSensorMaleager.connectSensor(address)
+        WorkoutService.activeService?.bleSensorManager?.connectSensor(address) ?: localSensorManager.connectSensor(address)
     }
 
     fun disconnectSensor(address: String) {
-        WorkoutService.activeService?.bleSensorMaleager?.disconnectSensor(address) ?: localSensorMaleager.disconnectSensor(address)
+        WorkoutService.activeService?.bleSensorManager?.disconnectSensor(address) ?: localSensorManager.disconnectSensor(address)
     }
 
     override fun onCleared() {
         super.onCleared()
         repositoryJob?.cancel()
         serviceJobs.forEach { it.cancel() }
-        localSensorMaleager.cleanUp()
+        localSensorManager.cleanUp()
         serviceConnection?.let {
             try {
                 getApplication<Application>().unbindService(it)

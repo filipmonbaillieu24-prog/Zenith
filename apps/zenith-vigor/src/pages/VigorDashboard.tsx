@@ -30,9 +30,9 @@ import {
 } from 'recharts';
 
 import { WeightScaleConnector } from '../components/WeightScaleConnector';
-import { MaleualLogModal } from '../components/MaleualLogModal';
+import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
-import { DeviceMaleagerModal } from '../components/DeviceMaleagerModal';
+import { DeviceManagerModal } from '../components/DeviceManagerModal';
 import { ProPaywallModal } from '../components/ProPaywallModal';
 import { calculateZenithSleepScore } from '../../../../shared/services/zenithSleepEngine';
 
@@ -113,9 +113,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
   // Modals state
   const [showSettings, setShowSettings] = useState(false);
-  const [showMaleualLog, setShowMaleualLog] = useState(false);
+  const [showManualLog, setShowManualLog] = useState(false);
   const [showScaleConnect, setShowScaleConnect] = useState(false);
-  const [showDeviceMaleager, setShowDeviceMaleager] = useState(false);
+  const [showDeviceManager, setShowDeviceManager] = useState(false);
   const [pairedDevices, setPairedDevices] = useState<any[]>([]);
 
   // Profile data
@@ -860,7 +860,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   };
 
   // Handles saving manual entries (Steps, Sleep, Weight)
-  const handleMaleualSave = async (type: 'weight' | 'sleep' | 'steps', payload: any) => {
+  const handleManualSave = async (type: 'weight' | 'sleep' | 'steps', payload: any) => {
     const table = `vigor_${type}`;
     const { error } = await supabase.from(table).insert({
       user_id: user.id,
@@ -1123,7 +1123,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </h3>
               <button 
                 onClick={() => {
-                  setShowMaleualLog(true);
+                  setShowManualLog(true);
                 }} 
                 className="btn-secondary" 
                 style={{ padding: '6px 12px', fontSize: 11, height: 'auto' }}
@@ -2001,7 +2001,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             </h3>
             <button 
               onClick={() => {
-                setShowMaleualLog(true);
+                setShowManualLog(true);
               }} 
               className="btn-secondary" 
               style={{ padding: '6px 12px', fontSize: 11, height: 'auto', background: 'rgba(168, 85, 247, 0.08)', borderColor: '#a855f7', color: '#a855f7' }}
@@ -2097,7 +2097,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             </h3>
             <button 
               onClick={() => {
-                setShowMaleualLog(true);
+                setShowManualLog(true);
               }} 
               className="btn-secondary" 
               style={{ padding: '6px 12px', fontSize: 11, height: 'auto', background: 'rgba(92, 124, 250, 0.08)', borderColor: '#5c7cfa', color: '#5c7cfa' }}
@@ -2202,7 +2202,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             <Settings size={15} /> Doelen Instellen
           </button>
           
-          <button onClick={() => setShowMaleualLog(true)} className="btn-secondary" style={{ padding: '10px 18px', fontSize: 13, height: '40px' }}>
+          <button onClick={() => setShowManualLog(true)} className="btn-secondary" style={{ padding: '10px 18px', fontSize: 13, height: '40px' }}>
             <Plus size={16} /> Log Handmatig
           </button>
         </div>
@@ -2560,18 +2560,18 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         />
       )}
 
-      {showMaleualLog && (
-        <MaleualLogModal 
-          onClose={() => setShowMaleualLog(false)}
-          onSave={handleMaleualSave}
+      {showManualLog && (
+        <ManualLogModal 
+          onClose={() => setShowManualLog(false)}
+          onSave={handleManualSave}
         />
       )}
 
-      {showDeviceMaleager && (
-        <DeviceMaleagerModal 
+      {showDeviceManager && (
+        <DeviceManagerModal 
           userId={user.id}
           onClose={() => {
-            setShowDeviceMaleager(false);
+            setShowDeviceManager(false);
             fetchLogs();
           }}
           fitnessProfile={dbProfile || user.user_metadata?.fitness_profile || {}}

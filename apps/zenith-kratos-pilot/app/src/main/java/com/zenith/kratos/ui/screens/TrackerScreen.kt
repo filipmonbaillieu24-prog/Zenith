@@ -1,7 +1,7 @@
 package com.zenith.kratos.ui.screens
 
 import android.content.Context
-import android.media.AudioMaleager
+import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
 import android.os.VibrationEffect
@@ -129,7 +129,7 @@ fun TrackerScreen(
     
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (context.checkSelfPermission(android.Maleifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageMaleager.PERMISSION_GRANTED) {
+            if (context.checkSelfPermission(android.Maleifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 permissionLauncher.launch(android.Maleifest.permission.POST_NOTIFICATIONS)
             }
         }
@@ -716,7 +716,7 @@ fun TrackerScreen(
 
                                                             scope.launch {
                                                                     try {
-                                                                        val toneGen = ToneGenerator(AudioMaleager.STREAM_NOTIFICATION, 100)
+                                                                        val toneGen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
                                                                         toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
                                                                         delay(300)
                                                                         toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 250)

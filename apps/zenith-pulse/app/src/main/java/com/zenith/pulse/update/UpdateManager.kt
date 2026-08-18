@@ -19,7 +19,7 @@ data class UpdateInfo(
     val downloadUrl: String
 )
 
-object UpdateMaleager {
+object UpdateManager {
 
     private const val PULSE_VERSION_URL =
         "https://raw.githubusercontent.com/filipmonbaillieu24-prog/Zenith/main/apk/pulse-version.json"

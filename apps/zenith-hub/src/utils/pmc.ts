@@ -1,5 +1,5 @@
 /**
- * Performance Maleagement Chart (PMC) calculations.
+ * Performance Management Chart (PMC) calculations.
  *
  * Based on Banister's Impulse-Response model, popularised by
  * TrainingPeaks / Andrew Coggan:

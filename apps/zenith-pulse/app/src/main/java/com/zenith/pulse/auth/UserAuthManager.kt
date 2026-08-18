@@ -17,7 +17,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-object UserAuthMaleager {
+object UserAuthManager {
 
     private const val PREFS_NAME = "zenith_pulse_auth_prefs"
     private const val KEY_USER_EMAIL = "key_user_email"
@@ -58,12 +58,12 @@ object UserAuthMaleager {
             .putString(KEY_USER_ID, userId.ifEmpty { email.trim().lowercase() })
             .putString(KEY_ACCESS_TOKEN, accessToken)
             .apply()
-        Log.i("UserAuthMaleager", "Saved user account for: $email")
+        Log.i("UserAuthManager", "Saved user account for: $email")
     }
 
     fun logout(context: Context) {
         getPrefs(context).edit().clear().apply()
-        Log.i("UserAuthMaleager", "Cleared user session")
+        Log.i("UserAuthManager", "Cleared user session")
     }
 
     suspend fun loginWithSupabase(context: Context, emailInput: String, passwordInput: String): Pair<Boolean, String> = withContext(Dispatchers.IO) {
@@ -92,7 +92,7 @@ object UserAuthMaleager {
             }
 
             val bodyText = response.bodyAsText()
-            Log.d("UserAuthMaleager", "Supabase Auth status: ${response.status.value}, body: $bodyText")
+            Log.d("UserAuthManager", "Supabase Auth status: ${response.status.value}, body: $bodyText")
 
             if (response.status.value in 200..299) {
                 val json = Json.parseToJsonElement(bodyText).jsonObject
@@ -119,11 +119,11 @@ object UserAuthMaleager {
                     "Status ${response.status.value}"
                 }
 
-                Log.w("UserAuthMaleager", "Supabase auth failed: $errorReason")
+                Log.w("UserAuthManager", "Supabase auth failed: $errorReason")
                 return@withContext Pair(false, "Inloggen mislukt: $errorReason")
             }
         } catch (e: Exception) {
-            Log.e("UserAuthMaleager", "Auth exception", e)
+            Log.e("UserAuthManager", "Auth exception", e)
             return@withContext Pair(false, "Verbindingsfout: ${e.localizedMessage}")
         }
     }

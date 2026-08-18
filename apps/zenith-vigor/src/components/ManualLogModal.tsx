@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { X, Moon, Footprints, Scale, SlidersHorizontal } from 'lucide-react';
 
-interface MaleualLogModalProps {
+interface ManualLogModalProps {
   onClose: () => void;
   onSave: (type: 'weight' | 'sleep' | 'steps', payload: any) => Promise<void>;
 }
 
-export const MaleualLogModal: React.FC<MaleualLogModalProps> = ({
+export const ManualLogModal: React.FC<ManualLogModalProps> = ({
   onClose,
   onSave,
 }) => {

@@ -22,7 +22,7 @@ import com.zenith.daily.data.*
 import com.zenith.daily.ui.screens.*
 import com.zenith.daily.ui.theme.*
 import com.zenith.daily.update.UpdateInfo
-import com.zenith.daily.update.UpdateMaleager
+import com.zenith.daily.update.UpdateManager
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         val savedEmail = prefs.getString("user_email", null)
 
         val currentVersionCode = try {
-            val pInfo = applicationContext.packageMaleager.getPackageInfo(applicationContext.packageName, 0)
+            val pInfo = applicationContext.packageManager.getPackageInfo(applicationContext.packageName, 0)
             pInfo.versionCode
         } catch (e: Exception) {
             1
@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
 
                 // Automatic Update Check on App Startup
                 LaunchedEffect(Unit) {
-                    val info = UpdateMaleager.checkForUpdates(currentVersionCode)
+                    val info = UpdateManager.checkForUpdates(currentVersionCode)
                     if (info != null) {
                         availableUpdate = info
                     }
@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
                                         isDownloading = true
                                         updateError = null
                                         scope.launch {
-                                            UpdateMaleager.downloadAndInstallApk(
+                                            UpdateManager.downloadAndInstallApk(
                                                 context = context,
                                                 downloadUrl = info.downloadUrl,
                                                 onProgress = { p -> downloadProgress = p },
