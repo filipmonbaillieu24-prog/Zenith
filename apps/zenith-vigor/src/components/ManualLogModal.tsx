@@ -168,7 +168,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
               color: activeTab === 'sleep' ? '#a855f7' : 'var(--text-muted)'
             }}
           >
-            <Moon size={14} style={{ color: activeTab === 'sleep' ? '#a855f7' : 'inherit' }} /> Slaap
+            <Moon size={14} style={{ color: activeTab === 'sleep' ? '#a855f7' : 'inherit' }} /> Sleep
           </button>
           <button
             type="button"

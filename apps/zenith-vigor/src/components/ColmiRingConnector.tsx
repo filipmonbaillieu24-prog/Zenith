@@ -181,7 +181,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
       try {
         // Physical BLE Mode via Tauri Rust Bridge (direct if not in iframe)
         if (!(window as any).__TAURI__ && !(window as any).__TAURI_INTERNALS__) {
-          throw new Error('Fysieke Bluetooth-synchronisatie is alleen beschikbaar in de desktop-app.');
+          throw new Error('Physical Bluetooth sync is only available in the desktop app.');
         }
 
         const { invoke } = await import('@tauri-apps/api/core');
@@ -358,7 +358,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
                 The Colmi R02 Smart Ring stores up to 7 days of activity, steps, and sleep data locally. Using the sync button maakt de app verbinding via Bluetooth en haalt deze gegevens automatisch op.
                 <br />
-                <span style={{ color: '#fff', fontWeight: 600 }}>Instruction:</span> Ensure Bluetooth is enabled on your device.uter en dat de ring dichtbij is.
+                <span style={{ color: '#fff', fontWeight: 600 }}>Instruction:</span> Ensure Bluetooth is enabled on your computer and the ring is nearby.
               </p>
             </div>
           )}
@@ -375,7 +375,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
                 Your Colmi R02 ring has successfully synchronized. Steps and sleep data have been saved to your profile.
                 <br /><br />
-                <span style={{ color: '#cbd5e1' }}>💡 Tip:</span> Synchronize daily for the most accurate withrics.at maximaal 7 dagen op.
+                <span style={{ color: '#cbd5e1' }}>💡 Tip:</span> Synchronize daily for maximum accuracy. The ring stores up to 7 days of data.
               </p>
             </div>
           )}

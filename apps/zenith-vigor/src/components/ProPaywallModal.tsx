@@ -60,7 +60,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             {featureName ? `Unlock ${featureName}` : 'Upgrade to Zenith Pro'}
           </h2>
           <p style={{ fontSize: 13, color: '#94a3b8', margin: 0, lineHeight: 1.5 }}>
-            {featureDescription || 'Krijg toegang tot visuele voortgangsvergelijking, alle lichaamsomtrekken, weegschaal vet% en diepe slaapfases.'}
+            {featureDescription || 'Get access to visual progress comparisons, body measurements, scale body fat %, and sleep stages.'}
           </p>
         </div>
 
@@ -70,7 +70,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Camera size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Voortgangsfoto's & Visuele Vergelijker</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Upload photos (Front, Side, Back) and compare je fysieke transformatie direct side-by-side with een slider.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Upload photos (Front, Side, Back) and compare your physical transformation side-by-side with a slider.</div>
             </div>
           </div>
 
@@ -78,7 +78,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Ruler size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Lichaamsomtrekken (Alle 8 Zones)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Track centiwithers for Chest, Biceps, Thighs, Hips,chouders, Nek, Kuiten en Taille over de tijd.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Track measurements for Chest, Biceps, Thighs, Hips, Shoulders, Neck, Calves, and Waist over time.</div>
             </div>
           </div>
 
@@ -93,8 +93,8 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Moon size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Slaapfases Breakdown (Smart Ring Sync)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Full breakdown of Deep Sleep (%), REM Sleep (%), Light Sleep (%)chte Slaap (%) & Wakker-tijd uit je Colmi Smart Ring.</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Sleepfases Breakdown (Smart Ring Sync)</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Full breakdown of Deep Sleep (%), REM Sleep (%), Light Sleep (%), and Awake time from your Colmi Smart Ring.</div>
             </div>
           </div>
         </div>
@@ -113,7 +113,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             €9,99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ month</span>
           </div>
           <div style={{ fontSize: 11, color: '#39ff14', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <CheckCircle2 size={12} /> 14 dagen gratis proefperiode, opzegbaar wanneer je wilt
+            <CheckCircle2 size={12} /> 14-day free trial, cancel anytime
           </div>
         </div>
 

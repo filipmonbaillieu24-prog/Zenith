@@ -399,11 +399,11 @@ export const DeviceManagerModal: React.FC<DeviceManagerModalProps> = ({
             >
               {selectedType === 'scale' ? (
                 <>
-                  The <strong>Neo Health Onyx SE</strong> scale connects via Web Bluetooth on your computer. Make sure your scale is on.aal aanstaat door er kort op te tikken.
+                  The <strong>Neo Health Onyx SE</strong> scale connects via Web Bluetooth on your computer. Make sure your scale is turned on by tapping it briefly.
                 </>
               ) : (
                 <>
-                  The <strong>Colmi R02 Smart Ring</strong> syncs via the native BLE bridge of the Zenith desktop app. Make sure the ring is active.ring opgeladen en in de buurt is.
+                  The <strong>Colmi R02 Smart Ring</strong> syncs via the native BLE bridge of the Zenith desktop app. Make sure the ring is active, charged, and nearby.
                 </>
               )}
             </div>

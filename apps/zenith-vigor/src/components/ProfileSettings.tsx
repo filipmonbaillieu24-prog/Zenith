@@ -116,7 +116,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                   />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Slaapdoel (Uren)</label>
+                  <label className="form-label">Sleepdoel (Uren)</label>
                   <input
                     type="number"
                     step="0.5"

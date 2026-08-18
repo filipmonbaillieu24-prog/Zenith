@@ -29,7 +29,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
   };
 
   const getStoredMetrics = () => {
-    const stored = sessionStorage.getItem('vigor_last_withrics');
+    const stored = sessionStorage.getItem('vigor_last_metrics');
     try {
       return stored ? JSON.parse(stored) : null;
     } catch {
@@ -115,7 +115,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
   // Stable weight flag: true when scale explicitly confirms a final stable measurement
   const [isStableMeasurement, setIsStableMeasurement] = useState(false);
 
-  // BLE custom withrics state
+  // BLE custom metrics state
   const [bleFat, setBleFat] = useState<number | null>(
     initialCalculated ? initialCalculated.fat : (activeMetrics?.body_fat || null)
   );
@@ -146,16 +146,16 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
   }, [initialWeight]);
 
   useEffect(() => {
-    const withricsToUse = initialMetrics || getStoredMetrics();
-    if (withricsToUse) {
-      if (withricsToUse.impedance) {
-        const results = calculateMetricsFromImpedance(withricsToUse.impedance, tempWeight || activeWeight || 80);
+    const metricsToUse = initialMetrics || getStoredMetrics();
+    if (metricsToUse) {
+      if (metricsToUse.impedance) {
+        const results = calculateMetricsFromImpedance(metricsToUse.impedance, tempWeight || activeWeight || 80);
         setBleFat(results.fat);
         setBleWater(results.water);
         setBleMuscle(results.muscle);
       } else {
-        if (withricsToUse.body_fat >= 5 && withricsToUse.body_fat <= 75) setBleFat(withricsToUse.body_fat);
-        if (withricsToUse.water >= 20 && withricsToUse.water <= 80) setBleWater(withricsToUse.water);
+        if (metricsToUse.body_fat >= 5 && metricsToUse.body_fat <= 75) setBleFat(metricsToUse.body_fat);
+        if (metricsToUse.water >= 20 && metricsToUse.water <= 80) setBleWater(metricsToUse.water);
       }
     }
   }, [initialMetrics, tempWeight]);
@@ -201,9 +201,9 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
             }
           });
           
-          unlistenMetrics = await listen('native-withrics-received', (event: any) => {
+          unlistenMetrics = await listen('native-metrics-received', (event: any) => {
             const payload = event.payload as { body_fat: number, water: number, impedance: number };
-            console.log("Modal received native withrics from Tauri Rust:", payload);
+            console.log("Modal received native metrics from Tauri Rust:", payload);
             if (payload.impedance) {
               const results = calculateMetricsFromImpedance(payload.impedance, tempWeight || activeWeight || 80);
               setBleFat(results.fat);
@@ -242,9 +242,9 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
         if (onPairingSuccess) {
           onPairingSuccess('Neo Health', 'Onyx SE');
         }
-      } else if (event.data?.type === 'native-withrics-received') {
+      } else if (event.data?.type === 'native-metrics-received') {
         const payload = event.data.payload;
-        console.log("Modal received native withrics forwarded from parent Hub:", payload);
+        console.log("Modal received native metrics forwarded from parent Hub:", payload);
         if (payload.impedance) {
           const results = calculateMetricsFromImpedance(payload.impedance, tempWeight || activeWeight || 80);
           setBleFat(results.fat);
@@ -424,7 +424,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
           let methodUsed = "";
 
           if (bytes[0] === 0x12 && bytes.length >= 17) {
-            // Yolanda 18-byte withrics packet - extract withrics and weight
+            // Yolanda 18-byte metrics packet - extract metrics and weight
             const rawW = (bytes[13] << 8 | bytes[14]);
             const w1314 = Math.round((rawW / 28.82) * 100) / 100;
             if (w1314 >= 40 && w1314 <= 150) {
@@ -545,7 +545,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
     const muscle = bleMuscle !== null ? bleMuscle : Math.round((41.0 + (weight - 75) * 0.05) * 10) / 10;
 
     sessionStorage.removeItem('vigor_last_weight');
-    sessionStorage.removeItem('vigor_last_withrics');
+    sessionStorage.removeItem('vigor_last_metrics');
 
     onWeightLogged(weight, fat, water, muscle);
     setMeasuredWeight(weight);
@@ -576,7 +576,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
         </div>
 
         <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5, marginBottom: 24 }}>
-          Pair your **Neo Health Bluetooth scale** to automatically log weight, body fat %, and vital withrics.gistreren.
+          Pair your **Neo Health Bluetooth scale** to automatically log weight, body fat %, and vital metrics.gistreren.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 12 }}>
@@ -628,11 +628,11 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                         {/* Live measurement label vs stable */}
                         {isStableMeasurement ? (
                           <span style={{ fontSize: 10, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, padding: '2px 10px', fontWeight: 700, textTransform: 'uppercase', display: 'inline-block', marginBottom: 8 }}>
-                            ✓ Stabiele withing — accepteer of weiger
+                            ✓ Stabiele measurement — accepteer of weiger
                           </span>
                         ) : (
                           <span style={{ fontSize: 10, background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 20, padding: '2px 10px', fontWeight: 700, textTransform: 'uppercase', display: 'inline-block', marginBottom: 8 }}>
-                            📡 Live withing — stabilisering...
+                            📡 Live measurement — stabilisering...
                           </span>
                         )}
                         <div style={{ fontSize: 36, fontWeight: 900, color: '#cbd5e1', margin: '4px 0 16px', letterSpacing: '-1px' }}>{tempWeight} kg</div>
@@ -659,13 +659,13 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
                             className="btn-secondary"
                             style={{ width: '100%', padding: '10px', opacity: 0.7 }}
                           >
-                            Accepteer Huidige Waarde (Nog niet stabiel)
+                            Accept Current Value (Not yet stable)
                           </button>
                         )}
                       </div>
                     ) : (
                       <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 8, textAlign: 'center' }}>
-                        Sta stil op de weegschaal om de withing te starten...
+                        Stand still on the scale to start measurement...
                       </p>
                     )}
 
@@ -705,7 +705,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, background: 'rgba(239, 68, 68, 0.03)', border: '1px solid rgba(239, 68, 68, 0.1)', borderRadius: '12px', padding: 16, textAlign: 'center' }}>
                 <HelpCircle size={28} style={{ color: '#ef4444', marginBottom: 12 }} />
-                <h4 style={{ fontSize: 12, color: '#ef4444', fontWeight: 800, marginBottom: 4 }}>Web Bluetooth Niet Ondersteund</h4>
+                <h4 style={{ fontSize: 12, color: '#ef4444', fontWeight: 800, marginBottom: 4 }}>Web Bluetooth Not Supported</h4>
                 <p style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
                   Uw browser ondersteunt de Web Bluetooth API niet. Gebruik Google Chrome of MS Edge.
                 </p>
@@ -716,7 +716,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
 
         {measuredWeight && (
           <div className="animate-fade-in" style={{ background: 'rgba(203, 213, 225, 0.04)', border: '1px solid rgba(203, 213, 225, 0.15)', borderRadius: '12px', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1' }}>Gewichtswithing succesvol opgeslagen!</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1' }}>Gewichtsmeasurement succesvol opgeslagen!</span>
             <button className="btn-primary" onClick={onClose} style={{ padding: '6px 12px', fontSize: 11 }}>Sluiten</button>
           </div>
         )}
