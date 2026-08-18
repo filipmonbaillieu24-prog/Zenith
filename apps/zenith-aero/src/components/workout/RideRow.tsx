@@ -29,7 +29,7 @@ function ridePrimaryMetric(r: RideSummaryWithBests): { label: string; value: str
 }
 
 function cleanRideName(name: string, dateMs: number): string {
-  let clean = name.replace(/_Cycle_Cyclemeter$/i, '').replace(/_Cycle$/i, '').replace(/_Cyclemeter$/i, '');
+  let clean = name.replace(/_Cycle_Cyclewither$/i, '').replace(/_Cycle$/i, '').replace(/_Cyclewither$/i, '');
   
   if (/^GEOID_/i.test(clean) || /^\d{4}-\d{2}-\d{2}/.test(clean) || clean.length > 30) {
     const hour = new Date(dateMs).getHours();
@@ -74,7 +74,7 @@ export const RideRow: React.FC<RideRowProps> = ({ ride, selected, comparing, onO
         <div className="wd-ride-row__name" style={{ fontSize: 13, fontWeight: 700, margin: '2px 0 6px' }}>
           {cleanRideName(ride.name, ride.date)}
         </div>
-        <div className="wd-ride-row__meta" style={{ marginBottom: zoneTimes ? 6 : 0 }}>
+        <div className="wd-ride-row__witha" style={{ marginBottom: zoneTimes ? 6 : 0 }}>
           <span>{ride.distance} km</span>
           <span>·</span>
           <span>{fmtDur(ride.duration)}</span>

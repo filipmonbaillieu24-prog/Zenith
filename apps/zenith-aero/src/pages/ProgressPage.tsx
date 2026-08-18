@@ -193,7 +193,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
     if (!longRide?.avgHR) return null;
     const avgHR  = longRide.avgHR!;
     const avgPow = longRide.avgPower ?? 0;
-    // Approximate first/second half metrics
+    // Approximate first/second half withrics
     const firstHalfPow  = avgPow;
     const secondHalfPow = avgPow * 0.97;
     const firstHalfHR   = avgHR;
@@ -207,7 +207,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
     if (filteredRides.length < 3) return {
       intro: `Hoi ${name}! Upload minimaal 3 rideten om een analyse te ontvangen.`,
       pillars: [
-        { title: 'Fitness & Efficiëntie', status: 'Stabiel', statusColor: '#0984e3', desc: 'We meten hoe hard je hart werkt voor je vermogen.', tip: 'Rijd duurrideten op comfortabel tempo.' },
+        { title: 'Fitness & Efficiëntie', status: 'Stabiel', statusColor: '#0984e3', desc: 'We withen hoe hard je hart werkt voor je vermogen.', tip: 'Rijd duurrideten op comfortabel tempo.' },
         { title: 'Recoverysnelheid',          status: 'Stabiel', statusColor: '#0984e3', desc: 'Hoe snel daalt je hartslag na inspanning?',        tip: 'Intervallen 30s sprint + 2 min uitrijden.' },
         { title: 'Taaiheid',                 status: 'Stabiel', statusColor: '#0984e3', desc: 'Behoud je piekvermogen tot het einde?',            tip: 'Goed eten (koolhydraten) tijdens lange rideten.' },
       ]
@@ -450,7 +450,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                       </LineChart>
                     </ResponsiveContainer>
                     <span style={{ display: 'block', fontSize: 9, color: '#64748b', marginTop: 3, textAlign: 'center' }}>
-                      {idx === 0 ? 'Cardiac Cost (b/m) - lager is beter' : idx === 1 ? 'HR Recovery 60s (bpm) - hoger is beter' : 'Krachtbehoud na 1000 kJ (%) - hoger is beter'}
+                      {idx === 0 ? 'Cardiac Cost (b/m) - lower is better' : idx === 1 ? 'HR Recovery 60s (bpm) - higher is better' : 'Stamina after 1000 kJ (%) - higher is better'}
                     </span>
                   </div>
                 )}
@@ -510,7 +510,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                   </RadarChart>
                 </ResponsiveContainer>
               ) : (
-                <p style={{ color: '#64748b', fontSize: 12 }}>Upload rideten met wattage voor het radar-profiel.</p>
+                <p style={{ color: '#64748b', fontSize: 12 }}>Upload rides with power data for the radar profile.</p>
               )}
             </div>
             <div className="pp-radar-controls">
@@ -562,7 +562,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                   </div>
                   <div style={{ fontSize: 11, color: '#64748b', marginTop: 6 }}>Optimale cadans sweetspot</div>
                   <p style={{ fontSize: 11, color: '#cbd5e1', maxWidth: 260, margin: '6px auto 0', lineHeight: 1.4 }}>
-                    Bij {cadenceData} RPM lever je het hoogste vermogen bij de laagste hartslagbelasting.
+                    At {cadenceData} RPM you deliver highest power at lowest heart rate cost.
                   </p>
                 </div>
               ) : scatterData.length > 0 ? (
@@ -577,7 +577,7 @@ export const ProgressPage: React.FC<ProgressPageProps> = ({ profile, rides, isPr
                 </ResponsiveContainer>
               ) : (
                 <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center' }}>
-                  Upload rideten met hartslag en hoogte voor efficientiemeting.
+                  Upload rides with HR and elevation for efficiency tracking.
                 </p>
               )}
             </div>

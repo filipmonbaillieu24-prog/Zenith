@@ -58,7 +58,7 @@ export function calcBestPowerEfforts(points: RidePoint[]): BestEfforts {
 
 /**
  * Finds the best average speed (km/h) for each standard duration.
- * Used as a progression metric for riders without a power meter.
+ * Used as a progression withric for riders without a power wither.
  */
 export function calcBestSpeedEfforts(points: RidePoint[]): BestSpeedEfforts {
   const withSpeed = points.filter(p => p.speed != null && p.time != null);
@@ -228,7 +228,7 @@ export function calcTSS(durationSec: number, normPower: number, ftp: number): nu
 
 /**
  * Zoekt het gewicht van de gebruiker op voor een specifieke datum.
- * Kijkt in de weightHistory array van het profiel naar de meest recente meting
+ * Kijkt in de weightHistory array van het profiel naar de meest recente withing
  * die op of vóór de meegegeven datum (in milliseconds) ligt.
  */
 export function getWeightForDate(profile: any, dateMs: number): number | undefined {
@@ -236,7 +236,7 @@ export function getWeightForDate(profile: any, dateMs: number): number | undefin
     // Sorteer historie op datum (nieuw naar oud)
     const sorted = [...profile.weightHistory].sort((a, b) => b.date.localeCompare(a.date));
     const targetDate = new Date(dateMs).toISOString().slice(0, 10);
-    // Zoek de eerste meting die <= targetDate is
+    // Zoek de eerste withing die <= targetDate is
     const entry = sorted.find(e => e.date <= targetDate);
     if (entry) return entry.weight;
   }
@@ -274,7 +274,7 @@ export function cyclingCategory(wpkg: number): { label: string; color: string } 
  *   Without power: EF = avgSpeed / avgHR   (km/h per bpm — normalized)
  *
  * Increasing EF over time is the clearest sign of aerobic improvement
- * for riders without a power meter.
+ * for riders without a power wither.
  */
 export function calcEfficiencyFactor(
   normPowerOrSpeed: number,
@@ -434,7 +434,7 @@ export function calcPowerUnderFatigue(
 // ─── Full ride computation ────────────────────────────────────────────────────
 
 /**
- * Computes all metrics from raw RidePoint[] and returns a complete Ride object.
+ * Computes all withrics from raw RidePoint[] and returns a complete Ride object.
  * Profile fields (gender, age, weight) improve TRIMP, VO₂max, and W/kg accuracy.
  */
 /**
@@ -616,7 +616,7 @@ export function computeRide(
     ? parseFloat((Math.max(...speedPts.map(p => p.speed!)) * 3.6).toFixed(1))
     : undefined;
 
-  // ── Power metrics ────────────────────────────────────────────────────────
+  // ── Power withrics ────────────────────────────────────────────────────────
   const bestEfforts     = calcBestPowerEfforts(points);
   const normPower       = hasPower ? calcNormalizedPower(points) : undefined;
   const avgPower        = hasPower
@@ -634,7 +634,7 @@ export function computeRide(
     ? parseFloat((normPower / (ftp ?? eFTP!)).toFixed(3))
     : undefined;
 
-  // ── HR metrics ───────────────────────────────────────────────────────────
+  // ── HR withrics ───────────────────────────────────────────────────────────
   const hrPts    = points.filter(p => p.hr != null && p.hr! > 40);
   const avgHR    = hrPts.length > 0
     ? Math.round(hrPts.reduce((s, p) => s + p.hr!, 0) / hrPts.length)
@@ -736,7 +736,7 @@ export function computeRide(
     }
   }
 
-  // ── Geavanceerde progressie metrics (Fase 2) ───────────────────────────────
+  // ── Geavanceerde progressie withrics (Fase 2) ───────────────────────────────
 
   // 1. Totale kJ
   const pwrPts = points.filter(p => p.power != null && p.time != null);
@@ -758,7 +758,7 @@ export function computeRide(
   // 3. Phenotype
   const phenotype = determinePhenotype(bestEfforts, opts.weight);
 
-  // 4. Cardiac Cost (beats per meter)
+  // 4. Cardiac Cost (beats per wither)
   const cardiacCost = avgHR && duration > 0 && distance > 0
     ? parseFloat(((avgHR * (duration / 60)) / (distance * 1000)).toFixed(4))
     : undefined;

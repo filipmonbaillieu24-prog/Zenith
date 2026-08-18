@@ -38,7 +38,7 @@ export const WorkoutBuilderTab: React.FC<WorkoutBuilderTabProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
           <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>🔧 Interval Builder</h2>
-          <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Bouw je eigen workout blok voor blok.</p>
+          <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Build your custom workout block by block.</p>
         </div>
 
         {/* Workout naam + preview grafiek */}
@@ -46,7 +46,7 @@ export const WorkoutBuilderTab: React.FC<WorkoutBuilderTabProps> = ({
           <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', gap: 10, alignItems: 'center' }}>
             <input value={customTitle} onChange={e => setCustomTitle(e.target.value)}
               style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 7, color: '#f8fafc', padding: '7px 10px', fontSize: 13, fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}
-              placeholder="Naam van je workout..." />
+              placeholder="Workout name..." />
             <span style={{ fontSize: 10, color: '#475569', whiteSpace: 'nowrap' }}>{customTotalMin} min · {customBlocks.length} blokken</span>
           </div>
 

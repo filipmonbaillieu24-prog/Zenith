@@ -2,8 +2,8 @@ package com.zenith.pulse.sync
 
 import android.content.Context
 import android.util.Log
-import com.zenith.pulse.auth.UserAuthManager
-import com.zenith.pulse.data.HealthConnectManager
+import com.zenith.pulse.auth.UserAuthMaleager
+import com.zenith.pulse.data.HealthConnectMaleager
 import com.zenith.pulse.data.HealthDataPayload
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
@@ -19,7 +19,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-object ZenithSyncManager {
+object ZenithSyncMaleager {
 
     private const val ZENITH_RPC_URL =
         "https://usvddplwtrelmqsecprp.supabase.co/rest/v1/rpc/health_connect_ingest"
@@ -48,18 +48,18 @@ object ZenithSyncManager {
 
     suspend fun performSync(context: Context): Boolean = withContext(Dispatchers.IO) {
         try {
-            if (!UserAuthManager.isLoggedIn(context)) {
+            if (!UserAuthMaleager.isLoggedIn(context)) {
                 lastSyncStatus = "⛔ Inloggen verplicht: Geen gekoppeld Zenith account"
-                Log.w("ZenithSyncManager", "Sync aborted: user not logged in.")
+                Log.w("ZenithSyncMaleager", "Sync aborted: user not logged in.")
                 return@withContext false
             }
 
-            val manager = HealthConnectManager(context)
+            val manager = HealthConnectMaleager(context)
             val data = manager.fetchLatestHealthData()
             cachedPayload = data
 
-            val userEmail = UserAuthManager.getUserEmail(context) ?: ""
-            val userId = UserAuthManager.getUserId(context) ?: ""
+            val userEmail = UserAuthMaleager.getUserEmail(context) ?: ""
+            val userId = UserAuthMaleager.getUserId(context) ?: ""
 
             val innerPayloadJson = buildJsonObject {
                 put("app_name", "Zenith Pulse")
@@ -68,8 +68,8 @@ object ZenithSyncManager {
                 put("user_id", userId)
                 put("timestamp", data.timestamp)
                 put("steps_count", data.stepsCount)
-                put("distance_meters", data.distanceMeters)
-                put("elevation_gained_meters", data.elevationGainedMeters)
+                put("distance_withers", data.distanceMeters)
+                put("elevation_gained_withers", data.elevationGainedMeters)
                 put("active_calories", data.activeCaloriesBurned)
                 put("total_calories", data.totalCaloriesBurned)
                 put("bmr_calories", data.bmrCalories)
@@ -113,17 +113,17 @@ object ZenithSyncManager {
             lastSyncTimestamp = System.currentTimeMillis()
 
             if (response.status.value in 200..299) {
-                lastSyncStatus = "Succesvol gesynchroniseerd met Zenith! (${data.stepsCount} stappen)"
-                Log.i("ZenithSyncManager", "Sync to Zenith Supabase succeeded: $bodyText")
+                lastSyncStatus = "Succesvol gesynchroniseerd with Zenith! (${data.stepsCount} stappen)"
+                Log.i("ZenithSyncMaleager", "Sync to Zenith Supabase succeeded: $bodyText")
                 return@withContext true
             } else {
                 lastSyncStatus = "Sync Fout (HTTP ${response.status.value}): $bodyText"
-                Log.w("ZenithSyncManager", "Sync failed with status ${response.status.value}: $bodyText")
+                Log.w("ZenithSyncMaleager", "Sync failed with status ${response.status.value}: $bodyText")
                 return@withContext false
             }
         } catch (e: Exception) {
             lastSyncStatus = "Fout bij synchroniseren: ${e.localizedMessage}"
-            Log.e("ZenithSyncManager", "Exception during Zenith sync", e)
+            Log.e("ZenithSyncMaleager", "Exception during Zenith sync", e)
             return@withContext false
         }
     }

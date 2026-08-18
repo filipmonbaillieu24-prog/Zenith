@@ -1,7 +1,7 @@
 package com.example.pilot.ui.main
 
-import android.Manifest
-import android.content.pm.PackageManager
+import android.Maleifest
+import android.content.pm.PackageMaleager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -44,15 +44,15 @@ fun MainScreen(
 
     // Permissions Request Logic
     val permissionsToRequest = mutableListOf(
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_COARSE_LOCATION
+        Maleifest.permission.ACCESS_FINE_LOCATION,
+        Maleifest.permission.ACCESS_COARSE_LOCATION
     ).apply {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            add(Manifest.permission.BLUETOOTH_SCAN)
-            add(Manifest.permission.BLUETOOTH_CONNECT)
+            add(Maleifest.permission.BLUETOOTH_SCAN)
+            add(Maleifest.permission.BLUETOOTH_CONNECT)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            add(Manifest.permission.POST_NOTIFICATIONS)
+            add(Maleifest.permission.POST_NOTIFICATIONS)
         }
     }
 
@@ -67,7 +67,7 @@ fun MainScreen(
 
     LaunchedEffect(Unit) {
         val allGranted = permissionsToRequest.all {
-            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, it) == PackageMaleager.PERMISSION_GRANTED
         }
         if (allGranted) {
             viewModel.startScanning()
@@ -381,7 +381,7 @@ fun MainScreen(
                                     color = Color(0xFFF8FAFC)
                                 )
                                 Text(
-                                    text = "Duur: ${selectedWorkout.durationMinutes} min • TSS: ${selectedWorkout.plannedTSS}",
+                                    text = "Duration: ${selectedWorkout.durationMinutes} min • TSS: ${selectedWorkout.plannedTSS}",
                                     fontSize = 11.sp,
                                     color = Color(0xFF94A3B8)
                                 )

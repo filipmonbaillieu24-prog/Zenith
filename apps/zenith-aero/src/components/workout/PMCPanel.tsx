@@ -20,7 +20,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
   
   if (pmc.length < 3) return (
     <div className="wd-section-card">
-      <p style={{ color: '#64748b', fontSize: 12 }}>Upload rideten met TSS om de PMC te berekenen.</p>
+      <p style={{ color: '#64748b', fontSize: 12 }}>Upload rides with TSS to compute the PMC.</p>
     </div>
   );
   
@@ -42,7 +42,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
       <div className="wd-section-card__head">
         <span className="wd-section-card__title">
           <TrendingUp size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5, color: '#cbd5e1' }} />
-          Performance Management
+          Performance Maleagement
         </span>
         <span className="wd-trend" style={{ background: `${tsbInfo.color}22`, color: tsbInfo.color, padding: '2px 8px', borderRadius: 6 }}>
           {tsbInfo.emoji} {tsbInfo.label}
@@ -75,7 +75,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
           <ReferenceLine y={-25} stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
           <ReferenceLine y={-50} stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
           
-          {/* TSB Zones op de achtergrond */}
+          {/* TSB Zones background */}
           <ReferenceArea y1={25} y2={50} fill="rgba(100, 116, 139, 0.02)" label={{ value: "Transition Zone", fill: "rgba(100, 116, 139, 0.25)", fontSize: 8, position: 'insideTopLeft' }} />
           <ReferenceArea y1={0} y2={25} fill="rgba(203, 213, 225, 0.015)" label={{ value: "Freshness / Taper Zone", fill: "rgba(203, 213, 225, 0.25)", fontSize: 8, position: 'insideTopLeft' }} />
           <ReferenceArea y1={-10} y2={-30} fill="rgba(0, 184, 148, 0.015)" label={{ value: "Optimal Training Zone", fill: "rgba(0, 184, 148, 0.25)", fontSize: 8, position: 'insideTopLeft' }} />
@@ -89,7 +89,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
       </ResponsiveContainer>
       <div className="wd-pmc-legend" style={{ display: 'flex', gap: 16, fontSize: 10, marginTop: 8, justifyContent: 'center' }}>
         <span style={{ color: '#00b894', fontWeight: 600 }}>— Fitheid (CTL)</span>
-        <span style={{ color: '#e17055', fontWeight: 600 }}>— Vermoeidheid (ATL)</span>
+        <span style={{ color: '#e17055', fontWeight: 600 }}>— Fatigue (ATL)</span>
         <span style={{ color: '#a29bfe', fontWeight: 600 }}>- - Vorm (TSB)</span>
       </div>
     </div>

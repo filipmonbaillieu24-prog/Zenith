@@ -30,7 +30,7 @@ export const CriticalPowerCurve: React.FC<CriticalPowerCurveProps> = ({ rides, w
     const hasPowerData = Object.values(bests).some(val => val > 0);
     if (!hasPowerData) return null;
 
-    // 2. Crideical Power & W' berekening met lineaire regressie (OLS) over m1 (60s), m5 (300s) en m20 (1200s)
+    // 2. Crideical Power & W' berekening with lineaire regressie (OLS) over m1 (60s), m5 (300s) en m20 (1200s)
     const points = [
       { t: 60, p: bests.m1 },
       { t: 300, p: bests.m5 },
@@ -85,7 +85,7 @@ export const CriticalPowerCurve: React.FC<CriticalPowerCurveProps> = ({ rides, w
     const chartData = durations
       .filter(d => d.real > 0)
       .map(d => {
-        // P(t) = CP + W'/t (W' is in kJ, dus vermenigvuldigen met 1000 voor Joules)
+        // P(t) = CP + W'/t (W' is in kJ, dus vermenigvuldigen with 1000 voor Joules)
         const modelPower = Math.round(cp + (wPrimeKj * 1000) / d.sec);
         return {
           name: d.label,
@@ -112,7 +112,7 @@ export const CriticalPowerCurve: React.FC<CriticalPowerCurveProps> = ({ rides, w
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Geen rideten met vermogensmetergegevens gevonden in de geselecteerde range.
+          Geen rideten with vermogenswithergegevens gevonden in de geselecteerde range.
         </p>
       </div>
     );

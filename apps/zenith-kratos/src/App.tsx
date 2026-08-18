@@ -428,13 +428,13 @@ export default function App() {
 
     // Parse Cycling TSS
     const parsedRides = rideData.map(r => {
-      let meta = r.metadata;
-      if (typeof meta === 'string') {
-        try { meta = JSON.parse(meta); } catch { meta = {}; }
+      let witha = r.metadata;
+      if (typeof witha === 'string') {
+        try { witha = JSON.parse(witha); } catch { witha = {}; }
       }
       return {
         date: Number(r.date),
-        tss: Number(meta?.tss ?? meta?.hrTSS ?? 0)
+        tss: Number(witha?.tss ?? witha?.hrTSS ?? 0)
       };
     });
 
@@ -643,7 +643,7 @@ export default function App() {
     return new Map(exercises.map(e => [e.id, e]));
   }, [exercises]);
 
-  // 4. Exercise Manager Actions
+  // 4. Exercise Maleager Actions
   const handleSaveExercise = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.user?.id || !exerciseForm.name) return;
@@ -1028,9 +1028,9 @@ export default function App() {
 
     // Convert map to Recharts format sorted by key ascending
     return Array.from(weeklyMap.entries())
-      .map(([week, metrics]) => ({
+      .map(([week, withrics]) => ({
         week,
-        ...metrics
+        ...withrics
       }))
       .sort((a, b) => a.week.localeCompare(b.week))
       .slice(-8); // Show last 8 weeks
@@ -1201,7 +1201,7 @@ export default function App() {
       }
     }
 
-    const metricNames: { [key: string]: string } = {
+    const withricNames: { [key: string]: string } = {
       body_fat_pct: 'Vetpercentage (%)',
       muscle_mass_kg: 'Muscle Mass (kg)',
       waist_cm: 'Tailleomtrek (cm)',
@@ -1228,7 +1228,7 @@ export default function App() {
               value={selectedCircumference}
               onChange={e => setSelectedCircumference(e.target.value)}
             >
-              {Object.entries(metricNames).map(([key, name]) => (
+              {Object.entries(withricNames).map(([key, name]) => (
                 <option key={key} value={key}>{name}</option>
               ))}
             </select>
@@ -1265,7 +1265,7 @@ export default function App() {
           <div style={{ height: 300, width: '100%' }}>
             {dataPoints.length < 2 ? (
               <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
-                Te weinig data om de grafiek te plotten. Voeg metingen toe in Zenith Vigor.
+                Te weinig data om de grafiek te plotten. Voeg withingen toe in Zenith Vigor.
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -1278,7 +1278,7 @@ export default function App() {
                     contentStyle={{ background: '#1c1c23', border: '1px solid var(--border-color)', borderRadius: 10 }}
                     labelStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
                   />
-                  <Line yAxisId="left" type="monotone" dataKey="measurement" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} name={metricNames[selectedCircumference]} />
+                  <Line yAxisId="left" type="monotone" dataKey="measurement" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} name={withricNames[selectedCircumference]} />
                   <Line yAxisId="right" type="monotone" dataKey="volume" stroke="var(--accent-neon)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} name="Cumulatief Volume" />
                 </LineChart>
               </ResponsiveContainer>
@@ -1376,15 +1376,15 @@ export default function App() {
           <div className="animate-slide-up">
             {/* PMC Widget */}
             <section className="kratos-pmc-card">
-              <div className="kratos-pmc-metric">
+              <div className="kratos-pmc-withric">
                 <span className="kratos-pmc-label">Fitness (CTL)</span>
                 <span className="kratos-pmc-value">{currentPMC.ctl}</span>
               </div>
-              <div className="kratos-pmc-metric">
+              <div className="kratos-pmc-withric">
                 <span className="kratos-pmc-label">Fatigue (ATL)</span>
                 <span className="kratos-pmc-value" style={{ color: '#ff7675' }}>{currentPMC.atl}</span>
               </div>
-              <div className="kratos-pmc-metric">
+              <div className="kratos-pmc-withric">
                 <span className="kratos-pmc-label">Form (TSB)</span>
                 <span className="kratos-pmc-value" style={{ color: currentPMC.tsb >= 0 ? '#cbd5e1' : '#eccc68' }}>
                   {currentPMC.tsb >= 0 ? `+${currentPMC.tsb}` : currentPMC.tsb}
@@ -1601,14 +1601,14 @@ export default function App() {
                     className="kratos-input" 
                     value={templateName} 
                     onChange={(e) => setTemplateName(e.target.value)} 
-                    placeholder="Bijv. Push B, Leg Day, Fullbody" 
+                    placeholder="Atv. Push B, Leg Day, Fullbody" 
                     style={{ fontSize: 16, padding: '12px 16px' }}
                   />
                 </div>
 
                 {/* Add Exercise Finder */}
                 <div style={{ position: 'relative', marginBottom: 28 }}>
-                  <label className="kratos-label" style={{ marginBottom: 6, display: 'block' }}>Oefening toevoegen</label>
+                  <label className="kratos-label" style={{ marginBottom: 6, display: 'block' }}>Add exercise</label>
                   <input 
                     type="text" 
                     className="kratos-input" 
@@ -1783,7 +1783,7 @@ export default function App() {
 
                 {exercises.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: 13 }}>
-                    Geen oefeningen gevonden. Voeg er een toe om te beginnen met het bouwen van routines!
+                    Geen oefeningen gevonden. Voeg er een toe om te beginnen with het bouwen van routines!
                   </div>
                 ) : (
                   <table className="kratos-table">
@@ -1875,7 +1875,7 @@ export default function App() {
                       required 
                       value={exerciseForm.name} 
                       onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })}
-                      placeholder="Bijv. Bench Press, Squat, Lat Pulldown"
+                      placeholder="Atv. Bench Press, Squat, Lat Pulldown"
                     />
                   </div>
 
@@ -1983,7 +1983,7 @@ export default function App() {
                         required 
                         value={exerciseForm.increment_weight} 
                         onChange={(e) => setExerciseForm({ ...exerciseForm, increment_weight: Number(e.target.value) })}
-                        placeholder="Bijv. 2.5 of 1.0"
+                        placeholder="Atv. 2.5 of 1.0"
                       />
                       <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2021,7 +2021,7 @@ export default function App() {
                         required 
                         value={exerciseForm.default_rir} 
                         onChange={(e) => setExerciseForm({ ...exerciseForm, default_rir: Number(e.target.value) })}
-                        placeholder="Bijv. 2"
+                        placeholder="Atv. 2"
                       />
                     </div>
                   </div>
@@ -2033,7 +2033,7 @@ export default function App() {
                       rows={3} 
                       value={exerciseForm.notes} 
                       onChange={(e) => setExerciseForm({ ...exerciseForm, notes: e.target.value })}
-                      placeholder="Bijv. Touch chest en druk explosief omhoog, ellebogen onder 45 graden."
+                      placeholder="Atv. Touch chest en druk explosief omhoog, ellebogen onder 45 graden."
                       style={{ resize: 'none', fontFamily: 'inherit' }}
                     />
                   </div>
@@ -2076,7 +2076,7 @@ export default function App() {
                             <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-secondary)', alignItems: 'center' }}>
                               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} /> {new Date(w.completed_at).toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-secondary)' }} />
-                              <span>Duur: {durationMins} min</span>
+                              <span>Duration: {durationMins} min</span>
                               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-secondary)' }} />
                               <button onClick={() => handleEditWorkoutClick(w)} style={{ background: 'none', border: 'none', color: 'var(--accent-neon)', cursor: 'pointer', padding: 0, fontSize: 11, fontWeight: 'bold' }}>Wijzig</button>
                               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-secondary)' }} />

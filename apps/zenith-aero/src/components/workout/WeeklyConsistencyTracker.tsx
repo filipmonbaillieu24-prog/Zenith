@@ -15,7 +15,7 @@ export const WeeklyConsistencyTracker: React.FC<WeeklyConsistencyTrackerProps> =
     const oneWeek = 7 * oneDay;
     const now = Date.now();
 
-    // Maak 12 wekelijkse buckets (van 12 weken geleden naar nu)
+    // Create 12 weekly buckets (from 12 weeks ago to now)
     for (let i = 11; i >= 0; i--) {
       const end = now - i * oneWeek;
       const start = end - oneWeek;
@@ -75,10 +75,10 @@ export const WeeklyConsistencyTracker: React.FC<WeeklyConsistencyTrackerProps> =
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
             <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 7 }} interval={1} />
             
-            {/* Linker Y-as voor TSS */}
+            {/* Left Y-axis for TSS */}
             <YAxis yAxisId="left" tick={{ fill: '#64748b', fontSize: 8 }} width={25} />
             
-            {/* Rechter Y-as voor Uren */}
+            {/* Right Y-axis for Hours */}
             <YAxis yAxisId="right" orientation="right" tick={{ fill: '#64748b', fontSize: 8 }} width={20} />
             
             <Tooltip 

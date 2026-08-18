@@ -12,7 +12,7 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
   const [viewMode, setViewMode] = useState<'watts' | 'wkg'>('watts');
 
   const chartData = useMemo(() => {
-    // Haal alle rideten met eFTP op, sorteer chronologisch
+    // Haal alle rideten with eFTP op, sorteer chronologisch
     return [...rides]
       .filter(r => r.eFTP && r.eFTP > 0)
       .sort((a, b) => a.date - b.date)
@@ -39,7 +39,7 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Fiets meer rideten om je eFTP-groei over de tijd te bekijken.
+          Fiets more rides om je eFTP-groei over de tijd te bekijken.
         </p>
       </div>
     );
@@ -113,7 +113,7 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
           borderRadius: 6
         }}>
           {(viewMode === 'watts' ? diffWatts : diffWkg) >= 0 ? '▲ +' : '▼ '}
-          {viewMode === 'watts' ? `${diffWatts} W` : `${diffWkg} W/kg`} sinds eerste meting
+          {viewMode === 'watts' ? `${diffWatts} W` : `${diffWkg} W/kg`} sinds eerste withing
         </div>
       </div>
 

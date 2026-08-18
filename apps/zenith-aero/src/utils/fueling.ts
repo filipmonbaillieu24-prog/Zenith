@@ -56,7 +56,7 @@ export function calculateFuel(
   
   // 6. Producten verdeling
   // Elke bidon (500ml) sportdrank levert 40g carbs en 500ml vocht.
-  // We vullen eerst de vochtbehoefte aan met bidons.
+  // We vullen eerst de vochtbehoefte aan with bidons.
   const maxBottles = Math.floor(totalFluid / 500);
   const bottles = Math.min(maxBottles, Math.ceil(durationHours * 1.2));
   

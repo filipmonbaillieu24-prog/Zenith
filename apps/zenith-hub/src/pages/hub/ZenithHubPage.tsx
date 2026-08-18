@@ -186,11 +186,11 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         .eq('user_id', userId);
       if (ridesData) {
         setAllRides(ridesData.map((r: any) => {
-          const meta = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata || {};
+          const witha = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata || {};
           return {
             date: Number(r.date),
             distance: Number(r.distance || 0),
-            tss: meta?.tss ?? meta?.hrTSS ?? 0
+            tss: witha?.tss ?? witha?.hrTSS ?? 0
           };
         }));
       }
@@ -267,7 +267,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     return computeSimulatedPMC(tssList, plannedWorkouts, 35);
   }, [allRides, allKratos, plannedWorkouts]);
 
-  // Find today's point in the simulation to show unified metrics (Aero + Kratos)
+  // Find today's point in the simulation to show unified withrics (Aero + Kratos)
   const todayPoint = useMemo(() => {
     if (simPMC.length === 0) return { ctl: fitnessMetrics.ctl, atl: fitnessMetrics.atl, tsb: fitnessMetrics.tsb };
     const todayKey = new Date().setHours(0,0,0,0);
@@ -596,7 +596,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       return null;
     }
     const sQual = sleepAnalysis.score;
-    const sDur = sleepAnalysis.metrics.totalHours;
+    const sDur = sleepAnalysis.withrics.totalHours;
     const weightVal = latestWeight?.weight ?? fitnessProfile.weight ?? 75;
     
     return predictRecoveryScore(
@@ -803,7 +803,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                       <div>
                         <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>ML Sleep Score</span>
                         <strong style={{ fontSize: 13, color: '#f8fafc' }}>
-                          {latestSleep ? `${sleepAnalysis.metrics.totalHours} hrs` : '--'}
+                          {latestSleep ? `${sleepAnalysis.withrics.totalHours} hrs` : '--'}
                         </strong>
                       </div>
                     </div>

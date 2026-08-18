@@ -375,7 +375,7 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
                 Your Colmi R02 ring has successfully synchronized. Steps and sleep data have been saved to your profile.
                 <br /><br />
-                <span style={{ color: '#cbd5e1' }}>💡 Tip:</span> Synchronize daily for the most accurate metrics.at maximaal 7 dagen op.
+                <span style={{ color: '#cbd5e1' }}>💡 Tip:</span> Synchronize daily for the most accurate withrics.at maximaal 7 dagen op.
               </p>
             </div>
           )}

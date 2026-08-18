@@ -29,7 +29,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ ride, ftp, lthr, o
     });
   }
 
-  // Detecteer klimmen om ze op de tijdlijn te overleggen
+  // Detect climbs to overlay on timeline
   const climbs = useMemo(() => detectClimbs(pts), [pts]);
 
   return (
@@ -43,7 +43,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ ride, ftp, lthr, o
               const activePointData = state.activePayload[0].payload;
               const originalIndex = activePointData.originalIndex;
               
-              // Zoek dichtstbijzijnde punt met geldige GPS-coördinaten
+              // Find nearest point with valid GPS coordinates
               let targetPt = pts[originalIndex];
               if (targetPt && (targetPt.lat == null || targetPt.lng == null)) {
                 for (let offset = 1; offset < 100; offset++) {
@@ -78,7 +78,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ ride, ftp, lthr, o
           />
           <YAxis yAxisId="ele" orientation="right" tick={{ fontSize: 10, fill: '#888' }} unit=" m" />
           
-          {/* Teken beklimmingen als doorschijnende vlakken */}
+          {/* Draw climbs as translucent overlays */}
           {climbs.map((climb, i) => {
             const startMin = Math.round((pts[climb.startIndex].time - pts[0].time) / 60000);
             const endMin   = Math.round((pts[climb.endIndex].time - pts[0].time) / 60000);

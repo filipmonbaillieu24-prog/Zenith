@@ -29,7 +29,7 @@ export const PacingScatterPlot: React.FC<PacingScatterPlotProps> = ({ rides }) =
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Geen rideten met vermogen en pacing-gegevens gevonden in de geselecteerde range.
+          No rides with power and pacing data found in selected range.
         </p>
       </div>
     );

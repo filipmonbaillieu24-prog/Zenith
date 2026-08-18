@@ -59,7 +59,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <div className="wd-main-single">
             <div className="wd-coach-header" style={{ marginBottom: 16 }}>
               <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>Gear & Materiaal</h2>
-              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Beheer uw fietsen, onderdelen en houd de slijtage van uw materiaal nauwkeurig bij.</p>
+              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Manage your bikes, components and track component wear accurately.</p>
             </div>
             <GearPage profile={profile} />
           </div>

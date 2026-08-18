@@ -121,7 +121,7 @@ export function useRoutePlanner(onSwitchToRoute?: () => void) {
           windData?.direction
         );
       } else {
-        if (!endPoint) throw new Error('Selecteer eerst een eindpunt op de kaart.');
+        if (!endPoint) throw new Error('Select an endpoint on the map first.');
         const waypoints: [number, number][] = [
           [startPoint[1], startPoint[0]],
           [endPoint[1],   endPoint[0]],
@@ -134,13 +134,13 @@ export function useRoutePlanner(onSwitchToRoute?: () => void) {
           }
         }));
         generated = results.filter((r): r is GeneratedRoute => r !== null);
-        if (!generated.length) throw new Error('Kon geen geldige route berekenen tussen deze punten.');
+        if (!generated.length) throw new Error('Could not calculate a valid route between these points.');
       }
 
       setRoutes(generated);
       setActiveRouteIndex(0);
     } catch (err: any) {
-      setError(err.message ?? 'Onbekende fout bij routeberekening.');
+      setError(err.message ?? 'Unknown error during route calculation.');
     } finally {
       setIsGenerating(false);
     }
@@ -174,7 +174,7 @@ export function useRoutePlanner(onSwitchToRoute?: () => void) {
       setRoutes(generated);
       setActiveRouteIndex(0);
     } catch (err: any) {
-      setError(err.message ?? 'Fout bij het berekenen van de trainingsroute.');
+      setError(err.message ?? 'Error calculating training route.');
     } finally {
       setIsGenerating(false);
     }

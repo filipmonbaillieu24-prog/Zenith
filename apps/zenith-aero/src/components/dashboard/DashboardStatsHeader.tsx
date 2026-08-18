@@ -98,7 +98,7 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
             </div>
           </div>
 
-          {/* ATL / Vermoeidheid */}
+          {/* ATL / Fatigue */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ position: 'relative', width: '36px', height: '36px' }}>
               <svg width="36" height="36" viewBox="0 0 36 36">

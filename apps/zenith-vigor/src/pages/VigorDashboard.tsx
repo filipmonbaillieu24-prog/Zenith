@@ -30,9 +30,9 @@ import {
 } from 'recharts';
 
 import { WeightScaleConnector } from '../components/WeightScaleConnector';
-import { ManualLogModal } from '../components/ManualLogModal';
+import { MaleualLogModal } from '../components/MaleualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
-import { DeviceManagerModal } from '../components/DeviceManagerModal';
+import { DeviceMaleagerModal } from '../components/DeviceMaleagerModal';
 import { ProPaywallModal } from '../components/ProPaywallModal';
 import { calculateZenithSleepScore } from '../../../../shared/services/zenithSleepEngine';
 
@@ -107,15 +107,15 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   const [comparePhoto1, setComparePhoto1] = useState<string>('');
   const [comparePhoto2, setComparePhoto2] = useState<string>('');
 
-  // Pre-received native weight/metrics to solve race conditions
+  // Pre-received native weight/withrics to solve race conditions
   const [initialWeight, setInitialWeight] = useState<number | null>(null);
   const [initialMetrics, setInitialMetrics] = useState<any>(null);
 
   // Modals state
   const [showSettings, setShowSettings] = useState(false);
-  const [showManualLog, setShowManualLog] = useState(false);
+  const [showMaleualLog, setShowMaleualLog] = useState(false);
   const [showScaleConnect, setShowScaleConnect] = useState(false);
-  const [showDeviceManager, setShowDeviceManager] = useState(false);
+  const [showDeviceMaleager, setShowDeviceMaleager] = useState(false);
   const [pairedDevices, setPairedDevices] = useState<any[]>([]);
 
   // Profile data
@@ -412,10 +412,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             setCurrentTab('weight'); // Switch to weight tab
             setShowScaleConnect(true);
           });
-          unlistenMetrics = await listen('native-metrics-received', (event: any) => {
+          unlistenMetrics = await listen('native-withrics-received', (event: any) => {
             const payload = event.payload as { body_fat: number, water: number, impedance: number };
-            console.log("Dashboard received native metrics from Tauri Rust:", payload);
-            sessionStorage.setItem('vigor_last_metrics', JSON.stringify(payload));
+            console.log("Dashboard received native withrics from Tauri Rust:", payload);
+            sessionStorage.setItem('vigor_last_withrics', JSON.stringify(payload));
             setInitialMetrics(payload);
           });
         } catch (err) {
@@ -432,10 +432,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         setInitialWeight(weight);
         setCurrentTab('weight'); // Switch to weight tab
         setShowScaleConnect(true);
-      } else if (event.data?.type === 'native-metrics-received') {
+      } else if (event.data?.type === 'native-withrics-received') {
         const payload = event.data.payload;
-        console.log("Dashboard received native metrics forwarded from parent Hub:", payload);
-        sessionStorage.setItem('vigor_last_metrics', JSON.stringify(payload));
+        console.log("Dashboard received native withrics forwarded from parent Hub:", payload);
+        sessionStorage.setItem('vigor_last_withrics', JSON.stringify(payload));
         setInitialMetrics(payload);
       } else if (event.data?.type === 'refresh-paired-devices') {
         console.log("Dashboard received refresh-paired-devices request");
@@ -534,7 +534,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   };
 
   const handleDeleteLog = async (type: 'weight' | 'sleep' | 'steps', id: string) => {
-    const typeNames = { weight: 'gewichtsmeting', sleep: 'slaapmeting', steps: 'stappenmeting' };
+    const typeNames = { weight: 'gewichtswithing', sleep: 'slaapwithing', steps: 'stappenwithing' };
     if (window.confirm(`Weet u zeker dat u deze ${typeNames[type]} wilt delete?`)) {
       const table = `vigor_${type}`;
       try {
@@ -605,13 +605,13 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       
       alert('Metingen succesvol opgeslagen!');
     } catch (err) {
-      console.error('Error saving metingen:', err);
-      alert('Error saving metingen.');
+      console.error('Error saving withingen:', err);
+      alert('Error saving withingen.');
     }
   };
 
   const handleDeleteMeasurement = async (id: string) => {
-    if (!confirm('Weet u zeker dat u deze meting wilt delete?')) return;
+    if (!confirm('Weet u zeker dat u deze withing wilt delete?')) return;
     try {
       const { error } = await supabase
         .from('vigor_body_measurements')
@@ -621,7 +621,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       if (error) throw error;
       setMeasurements(prev => prev.filter(m => m.id !== id));
     } catch (err) {
-      console.error('Error deleting meting:', err);
+      console.error('Error deleting withing:', err);
     }
   };
 
@@ -700,7 +700,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     }
   };
 
-  // Derived metrics
+  // Derived withrics
   const latestWeight = useMemo(() => {
     if (weights.length === 0) return null;
     return weights[weights.length - 1];
@@ -860,7 +860,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   };
 
   // Handles saving manual entries (Steps, Sleep, Weight)
-  const handleManualSave = async (type: 'weight' | 'sleep' | 'steps', payload: any) => {
+  const handleMaleualSave = async (type: 'weight' | 'sleep' | 'steps', payload: any) => {
     const table = `vigor_${type}`;
     const { error } = await supabase.from(table).insert({
       user_id: user.id,
@@ -898,15 +898,15 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         <div className="vigor-grid">
           {/* Card 1: Weight */}
           <div className="vigor-card col-4" style={{ cursor: 'pointer' }} onClick={() => setCurrentTab('weight')}>
-            <div className="metric-header">
-              <span className="metric-title">Gewicht</span>
-              <div className="metric-icon-wrap" style={{ background: 'rgba(203, 213, 225, 0.08)', border: '1px solid rgba(203, 213, 225, 0.2)' }}>
+            <div className="withric-header">
+              <span className="withric-title">Gewicht</span>
+              <div className="withric-icon-wrap" style={{ background: 'rgba(203, 213, 225, 0.08)', border: '1px solid rgba(203, 213, 225, 0.2)' }}>
                 <Scale size={18} style={{ color: '#cbd5e1' }} />
               </div>
             </div>
-            <div className="metric-value-container">
-              <span className="metric-value">{latestWeight ? latestWeight.weight : '--'}</span>
-              <span className="metric-unit">kg</span>
+            <div className="withric-value-container">
+              <span className="withric-value">{latestWeight ? latestWeight.weight : '--'}</span>
+              <span className="withric-unit">kg</span>
             </div>
             {latestWeight && latestWeight.body_fat && (
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12, display: 'flex', gap: 12 }}>
@@ -914,27 +914,27 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 {latestWeight.muscle_mass && <span>Spier: <strong>{latestWeight.muscle_mass}%</strong></span>}
               </div>
             )}
-            <div className="metric-footer" style={{ marginTop: latestWeight && latestWeight.body_fat ? 0 : 20 }}>
+            <div className="withric-footer" style={{ marginTop: latestWeight && latestWeight.body_fat ? 0 : 20 }}>
               <Calendar size={12} />
               <span>
                 {latestWeight 
-                  ? `Gemeten op ${new Date(latestWeight.logged_at).toLocaleDateString('nl-NL')}`
-                  : 'No meting'}
+                  ? `Gewithen op ${new Date(latestWeight.logged_at).toLocaleDateString('nl-NL')}`
+                  : 'No withing'}
               </span>
             </div>
           </div>
 
           {/* Card 2: Steps */}
           <div className="vigor-card col-4" style={{ cursor: 'pointer' }} onClick={() => setCurrentTab('steps')}>
-            <div className="metric-header">
-              <span className="metric-title">Dagelijkse Stappen</span>
-              <div className="metric-icon-wrap" style={{ background: 'rgba(92, 124, 250, 0.08)', border: '1px solid rgba(92, 124, 250, 0.2)' }}>
+            <div className="withric-header">
+              <span className="withric-title">Dagelijkse Stappen</span>
+              <div className="withric-icon-wrap" style={{ background: 'rgba(92, 124, 250, 0.08)', border: '1px solid rgba(92, 124, 250, 0.2)' }}>
                 <Footprints size={18} style={{ color: '#5c7cfa' }} />
               </div>
             </div>
-            <div className="metric-value-container">
-              <span className="metric-value">{currentDailySteps.toLocaleString()}</span>
-              <span className="metric-unit">/ {profile.target_steps?.toLocaleString() || '10.000'}</span>
+            <div className="withric-value-container">
+              <span className="withric-value">{currentDailySteps.toLocaleString()}</span>
+              <span className="withric-unit">/ {profile.target_steps?.toLocaleString() || '10.000'}</span>
             </div>
             <div style={{ margin: '8px 0 12px' }}>
               <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
@@ -945,7 +945,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <span>{stepsProgress}%</span>
               </div>
             </div>
-            <div className="metric-footer" style={{ marginTop: 0 }}>
+            <div className="withric-footer" style={{ marginTop: 0 }}>
               <Sparkles size={12} style={{ color: '#5c7cfa' }} />
               <span style={{ fontSize: 10 }}>
                 {isTodayStepsPresent 
@@ -957,24 +957,24 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
           {/* Card 3: Sleep */}
           <div className="vigor-card col-4" style={{ cursor: 'pointer' }} onClick={() => setCurrentTab('sleep')}>
-            <div className="metric-header">
-              <span className="metric-title">Slaap</span>
-              <div className="metric-icon-wrap" style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.2)' }}>
+            <div className="withric-header">
+              <span className="withric-title">Slaap</span>
+              <div className="withric-icon-wrap" style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.2)' }}>
                 <Moon size={18} style={{ color: '#a855f7' }} />
               </div>
             </div>
-            <div className="metric-value-container">
-              <span className="metric-value">
+            <div className="withric-value-container">
+              <span className="withric-value">
                 {latestSleep ? Math.floor(latestSleep.duration_minutes / 60) : '--'}
               </span>
-              <span className="metric-unit">u {latestSleep ? latestSleep.duration_minutes % 60 : ''}m</span>
+              <span className="withric-unit">u {latestSleep ? latestSleep.duration_minutes % 60 : ''}m</span>
             </div>
             {latestSleep && latestSleep.quality_score && (
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
                 Kwaliteit: <strong style={{ color: '#a855f7' }}>{latestSleep.quality_score}/100</strong>
               </div>
             )}
-            <div className="metric-footer" style={{ marginTop: latestSleep && latestSleep.quality_score ? 0 : 20 }}>
+            <div className="withric-footer" style={{ marginTop: latestSleep && latestSleep.quality_score ? 0 : 20 }}>
               <Moon size={12} style={{ color: '#a855f7' }} />
               <span>Doel: {profile.target_sleep_hours || 8} uur</span>
             </div>
@@ -996,12 +996,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   </span>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Berekend op basis van je lengte van <strong>{profile.height} cm</strong> en je meest recente gewichtsmeting.
+                  Berekend op basis van je lengte van <strong>{profile.height} cm</strong> en je meest recente gewichtswithing.
                 </div>
               </div>
             ) : (
               <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '12px 0' }}>
-                Voer een gewichtsmeting en lengte in om uw BMI te berekenen.
+                Voer een gewichtswithing en lengte in om uw BMI te berekenen.
               </div>
             )}
           </div>
@@ -1057,13 +1057,13 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </h2>
               <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
                 {goalProgress.isWeightLoss 
-                  ? `Je hebt al ${Math.round((goalProgress.oldestWeight - goalProgress.currentWeight) * 10) / 10} kg verloren! Nog ${goalProgress.remainingWeight} kg te gaan tot je streefgewicht van ${goalProgress.targetWeight} kg.`
-                  : `Je hebt al ${Math.round((goalProgress.currentWeight - goalProgress.oldestWeight) * 10) / 10} kg gewonnen! Nog ${goalProgress.remainingWeight} kg te gaan tot je streefgewicht van ${goalProgress.targetWeight} kg.`
+                  ? `You completed al ${Math.round((goalProgress.oldestWeight - goalProgress.currentWeight) * 10) / 10} kg verloren! Nog ${goalProgress.remainingWeight} kg te gaan tot je streefgewicht van ${goalProgress.targetWeight} kg.`
+                  : `You completed al ${Math.round((goalProgress.currentWeight - goalProgress.oldestWeight) * 10) / 10} kg gewonnen! Nog ${goalProgress.remainingWeight} kg te gaan tot je streefgewicht van ${goalProgress.targetWeight} kg.`
                 }
               </p>
             </div>
 
-            {/* Middle section: Spaced out metrics cards */}
+            {/* Middle section: Spaced out withrics cards */}
             <div style={{ flex: '1', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, alignSelf: 'stretch', alignItems: 'center' }}>
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'center' }}>
                 <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Start</span>
@@ -1123,7 +1123,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </h3>
               <button 
                 onClick={() => {
-                  setShowManualLog(true);
+                  setShowMaleualLog(true);
                 }} 
                 className="btn-secondary" 
                 style={{ padding: '6px 12px', fontSize: 11, height: 'auto' }}
@@ -1219,7 +1219,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         {/* Weight history table */}
         <div className="vigor-card col-12">
           <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
-            Gewichtsmetingen geschiedenis
+            Gewichtswithingen geschiedenis
           </h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -1249,7 +1249,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 ))}
                 {weights.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No gewichtsmetingen geregistreerd.</td>
+                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No gewichtswithingen geregistreerd.</td>
                   </tr>
                 )}
               </tbody>
@@ -1266,7 +1266,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     const photo1Url = comparePhoto1 || anglePhotos[0]?.image_url || '';
     const photo2Url = comparePhoto2 || anglePhotos[anglePhotos.length - 1]?.image_url || '';
 
-    const metricNames: { [key: string]: string } = {
+    const withricNames: { [key: string]: string } = {
       body_fat_pct: 'Vetpercentage (%)',
       muscle_mass_kg: 'Muscle Mass (kg)',
       waist_cm: 'Tailleomtrek (cm)',
@@ -1308,7 +1308,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               transition: 'all 0.2s'
             }}
           >
-            Lichaamsmetingen
+            Lichaamswithingen
           </button>
           <button
             onClick={() => setProgressSubTab('photos')}
@@ -1336,10 +1336,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 Lichaamsomtrekken Logboek is a Pro Feature
               </h3>
               <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 24px', maxWidth: 440, lineHeight: 1.6 }}>
-                Volg de centimeters van al je 8 lichaamszones (Borst, Biceps, Dijen, Heupen, Schouders, Nek, Kuiten en Taille) over de tijd met gedetailleerde progressiegrafieken.
+                Volg de centiwithers van al je 8 lichaamszones (Borst, Biceps, Dijen, Heupen, Schouders, Nek, Kuiten en Taille) over de tijd with gedetailleerde progressiegrafieken.
               </p>
               <button 
-                onClick={() => handleRequestProModal('Lichaamsomtrekken', 'Volg de centimeters van al je 8 lichaamszones over de tijd met gedetailleerde progressiegrafieken.')} 
+                onClick={() => handleRequestProModal('Lichaamsomtrekken', 'Volg de centiwithers van al je 8 lichaamszones over de tijd with gedetailleerde progressiegrafieken.')} 
                 className="btn-primary" 
                 style={{ padding: '10px 24px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}
               >
@@ -1370,7 +1370,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <input 
                       type="number" 
                       step="any"
-                      placeholder="Bijv. 12.5"
+                      placeholder="Atv. 12.5"
                       className="form-input" 
                       value={newMeasurement.body_fat_pct}
                       onChange={e => setNewMeasurement({ ...newMeasurement, body_fat_pct: e.target.value })}
@@ -1384,7 +1384,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <input 
                       type="number" 
                       step="any"
-                      placeholder="Bijv. 80"
+                      placeholder="Atv. 80"
                       className="form-input" 
                       value={newMeasurement.waist_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, waist_cm: e.target.value })}
@@ -1395,7 +1395,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <input 
                       type="number" 
                       step="any"
-                      placeholder="Bijv. 65"
+                      placeholder="Atv. 65"
                       className="form-input" 
                       value={newMeasurement.muscle_mass_kg}
                       onChange={e => setNewMeasurement({ ...newMeasurement, muscle_mass_kg: e.target.value })}
@@ -1546,7 +1546,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   value={chartMetric}
                   onChange={e => setChartMetric(e.target.value)}
                 >
-                  {Object.entries(metricNames).map(([key, name]) => (
+                  {Object.entries(withricNames).map(([key, name]) => (
                     <option key={key} value={key}>{name}</option>
                   ))}
                 </select>
@@ -1555,7 +1555,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               <div style={{ flex: 1, minHeight: 220 }}>
                 {chartData.length === 0 ? (
                   <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-                    Geen voldoende data voor deze metriek.
+                    Geen voldoende data voor deze withriek.
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -1568,7 +1568,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                         labelStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
                         itemStyle={{ fontSize: 11, color: 'var(--color-primary)' }}
                       />
-                      <Line type="monotone" dataKey="value" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} name={metricNames[chartMetric]} />
+                      <Line type="monotone" dataKey="value" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} name={withricNames[chartMetric]} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -1626,7 +1626,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     {measurements.length === 0 && (
                       <tr>
                         <td colSpan={10} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                          Geen lichaamsmetingen geregistreerd.
+                          Geen lichaamswithingen geregistreerd.
                         </td>
                       </tr>
                     )}
@@ -1644,10 +1644,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 Voortgangsfoto's & Vergelijker is a Pro Feature
               </h3>
               <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 24px', maxWidth: 440, lineHeight: 1.6 }}>
-                Upload maandelijks foto's (Voorkant, Zijkant, Achterkant) en vergelijk je fysieke transformatie direct Side-by-Side met de interactieve slider.
+                Upload maandelijks foto's (Voorkant, Zijkant, Achterkant) en vergelijk je fysieke transformatie direct Side-by-Side with de interactieve slider.
               </p>
               <button 
-                onClick={() => handleRequestProModal("Voortgangsfoto's & Vergelijker", "Upload maandelijks foto's en vergelijk je fysieke transformatie direct Side-by-Side met de interactieve slider.")} 
+                onClick={() => handleRequestProModal("Voortgangsfoto's & Vergelijker", "Upload maandelijks foto's en vergelijk je fysieke transformatie direct Side-by-Side with de interactieve slider.")} 
                 className="btn-primary" 
                 style={{ padding: '10px 24px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}
               >
@@ -1701,7 +1701,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Opmerkingen</label>
                   <textarea 
                     className="form-input" 
-                    placeholder="Bijv. Vrij nuchtere maag, koude pomp..."
+                    placeholder="Atv. Vrij nuchtere maag, koude pomp..."
                     value={photoNotes}
                     onChange={e => setPhotoNotes(e.target.value)}
                     style={{ height: 60, resize: 'none', fontSize: 11 }}
@@ -1870,16 +1870,16 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   const renderSleepTab = () => {
     const latestSleep = sleeps.length > 0 ? sleeps[sleeps.length - 1] : null;
     const sleepAnalysis = calculateZenithSleepScore(latestSleep, sleeps, profile.target_sleep_hours || 8.0);
-    const durMins = sleepAnalysis.metrics.totalMins;
-    const deepMins = sleepAnalysis.metrics.deepMins;
-    const lightMins = sleepAnalysis.metrics.lightMins;
-    const remMins = sleepAnalysis.metrics.remMins;
-    const awakeMins = sleepAnalysis.metrics.awakeMins;
+    const durMins = sleepAnalysis.withrics.totalMins;
+    const deepMins = sleepAnalysis.withrics.deepMins;
+    const lightMins = sleepAnalysis.withrics.lightMins;
+    const remMins = sleepAnalysis.withrics.remMins;
+    const awakeMins = sleepAnalysis.withrics.awakeMins;
 
-    const deepPct = sleepAnalysis.metrics.deepPct;
-    const lightPct = sleepAnalysis.metrics.lightPct;
-    const remPct = sleepAnalysis.metrics.remPct;
-    const awakePct = sleepAnalysis.metrics.awakePct;
+    const deepPct = sleepAnalysis.withrics.deepPct;
+    const lightPct = sleepAnalysis.withrics.lightPct;
+    const remPct = sleepAnalysis.withrics.remPct;
+    const awakePct = sleepAnalysis.withrics.awakePct;
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} className="animate-fade-in">
@@ -1927,7 +1927,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   Personal Baseline: <strong style={{ color: '#fff' }}>{sleepAnalysis.personalBaselineHours} hrs / night</strong>
                 </div>
                 <div style={{ fontSize: 11, color: '#94a3b8', background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.06)' }}>
-                  Efficiency: <strong style={{ color: '#38bdf8' }}>{sleepAnalysis.metrics.efficiencyPct}%</strong>
+                  Efficiency: <strong style={{ color: '#38bdf8' }}>{sleepAnalysis.withrics.efficiencyPct}%</strong>
                 </div>
               </div>
             </div>
@@ -2001,7 +2001,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             </h3>
             <button 
               onClick={() => {
-                setShowManualLog(true);
+                setShowMaleualLog(true);
               }} 
               className="btn-secondary" 
               style={{ padding: '6px 12px', fontSize: 11, height: 'auto', background: 'rgba(168, 85, 247, 0.08)', borderColor: '#a855f7', color: '#a855f7' }}
@@ -2037,7 +2037,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         {/* Sleep history table */}
         <div className="vigor-card col-12">
           <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
-            Slaapmetingen & Fases Geschiedenis
+            Slaapwithingen & Fases Geschiedenis
           </h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -2073,7 +2073,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 })}
                 {sleeps.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No slaapmetingen geregistreerd.</td>
+                    <td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No slaapwithingen geregistreerd.</td>
                   </tr>
                 )}
               </tbody>
@@ -2097,7 +2097,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             </h3>
             <button 
               onClick={() => {
-                setShowManualLog(true);
+                setShowMaleualLog(true);
               }} 
               className="btn-secondary" 
               style={{ padding: '6px 12px', fontSize: 11, height: 'auto', background: 'rgba(92, 124, 250, 0.08)', borderColor: '#5c7cfa', color: '#5c7cfa' }}
@@ -2133,7 +2133,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         {/* Steps history table */}
         <div className="vigor-card col-12">
           <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
-            Stappenmetingen geschiedenis
+            Stappenwithingen geschiedenis
           </h3>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
@@ -2202,7 +2202,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             <Settings size={15} /> Doelen Instellen
           </button>
           
-          <button onClick={() => setShowManualLog(true)} className="btn-secondary" style={{ padding: '10px 18px', fontSize: 13, height: '40px' }}>
+          <button onClick={() => setShowMaleualLog(true)} className="btn-secondary" style={{ padding: '10px 18px', fontSize: 13, height: '40px' }}>
             <Plus size={16} /> Log Handmatig
           </button>
         </div>
@@ -2560,18 +2560,18 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         />
       )}
 
-      {showManualLog && (
-        <ManualLogModal 
-          onClose={() => setShowManualLog(false)}
-          onSave={handleManualSave}
+      {showMaleualLog && (
+        <MaleualLogModal 
+          onClose={() => setShowMaleualLog(false)}
+          onSave={handleMaleualSave}
         />
       )}
 
-      {showDeviceManager && (
-        <DeviceManagerModal 
+      {showDeviceMaleager && (
+        <DeviceMaleagerModal 
           userId={user.id}
           onClose={() => {
-            setShowDeviceManager(false);
+            setShowDeviceMaleager(false);
             fetchLogs();
           }}
           fitnessProfile={dbProfile || user.user_metadata?.fitness_profile || {}}
@@ -2586,7 +2586,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             setInitialWeight(null);
             setInitialMetrics(null);
             sessionStorage.removeItem('vigor_last_weight');
-            sessionStorage.removeItem('vigor_last_metrics');
+            sessionStorage.removeItem('vigor_last_withrics');
           }}
           onWeightLogged={handleScaleWeightLogged}
           autoConnectDevice={autoConnectedDevice}

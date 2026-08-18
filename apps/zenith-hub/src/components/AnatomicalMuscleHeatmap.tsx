@@ -102,7 +102,7 @@ const defaultMuscleDataMap: MuscleDataMap = {
   }
 };
 
-const cosmeticSlugs = new Set(['head', 'hair', 'hands', 'knees', 'feet', 'ankles']);
+const coswithicSlugs = new Set(['head', 'hair', 'hands', 'knees', 'feet', 'ankles']);
 const overlappingSubGroupSlugs = new Set([
   'upperChest',
   'lowerChest',
@@ -122,7 +122,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
 
   const getMuscleFill = (slug: string) => {
-    if (cosmeticSlugs.has(slug)) {
+    if (coswithicSlugs.has(slug)) {
       if (slug === 'head') return '#64748b';
       if (slug === 'hair') return '#334155';
       return '#94a3b8'; // Grey base silhouette for hands, feet, knees, ankles
@@ -153,10 +153,10 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
     return side === 'front' ? '0 0 650 1450' : '823 0 650 1450';
   };
 
-  const selectedMuscle = hoveredSlug && !cosmeticSlugs.has(hoveredSlug) ? data[hoveredSlug] : null;
+  const selectedMuscle = hoveredSlug && !coswithicSlugs.has(hoveredSlug) ? data[hoveredSlug] : null;
 
   const renderBodyPart = (part: PathPartData) => {
-    const isCosmetic = cosmeticSlugs.has(part.slug);
+    const isCoswithic = coswithicSlugs.has(part.slug);
     const fill = getMuscleFill(part.slug);
     const isHovered = hoveredSlug === part.slug;
 
@@ -165,8 +165,8 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
     return (
       <g
         key={part.slug}
-        style={{ cursor: isCosmetic ? 'default' : 'pointer' }}
-        onMouseEnter={() => !isCosmetic && setHoveredSlug(part.slug)}
+        style={{ cursor: isCoswithic ? 'default' : 'pointer' }}
+        onMouseEnter={() => !isCoswithic && setHoveredSlug(part.slug)}
         onMouseLeave={() => setHoveredSlug(null)}
       >
         {allD.map((d, i) => (
@@ -300,7 +300,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
         {(activeView === 'both' || activeView === 'front') && (
           <div style={{ textAlign: 'center', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
             <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '12px' }}>
-              Voorzijde ({gender === 'male' ? 'Man' : 'Vrouw'})
+              Voorzijde ({gender === 'male' ? 'Male' : 'Female'})
             </div>
 
             <svg viewBox={getViewBox('front')} style={{ width: '100%', maxHeight: '460px', filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.7))' }}>
@@ -313,7 +313,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
         {(activeView === 'both' || activeView === 'back') && (
           <div style={{ textAlign: 'center', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
             <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '12px' }}>
-              Achterzijde ({gender === 'male' ? 'Man' : 'Vrouw'})
+              Achterzijde ({gender === 'male' ? 'Male' : 'Female'})
             </div>
 
             <svg viewBox={getViewBox('back')} style={{ width: '100%', maxHeight: '460px', filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.7))' }}>

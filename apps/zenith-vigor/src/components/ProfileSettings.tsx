@@ -111,7 +111,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                     step="0.1"
                     className="form-input"
                     value={targetWeight}
-                    placeholder="Bijv. 72.0"
+                    placeholder="Atv. 72.0"
                     onChange={(e) => setTargetWeight(e.target.value)}
                   />
                 </div>

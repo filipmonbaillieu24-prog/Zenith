@@ -44,7 +44,7 @@ data class HealthDataPayload(
     val timestamp: String = Instant.now().toString()
 )
 
-class HealthConnectManager(private val context: Context) {
+class HealthConnectMaleager(private val context: Context) {
 
     private val healthConnectClient: HealthConnectClient? by lazy {
         val status = HealthConnectClient.getSdkStatus(context)
@@ -160,7 +160,7 @@ class HealthConnectManager(private val context: Context) {
                 totalSteps = stepsByOrigin.values.maxOrNull() ?: 0L
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Steps fetch error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Steps fetch error: ${e.message}")
         }
 
         // 2. Distance Today
@@ -178,7 +178,7 @@ class HealthConnectManager(private val context: Context) {
                 totalDistMeters = totalSteps * 0.763
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Distance fetch error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Distance fetch error: ${e.message}")
         }
 
         // 3. Elevation Gained Today
@@ -193,7 +193,7 @@ class HealthConnectManager(private val context: Context) {
                 totalElevMeters += record.elevation.inMeters
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Elevation fetch error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Elevation fetch error: ${e.message}")
         }
 
         // 4. Active & Total Calories (Today)
@@ -208,7 +208,7 @@ class HealthConnectManager(private val context: Context) {
                 activeCals += record.energy.inKilocalories
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Active calories error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Active calories error: ${e.message}")
         }
 
         try {
@@ -222,7 +222,7 @@ class HealthConnectManager(private val context: Context) {
                 totalCals += record.energy.inKilocalories
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Total calories error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Total calories error: ${e.message}")
         }
 
         if (activeCals == 0.0 && totalCals > 0.0) {
@@ -240,7 +240,7 @@ class HealthConnectManager(private val context: Context) {
                 bmrCals = bmrRes.records.last().basalMetabolicRate.inKilocaloriesPerDay
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "BMR error: ${e.message}")
+            Log.w("HealthConnectMaleager", "BMR error: ${e.message}")
         }
 
         // 5. Heart Rate & Resting Heart Rate Extraction
@@ -259,7 +259,7 @@ class HealthConnectManager(private val context: Context) {
                 latestHr = allHrSamples.maxByOrNull { it.time }?.beatsPerMinute?.toInt() ?: 0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Heart Rate error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Heart Rate error: ${e.message}")
         }
 
         try {
@@ -273,7 +273,7 @@ class HealthConnectManager(private val context: Context) {
                 restingHr = rhrRes.records.maxByOrNull { it.time }?.beatsPerMinute?.toInt() ?: 0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Resting HR error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Resting HR error: ${e.message}")
         }
 
         // Fallback for Resting HR: Extract minimum resting heart rate sample during rest/sleep hours
@@ -296,7 +296,7 @@ class HealthConnectManager(private val context: Context) {
                 latestHrv = hrvRes.records.maxByOrNull { it.time }?.heartRateVariabilityMillis ?: 0.0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "HRV error: ${e.message}")
+            Log.w("HealthConnectMaleager", "HRV error: ${e.message}")
         }
 
         // Fallback for HRV: Calculate RMSSD variability from continuous resting/sleep heart rate samples
@@ -314,7 +314,7 @@ class HealthConnectManager(private val context: Context) {
                     latestHrv = sqrt(sumSqDiff / count)
                 }
             } catch (e: Exception) {
-                Log.w("HealthConnectManager", "HRV calculation error: ${e.message}")
+                Log.w("HealthConnectMaleager", "HRV calculation error: ${e.message}")
             }
         }
 
@@ -350,7 +350,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Sleep error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Sleep error: ${e.message}")
         }
 
         // 8. Exercise Sessions (Last 30 Days)
@@ -375,7 +375,7 @@ class HealthConnectManager(private val context: Context) {
                 )
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Exercise error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Exercise error: ${e.message}")
         }
 
         // 9. Body Composition (Weight, Height, Fat, Lean Mass - Last 30 Days)
@@ -390,7 +390,7 @@ class HealthConnectManager(private val context: Context) {
                 latestWeight = weightRes.records.maxByOrNull { it.time }?.weight?.inKilograms ?: 0.0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Weight error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Weight error: ${e.message}")
         }
 
         try {
@@ -404,7 +404,7 @@ class HealthConnectManager(private val context: Context) {
                 heightValueCm = (heightRes.records.maxByOrNull { it.time }?.height?.inMeters ?: 0.0) * 100.0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Height error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Height error: ${e.message}")
         }
 
         try {
@@ -418,7 +418,7 @@ class HealthConnectManager(private val context: Context) {
                 bodyFatPct = fatRes.records.maxByOrNull { it.time }?.percentage?.value ?: 0.0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Body Fat error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Body Fat error: ${e.message}")
         }
 
         try {
@@ -432,7 +432,7 @@ class HealthConnectManager(private val context: Context) {
                 leanMassKg = leanRes.records.maxByOrNull { it.time }?.mass?.inKilograms ?: 0.0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Lean Mass error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Lean Mass error: ${e.message}")
         }
 
         // 10. SpO2 & Respiratory (Unrestricted Time Range)
@@ -447,7 +447,7 @@ class HealthConnectManager(private val context: Context) {
                 latestSpO2Val = spo2Res.records.maxByOrNull { it.time }?.percentage?.value ?: 0.0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "SpO2 error: ${e.message}")
+            Log.w("HealthConnectMaleager", "SpO2 error: ${e.message}")
         }
 
         try {
@@ -461,7 +461,7 @@ class HealthConnectManager(private val context: Context) {
                 respRate = respRes.records.maxByOrNull { it.time }?.rate ?: 0.0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Respiratory error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Respiratory error: ${e.message}")
         }
 
         // 11. Blood Pressure & Temperature (Last 48h)
@@ -475,12 +475,12 @@ class HealthConnectManager(private val context: Context) {
             if (bpRes.records.isNotEmpty()) {
                 val lastBp = bpRes.records.maxByOrNull { it.time }
                 if (lastBp != null) {
-                    sysBp = lastBp.systolic.inMillimetersOfMercury
-                    diaBp = lastBp.diastolic.inMillimetersOfMercury
+                    sysBp = lastBp.systolic.inMilliwithersOfMercury
+                    diaBp = lastBp.diastolic.inMilliwithersOfMercury
                 }
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Blood Pressure error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Blood Pressure error: ${e.message}")
         }
 
         try {
@@ -494,7 +494,7 @@ class HealthConnectManager(private val context: Context) {
                 tempCelsius = tempRes.records.maxByOrNull { it.time }?.temperature?.inCelsius ?: 0.0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Body Temp error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Body Temp error: ${e.message}")
         }
 
         // 12. Hydration (Today)
@@ -509,7 +509,7 @@ class HealthConnectManager(private val context: Context) {
                 totalHydrationMl += h.volume.inLiters * 1000.0
             }
         } catch (e: Exception) {
-            Log.w("HealthConnectManager", "Hydration error: ${e.message}")
+            Log.w("HealthConnectMaleager", "Hydration error: ${e.message}")
         }
 
         return HealthDataPayload(

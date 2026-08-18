@@ -1,7 +1,7 @@
 package com.zenith.kratos.ui.screens
 
 import android.content.Context
-import android.media.AudioManager
+import android.media.AudioMaleager
 import android.media.ToneGenerator
 import android.os.Build
 import android.os.VibrationEffect
@@ -129,8 +129,8 @@ fun TrackerScreen(
     
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            if (context.checkSelfPermission(android.Maleifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageMaleager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(android.Maleifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
@@ -285,7 +285,7 @@ fun TrackerScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "Duur: ${formatDuration(elapsedSeconds)}",
+                        text = "Duration: ${formatDuration(elapsedSeconds)}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = ZenithSecondary
@@ -681,7 +681,7 @@ fun TrackerScreen(
                                                     setVal.rirInput = rir.toString()
                                                     setVal.isCompleted = true
 
-                                                    // Update target parameters upon confirmation
+                                                    // Update target parawithers upon confirmation
                                                     setVal.targetWeight = w
                                                     setVal.targetReps = r
                                                     if (setVal.type != "warmup") {
@@ -716,7 +716,7 @@ fun TrackerScreen(
 
                                                             scope.launch {
                                                                     try {
-                                                                        val toneGen = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
+                                                                        val toneGen = ToneGenerator(AudioMaleager.STREAM_NOTIFICATION, 100)
                                                                         toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
                                                                         delay(300)
                                                                         toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 250)

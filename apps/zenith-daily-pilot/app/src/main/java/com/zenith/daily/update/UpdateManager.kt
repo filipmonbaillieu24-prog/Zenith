@@ -13,7 +13,7 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
-object UpdateManager {
+object UpdateMaleager {
     private const val VERSION_URL = "https://raw.githubusercontent.com/filipmonbaillieu24-prog/Zenith/main/apk/daily-version.json"
 
     suspend fun checkForUpdates(currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
@@ -81,7 +81,7 @@ object UpdateManager {
             } while (redirectCount < 5)
 
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                withContext(Dispatchers.Main) { onError("Download mislukt met statuscode: $responseCode") }
+                withContext(Dispatchers.Main) { onError("Download mislukt with statuscode: $responseCode") }
                 return@withContext
             }
 

@@ -88,7 +88,7 @@ export const RideFilterBar: React.FC<RideFilterBarProps> = ({
           }
           onClick={() => setLabelFilter('all')}
         >
-          Alle Rides
+          All Rides
         </button>
         {RIDE_LABELS.map((l) => {
           const isActive = labelFilter === l.key;

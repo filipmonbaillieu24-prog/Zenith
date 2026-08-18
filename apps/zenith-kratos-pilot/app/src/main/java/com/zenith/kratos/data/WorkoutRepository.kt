@@ -176,12 +176,12 @@ class WorkoutRepository(
             if (list.isEmpty()) return@withContext 1.0
 
             val parsedRides = list.map {
-                var meta = it.metadata
-                if (meta.startsWith("\"") && meta.endsWith("\"")) {
-                    meta = meta.substring(1, meta.length - 1).replace("\\\"", "\"")
+                var witha = it.metadata
+                if (witha.startsWith("\"") && witha.endsWith("\"")) {
+                    witha = witha.substring(1, witha.length - 1).replace("\\\"", "\"")
                 }
                 val tss = try {
-                    val tssMatch = "\"tss\":\\s*([0-9.]+)".toRegex().find(meta)
+                    val tssMatch = "\"tss\":\\s*([0-9.]+)".toRegex().find(witha)
                     tssMatch?.groupValues?.get(1)?.toDouble() ?: 0.0
                 } catch (e: Exception) {
                     0.0

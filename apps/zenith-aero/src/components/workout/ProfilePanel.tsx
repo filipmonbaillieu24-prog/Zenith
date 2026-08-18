@@ -30,7 +30,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
   const set = (key: keyof FitnessProfile, val: any) =>
     onChange({ ...profile, [key]: val === '' ? undefined : val });
 
-  // Google Drive sync instellingen (localStorage)
+  // Google Drive sync settings (localStorage)
   const [gdrivePath, setGdrivePath] = useState(
     () => localStorage.getItem(GDRIVE_PATH_KEY) ?? ''
   );
@@ -45,14 +45,14 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
     const trimmed = val.trim();
     if (trimmed) {
       localStorage.setItem(GDRIVE_PATH_KEY, trimmed);
-      // Maak direct de submappen aan in de achtergrond zodat de gebruiker ziet dat het werkt
+      // Create subfolders directly in background
       try {
         const routesFolder = gdriveSubPath(trimmed, GDRIVE_ROUTES_FOLDER);
         const ridesFolder  = gdriveSubPath(trimmed, GDRIVE_RIDES_FOLDER);
         await invoke('ensure_dir', { path: routesFolder });
         await invoke('ensure_dir', { path: ridesFolder });
       } catch (err) {
-        console.error('Kon mappen niet aanmaken:', err);
+        console.error('Could not create folders:', err);
       }
     } else {
       localStorage.removeItem(GDRIVE_PATH_KEY);
@@ -250,12 +250,12 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
         <div className="wd-profile-actions">
           <p className="wd-profile-note">
             <Lightbulb size={12} style={{ display:'inline', verticalAlign:'middle', marginRight: 4, color:'#fdcb6e' }} />
-            Geslacht verbetert hrTSS. Leeftijd schat maxHR. Gewicht geeft W/kg en calorieën.
+            Gender improves hrTSS. Age estimates maxHR. Weight gives W/kg and calories.
           </p>
           <button className="wd-recalc-btn" onClick={onRecalculate} disabled={recalculating}>
             {recalculating
               ? <><RefreshCw size={13} className="spin" /> Berekenen…</>
-              : <><RotateCcw size={13} /> Herbereken alle rideten</>
+              : <><RotateCcw size={13} /> Recalculate all rides</>
             }
           </button>
         </div>

@@ -30,7 +30,7 @@ export const AICoachChatWidget: React.FC<AICoachChatWidgetProps> = ({ profile, r
       setMessages([
         {
           role: 'assistant',
-          content: `Hoi ${name}! Ik ben je persoonlijke Zenith AI Coach. Ik heb toegang tot je fitheidscijfers en trainingsgeschiedenis. Stel me gerust al je vragen over je rideten, trainingszones, voeding of hersteladviezen. Hoe voelen de benen today?`,
+          content: `Hoi ${name}! I am your personal Zenith AI Coach. I have access to your fitness data and history. Feel free to ask me anything al je vragen over je rideten, trainingszones, voeding of hersteladviezen. Hoe voelen de benen today?`,
         },
       ]);
     }
@@ -65,12 +65,12 @@ export const AICoachChatWidget: React.FC<AICoachChatWidgetProps> = ({ profile, r
       .map(r => {
         const dateStr = new Date(r.date).toLocaleDateString('nl-BE');
         const rpeStr = (r as any).rpe ? `RPE: ${(r as any).rpe}/10` : 'RPE: onbekend';
-        return `- ${dateStr}: ${r.distance.toFixed(0)}km, duur: ${(r.duration/3600).toFixed(1)}u, ${rpeStr}, opmerkingen: ${r.notes || 'geen'}`;
+        return `- ${dateStr}: ${r.distance.toFixed(0)}km, duur: ${(r.duration/3600).toFixed(1)}u, ${rpeStr}, opmerkingen: ${r.notes || 'none'}`;
       })
       .join('\n');
 
-    return `Je bent de persoonlijke wielercoach van de atleet.
-Gegevens van de atleet:
+    return `You are the personal cycling coach of the athlete.
+Athlete data:
 - Naam: ${name}
 - Leeftijd: ${age}
 - Gewicht: ${weight} kg
@@ -80,7 +80,7 @@ Gegevens van de atleet:
 Actuele fitheidscijfers:
 - CTL (Fitheid): ${Math.round(latest.ctl)}
 - ATL (Vermoeidheid): ${Math.round(latest.atl)}
-- TSB (Vorm/Frisheid): ${Math.round(latest.tsb)} (een negatieve TSB betekent vermoeidheid, beneden de -20 is risicovol)
+- TSB (Vorm/Frisheid): ${Math.round(latest.tsb)} (negative TSB indicates fatigue, below -20 is risky)
 
 Recente trainingsgeschiedenis:
 ${recentRides}
@@ -104,7 +104,7 @@ Houd hier rekening mee in je adviezen. Geef korte, concrete, direct toepasbare c
       const response = await sendAIChat(updatedMessages, getSystemContext());
       setMessages([...updatedMessages, { role: 'assistant', content: response }]);
     } catch (err: any) {
-      setError(err.message || 'Kon geen verbinding maken met de AI.');
+      setError(err.message || 'Could not connect to the AI service.');
     } finally {
       setSending(false);
     }
@@ -260,7 +260,7 @@ Houd hier rekening mee in je adviezen. Geef korte, concrete, direct toepasbare c
           type="text"
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder="Stel een vraag aan de coach over je rideten, zones of herstel..."
+          placeholder="Ask the coach about your rides, zones or recovery..."
           disabled={sending}
           className="wd-chat-input-field"
         />

@@ -437,13 +437,13 @@ function App() {
       }
 
       ridesData?.forEach((r: any) => {
-        let meta = r.metadata;
-        if (typeof meta === 'string') {
-          try { meta = JSON.parse(meta); } catch { meta = {}; }
+        let witha = r.metadata;
+        if (typeof witha === 'string') {
+          try { witha = JSON.parse(witha); } catch { witha = {}; }
         }
         const dStr = formatDateString(new Date(Number(r.date)));
         if (activeCalMap[dStr] !== undefined) {
-          activeCalMap[dStr] += Number(meta?.calories ?? 0);
+          activeCalMap[dStr] += Number(witha?.calories ?? 0);
         }
       });
 
@@ -470,7 +470,7 @@ function App() {
       setActiveCaloriesMap(activeCalMap);
       setGymVolumeMap(gymVolMap);
 
-      // Parameter history is now calculated dynamically in fetchCalibrationLogs client-side.
+      // Parawither history is now calculated dynamically in fetchCalibrationLogs client-side.
 
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -598,11 +598,11 @@ function App() {
       ridesHist?.forEach(r => {
         const dStr = new Date(Number(r.date)).toISOString().split('T')[0];
         if (logsMap[dStr]) {
-          let meta = r.metadata;
-          if (typeof meta === 'string') {
-            try { meta = JSON.parse(meta); } catch { meta = {}; }
+          let witha = r.metadata;
+          if (typeof witha === 'string') {
+            try { witha = JSON.parse(witha); } catch { witha = {}; }
           }
-          logsMap[dStr].activeCalories += Number(meta?.calories ?? 0);
+          logsMap[dStr].activeCalories += Number(witha?.calories ?? 0);
         }
       });
 
@@ -657,7 +657,7 @@ function App() {
       const zOutput = runZaneCalibration(Object.values(logsMap), activeProfile, latestWeight, selectedDateStr);
       setZaneResult(zOutput);
 
-      // Calculate dynamic day-by-day parameter evolution and confidence intervals
+      // Calculate dynamic day-by-day parawither evolution and confidence intervals
       const sortedLogs = Object.values(logsMap).sort((a, b) => a.date.localeCompare(b.date));
       const formattedHist = [];
 
@@ -1398,12 +1398,12 @@ function App() {
     });
 
     const activeDateCaffeine = intakeMap[selectedDateStr] || 0;
-    const metabolicBoost = Math.round(activeDateCaffeine * (zaneResult.caffeineCoeff || 0.15));
+    const withabolicBoost = Math.round(activeDateCaffeine * (zaneResult.caffeineCoeff || 0.15));
 
     return {
       chartData,
       activeDateCaffeine,
-      metabolicBoost
+      withabolicBoost
     };
   }, [supplementsLogs, thirtyDayFoodLogs, sleepLogs, selectedDateStr, zaneResult.caffeineCoeff]);
 
@@ -1884,7 +1884,7 @@ function App() {
                       : (todaySleepQuality !== null ? `${todaySleepQuality}%` : `${Math.round(sleepQualityAvg)}%`)}
                   </div>
                   <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Coëfficiënt' : 'Actuele meting'}
+                    {zaneResult.isCalibrated ? 'Coëfficiënt' : 'Actuele withing'}
                   </span>
                 </div>
                 <div className="zane-stat-item">
@@ -1895,7 +1895,7 @@ function App() {
                       : (todaySleepDuration !== null ? `${Math.floor(todaySleepDuration)}u ${Math.round((todaySleepDuration % 1) * 60)}m` : `${Math.floor(sleepDurationAvg)}u`)}
                   </div>
                   <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Coëfficiënt' : 'Actuele meting'}
+                    {zaneResult.isCalibrated ? 'Coëfficiënt' : 'Actuele withing'}
                   </span>
                 </div>
                 <div className="zane-stat-item">
@@ -1922,7 +1922,7 @@ function App() {
                 {zaneResult.isCalibrated ? (
                   <>
                     Zenith is fully calibrated based on <strong>{zaneResult.calibrationDays} days</strong> of data. 
-                    The algorithm directly adjusts your energy needs based on your actual metabolic variance and sleep quality.
+                    The algorithm directly adjusts your energy needs based on your actual withabolic variance and sleep quality.
                   </>
                 ) : (
                   <>
@@ -1950,7 +1950,7 @@ function App() {
           {/* Zenith Evolution Chart Card */}
           <div className="fuel-card col-7">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Zenith Parameter Evolutie
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Zenith Parawither Evolutie
             </h3>
             {zaneHistory.length === 0 ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12, minHeight: 180, textAlign: 'center' }}>
@@ -2060,7 +2060,7 @@ function App() {
               </div>
               <div className="zane-feedback-text" style={{ fontSize: '11px', marginTop: '4px', lineHeight: '1.4' }}>
                 {netDailyBalance <= -100 ? (
-                  <>You are in an energy deficit of {Math.abs(netDailyBalance)} kcal. Dit stimuleert vetverbranding met een gezonde, duurzame snelheid.</>
+                  <>You are in an energy deficit of {Math.abs(netDailyBalance)} kcal. Dit stimuleert vetverbranding with een gezonde, duurzame snelheid.</>
                 ) : netDailyBalance >= 100 ? (
                   <>You are in an energy surplus of {netDailyBalance} kcal. This supports muscle growth and recovery after heavy training.</>
                 ) : (
@@ -2382,7 +2382,7 @@ function App() {
 
           {recipes.length === 0 ? (
             <div className="fuel-card" style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
-              U heeft nog geen recepten aangemaakt. Maak uw eerste recept an!
+              U heeft nog none recepten aangemaakt. Maak uw eerste recept an!
             </div>
           ) : (
             <div className="recipes-grid">
@@ -2626,7 +2626,7 @@ function App() {
               <div style={{ background: 'rgba(0,0,0,0.15)', padding: '16px', borderRadius: '10px', marginBottom: 16 }}>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Extra energieverbruik (ML):</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--color-primary)', margin: '4px 0' }}>
-                  +{caffeineStats.metabolicBoost} kcal
+                  +{caffeineStats.withabolicBoost} kcal
                 </div>
               </div>
 
@@ -2801,7 +2801,7 @@ function App() {
                       <input 
                         type="text" 
                         className="form-input" 
-                        placeholder="Bijv. Energiereep, Banaan" 
+                        placeholder="Atv. Energiereep, Banaan" 
                         value={quickName}
                         onChange={e => setQuickName(e.target.value)}
                         required
@@ -3037,7 +3037,7 @@ function App() {
                   <input 
                     type="text" 
                     className="form-input" 
-                    placeholder="Bijv. Havermout, Pindakaas" 
+                    placeholder="Atv. Havermout, Pindakaas" 
                     value={ingName}
                     onChange={e => setIngName(e.target.value)}
                     required
@@ -3111,7 +3111,7 @@ function App() {
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="Bijv. Snee, Banaan, Stuk" 
+                      placeholder="Atv. Snee, Banaan, Stuk" 
                       value={ingPortionName}
                       onChange={e => setIngPortionName(e.target.value)}
                     />
@@ -3121,7 +3121,7 @@ function App() {
                     <input 
                       type="number" 
                       className="form-input" 
-                      placeholder="Bijv. 35" 
+                      placeholder="Atv. 35" 
                       value={ingPortionWeight}
                       onChange={e => setIngPortionWeight(e.target.value)}
                     />
@@ -3133,7 +3133,7 @@ function App() {
                   <input 
                     type="number" 
                     className="form-input" 
-                    placeholder="Bijv. 12" 
+                    placeholder="Atv. 12" 
                     value={ingPortionsPackage}
                     onChange={e => setIngPortionsPackage(e.target.value)}
                   />
@@ -3144,7 +3144,7 @@ function App() {
                   <input 
                     type="number" 
                     className="form-input" 
-                    placeholder="Bijv. 32 voor energy drink, 80 voor espresso" 
+                    placeholder="Atv. 32 voor energy drink, 80 voor espresso" 
                     value={ingCaffeine}
                     onChange={e => setIngCaffeine(e.target.value)}
                   />
@@ -3152,7 +3152,7 @@ function App() {
               </div>
               <div style={{ padding: '0 24px 24px' }}>
                 <button type="submit" className="btn-submit" style={{ width: '100%' }}>
-                  {editingIngredientId ? 'Ingrediënt Bijwerken' : 'Sla ingrediënt op'}
+                  {editingIngredientId ? 'Ingrediënt Atwerken' : 'Sla ingrediënt op'}
                 </button>
               </div>
             </form>
@@ -3177,7 +3177,7 @@ function App() {
                   <input 
                     type="text" 
                     className="form-input" 
-                    placeholder="Bijv. Zenith Rice Cakes" 
+                    placeholder="Atv. Zenith Rice Cakes" 
                     value={recName}
                     onChange={e => setRecName(e.target.value)}
                     required
@@ -3213,7 +3213,7 @@ function App() {
                     <input 
                       type="text" 
                       className="form-input" 
-                      placeholder="Bijv. 4 repen" 
+                      placeholder="Atv. 4 repen" 
                       value={recServingSize}
                       onChange={e => setRecServingSize(e.target.value)}
                       required
@@ -3370,7 +3370,7 @@ function App() {
               </div>
               <div style={{ padding: '0 24px 24px' }}>
                 <button type="submit" className="btn-submit" style={{ width: '100%' }}>
-                  {editingRecipeId ? 'Recept Bijwerken' : 'Sla recept op'}
+                  {editingRecipeId ? 'Recept Atwerken' : 'Sla recept op'}
                 </button>
               </div>
             </form>

@@ -130,7 +130,7 @@ export const kratosAutoregModel = new SimpleMLP(
 );
 
 /**
- * Predicts the optimal weight (in kg) for the next set based on the previous set's parameters,
+ * Predicts the optimal weight (in kg) for the next set based on the previous set's parawithers,
  * RIR Delta matrix, rest time, and hardware step limits (Autoregulation 2.0).
  */
 export function predictAutoregWeight(
@@ -245,7 +245,7 @@ function generateDualSportFatigueWeights() {
     W1[1][j] = 0.7;   // High cardio ATL = more fatigued
     W1[2][j] = 0.6;   // High gym volume = more fatigued
     W1[3][j] = -0.5;  // Good sleep quality = less fatigued
-    W1[4][j] = 0.3;   // Many steps = slight fatigue
+    W1[4][j] = 0.3;   // Maley steps = slight fatigue
     W1[5][j] = 0.5;   // High active calories = more fatigued
     W2[j][0] = 0.45;
   }

@@ -8,14 +8,14 @@ export interface NeuralAnalysis {
 
 /**
  * One data sample from a ride (typically 1-second resolution from FIT/GPX).
- * All fields are optional — not every device records all metrics.
+ * All fields are optional — not every device records all withrics.
  */
 export interface RidePoint {
   time:      number;   // Unix timestamp (ms)
   lat?:      number;
   lng?:      number;
   ele?:      number;   // m
-  distance?: number;   // cumulative meters
+  distance?: number;   // cumulative withers
   power?:    number;   // watts
   hr?:       number;   // bpm
   cadence?:  number;   // rpm
@@ -56,7 +56,7 @@ export interface RideSummary {
   avgSpeed:         number;   // km/h
   maxSpeed?:        number;   // km/h
 
-  // Power (optional — only if device has power meter)
+  // Power (optional — only if device has power wither)
   avgPower?:        number;   // W
   normPower?:       number;   // W — Normalized Power
   maxPower?:        number;   // W
@@ -100,17 +100,17 @@ export interface RideSummary {
   // Heart rate recovery
   hrRecovery60?:    number;    // bpm drop in 60s after peak HR — higher = fitter
 
-  // Geavanceerde progressie metrics (Fase 2)
+  // Geavanceerde progressie withrics (Fase 2)
   phenotype?:             string;    // Fysiologische classificatie: Sprinter, Puncheur, Tijdridespecialist, Climber
   kjTotal?:               number;    // Totale energieverbruik in kJ
   fresh5minPower?:        number;    // Beste 5 min vermogen (fris, <1000 kJ)
   fatigued5minPower?:     number;    // Beste 5 min vermogen (vermoeid, >=1000 kJ)
   fresh20minPower?:       number;    // Beste 20 min vermogen (fris, <1000 kJ)
   fatigued20minPower?:    number;    // Beste 20 min vermogen (vermoeid, >=1000 kJ)
-  cardiacCost?:           number;    // Cardiale kosten per meter (beats/meter)
+  cardiacCost?:           number;    // Cardiale kosten per wither (beats/wither)
   climbingAvgHR?:         number;    // Averagee hartslag tijdens beklimmingen
   activeHRDecayRate?:     number;    // Speed van hartslagherstel tijdens actieve rust (bpm/min)
-  cadenceEfficiencySweetspot?: number; // Optimale cadans met laagste hartslag/vermogen ratio
+  cadenceEfficiencySweetspot?: number; // Optimale cadans with laagste hartslag/vermogen ratio
 
   // User-added metadata
   notes?:   string;   // free-text notes per ride
@@ -213,7 +213,7 @@ export interface HRZone {
 }
 
 export const POWER_ZONES: PowerZone[] = [
-  { zone: 1, name: 'Actief herstel',      color: '#74b9ff', minPct:   0, maxPct:  55 },
+  { zone: 1, name: 'Active Recovery',      color: '#74b9ff', minPct:   0, maxPct:  55 },
   { zone: 2, name: 'Endurance', color: '#00b894', minPct:  56, maxPct:  75 },
   { zone: 3, name: 'Tempo',               color: '#fdcb6e', minPct:  76, maxPct:  90 },
   { zone: 4, name: 'Lactaatdrempel',      color: '#e17055', minPct:  91, maxPct: 105 },
@@ -222,7 +222,7 @@ export const POWER_ZONES: PowerZone[] = [
 ];
 
 export const HR_ZONES: HRZone[] = [
-  { zone: 1, name: 'Actief herstel',      color: '#74b9ff', minPct:   0, maxPct:  68 },
+  { zone: 1, name: 'Active Recovery',      color: '#74b9ff', minPct:   0, maxPct:  68 },
   { zone: 2, name: 'Endurance', color: '#00b894', minPct:  69, maxPct:  83 },
   { zone: 3, name: 'Tempo',               color: '#fdcb6e', minPct:  84, maxPct:  94 },
   { zone: 4, name: 'Lactaatdrempel',      color: '#e17055', minPct:  95, maxPct: 105 },

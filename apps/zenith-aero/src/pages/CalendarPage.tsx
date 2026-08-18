@@ -54,7 +54,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
         const list = await getAllPlannedWorkouts();
         setPlannedWorkouts(list);
       } catch (err) {
-        console.error('Kon geplande workouts niet laden uit Supabase:', err);
+        console.error('Could not load planned workouts from Supabase:', err);
       }
     };
     loadWorkouts();
@@ -89,7 +89,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
     try {
       const route = await getRoute(editingWorkout.routeId);
       if (!route) {
-        setGpxError("Route niet gevonden in database.");
+        setGpxError("Route not found in database.");
         return;
       }
       
@@ -100,14 +100,14 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
       const res = await saveExportFile(gpxContent, fileName, 'application/gpx+xml');
       if (!res.ok) {
         if (res.error !== 'CANCELLED') {
-          setGpxError(res.error || "Error saving van bestand.");
+          setGpxError(res.error || "Error saving file.");
         }
       } else {
         setGpxSuccess(res.path ? `✓ GPX opgeslagen op: ${res.path}` : "✓ GPX succesvol gedownload");
       }
     } catch (err) {
       console.error(err);
-      setGpxError("Kon route niet ophalen of exporteren.");
+      setGpxError("Could not fetch or export route.");
     } finally {
       setDownloadingGpx(false);
     }
@@ -181,7 +181,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
 
     const days: { dateStr: string; dayNum: number; isCurrentMonth: boolean; dateObj: Date }[] = [];
 
-    // Vorige maand dagen opvullen
+    // Fill previous month days
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startDayOfWeek - 1; i >= 0; i--) {
       const d = new Date(year, month - 1, prevMonthLastDay - i);
@@ -204,7 +204,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
       });
     }
 
-    // Volgende maand dagen opvullen tot 35 of 42 cellen
+    // Fill next month days up to 35 or 42 cells
     const totalNeeded = days.length > 35 ? 42 : 35;
     const remaining = totalNeeded - days.length;
     for (let i = 1; i <= remaining; i++) {
@@ -242,7 +242,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
     return map;
   }, [plannedWorkouts]);
 
-  // Modal openen om toe te voegen / bewerken
+  // Open modal to add / edit
   const handleOpenAddModal = (dateStr: string) => {
     setEditingWorkout(null);
     setTargetDate(dateStr);
@@ -334,14 +334,14 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
           await savePlannedWorkout(updated);
           setPlannedWorkouts(prev => prev.map(p => p.id === id ? updated : p));
         } catch (err) {
-          console.error('Fout bij verplaatsen geplande workout:', err);
+          console.error('Error moving planned workout:', err);
         }
       }
     }
     setDraggedWorkoutId(null);
   };
 
-  // Format chart data voor Recharts
+  // Format chart data for Recharts
   const chartData = useMemo(() => {
     return simPMC.map(pt => ({
       dateStr: new Date(pt.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }),
@@ -358,7 +358,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
 
   return (
     <div className="wd-calendar-page animate-slide-up">
-      {/* ── 1. Top Banner met PMC Simulatie KPI's ────────────────────────────── */}
+      {/* ── 1. Top Banner with PMC Simulation KPIs ────────────────────────────── */}
       <div className="wd-calendar-hero">
         <div className="wd-calendar-hero__header">
           <div>
@@ -432,12 +432,12 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
 
       {/* ── 3. Month Grid ────────────────────────────────────────────────────── */}
       <div className="wd-calendar-grid">
-        {/* Dagen van de week headers */}
+        {/* Days of the week headers */}
         {['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'].map(d => (
           <div key={d} className="wd-cal-header-cell">{d}</div>
         ))}
 
-        {/* Calendar Dagen */}
+        {/* Calendar Days */}
         {calendarDays.map(day => {
           const isToday = day.dateStr === todayStr;
           const dayRides = ridesByDate.get(day.dateStr) ?? [];
@@ -456,7 +456,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                 <span className="wd-cal-day-num">{day.dayNum}</span>
                 <button
                   className="wd-cal-day-add-btn"
-                  title="Plan workout op deze dag"
+                  title="Plan workout on this day"
                   onClick={() => handleOpenAddModal(day.dateStr)}
                 >
                   +
@@ -469,7 +469,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                   <div
                     key={r.id}
                     className="wd-cal-badge wd-cal-badge--completed" onClick={() => onSelectRide?.(r.id)}
-                    title={`Voltooid: ${r.name}\nDistance: ${r.distance.toFixed(1)} km\nTijd: ${Math.round(r.duration / 60)} min\nHoogte: ${r.elevGain} m\nGem: ${r.avgSpeed.toFixed(1)} km/h\nBelasting: ${Math.round(r.tss ?? r.hrTSS ?? 0)} TSS`}
+                    title={`Voltooid: ${r.name}\nDistance: ${r.distance.toFixed(1)} km\nTijd: ${Math.round(r.duration / 60)} min\nHoogte: ${r.elevGain} m\nGem: ${r.avgSpeed.toFixed(1)} km/h\nWorkload: ${Math.round(r.tss ?? r.hrTSS ?? 0)} TSS`}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '2px', padding: '6px 8px' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -494,7 +494,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                     draggable
                     onDragStart={(e) => handleDragStart(e, p.id)}
                     onClick={() => handleOpenEditModal(p)}
-                    title={`Gepland: ${p.title}\nDuur: ${p.durationMinutes} min\nBelasting: ${p.plannedTSS} TSS\nNotities: ${p.notes || 'geen'}\nKlik om te bewerken, sleep om te verplaatsen.`}
+                    title={`Planned: ${p.title}\nDuration: ${p.durationMinutes} min\nWorkload: ${p.plannedTSS} TSS\nNotes: ${p.notes || 'none'}\nClick to edit, sleep om te verplaatsen.`}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '2px', padding: '6px 8px' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -535,7 +535,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
               </div>
 
               <div className="wd-form-group">
-                <label>Titel van Workout</label>
+                <label>Workout Title</label>
                 <input
                   type="text"
                   placeholder="bv. Sweet Spot 2x15m"
@@ -551,7 +551,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                   onChange={e => {
                     const t = e.target.value as PlannedWorkoutItem['type'];
                     setFormType(t);
-                    // Automatische inschatting TSS op basis van duur & type
+                    // Automatic TSS estimation based on duration & type
                     if (t === 'recovery') setFormTSS(Math.round(formDuration * 0.4));
                     if (t === 'endurance') setFormTSS(Math.round(formDuration * 0.8));
                     if (t === 'sweetspot') setFormTSS(Math.round(formDuration * 1.1));
@@ -599,7 +599,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ rides, kratosWorkout
                 <label>Notities / Instructies</label>
                 <textarea
                   rows={3}
-                  placeholder="bv. Warm-up 15m, 2x 15m op 220W met 5m herstel..."
+                  placeholder="e.g., Warm-up 15m, 2x 15m at 220W with 5m recovery..."
                   value={formNotes}
                   onChange={e => setFormNotes(e.target.value)}
                 />

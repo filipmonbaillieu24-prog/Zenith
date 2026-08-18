@@ -6,13 +6,13 @@ import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.location.LocationListener
-import android.location.LocationManager
+import android.location.LocationMaleager
 import android.os.Binder
 import android.os.Bundle
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.example.pilot.R
-import com.example.pilot.ble.BleSensorManager
+import com.example.pilot.ble.BleSensorMaleager
 import com.example.pilot.coaching.CoachingEngine
 import com.example.pilot.data.PlannedWorkout
 import com.example.pilot.data.WorkoutRepository
@@ -31,9 +31,9 @@ class WorkoutService : Service() {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
     lateinit var coachingEngine: CoachingEngine
-    lateinit var bleSensorManager: BleSensorManager
+    lateinit var bleSensorMaleager: BleSensorMaleager
     private val repository = WorkoutRepository()
-    private var locationManager: LocationManager? = null
+    private var locationMaleager: LocationMaleager? = null
 
     // Session State
     private var activeWorkout: PlannedWorkout? = null
@@ -74,8 +74,8 @@ class WorkoutService : Service() {
         super.onCreate()
         activeService = this
         coachingEngine = CoachingEngine(this)
-        bleSensorManager = BleSensorManager(this)
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        bleSensorMaleager = BleSensorMaleager(this)
+        locationMaleager = getSystemService(Context.LOCATION_SERVICE) as LocationMaleager
         createNotificationChannel()
     }
 
@@ -97,8 +97,8 @@ class WorkoutService : Service() {
 
         // Request GPS Updates for Auto-Pause
         try {
-            locationManager?.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
+            locationMaleager?.requestLocationUpdates(
+                LocationMaleager.GPS_PROVIDER,
                 1000L,
                 1f,
                 locationListener
@@ -123,7 +123,7 @@ class WorkoutService : Service() {
         if (steps.isNotEmpty()) {
             val firstBlock = steps[0]
             coachingEngine.speak(
-                "Eerste blok: ${firstBlock.name}. Duur: ${firstBlock.duration / 60} minuten.",
+                "Eerste blok: ${firstBlock.name}. Duration: ${firstBlock.duration / 60} minuten.",
                 "COACHING"
             )
         }
@@ -154,7 +154,7 @@ class WorkoutService : Service() {
         _isWorkoutActive.value = false
         
         // Remove location listener
-        locationManager?.removeUpdates(locationListener)
+        locationMaleager?.removeUpdates(locationListener)
 
         coachingEngine.speak("Training beëindigd. Goed gedaan.", "SYSTEM")
 
@@ -221,7 +221,7 @@ class WorkoutService : Service() {
                     "This is an active recovery block. Keep your legs spinning smoothly."
                 }
                 coachingEngine.speak(
-                    "Volgend blok: ${nextBlock.name}. Duur: ${nextBlock.duration / 60} minuten. $targetText",
+                    "Volgend blok: ${nextBlock.name}. Duration: ${nextBlock.duration / 60} minuten. $targetText",
                     "COACHING"
                 )
             } else {
@@ -238,9 +238,9 @@ class WorkoutService : Service() {
         if (currentIdx >= steps.size) return
         val currentBlock = steps[currentIdx]
 
-        val hr = bleSensorManager.currentHR.value
-        val power = bleSensorManager.currentPower.value
-        val cadence = bleSensorManager.currentCadence.value
+        val hr = bleSensorMaleager.currentHR.value
+        val power = bleSensorMaleager.currentPower.value
+        val cadence = bleSensorMaleager.currentCadence.value
         val ftp = activeWorkout?.ftp ?: 220
         val lthr = activeWorkout?.lthr ?: 160
 
@@ -335,11 +335,11 @@ class WorkoutService : Service() {
         val channel = NotificationChannel(
             CHANNEL_ID,
             "Zenith Pilot Active Workout",
-            NotificationManager.IMPORTANCE_LOW
+            NotificationMaleager.IMPORTANCE_LOW
         ).apply {
-            description = "Displays live metrics for your active cycling workout."
+            description = "Displays live withrics for your active cycling workout."
         }
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationMaleager
         manager.createNotificationChannel(channel)
     }
 
@@ -348,8 +348,8 @@ class WorkoutService : Service() {
         if (currentIdx >= steps.size) return
         val currentBlock = steps[currentIdx]
         
-        val hr = bleSensorManager.currentHR.value ?: 0
-        val power = bleSensorManager.currentPower.value ?: 0
+        val hr = bleSensorMaleager.currentHR.value ?: 0
+        val power = bleSensorMaleager.currentPower.value ?: 0
         val zone = currentBlock.zone
 
         val durationRemaining = currentBlock.duration - _blockElapsedSeconds.value
@@ -364,7 +364,7 @@ class WorkoutService : Service() {
             power = power,
             zone = zone
         )
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationMaleager
         manager.notify(NOTIFICATION_ID, notification)
     }
 
@@ -399,8 +399,8 @@ class WorkoutService : Service() {
         activeService = null
         timerJob?.cancel()
         coachingEngine.shutdown()
-        bleSensorManager.cleanUp()
-        locationManager?.removeUpdates(locationListener)
+        bleSensorMaleager.cleanUp()
+        locationMaleager?.removeUpdates(locationListener)
         super.onDestroy()
     }
 }

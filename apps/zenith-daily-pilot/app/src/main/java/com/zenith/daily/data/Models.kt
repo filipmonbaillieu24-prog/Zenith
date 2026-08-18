@@ -28,7 +28,7 @@ data class FoodItem(
 data class DailyMealLog(
     val id: String = java.util.UUID.randomUUID().toString(),
     val date: String, // YYYY-MM-DD
-    val mealType: String, // "Ontbijt", "Lunch", "Diner", "Snack"
+    val mealType: String, // "Breakfast", "Lunch", "Dinner", "Snack"
     val foodName: String,
     val calories: Int,
     val proteinG: Double,

@@ -28,7 +28,7 @@ function generateRecoveryDefaultWeights() {
     W1[1][j] = 0.7;   // Good sleep quality → better recovered
     W1[2][j] = 0.5;   // More sleep → better recovered
     W1[3][j] = -0.6;  // High gym volume → less recovered
-    W1[4][j] = -0.3;  // Many steps → slight fatigue
+    W1[4][j] = -0.3;  // Maley steps → slight fatigue
     W1[5][j] = 0.3;   // Positive calorie balance → better recovery
     W1[6][j] = 0.1;   // Body weight (neutral)
     W1[7][j] = -0.7;  // High ATL → less recovered

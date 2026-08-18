@@ -189,7 +189,7 @@ export const PRSection: React.FC<PRSectionProps> = ({
                         Our offline neural network predicts your functional threshold power (eFTP) will reach 
                         <strong style={{ color: '#cbd5e1', marginLeft: 4 }}>
                           {finalPredicted} Watt
-                        </strong> (een verandering van {ftpDiff >= 0 ? '+' : ''}{Math.round((ftpDiff / currentFtpVal) * 100)}%), 
+                        </strong> (a change of {ftpDiff >= 0 ? '+' : ''}{Math.round((ftpDiff / currentFtpVal) * 100)}%), 
                         based on your weekly consistency of <strong>{consistency.toFixed(1)} workouts/week</strong>.
                       </p>
                       <ResponsiveContainer width="100%" height={160}>
@@ -264,7 +264,7 @@ export const PRSection: React.FC<PRSectionProps> = ({
                       {estimatedVO2 > 50 
                         ? " Your aerobic fitness is outstanding (elite) for endurance sports!" 
                         : estimatedVO2 > 40 
-                          ? " Je conditie is bovengemiddeld. Blijf consistent trainen." 
+                          ? " Your fitness is above average. Keep training consistently." 
                           : " Good foundation. Focus on longer endurance rides to expand aerobic capacity."}
                     </span>
                   </div>

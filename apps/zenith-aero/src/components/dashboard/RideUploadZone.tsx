@@ -54,14 +54,14 @@ export const RideUploadZone: React.FC<RideUploadZoneProps> = ({
         {uploading ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#94a3b8' }}>
             <span className="wd-spinner" />
-            <span style={{ fontSize: 12, fontWeight: 700 }}>Bezig met uploaden...</span>
+            <span style={{ fontSize: 12, fontWeight: 700 }}>Uploading...</span>
           </div>
         ) : (
           <>
             <span style={{ fontSize: '32px', marginBottom: '8px', filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.15))' }}>📥</span>
             <span style={{ fontWeight: 800, color: '#f8fafc', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Importeer Activiteit</span>
             <span style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 4, lineHeight: 1.5, maxWidth: '200px' }}>
-              Sleep je <strong>.fit</strong>, <strong>.gpx</strong> of <strong>.tcx</strong> bestanden hier of klik om te bladeren
+              Drag your <strong>.fit</strong>, <strong>.gpx</strong> or <strong>.tcx</strong> files here or click to browse
             </span>
           </>
         )}

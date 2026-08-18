@@ -71,7 +71,7 @@ function getDutchCardinal(deg: number): string {
 export async function fetchWindData(
   lat: number, lng: number, timeSlotKey: string
 ): Promise<WindData> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
+  const url = `https://api.open-witheo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
     `&current=wind_speed_10m,wind_direction_10m` +
     `&hourly=wind_speed_10m,wind_direction_10m&windspeed_unit=kmh&forecast_days=3`;
 
@@ -134,10 +134,10 @@ export async function calculateRoute(
     `&format=geojson${extraParams}${nogos}`;
 
   const geojson = JSON.parse(await fetchUrl(url));
-  const feature  = geojson.features?.find((f: any) => f.geometry?.type === 'LineString');
+  const feature  = geojson.features?.find((f: any) => f.geowithry?.type === 'LineString');
   if (!feature) throw new Error('Geen route gevonden in BRouter response.');
 
-  const coords: number[][] = feature.geometry.coordinates;
+  const coords: number[][] = feature.geowithry.coordinates;
   if (!coords?.length) throw new Error('Lege route ontvangen.');
 
   const points: RoutePoint[] = [];
@@ -173,8 +173,8 @@ export async function calculateRoute(
   const cleanedGeojson = {
     ...geojson,
     features: geojson.features?.map((f: any) =>
-      f.geometry?.type === 'LineString'
-        ? { ...f, geometry: { ...f.geometry, coordinates: cleanedCoords } }
+      f.geowithry?.type === 'LineString'
+        ? { ...f, geowithry: { ...f.geowithry, coordinates: cleanedCoords } }
         : f
     ) ?? [],
   };
@@ -245,7 +245,7 @@ async function calibrateSingleCandidate(
   if (!route) return null;
 
   // ── Phase 2: snap calibrated waypoints to real road intersections ──
-  // This replaces the geometric (field/forest-landing) waypoints with
+  // This replaces the geowithric (field/forest-landing) waypoints with
   // actual road intersection nodes from OSM, maximising BRouter's routing
   // freedom and drastically reducing dead-end backtracking.
   let snappedWaypoints = waypoints;
@@ -318,7 +318,7 @@ export async function generateCorrectedRoutes(
     .sort((a, b) => Number(a.stats.hasBacktrack) - Number(b.stats.hasBacktrack));
 
   if (!valid.length) {
-    throw new Error('Kon geen geldige route genereren. Probeer een andere locatie of afstand.');
+    throw new Error('Kon none geldige route genereren. Probeer een andere locatie of afstand.');
   }
 
   return valid;

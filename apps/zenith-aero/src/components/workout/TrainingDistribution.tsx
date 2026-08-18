@@ -51,35 +51,35 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
 
     // Classificeer model
     let model = "Ongebalanceerd";
-    let desc = "Je trainingsverdeling past nog niet direct in een klassiek patroon. Dit is normaal als je net bent begonnen of zeer onregelmatig fietst.";
-    let tip = "Probeer je duurrideten bewuster in Zone 2 te houden (laag tempo) en je intensieve dagen echt hard te maken (intervallen).";
+    let desc = "Your training distribution does not yet fit a classic pattern. Normal when just starting out fietst.";
+    let tip = "Try keeping endurance rides consciously in Zone 2 and make hard days count.";
     let color = "#ffeaa7";
 
     if (pctLID >= 75 && pctMID <= 12 && pctHID >= 5) {
       model = "Gepolariseerd (Polarized)";
       color = "#34d399";
-      desc = "Klassieke 80/20 verdeling! Je doet het overgrote deel van je werk in de rustige duurzones (Zone 1-2) en spaart je energie om er echt vol voor te gaan op intensieve dagen.";
-      tip = "Dit is de meest efficiënte methode om je aerobe drempel te verhogen zonder oververmoeid te raken. Blijf zo trainen!";
+      desc = "Classic 80/20 distribution! You do most work in easy endurance zones (Zone 1-2). vol voor te gaan op intensieve dagen.";
+      tip = "Most efficient method to elevate your aerobic threshold without fatigue.";
     } else if (pctLID >= 60 && pctMID >= 15 && pctMID <= 30 && pctHID < pctMID) {
       model = "Piramide (Pyramidal)";
       color = "#cbd5e1";
-      desc = "Een solide piramidemodel. De basis bestaat uit rustige duurrideten, aangevuld met een redelijk aandeel tempowerk (Zone 3/4) en een klein aandeel echte sprints/intervallen.";
-      tip = "Ideaal voor het opbouwen van een all-round basisconditie en tempohardheid in het voorseizoen.";
+      desc = "Solid pyramid model. Base consists of endurance rides with tempo work.lein aandeel echte sprints/intervallen.";
+      tip = "Ideal for building all-round base fitness.";
     } else if (pctMID >= 35) {
       model = "Threshold / Sweet Spot Focus";
       color = "#fbbf24";
-      desc = "Je traint heel veel in de 'Sweet Spot' of drempelzones (Zone 3 en 4). Dit voelt zwaar en effectief, maar kan leiden tot stagnatie omdat je constant licht vermoeid bent.";
-      tip = "Probeer meer rideten echt rustig te rijden (Zone 2) om je vetverbranding op te bouwen, zodat je frisser bent voor gerichte intervallen.";
+      desc = "High volume in Sweet Spot/Threshold. Effective but can lead to plateau.dat je constant licht vermoeid bent.";
+      tip = "Probeer more rides echt rustig te rijden (Zone 2) om je vetverbranding op te bouwen, zodat je frisser bent voor gerichte intervallen.";
     } else if (pctLID >= 85 && pctHID < 3) {
       model = "Basis & Recovery";
       color = "#a29bfe";
-      desc = "Je focus ligt momenteel bijna volledig op rustige duurtrainingen en herstel. Uitstekend voor basisopbouw of na een zwaar wedstrijdblok.";
-      tip = "Voeg af en toe een intensieve intervaltraining toe om je VO2max en cardiovasculaire systeem te prikkelen.";
+      desc = "Focus is currently on endurance & recovery. Great for base building.ok.";
+      tip = "Add occasional high-intensity interval sessions to stimulate VO2max.";
     } else if (pctHID >= 25) {
       model = "Hoge Intensiteit (HIIT)";
       color = "#f87171";
-      desc = "Je traint extreem intensief! Meer dan een kwart van je tijd breng je door in het rood (Zone 5+). Dit is effectief op korte termijn, maar vergroot de kans op overtraining aanzienlijk.";
-      tip = "Las een herstelweek in en vervang minimaal de helft van de intensieve trainingen door rustige Zone 2 duurrideten.";
+      desc = "Extremely intensive training! More than 25% spent in Zone 5+.maar vergroot de kans op overtraining aanzienlijk.";
+      tip = "Schedule a deload week and replace half of intensive sessions with Zone 2 rides.";
     }
 
     const data = [
@@ -110,7 +110,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Upload rideten met hartslag- of vermogensdata om je trainingsdistributie te analyseren.
+          Upload rides with HR or power data to analyze training distribution.
         </p>
       </div>
     );
@@ -146,7 +146,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
               <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
             </PieChart>
           </ResponsiveContainer>
-          {/* Legenda in het midden */}
+          {/* Legend in center */}
           <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
             <span style={{ fontSize: 10, color: '#64748b', display: 'block', lineHeight: 1 }}>Verdeling</span>
           </div>

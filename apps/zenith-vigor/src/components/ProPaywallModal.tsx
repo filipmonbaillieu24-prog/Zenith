@@ -70,7 +70,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Camera size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Voortgangsfoto's & Visuele Vergelijker</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Upload photos (Front, Side, Back) and compare je fysieke transformatie direct side-by-side met een slider.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Upload photos (Front, Side, Back) and compare je fysieke transformatie direct side-by-side with een slider.</div>
             </div>
           </div>
 
@@ -78,7 +78,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Ruler size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Lichaamsomtrekken (Alle 8 Zones)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Track centimeters for Chest, Biceps, Thighs, Hips,chouders, Nek, Kuiten en Taille over de tijd.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Track centiwithers for Chest, Biceps, Thighs, Hips,chouders, Nek, Kuiten en Taille over de tijd.</div>
             </div>
           </div>
 

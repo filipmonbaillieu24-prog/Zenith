@@ -66,7 +66,7 @@ export function generateCoachAdvice(
       advice.push({
         category: 'training', prioridey: 2, icon: '💤', color: '#74b9ff',
         title: 'Lage trainingsbelasting deze week',
-        body:  `Je TSS is ${Math.round(weekTSS)} vs ${Math.round(prevWeekTSS)} vorige week. Als dit geen bewuste rust is, probeer een zone 2 ride van 60–90 minuten.`,
+        body:  `Je TSS is ${Math.round(weekTSS)} vs ${Math.round(prevWeekTSS)} vorige week. Als dit none bewuste rust is, probeer een zone 2 ride van 60–90 minuten.`,
         action: 'Plan een duurride van 60–90 min',
       });
     }
@@ -140,7 +140,7 @@ export function generateCoachAdvice(
     advice.push({
       category: 'training', prioridey: 2, icon: '📅', color: '#74b9ff',
       title: 'Lage trainingsfrequentie',
-      body:  `Je laatste ride was ${Math.floor(daysSinceLast)} dagen geleden. Zelfs een korte ride van 30 min houdt je basisconditie op peil.`,
+      body:  `Your last ride was ${Math.floor(daysSinceLast)} dagen geleden. Zelfs een korte ride van 30 min houdt je basisconditie op peil.`,
       action: 'Rijd today minstens 30 minuten',
     });
   }
@@ -151,7 +151,7 @@ export function generateCoachAdvice(
     advice.push({
       category: 'herstel', prioridey: 2, icon: '❤️‍🔥', color: '#ff7675',
       title: 'Hoge cardiac drift recent',
-      body:  `${highDrift.length} recente rideten met >8% cardiac drift. Dit wijst op accumulerende vermoeidheid, ondervulling of ziekte.`,
+      body:  `${highDrift.length} recente rideten with >8% cardiac drift. Dit wijst op accumulerende vermoeidheid, ondervulling of ziekte.`,
       action: 'Rustdag + goede hydratatie',
     });
   }
@@ -169,7 +169,7 @@ export function generateCoachAdvice(
       advice.push({
         category: 'doel', prioridey: 3, icon: '🎯', color: 'var(--color-accent,#39ff14)',
         title: `Goed niveau: ${wpkg.toFixed(2)} W/kg`,
-        body:  'Je bent op weg naar gevorderd niveau (3.0+ W/kg). Combineer lange duurrideten met 1–2 intervaltrainingen per week (sweet spot / threshold).',
+        body:  'Je bent op weg naar gevorderd niveau (3.0+ W/kg). Combineer lange duurrideten with 1–2 intervaltrainingen per week (sweet spot / threshold).',
       });
     } else {
       advice.push({
@@ -188,7 +188,7 @@ export function generateCoachAdvice(
       advice.push({
         category: 'training', prioridey: 3, icon: '🚴', color: '#fdcb6e',
         title: `Lage cadans: ${avgCad.toFixed(0)} rpm`,
-        body:  'Je gemiddelde cadans is onder 80 rpm. Hogere cadans (85–95 rpm) vermindert spierschade en verhoogt duurprestatie. Oefen bewust met een hogere cadans op makkelijke rideten.',
+        body:  'Je gemiddelde cadans is onder 80 rpm. Hogere cadans (85–95 rpm) vermindert spierschade en verhoogt duurprestatie. Oefen bewust with een hogere cadans op makkelijke rideten.',
         action: 'Oefen 85–95 rpm op je volgende ride',
       });
     }
@@ -209,7 +209,7 @@ export function generateCoachAdvice(
   // Check of de atleet recent zijn batterij diep heeft leeggereden (sprint/interval rideten)
   const powerRides = recent.filter(r => r.hasPower && r.bestEfforts);
   if (powerRides.length > 0) {
-    // Zoek naar rideten met zeer hoge 5s / 1 min vermogens in verhouding tot FTP
+    // Zoek naar rideten with zeer hoge 5s / 1 min vermogens in verhouding tot FTP
     const ftpVal = profile.ftp ?? 220;
     const deepDepletionRides = powerRides.filter(r => {
       const s5 = r.bestEfforts?.s5 ?? 0;
@@ -221,9 +221,9 @@ export function generateCoachAdvice(
     if (deepDepletionRides.length >= 2) {
       advice.push({
         category: 'progressie', prioridey: 3, icon: '🔋', color: '#39ff14',
-        title: 'Diepe anaerobe W\' uitputting gemeten',
+        title: 'Diepe anaerobe W\' uitputting gewithen',
         body: `In ${deepDepletionRides.length} van je recente rideten heb je je anaerobe tank ($W'$) diep aangesproken door explosieve inspanningen boven je drempel. Dit stimuleert de glycolytische capaciteit en je sprintcapaciteit.`,
-        action: 'Zorg voor minimaal 48u herstel na rideten met dergelijke explosieve prikkels'
+        action: 'Zorg voor minimaal 48u herstel na rideten with dergelijke explosieve prikkels'
       });
     }
   }
@@ -241,8 +241,8 @@ export function generateCoachAdvice(
     advice.push({
       category: 'doel', prioridey: 2, icon: '⚡', color: '#cbd5e1',
       title: 'Focus: Speed & Sprintvermogen',
-      body: 'Je richt je op explosiviteit en snelheid. Voeg deze week korte, maximale sprints toe aan je rideten met volledige rust tussendoor om je anaerobe capaciteit (W\') te boosten.',
-      action: 'Plan een sprinttraining: 5x15s maximaal met 4 min rust'
+      body: 'Je richt je op explosiviteit en snelheid. Voeg deze week korte, maximale sprints toe aan je rideten with volledige rust tussendoor om je anaerobe capaciteit (W\') te boosten.',
+      action: 'Plan een sprinttraining: 5x15s maximaal with 4 min rust'
     });
   } else if (goal === 'endurance') {
     advice.push({
@@ -269,7 +269,7 @@ export function generateCoachAdvice(
       advice.push({
         category: 'herstel', prioridey: 2, icon: '⚡', color: '#fdcb6e',
         title: `Hoge trainingsbelasting (TSB: ${Math.round(tsb)})`,
-        body: `Je Vorm staat op ${Math.round(tsb)} met een vermoeidheid (ATL) van ${Math.round(atl)}. Je bent in een opbouwfase — monitor hoe je je voelt en slaap voldoende.`,
+        body: `Je Vorm staat op ${Math.round(tsb)} with een vermoeidheid (ATL) van ${Math.round(atl)}. Je bent in een opbouwfase — monitor hoe je je voelt en slaap voldoende.`,
         action: 'Priorideeer 7–8u slaap, voldoende koolhydraten en hydratatie',
       });
     } else if (tsb > 10 && tsb < 25) {
@@ -284,7 +284,7 @@ export function generateCoachAdvice(
         category: 'training', prioridey: 2, icon: '😴', color: '#74b9ff',
         title: `Te veel rust (TSB: +${Math.round(tsb)})`,
         body: `TSB van +${Math.round(tsb)} is erg positief — je bent goed hersteld maar verliest stilaan trainingsprikkels. Fitheid (CTL ${Math.round(ctl)}) daalt bij langdurige inactiviteit.`,
-        action: 'Herneem geleidelijk met een endurance- of sweetspot-ride',
+        action: 'Herneem geleidelijk with een endurance- of sweetspot-ride',
       });
     }
 
@@ -293,7 +293,7 @@ export function generateCoachAdvice(
       advice.push({
         category: 'doel', prioridey: 3, icon: '📊', color: '#a29bfe',
         title: `Lage basisfitness (CTL: ${Math.round(ctl)})`,
-        body: `Je chronische trainingsbelasting (CTL ${Math.round(ctl)}) is laag. Verhoog geleidelijk je volume met 5–10% per week. Target: CTL 40+ voor competitief niveau.`,
+        body: `Je chronische trainingsbelasting (CTL ${Math.round(ctl)}) is laag. Verhoog geleidelijk je volume with 5–10% per week. Target: CTL 40+ voor competitief niveau.`,
         action: 'Voeg één extra duurride per week toe van 60–90 min in Zone 2',
       });
     } else if (ctl > 70) {

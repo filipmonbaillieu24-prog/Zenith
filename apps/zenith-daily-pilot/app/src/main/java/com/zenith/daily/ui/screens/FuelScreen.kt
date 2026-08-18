@@ -49,7 +49,7 @@ fun FuelScreen(
         it.name.contains(searchQuery, ignoreCase = true) || (it.brand?.contains(searchQuery, ignoreCase = true) == true)
     }
 
-    val mealCategories = listOf("Ontbijt", "Lunch", "Diner", "Snacks")
+    val mealCategories = listOf("Breakfast", "Lunch", "Dinner", "Snacks")
 
     Column(
         modifier = modifier
@@ -382,7 +382,7 @@ fun FuelScreen(
                         OutlinedTextField(
                             value = calsInput,
                             onValueChange = { calsInput = it },
-                            label = { Text("Calorieën*", color = ZenithSecondary) },
+                            label = { Text("Calories*", color = ZenithSecondary) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f)
                         )

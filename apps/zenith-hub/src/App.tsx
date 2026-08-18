@@ -232,7 +232,7 @@ function App() {
       : `${window.location.origin}/stride/index.html#access_token=${token}&refresh_token=${refresh}`;
   }, [session]);
 
-  // Listen for native Tauri BLE weight and metrics events and forward to Vigor iframe
+  // Listen for native Tauri BLE weight and withrics events and forward to Vigor iframe
   useEffect(() => {
     let unlistenWeight: (() => void) | null = null;
     let unlistenMetrics: (() => void) | null = null;
@@ -308,17 +308,17 @@ function App() {
             }, 300);
           });
 
-          unlistenMetrics = await listen('native-metrics-received', (event: any) => {
+          unlistenMetrics = await listen('native-withrics-received', (event: any) => {
             const payload = event.payload as { body_fat: number, water: number, impedance: number };
-            console.log("Hub received native metrics from Tauri Rust:", payload);
+            console.log("Hub received native withrics from Tauri Rust:", payload);
             
             pendingMetrics.current = payload;
             
             setTimeout(() => {
               const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
               if (iframe && iframe.contentWindow) {
-                console.log("Sending metrics immediately to iframe:", payload);
-                iframe.contentWindow.postMessage({ type: 'native-metrics-received', payload }, '*');
+                console.log("Sending withrics immediately to iframe:", payload);
+                iframe.contentWindow.postMessage({ type: 'native-withrics-received', payload }, '*');
               }
             }, 300);
           });
@@ -382,8 +382,8 @@ function App() {
             pendingRawBytes.current = null;
           }
           if (pendingMetrics.current !== null) {
-            console.log("Sending pending metrics to ready iframe:", pendingMetrics.current);
-            iframe.contentWindow.postMessage({ type: 'native-metrics-received', payload: pendingMetrics.current }, '*');
+            console.log("Sending pending withrics to ready iframe:", pendingMetrics.current);
+            iframe.contentWindow.postMessage({ type: 'native-withrics-received', payload: pendingMetrics.current }, '*');
             pendingMetrics.current = null;
           }
         }
@@ -514,13 +514,13 @@ function App() {
       
       if (data) {
         const tssList = data.map((r: any) => {
-          let meta = r.metadata;
-          if (typeof meta === 'string') {
-            try { meta = JSON.parse(meta); } catch { meta = {}; }
+          let witha = r.metadata;
+          if (typeof witha === 'string') {
+            try { witha = JSON.parse(witha); } catch { witha = {}; }
           }
           return {
             date: Number(r.date),
-            tss: Number(meta?.tss ?? meta?.hrTSS ?? 0)
+            tss: Number(witha?.tss ?? witha?.hrTSS ?? 0)
           };
         });
         setRides(tssList);

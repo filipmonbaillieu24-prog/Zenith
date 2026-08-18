@@ -48,11 +48,11 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     const name = profile.name ?? 'Atleet';
     const tsb = pmcStatus.latest.tsb;
     if (tsb < -20) {
-      return `Hallo ${name}. Je lichaam staat momenteel onder aanzienlijke stress (TSB: ${Math.round(tsb)}). Focus today op actief herstel of neem een volledige rustdag.`;
+      return `Hello ${name}. Your body is currently under substantial stress (TSB: ${Math.round(tsb)}). Focus today on active recovery or take een volledige rustdag.`;
     } else if (tsb > 5) {
-      return `Hallo ${name}. Je bent uitgerust en je vorm is uitstekend (TSB: +${Math.round(tsb)}). Today is een perfecte dag voor een intensieve intervaltraining of een lange duurride!`;
+      return `Hello ${name}. You are well rested and your form is excellent (TSB: +${Math.round(tsb)}). Today is a great day for an intensive intervaltraining of een lange duurride!`;
     } else {
-      return `Hallo ${name}. Je trainingsopbouw verloopt stabiel en gecontroleerd. Blijf je zones respecteren en volg de onderstaande adviezen om blessures te voorkomen.`;
+      return `Hello ${name}. Your training build is steady and controlled. Keep respecting your zones and follow guidance to blessures te voorkomen.`;
     }
   };
 
@@ -60,7 +60,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
     return (
       <div className="wd-section-card" style={{ padding: 24, textAlign: 'center', color: '#cbd5e1' }}>
         <Brain size={32} strokeWidth={1.5} style={{ color: '#cbd5e1', marginBottom: 12 }} />
-        <p style={{ margin: 0 }}>Upload minimaal 2 rideten met hartslag- of vermogensgegevens om gepersonaliseerd AI-trainingsadvies te genereren.</p>
+        <p style={{ margin: 0 }}>Upload at least 2 rides with HR or power data to generate personalized AI coaching.</p>
       </div>
     );
   }
@@ -103,7 +103,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
         target_hr_max: maxHR,
         target_cadence_min: b.zone === 1 ? 90 : b.zone === 5 ? 95 : 85,
         target_cadence_max: b.zone === 1 ? 100 : b.zone === 5 ? 105 : 95,
-        audio_notes: `Start met ${b.name}. Probeer je vermogen tussen ${minPower} en ${maxPower} Watt te houden.`,
+        audio_notes: `Start with ${b.name}. Try to keep your power between ${minPower} en ${maxPower} Watts.`,
         name: b.name,
         powerPct: b.powerPct,
         zone: b.zone,
@@ -143,11 +143,11 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
       };
       
       await savePlannedWorkout(workoutToSave);
-      setSaveSuccessMsg('✓ Training succesvol ingepland voor today!');
+      setSaveSuccessMsg('✓ Workout successfully scheduled for today!');
       setGeneratedWorkout(null);
     } catch (err) {
       console.error('Error saving geplande workout:', err);
-      setSaveSuccessMsg('✗ Kon training niet opslaan.');
+      setSaveSuccessMsg('✗ Could not save workout.');
     } finally {
       setIsSavingWorkout(false);
     }
@@ -198,7 +198,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           <Brain size={34} strokeWidth={1.5} className="wd-coach-brain-glow" />
         </div>
         <div className="wd-coach-hero-content">
-          <h3>Jouw AI Training Coach</h3>
+          <h3>Your AI Training Coach</h3>
           <p>{getGreetingMessage()}</p>
         </div>
       </div>
@@ -209,7 +209,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           <Sparkles size={16} style={{ color: '#cbd5e1', filter: 'drop-shadow(0 0 4px rgba(203, 213, 225, 0.5))' }} /> AI Dagtraining Generator
         </h3>
         <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px', lineHeight: 1.5 }}>
-          Genereer automatisch de optimale gestructureerde training voor today op basis van je actuele fysiologische vorm (TSB) en beschikbare tijd.
+          Automatically generate the optimal structured workout for today based on your current TSB and available time.
         </p>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
@@ -269,7 +269,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
           }}>
             {saveSuccessMsg} {saveSuccessMsg.startsWith('✓') && (
               <span style={{ display: 'block', fontSize: 10, fontWeight: 500, color: '#cbd5e1', marginTop: 4 }}>
-                Open de <strong>Route Planner</strong>-tab om een bijbehorende GPX-route met dynamische snelheidsdoelen te genereren!
+                Open the <strong>Route Planner</strong> tab to generate a matching GPX route with dynamic speed targets!
               </span>
             )}
           </div>
@@ -283,7 +283,7 @@ export const CoachPanel: React.FC<CoachPanelProps> = ({
                 <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#fff' }}>{generatedWorkout.title}</h4>
               </div>
               <div style={{ display: 'flex', gap: 10, fontSize: 11 }}>
-                <span>Duur: <strong style={{ color: '#cbd5e1' }}>{generatedWorkout.durationMinutes} min</strong></span>
+                <span>Duration: <strong style={{ color: '#cbd5e1' }}>{generatedWorkout.durationMinutes} min</strong></span>
                 <span style={{ color: '#64748b' }}>|</span>
                 <span>TSS: <strong style={{ color: '#ff7675' }}>{generatedWorkout.plannedTSS}</strong></span>
               </div>

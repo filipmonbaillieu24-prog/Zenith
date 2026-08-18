@@ -177,7 +177,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 ZENITH PRO FEATURE
               </div>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginTop: 2 }}>
-                Route Generator is vergrendeld
+                Route Generator is locked
               </div>
               <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
                 Click here to upgrade to Pro
@@ -416,7 +416,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Max elevation gain */}
           <div className="form-group">
             <div className="label-with-value">
-              <label>Max. hoogtemeters</label>
+              <label>Max. hoogtewithers</label>
               <span className="value-display">
                 {maxElevationGain === 0 ? 'No limit' : `${maxElevationGain} m`}
               </span>

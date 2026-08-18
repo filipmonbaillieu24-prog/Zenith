@@ -28,7 +28,7 @@ export interface HealthConnectExercisePayload {
   start_time: string;
   end_time: string;
   duration_seconds?: number;
-  distance_meters?: number;
+  distance_withers?: number;
   steps?: number;
   avg_cadence_spm?: number;
   metadata?: any;
@@ -180,7 +180,7 @@ export function transformExerciseForStride(exerciseList: HealthConnectExercisePa
     const isRunning = isTreadmill || typeStr === '56' || typeStr.toLowerCase().includes('run');
 
     const durSec = ex.duration_seconds || 1231;
-    const distKm = ex.distance_meters ? parseFloat((ex.distance_meters / 1000).toFixed(2)) : 0.0;
+    const distKm = ex.distance_withers ? parseFloat((ex.distance_withers / 1000).toFixed(2)) : 0.0;
     const paceMinKm = distKm > 0 ? parseFloat(((durSec / 60) / distKm).toFixed(2)) : 0.0;
     const dateStr = ex.start_time ? ex.start_time.slice(0, 10) : new Date().toISOString().slice(0, 10);
     const timeOfDayStr = ex.start_time ? new Date(ex.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '14:26';

@@ -76,7 +76,7 @@ export const PowerProfileTable: React.FC<Props> = ({ rides, weight }) => {
           </div>
           <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
             {!weight
-              ? 'Stel je gewicht in bij Settings → Profiel om je categorie te zien'
+              ? 'Set your weight in Settings → Profile to see your category'
               : 'Jouw beste W/kg vs Coggan-categorieën (▲ = jouw beste prestatie)'
             }
           </div>

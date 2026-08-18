@@ -14,13 +14,13 @@ export const RacePredictor: React.FC<RacePredictorProps> = ({ ftp, weight = 75, 
   const resolvedFTP = (ftp ?? (rides.length > 0 ? Math.max(...rides.map(r => r.eFTP ?? 0)) : 250)) || 250;
   const wkg = resolvedFTP / weight;
 
-  // Bepaal gemiddelde cardiac drift (aerobe decoupling) van de laatste 5 rideten met HR data
+  // Determine average cardiac drift from last 5 rides with HR data
   const hrRides = rides.filter(r => r.hasHR && r.decoupling != null);
   const avgDrift = hrRides.length > 0
     ? hrRides.slice(0, 5).reduce((s, r) => s + r.decoupling!, 0) / Math.min(5, hrRides.length)
     : 0;
 
-  // Drift straffactor: als drift hoog is (> 6%), vermoeit de renner sneller op lange afstanden
+  // Drift penalty factor: if drift is high (> 6%), athlete fatigues faster on long distances
   const driftPenalty = avgDrift > 6 ? 0.94 : 1.0;
 
   const distances = [
@@ -56,7 +56,7 @@ export const RacePredictor: React.FC<RacePredictorProps> = ({ ftp, weight = 75, 
     <div className="pp-predictor-card">
       <div className="pp-predictor-header">
         <h3 className="pp-predictor-title">🧭 Race Predictor & Tempovoorspeller</h3>
-        <span className="pp-predictor-subtitle">Schatting op basis van {resolvedFTP}W FTP ({wkg.toFixed(2)} W/kg)</span>
+        <span className="pp-predictor-subtitle">Estimate based on {resolvedFTP}W FTP ({wkg.toFixed(2)} W/kg)</span>
       </div>
 
       <div className="pp-predictions-grid">
@@ -81,7 +81,7 @@ export const RacePredictor: React.FC<RacePredictorProps> = ({ ftp, weight = 75, 
         <div className="pp-predictor-warning">
           <ShieldAlert size={14} className="pp-warning-icon" />
           <span>
-            <strong>Drift Penalty toegepast:</strong> Door een recente cardiac drift van {avgDrift.toFixed(1)}% op langere rideten, is de prognose voor 100k+ rideten conservatiever berekend. Werk aan je aerobe duurvermogen om je tijden te verbeteren!
+            <strong>Drift Penalty toegepast:</strong> Door een recente cardiac drift van {avgDrift.toFixed(1)}% on longer rides, is de prognose voor 100k+ rideten conservatiever berekend. Werk aan je aerobe duurvermogen om je tijden te verbeteren!
           </span>
         </div>
       )}

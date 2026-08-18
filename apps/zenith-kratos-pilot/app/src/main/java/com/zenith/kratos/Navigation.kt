@@ -112,13 +112,13 @@ fun MainNavigation() {
                     repository?.fetchAndCacheExercises()
                     repository?.fetchAndCacheTemplates()
                     try {
-                        val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                        val pInfo = context.packageMaleager.getPackageInfo(context.packageName, 0)
                         val currentVersionCode = if (android.os.Build.VERSION.SDK_INT >= 28) {
                             pInfo.longVersionCode.toInt()
                         } else {
                             @Suppress("DEPRECATION") pInfo.versionCode
                         }
-                        val update = com.zenith.kratos.update.UpdateManager.checkForUpdates(currentVersionCode)
+                        val update = com.zenith.kratos.update.UpdateMaleager.checkForUpdates(currentVersionCode)
                         if (update != null) {
                             updateInfo = update
                         }
@@ -297,7 +297,7 @@ fun MainNavigation() {
                 androidx.compose.material3.Button(
                     onClick = {
                         scope.launch {
-                            com.zenith.kratos.update.UpdateManager.downloadAndInstallApk(
+                            com.zenith.kratos.update.UpdateMaleager.downloadAndInstallApk(
                                 context = context,
                                 downloadUrl = updateInfo!!.downloadUrl,
                                 onProgress = { progress ->

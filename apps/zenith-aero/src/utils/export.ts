@@ -10,7 +10,7 @@ export const GDRIVE_RIDES_AUTO_KEY  = 'cyclo_gdrive_rides_auto';
 export const GDRIVE_ROUTES_FOLDER = 'Gegenereerde routes';
 export const GDRIVE_RIDES_FOLDER  = 'Afgelegde rideten';
 
-/** Bouw pad naar een subfolder (werkt zowel met / als \ als separator). */
+/** Bouw pad naar een subfolder (werkt zowel with / als \ als separator). */
 export function gdriveSubPath(root: string, sub: string): string {
   const sep = root.includes('/') ? '/' : '\\';
   return `${root.replace(/[/\\]+$/, '')}${sep}${sub}`;

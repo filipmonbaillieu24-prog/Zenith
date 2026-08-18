@@ -46,7 +46,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div>
           <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>🎯 Periodization</h2>
-          <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Stel een doeldatum in en de app berekent automatisch je trainingsfase.</p>
+          <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Set a target date and the app will automatically compute your training phases.</p>
         </div>
 
         {/* Event invoer */}
@@ -107,7 +107,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
           })}
         </div>
 
-        {/* Aanbevolen weekfocus — met gereden rideten */}
+        {/* Recommended weekly focus — with completed rides */}
         <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden' }}>
           <div style={{ padding: '8px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.7px', display: 'flex', gap: 6, alignItems: 'center' }}>
             <Star size={11} color={phase.color} /> Aanbevolen Weekfocus — {phase.label}
@@ -153,7 +153,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
           </div>
         </div>
 
-        {/* Fase-specifiek advies op basis van echte rideten */}
+        {/* Phase-specific guidance based on real rides */}
         <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
             <AlertCircle size={11} /> Gepersonaliseerd advies — {rides.length} rideten geanalyseerd
@@ -164,9 +164,9 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
               const weeksLeft = Math.max(1, Math.ceil(phaseInfo.daysToEvent / 7));
               const ctlTarget = Math.round(pmcData.ctl + (weeksLeft * 0.8));
               return [
-                { icon: '📈', text: `Bouw volume op met max. 5–10% per week. Jouw CTL-doel voor einde basisperiode: ~${ctlTarget} (nu: ${Math.round(pmcData.ctl)}).` },
-                { icon: '🚴', text: 'Minimaal 80% van je trainingen in Zone 2 (conversatietempo).' },
-                { icon: '⚡', text: `Huidige wekelijkse TSS: ~${Math.round(pmcData.atl * 7)}. Streef naar ${Math.round(pmcData.ctl * 7 * 0.9)} TSS/week.` },
+                { icon: '📈', text: `Build volume by max 5–10% per week. Your CTL target by end of base period: ~${ctlTarget} (nu: ${Math.round(pmcData.ctl)}).` },
+                { icon: '🚴', text: 'At least 80% of your rides in Zone 2 (conversational pace).' },
+                { icon: '⚡', text: `Current weekly TSS: ~${Math.round(pmcData.atl * 7)}. Target ${Math.round(pmcData.ctl * 7 * 0.9)} TSS/week.` },
               ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>);
             })()}
 
@@ -174,28 +174,28 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
               const weeksInBuild = Math.max(1, Math.min(9, Math.ceil(phaseInfo.daysToEvent / 7) - 3));
               const ctlBuildTarget = Math.round(pmcData.ctl + (weeksInBuild * 1.2));
               return [
-                { icon: '🏋️', text: 'Verhoog de intensiteit: meer sweet spot en drempeltraining.' },
-                { icon: '📊', text: `CTL-doel: ${ctlBuildTarget} voor de tapering (nu: ${Math.round(pmcData.ctl)}). Dat is +${Math.round(1.2)} CTL/week nodig.` },
-                { icon: '😴', text: `ATL nu: ${Math.round(pmcData.atl)}. Houd TSB boven -30 om overtraining te vermijden.` },
+                { icon: '🏋️', text: 'Increase intensity: more sweet spot and threshold workouts.' },
+                { icon: '📊', text: `CTL-doel: ${ctlBuildTarget} before tapering (nu: ${Math.round(pmcData.ctl)}). That requires +${Math.round(1.2)} CTL/week needed.` },
+                { icon: '😴', text: `ATL nu: ${Math.round(pmcData.atl)}. Keep TSB above -30 to prevent overtraining.` },
               ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>);
             })()}
 
             {phaseInfo.phase === 'peak' && [
-              { icon: '⬇️', text: `Verlaag volume met 40–50% (van ~${Math.round(pmcData.atl * 7)} naar ~${Math.round(pmcData.atl * 7 * 0.5)} TSS/week).` },
-              { icon: '⚡', text: 'Behoud 2–3 korte scherpe intervallen per week om je systeem scherp te houden.' },
-              { icon: '😴', text: `TSB nu: ${Math.round(pmcData.tsb)}. Streef naar TSB van +10 tot +20 op racedag.` },
+              { icon: '⬇️', text: `Reduce volume by 40–50% (van ~${Math.round(pmcData.atl * 7)} naar ~${Math.round(pmcData.atl * 7 * 0.5)} TSS/week).` },
+              { icon: '⚡', text: 'Maintain 2–3 short sharp intervals per week to keep your system primed.' },
+              { icon: '😴', text: `TSB nu: ${Math.round(pmcData.tsb)}. Target TSB van +10 tot +20 op racedag.` },
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}
 
             {phaseInfo.phase === 'race' && [
-              { icon: '🏁', text: 'Geen nieuwe trainingsprikkel meer. Recovery is je enige taak.' },
-              { icon: '🚴', text: 'Maximum 1 korte activeringsride (30–45 min) met 2–3 scherpe acceleraties.' },
-              { icon: '🍝', text: 'Carbohydraat-laden 2–3 dagen voor het event (7–10g/kg/dag).' },
+              { icon: '🏁', text: 'No new training stimulus. Recovery is your only task.' },
+              { icon: '🚴', text: 'Maximum 1 short opener ride (30–45 min) with 2–3 short surges.' },
+              { icon: '🍝', text: 'Carbo-load 2–3 days prior to event (7–10g/kg/dag).' },
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}
 
             {phaseInfo.phase === 'recovery' && [
-              { icon: '🎉', text: 'Gefeliciteerd! Neem minimaal 1–2 weken volledig rust.' },
-              { icon: '🚶', text: 'Wandelen, zwemmen of lichte yoga is oké. Geen geforceerde training.' },
-              { icon: '🎯', text: `Je hebt ${rides.length} rideten en een CTL van ${Math.round(pmcData.ctl)} opgebouwd. Stel een nieuw doel in!` },
+              { icon: '🎉', text: 'Congratulations! Take at least 1–2 weeks of complete recovery.' },
+              { icon: '🚶', text: 'Walking, swimming or light yoga is fine. No forced training.' },
+              { icon: '🎯', text: `You completed ${rides.length} rides and a CTL of ${Math.round(pmcData.ctl)} rebuilt. Set a new target!` },
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}
           </div>
         </div>

@@ -12,7 +12,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 
-object UpdateManager {
+object UpdateMaleager {
     private const val VERSION_URL = "https://raw.githubusercontent.com/filipmonbaillieu24-prog/Zenith/main/apk/version.json"
     private val client = OkHttpClient()
 

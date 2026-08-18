@@ -44,15 +44,15 @@ interface RoadNode {
 }
 
 /**
- * From way geometries returned by Overpass, build a map of road nodes
+ * From way geowithries returned by Overpass, build a map of road nodes
  * keyed by rounded coordinates. Nodes shared between multiple ways
  * (intersections) receive a higher count.
  */
-function extractNodes(ways: { geometry?: { lat: number; lon: number }[] }[]): Map<string, RoadNode> {
+function extractNodes(ways: { geowithry?: { lat: number; lon: number }[] }[]): Map<string, RoadNode> {
   const map = new Map<string, RoadNode>();
   for (const way of ways) {
-    if (!way.geometry?.length) continue;
-    for (const pt of way.geometry) {
+    if (!way.geowithry?.length) continue;
+    for (const pt of way.geowithry) {
       const key = `${pt.lat.toFixed(5)},${pt.lon.toFixed(5)}`; // ~1 m precision
       const existing = map.get(key);
       if (existing) {
@@ -76,7 +76,7 @@ function extractNodes(ways: { geometry?: { lat: number; lon: number }[] }[]): Ma
  *   distancePenalty   = dist / 100  (closer is better, in 100 m units)
  *
  * This strongly prefers intersections over dead-ends, while still
- * favouring nodes close to our geometric target waypoint.
+ * favouring nodes close to our geowithric target waypoint.
  */
 function selectBestNode(
   nodes: Map<string, RoadNode>,
@@ -104,7 +104,7 @@ function selectBestNode(
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Snaps a single geometric waypoint to the nearest suitable road intersection.
+ * Snaps a single geowithric waypoint to the nearest suitable road intersection.
  *
  * 1. Queries Overpass for all road ways of the appropriate type within `radiusM`
  * 2. Extracts all road nodes and counts how many ways each belongs to

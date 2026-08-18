@@ -418,7 +418,7 @@ export function App() {
                 <span className="duration-small">{formatDuration(run.durationSec)}</span>
               </div>
 
-              <div className="col-metrics">
+              <div className="col-withrics">
                 {run.avgHeartRate ? (
                   <span className="hr-tag">
                     <Heart size={12} style={{ color: '#ef4444' }} /> {run.avgHeartRate} bpm
@@ -463,7 +463,7 @@ export function App() {
             </div>
 
             <div className="stride-modal-body">
-              <div className="detail-metrics-grid">
+              <div className="detail-withrics-grid">
                 <div className="detail-stat-box">
                   <span className="stat-label">Distance</span>
                   <span className="stat-val">{selectedRunDetail.distanceKm > 0 ? `${selectedRunDetail.distanceKm} km` : '0 km (Indoor)'}</span>
@@ -579,10 +579,10 @@ export function App() {
 
               {selectedRunDetail.splits && selectedRunDetail.splits.length > 0 && (
                 <div className="detail-splits-section">
-                  <h4>Kilometer Splits Breakdown</h4>
+                  <h4>Kilowither Splits Breakdown</h4>
                   <div className="splits-table">
                     <div className="split-header">
-                      <span>Kilometer</span>
+                      <span>Kilowither</span>
                       <span>Pace min/km</span>
                       <span>Avg Heart Rate</span>
                       <span>Hoogte</span>

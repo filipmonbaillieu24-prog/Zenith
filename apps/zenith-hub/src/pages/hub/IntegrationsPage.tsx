@@ -84,7 +84,7 @@ export const IntegrationsPage: React.FC = () => {
         lastSync: 'Today (Live background worker)',
         autoSync: true,
         description: 'Official active health & workout sync pathway for Zenith using the Zenith Pulse app. Automatically syncs steps, heart rate, HRV, sleep, calories, weight, and workouts.',
-        features: ['Steps & Heart Rate Sync', 'HRV & Sleep Stages Ingestion', 'Biometric Weight Logging', 'Background WorkManager Sync']
+        features: ['Steps & Heart Rate Sync', 'HRV & Sleep Stages Ingestion', 'Biowithric Weight Logging', 'Background WorkMaleager Sync']
       },
       {
         id: 'strava',
@@ -221,7 +221,7 @@ export const IntegrationsPage: React.FC = () => {
     }));
   };
 
-  const handleManualSync = (service: IntegrationService) => {
+  const handleMaleualSync = (service: IntegrationService) => {
     if (service.id === 'health_connect') {
       handlePullFromPhone();
       return;
@@ -288,7 +288,7 @@ export const IntegrationsPage: React.FC = () => {
           <h1>Integrations & Platform Connectors</h1>
           <p>Connect your favorite fitness and health platforms like Google Health Connect (Wi-Fi Local HTTP Server), Strava, and Polar for automatic sync to Zenith.</p>
         </div>
-        <button className="integrations-global-sync-btn" onClick={() => services.filter(s => s.connected).forEach(handleManualSync)}>
+        <button className="integrations-global-sync-btn" onClick={() => services.filter(s => s.connected).forEach(handleMaleualSync)}>
           <RefreshCw size={16} className={isSyncing ? 'spin' : ''} />
           <span>Sync All Services</span>
         </button>
@@ -412,15 +412,15 @@ export const IntegrationsPage: React.FC = () => {
               </div>
 
               {service.connected && (
-                <div className="integration-meta-box">
-                  <div className="integration-meta-row">
-                    <span className="meta-label">
+                <div className="integration-witha-box">
+                  <div className="integration-witha-row">
+                    <span className="witha-label">
                       <Clock size={12} /> Last Sync:
                     </span>
-                    <span className="meta-value">{service.lastSync || 'Not synced yet'}</span>
+                    <span className="witha-value">{service.lastSync || 'Not synced yet'}</span>
                   </div>
-                  <div className="integration-meta-row">
-                    <span className="meta-label">
+                  <div className="integration-witha-row">
+                    <span className="witha-label">
                       <Sliders size={12} /> Auto-Sync:
                     </span>
                     <label className="toggle-switch">
@@ -440,7 +440,7 @@ export const IntegrationsPage: React.FC = () => {
                   <>
                     <button 
                       className="btn-sync" 
-                      onClick={() => handleManualSync(service)}
+                      onClick={() => handleMaleualSync(service)}
                       disabled={isCurrentSyncing}
                     >
                       <RefreshCw size={14} className={isCurrentSyncing ? 'spin' : ''} />
@@ -579,7 +579,7 @@ export const IntegrationsPage: React.FC = () => {
                       <li>Open the <strong>Onelapfit app</strong> on your phone or visit <a href="https://www.onelapfit.com" target="_blank" rel="noreferrer" style={{ color: '#38bdf8' }}>onelapfit.com</a>.</li>
                       <li>Go to <strong>Settings ➔ Third-Party Apps</strong>.</li>
                       <li>Select <strong>Strava</strong> and authorize the link.</li>
-                      <li>When your indoor workout finishes, Onelapfit syncs to Strava, and Zenith ingests it into <strong>Zenith Aero</strong> with all power metrics!</li>
+                      <li>When your indoor workout finishes, Onelapfit syncs to Strava, and Zenith ingests it into <strong>Zenith Aero</strong> with all power withrics!</li>
                     </ol>
                   </div>
 
@@ -595,7 +595,7 @@ export const IntegrationsPage: React.FC = () => {
               ) : (
                 <>
                   <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>
-                    Enter your Client Credentials for <strong>{selectedService.name}</strong>. Zenith will automatically fetch your workout data and recovery metrics.
+                    Enter your Client Credentials for <strong>{selectedService.name}</strong>. Zenith will automatically fetch your workout data and recovery withrics.
                   </p>
 
                   <div className="form-group">

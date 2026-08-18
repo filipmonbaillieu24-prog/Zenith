@@ -32,7 +32,7 @@ export const PowerHistogram: React.FC<PowerHistogramProps> = ({ points, ftp }) =
   return (
     <div className="rp-chart-card">
       <h3>📊 Powersverdeling</h3>
-      <p style={{ fontSize: 11, color: '#555', margin: '0 0 10px' }}>Tijd (%) op elk vermogensniveau</p>
+      <p style={{ fontSize: 11, color: '#555', margin: '0 0 10px' }}>Time (%) at each power level</p>
       <ResponsiveContainer width="100%" height={160}>
         <BarChart data={data} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />

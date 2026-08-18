@@ -56,7 +56,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
   if (gpsPts.length < 10) return null;
 
   // State to switch coloring mode interactively
-  const [metric, setMetric] = useState<'power' | 'hr' | 'speed' | 'wkg'>(() => {
+  const [withric, setMetric] = useState<'power' | 'hr' | 'speed' | 'wkg'>(() => {
     if (ride.hasPower && weight) return 'wkg';
     if (ride.hasPower) return 'power';
     if (ride.hasHR) return 'hr';
@@ -64,9 +64,9 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
   });
 
   const values = gpsPts.map(p => {
-    if (metric === 'wkg') return weight && p.power != null ? (p.power / weight) : 0;
-    if (metric === 'power') return p.power ?? 0;
-    if (metric === 'hr') return p.hr ?? 0;
+    if (withric === 'wkg') return weight && p.power != null ? (p.power / weight) : 0;
+    if (withric === 'power') return p.power ?? 0;
+    if (withric === 'hr') return p.hr ?? 0;
     return (p.speed ?? 0) * 3.6;
   });
 
@@ -88,8 +88,8 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
   for (let i = 0; i < gpsPts.length - segSize; i += segSize) {
     const seg     = gpsPts.slice(i, i + segSize + 1);
     const avgVal  = seg.reduce((s, p) => {
-      if (metric === 'wkg') return s + (weight && p.power != null ? (p.power / weight) : 0);
-      return s + (metric === 'power' ? (p.power ?? 0) : metric === 'hr' ? (p.hr ?? 0) : (p.speed ?? 0) * 3.6);
+      if (withric === 'wkg') return s + (weight && p.power != null ? (p.power / weight) : 0);
+      return s + (withric === 'power' ? (p.power ?? 0) : withric === 'hr' ? (p.hr ?? 0) : (p.speed ?? 0) * 3.6);
     }, 0) / seg.length;
     segments.push({
       positions: seg.map(p => [p.lat!, p.lng!]),
@@ -108,7 +108,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
 
   // ── Points of Interest (POI) zoeken op de route ────────────────────────────
   
-  // 1. Zoek max vermogen index (alleen gps-punten met power)
+  // 1. Zoek max vermogen index (alleen gps-punten with power)
   let maxPwrPt: RidePoint | null = null;
   if (ride.hasPower) {
     const validPwrPts = gpsPts.filter(p => p.power != null);
@@ -117,7 +117,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
     }
   }
 
-  // 2. Zoek max hartslag index (als er geen power is, of als extra POI)
+  // 2. Zoek max hartslag index (als er none power is, of als extra POI)
   let maxHRPt: RidePoint | null = null;
   if (ride.hasHR) {
     const validHRPts = gpsPts.filter(p => p.hr != null);
@@ -151,15 +151,15 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
           <span style={{ fontSize:10, fontWeight:700, color:'#aaa', textTransform:'uppercase', marginBottom:2 }}>Kaartkleuring</span>
           <div style={{ display:'flex', gap:4 }}>
             {ride.hasPower && weight && (
-              <button className={`wd-sort-btn ${metric === 'wkg' ? 'wd-sort-btn--active' : ''}`} style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setMetric('wkg')}>W/kg</button>
+              <button className={`wd-sort-btn ${withric === 'wkg' ? 'wd-sort-btn--active' : ''}`} style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setMetric('wkg')}>W/kg</button>
             )}
             {ride.hasPower && (
-              <button className={`wd-sort-btn ${metric === 'power' ? 'wd-sort-btn--active' : ''}`} style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setMetric('power')}>Watt</button>
+              <button className={`wd-sort-btn ${withric === 'power' ? 'wd-sort-btn--active' : ''}`} style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setMetric('power')}>Watt</button>
             )}
             {ride.hasHR && (
-              <button className={`wd-sort-btn ${metric === 'hr' ? 'wd-sort-btn--active' : ''}`} style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setMetric('hr')}>HR</button>
+              <button className={`wd-sort-btn ${withric === 'hr' ? 'wd-sort-btn--active' : ''}`} style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setMetric('hr')}>HR</button>
             )}
-            <button className={`wd-sort-btn ${metric === 'speed' ? 'wd-sort-btn--active' : ''}`} style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setMetric('speed')}>km/h</button>
+            <button className={`wd-sort-btn ${withric === 'speed' ? 'wd-sort-btn--active' : ''}`} style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setMetric('speed')}>km/h</button>
           </div>
         </div>
         

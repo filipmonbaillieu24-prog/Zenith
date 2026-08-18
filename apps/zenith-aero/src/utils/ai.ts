@@ -41,7 +41,7 @@ export async function sendAIChat(
 
   const systemMessage: AIChatMessage = {
     role: 'system',
-    content: `${systemContext}\nJe bent een professionele wielercoach genaamd Zenith AI Coach. Geef korte, duidelijke en wetenschappelijk onderbouwde antwoorden in het Nederlands. Gebruik geen emojis in je antwoord.`,
+    content: `${systemContext}\nJe bent een professionele wielercoach genaamd Zenith AI Coach. Geef korte, duidelijke en wetenschappelijk onderbouwde antwoorden in het Nederlands. Gebruik none emojis in je antwoord.`,
   };
 
   const fullMessages = [systemMessage, ...messages];

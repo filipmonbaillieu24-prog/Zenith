@@ -1,6 +1,6 @@
 /**
  * Zenith Sleep & Recovery Engine (ZSE v1.0)
- * Advanced ML & Biometric Sleep Analysis for Zenith Vigor & Zenith Hub
+ * Advanced ML & Biowithric Sleep Analysis for Zenith Vigor & Zenith Hub
  */
 
 export interface SleepLogItem {
@@ -26,7 +26,7 @@ export interface SleepAnalysisResult {
     remSleepScore: number; // Max 25
     efficiencyScore: number; // Max 15
   };
-  metrics: {
+  withrics: {
     totalHours: number;
     totalMins: number;
     deepMins: number;
@@ -59,7 +59,7 @@ export function calculateZenithSleepScore(
       rating: 'Poor',
       ratingColor: '#ef4444',
       breakdown: { durationScore: 0, deepSleepScore: 0, remSleepScore: 0, efficiencyScore: 0 },
-      metrics: {
+      withrics: {
         totalHours: 0, totalMins: 0, deepMins: 0, remMins: 0, lightMins: 0, awakeMins: 0,
         deepPct: 0, remPct: 0, lightPct: 0, awakePct: 0, efficiencyPct: 0
       },
@@ -209,7 +209,7 @@ export function calculateZenithSleepScore(
       remSleepScore,
       efficiencyScore
     },
-    metrics: {
+    withrics: {
       totalHours,
       totalMins: durationMins,
       deepMins,

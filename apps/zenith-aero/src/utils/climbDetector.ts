@@ -12,8 +12,8 @@ export interface Climb {
 }
 
 /**
- * Detecteert beklimmingen in een lijst met ridepunten.
- * Een klim is een aaneengesloten segment van stijging met minimale lengte en percentage.
+ * Detecteert beklimmingen in een lijst with ridepunten.
+ * Een klim is een aaneengesloten segment van stijging with minimale lengte en percentage.
  */
 export function detectClimbs(points: RidePoint[]): Climb[] {
   if (points.length < 5) return [];

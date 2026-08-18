@@ -83,7 +83,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
 
     let type = "All-rounder";
     let icon = "🚴";
-    let desc = "Je hebt een gebalanceerd profiel. Je bent veelzijdig inzetbaar en kunt zowel op het vlakke als in korte heuvels goed uit de voeten.";
+    let desc = "You completed een gebalanceerd profiel. Je bent veelzijdig inzetbaar en kunt zowel op het vlakke als in korte heuvels goed uit de voeten.";
     let strength = "Veelzijdigheid en aanpassingsvermogen.";
     let weaknessTip = "Focus op drempeltraining (FTP) om je algehele motor groter te maken, of sprintwerk om een echt wapen te ontwikkelen.";
 
@@ -92,7 +92,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
     if (maxIdx === sprintIdx && sprintIdx > ftpIdx + 15) {
       type = "Sprinter";
       icon = "⚡";
-      desc = "Jouw fysiologie is gebouwd op pure snelheid en explosiviteit. Je beschikt over een uitstekende spiermassa met snelle spiervezels.";
+      desc = "Jouw fysiologie is gebouwd op pure snelheid en explosiviteit. Je beschikt over een uitstekende spiermassa with snelle spiervezels.";
       strength = "Explosieve eindsprint en korte demarrages.";
       weaknessTip = "Rijd langere rideten op een rustig tempo om je aerobe motor te vergroten, zodat je fris aan de eindsprint begint.";
     } else if (maxIdx === anaerobicIdx && anaerobicIdx > ftpIdx + 10) {
@@ -100,11 +100,11 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
       icon = "⛰️";
       desc = "Korte, steile hellingen zijn jouw absolute favoriet. Je kunt extreem diep gaan in het anaerobe gebied (1 tot 2 minuten voluit).";
       strength = "Demarrages op heuvels en korte, intensieve inspanningen.";
-      weaknessTip = "Train je vetverbranding met rustige duurrideten om je herstel tussen opeenvolgende heuvels te versnellen.";
+      weaknessTip = "Train je vetverbranding with rustige duurrideten om je herstel tussen opeenvolgende heuvels te versnellen.";
     } else if (maxIdx === vo2maxIdx && vo2maxIdx > sprintIdx + 10) {
       type = "Klimmer";
       icon = "🧗";
-      desc = "Je hebt een uitstekende verhouding tussen je VO2max en je gewicht. Je blinkt uit zodra de weg langere tijd omhoog loopt.";
+      desc = "You completed een uitstekende verhouding tussen je VO2max en je gewicht. Je blinkt uit zodra de weg langere tijd omhoog loopt.";
       strength = "Langere beklimmingen en opeenvolgende tempoversnellingen.";
       weaknessTip = "Doe krachttraining op de fiets (lage cadans, hoog vermogen) om meer spierkracht te ontwikkelen voor vlakkere stukken.";
     } else if (maxIdx === ftpIdx && ftpIdx > sprintIdx + 10) {
@@ -138,7 +138,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
   if (!profile) {
     return (
       <div className="pp-pheno-card">
-        <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center' }}>Upload rideten met vermogen om je fenotype te berekenen.</p>
+        <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center' }}>Upload rides with power wither data to calculate your phenotype.</p>
       </div>
     );
   }
@@ -147,7 +147,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
     <div className="pp-pheno-card">
       <div className="pp-pheno-header">
         <h3 className="pp-pheno-title">🧬 Fysiologische Profilering (Fenotype)</h3>
-        <span className="pp-pheno-subtitle">Classificatie op basis van je all-time vermogensprofiel ({gender === 'female' ? 'Vrouw' : 'Man'})</span>
+        <span className="pp-pheno-subtitle">Classification based on your all-time power profile ({gender === 'female' ? 'Female' : 'Male'})</span>
       </div>
 
       <div className="pp-pheno-badge-row">
@@ -171,7 +171,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
               <span className="pp-pheno-score-val">{s.val} <small style={{ fontSize: 9, color: '#64748b' }}>{s.unit}</small></span>
             </div>
             
-            {/* Coggan segmenten balk met marker */}
+            {/* Coggan segmenten balk with marker */}
             <div className="pp-pheno-bar-container" style={{ height: 12, background: 'transparent', overflow: 'visible', position: 'relative', marginTop: 4 }}>
               {/* Gekleurde segmenten */}
               <div style={{ display: 'flex', width: '100%', height: 6, borderRadius: 3, overflow: 'hidden', opacity: 0.18 }}>
@@ -210,7 +210,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
           <p className="pp-insight-val">{profile.strength}</p>
         </div>
         <div className="pp-insight-block" style={{ marginTop: 8 }}>
-          <span className="pp-insight-lbl" style={{ color: '#fdcb6e' }}>🎯 Coach Tip voor zwakke punten:</span>
+          <span className="pp-insight-lbl" style={{ color: '#fdcb6e' }}>🎯 Coach Tip for Weaknesses:</span>
           <p className="pp-insight-val">{profile.weaknessTip}</p>
         </div>
       </div>

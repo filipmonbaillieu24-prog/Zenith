@@ -242,7 +242,7 @@ const WorkoutDashboard: React.FC<Props> = ({
         <div className="wd-empty-icon"><Bike size={52} color="#cbd5e1" strokeWidth={1.5} /></div>
         <h2>No rideten</h2>
         <p style={{ marginBottom: 16, color: '#94a3b8', fontSize: 13 }}>
-          Importeer een FIT-, GPX- of TCX-bestand via de knop <strong style={{ color: '#fff' }}>Import Ride</strong> in de menubalk hierboven om je activiteitengeschiedenis te laden.
+          Import a FIT, GPX or TCX file via the button <strong style={{ color: '#fff' }}>Import Ride</strong> in the header bar above to view your activitytiviteitengeschiedenis te laden.
         </p>
       </div>
     );
@@ -253,7 +253,7 @@ const WorkoutDashboard: React.FC<Props> = ({
         const getLatestRideAISummary = (r: RideSummaryWithBests) => {
           const isZwaar = (r.tss ?? r.hrTSS ?? 0) > 150;
           const labelStr = r.label ? `een ${r.label.toLowerCase()}` : 'een fietstraining';
-          return `Je laatste ride was ${labelStr} van ${r.distance.toFixed(0)} km met ${r.elevGain}m hoogtemeters. ${isZwaar ? 'Dit was een zware belasting voor je lichaam - zorg voor voldoende herstel!' : 'Dit was een uitstekende actieve training.'}`;
+          return `Your last ride was ${labelStr} van ${r.distance.toFixed(0)} km with ${r.elevGain}m hoogtewithers. ${isZwaar ? 'This was a heavy workload.sting voor je lichaam - zorg voor voldoende herstel!' : 'Dit was een uitstekende actieve training.'}`;
         };
         return (
           <div className="wd-main-grid animate-slide-up">
@@ -280,17 +280,17 @@ const WorkoutDashboard: React.FC<Props> = ({
                 <span className="wd-dashboard-card__value">{totalElev.toFixed(0)} m</span>
               </div>
               <div className="wd-dashboard-card">
-                <span className="wd-dashboard-card__label">Calorieën</span>
+                <span className="wd-dashboard-card__label">Calories</span>
                 <span className="wd-dashboard-card__value">{totalCal > 0 ? `${totalCal.toLocaleString()} kcal` : '--'}</span>
               </div>
             </div>
 
-            {/* 2. Laatste Ride Details */}
+            {/* 2. Latest Ride Details */}
             <div className="wd-dashboard-row" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
-              {/* Laatste ride paneel */}
+              {/* Latest ride panel */}
               <div className="wd-section-card" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">🏆 Laatste Ride Details</span>
+                  <span className="wd-section-card__title">🏆 Latest Ride Details</span>
                   <span style={{ fontSize: 11, color: '#64748b' }}>{fmtShortDate(latestRide.date)}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 20, flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -395,8 +395,8 @@ const WorkoutDashboard: React.FC<Props> = ({
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <p style={{ fontSize: 10, color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>
-                    Efficiëntiefactor (EF) is de verhouding tussen genormaliseerd vermogen en gemiddelde hartslag.
-                    Stijgende EF geeft een verbeterde aerobe conditie aan.
+                    Efficiency Factor (EF) is the ratio of normalized power to average heart rate.
+                    Rising EF indicates improved aerobic fitness.
                   </p>
                   {efData.length < 3 ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, fontSize: 11, color: '#555' }}>Niet genoeg hartslag/vermogensdata</div>
@@ -583,7 +583,7 @@ const WorkoutDashboard: React.FC<Props> = ({
           borderRadius: 16
         }}>
           <span style={{ fontSize: 14, fontWeight: 800, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-            Sleep bestanden hierheen om te importeren (FIT / GPX)
+            Drag files here to import (FIT / GPX)
           </span>
         </div>
       )}

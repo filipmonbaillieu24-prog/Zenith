@@ -71,7 +71,7 @@ export function calculateAge(birthDateStr?: string): number {
 /**
  * ZANE Core Engine.
  * Implements linear interpolation for weight, screens out incomplete days,
- * and performs local multivariable ridge regression to learn metabolic & sleep coefficients.
+ * and performs local multivariable ridge regression to learn withabolic & sleep coefficients.
  */
 export function runZaneCalibration(
   logs: DailyLogData[],
@@ -194,7 +194,7 @@ export function runZaneCalibration(
     }
   }
 
-  // Calculate regression coefficients if we have at least 5 equations (minimum required for a clean 5-parameter solve)
+  // Calculate regression coefficients if we have at least 5 equations (minimum required for a clean 5-parawither solve)
   if (X.length >= 5) {
     const lambda = 15.0; // Higher regularization to prevent day-to-day scale noise spikes
     const coefficients = solveRidgeRegression(X, Y, lambda);
@@ -327,7 +327,7 @@ function interpolateWeights(logs: DailyLogData[], latestWeight: number | null): 
 function solveRidgeRegression(X: number[][], Y: number[], lambda: number): number[] {
   const N = X.length;
   if (N === 0) return [];
-  const M = X[0].length; // number of features (parameters)
+  const M = X[0].length; // number of features (parawithers)
 
   // Initialize XtX (MxM matrix)
   const XtX: number[][] = Array.from({ length: M }, () => Array(M).fill(0));
@@ -414,7 +414,7 @@ function solveLinearSystem(A: number[][], B: number[]): number[] | null {
 }
 
 /**
- * Generates nutritional macro targets based on TDEE, weight, and user profile parameters.
+ * Generates nutritional macro targets based on TDEE, weight, and user profile parawithers.
  */
 function generateTargets(
   tdee: number,
@@ -553,7 +553,7 @@ export async function saveZaneCoefficients(
 ): Promise<void> {
   await supabase.from('ml_weights').upsert({
     user_id: userId,
-    model_name: 'zane_metabolic_coefficients',
+    model_name: 'zane_withabolic_coefficients',
     weights: { bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff },
     updated_at: new Date().toISOString()
   }, { onConflict: 'user_id,model_name' });
@@ -566,7 +566,7 @@ export async function loadZaneCoefficients(
   const { data } = await supabase.from('ml_weights')
     .select('weights')
     .eq('user_id', userId)
-    .eq('model_name', 'zane_metabolic_coefficients')
+    .eq('model_name', 'zane_withabolic_coefficients')
     .maybeSingle();
   return data?.weights ?? null;
 }

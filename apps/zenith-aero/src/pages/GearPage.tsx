@@ -14,7 +14,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
   const [gears, setGears] = useState<Gear[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // States voor fiets toevoegen
+  // States for adding bike
   const [showAddGear, setShowAddGear] = useState(false);
   const [gearName, setGearName] = useState('');
   const [gearType, setGearType] = useState<'road' | 'gravel' | 'mtb' | 'other'>('road');
@@ -22,7 +22,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
   const [gearModel, setGearModel] = useState('');
   const [gearWeight, setGearWeight] = useState('');
 
-  // States voor custom onderdeel toevoegen per fiets
+  // States for adding custom component per bike
   const [activeGearForAddComp, setActiveGearForAddComp] = useState<string | null>(null);
   const [compName, setCompName] = useState('');
   const [compMaxDist, setCompMaxDist] = useState('3000');
@@ -92,14 +92,14 @@ export const GearPage: React.FC<GearPageProps> = () => {
           name: 'Chain',
           distance: 0,
           maxDistance: 3000,
-          installedAt: 0  // 0 = telt alle rideten mee vanaf het begin
+          installedAt: 0  // 0 = counts all rides from the start
         },
         {
           id: Math.random().toString(36).substring(2, 9),
           name: 'Tires',
           distance: 0,
           maxDistance: 5000,
-          installedAt: 0  // 0 = telt alle rideten mee vanaf het begin
+          installedAt: 0  // 0 = counts all rides from the start
         }
       ]
     };
@@ -121,7 +121,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
     }
   };
 
-  // Custom component toevoegen aan fiets
+  // Add custom component to bike
   const handleAddComponent = async (gearId: string) => {
     if (!compName.trim()) return;
     const gear = gears.find(g => g.id === gearId);
@@ -132,7 +132,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
       name: compName,
       distance: 0,
       maxDistance: parseInt(compMaxDist) || 3000,
-      installedAt: 0  // 0 = telt alle rideten mee vanaf fiets-aanmaak
+      installedAt: 0  // 0 = counts all rides from bike creation
     };
 
     const updatedGear = {
@@ -147,13 +147,13 @@ export const GearPage: React.FC<GearPageProps> = () => {
     loadData();
   };
 
-  // Component resetten — timestamp op 0 zetten zodat alle rideten meetellen
+  // Reset component — set timestamp to 0 so all rides count
   const handleSyncComponentToAllRides = async (gearId: string, compId: string) => {
     const gear = gears.find(g => g.id === gearId);
     if (!gear) return;
     const updatedComponents = gear.components.map(c => {
       if (c.id === compId) {
-        return { ...c, installedAt: 0 }; // 0 = tel alle rideten van deze fiets mee
+        return { ...c, installedAt: 0 }; // 0 = count all rides of this bike
       }
       return c;
     });
@@ -162,14 +162,14 @@ export const GearPage: React.FC<GearPageProps> = () => {
     loadData();
   };
 
-  // Component kilometerstand resetten (vervangen)
+  // Component kilowitherstand resetten (vervangen)
   const handleResetComponent = async (gearId: string, compId: string) => {
     const gear = gears.find(g => g.id === gearId);
     if (!gear) return;
     const comp = gear.components.find(c => c.id === compId);
     if (!comp) return;
 
-    if (confirm(`Are you sure you want to de kilometerstand van ${comp.name} wilt resetten? (Dit archiveert de huidige stand in de geschiedenis)`)) {
+    if (confirm(`Are you sure you want to reset the mileage of ${comp.name} wilt reset? (This archives the current distance in history)`)) {
       const updatedComponents = gear.components.map(c => {
         if (c.id === compId) {
           const history = c.history ?? [];
@@ -189,7 +189,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
     }
   };
 
-  // Sync alle componenten van een fiets naar alle rideten (installedAt = 0)
+  // Sync all components of a bike to all rides (installedAt = 0)
   const handleSyncAllComponents = async (gearId: string) => {
     const gear = gears.find(g => g.id === gearId);
     if (!gear) return;
@@ -218,7 +218,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
           </button>
         </div>
 
-        {/* Formulier fiets toevoegen */}
+        {/* Add bike form */}
         {showAddGear && (
           <form onSubmit={handleAddGear} className="gp-bike-form animate-slide-up">
             <h3>Nieuwe Fiets Add</h3>
@@ -279,9 +279,9 @@ export const GearPage: React.FC<GearPageProps> = () => {
                       className="gp-comp-reset-btn"
                       style={{ background: 'rgba(203, 213, 225,0.07)', borderColor: 'rgba(203, 213, 225,0.25)', color: '#cbd5e1', fontSize: 10 }}
                       onClick={() => handleSyncAllComponents(g.id)}
-                      title="Synchroniseer alle onderdelen met alle rideten van deze fiets"
+                      title="Synchronize all components with all rides of this bike"
                     >
-                      🔄 Sync alle km
+                      🔄 Sync all km
                     </button>
                   )}
                   <button className="gp-delete-btn" onClick={() => handleDeleteGear(g.id)} title="Fiets verwijderen">
@@ -299,7 +299,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                   </button>
                 </div>
 
-                {/* Info banner: slijtage vs totaal km */}
+                {/* Info banner: wear vs total km */}
                 {g.components.some(c => c.installedAt > 0 && Math.abs(c.distance - g.distance) > 5) && (
                   <div style={{
                     display: 'flex', alignItems: 'flex-start', gap: 8,
@@ -308,13 +308,13 @@ export const GearPage: React.FC<GearPageProps> = () => {
                   }}>
                     <span style={{ flexShrink: 0 }}>⚠️</span>
                     <span style={{ color: '#fdcb6e', lineHeight: 1.4 }}>
-                      <strong>Slijtage km wijkt af van fiets-totaal.</strong> Dit komt doordat de installatiedatum van een onderdeel
-                      later is dan de eerste ride. Klik op <em>Sync alle km</em> om alle rideten mee te tellen.
+                      <strong>Component mileage differs from total bike distance.</strong> This occurs when component installation date is
+                      later than the first ride. Click <em>Sync all km</em> to include all rides.
                     </span>
                   </div>
                 )}
 
-                {/* Inline formulier onderdeel toevoegen */}
+                {/* Inline add component form */}
                 {activeGearForAddComp === g.id && (
                   <div className="gp-add-comp-form animate-slide-up">
                     <input type="text" placeholder="Onderdeel (bijv. Cassette, Chain)" value={compName} onChange={e => setCompName(e.target.value)} required />
@@ -339,16 +339,16 @@ export const GearPage: React.FC<GearPageProps> = () => {
                                   className="gp-comp-reset-btn"
                                   style={{ background: 'rgba(203, 213, 225,0.06)', borderColor: 'rgba(203, 213, 225,0.2)', color: '#cbd5e1' }}
                                   onClick={() => handleSyncComponentToAllRides(g.id, c.id)}
-                                  title="Synchroniseer met alle rideten (reset installatiedatum naar begin)"
+                                  title="Synchronize with all rides (reset installation date to start)"
                                 >
-                                  🔄 Sync alle km
+                                  🔄 Sync all km
                                 </button>
                               )}
                               <button
                                 type="button"
                                 className="gp-comp-reset-btn"
                                 onClick={() => handleResetComponent(g.id, c.id)}
-                                title="Onderdeel vervangen (kilometerstand resetten)"
+                                title="Onderdeel vervangen (kilowitherstand resetten)"
                               >
                                 🔧 Vervang
                               </button>

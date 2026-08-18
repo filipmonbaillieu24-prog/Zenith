@@ -2,15 +2,15 @@ package com.zenith.kratos
 
 import android.app.Notification
 import android.app.NotificationChannel
-import android.app.NotificationManager
+import android.app.NotificationMaleager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
-import android.media.AudioManager
-import android.media.RingtoneManager
+import android.media.AudioMaleager
+import android.media.RingtoneMaleager
 import android.media.ToneGenerator
 import android.os.Build
 import android.os.Handler
@@ -70,8 +70,8 @@ class RestTimerService : Service() {
             override fun run() {
                 if (remainingSeconds > 0) {
                     remainingSeconds--
-                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    notificationManager.notify(NOTIFICATION_ID, buildNotification(remainingSeconds))
+                    val notificationMaleager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationMaleager
+                    notificationMaleager.notify(NOTIFICATION_ID, buildNotification(remainingSeconds))
                     
                     val updateIntent = Intent("com.zenith.kratos.TIMER_UPDATE")
                     updateIntent.putExtra("remaining", remainingSeconds)
@@ -95,9 +95,9 @@ class RestTimerService : Service() {
         
         // Vibrate and Play Sound in Background
         if (!isMuted) {
-            val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val audioMaleager = getSystemService(Context.AUDIO_SERVICE) as AudioMaleager
             var focusRequest: AudioFocusRequest? = null
-            val focusChangeListener = AudioManager.OnAudioFocusChangeListener { }
+            val focusChangeListener = AudioMaleager.OnAudioFocusChangeListener { }
 
             // 1. Request Audio Focus on the Media/Music stream
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -105,32 +105,32 @@ class RestTimerService : Service() {
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build()
-                focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                focusRequest = AudioFocusRequest.Builder(AudioMaleager.AUDIOFOCUS_GAIN_TRANSIENT)
                     .setAudioAttributes(audioAttributes)
                     .setAcceptsDelayedFocusGain(false)
                     .setOnAudioFocusChangeListener(focusChangeListener)
                     .build()
-                audioManager.requestAudioFocus(focusRequest)
+                audioMaleager.requestAudioFocus(focusRequest)
             } else {
                 @Suppress("DEPRECATION")
-                audioManager.requestAudioFocus(
+                audioMaleager.requestAudioFocus(
                     focusChangeListener,
-                    AudioManager.STREAM_MUSIC,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+                    AudioMaleager.STREAM_MUSIC,
+                    AudioMaleager.AUDIOFOCUS_GAIN_TRANSIENT
                 )
             }
 
             // 2. Play sound via MediaPlayer on STREAM_MUSIC (to guarantee headphones/speaker output)
             var mediaPlayer: android.media.MediaPlayer? = null
             try {
-                val alarmUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+                val alarmUri = RingtoneMaleager.getDefaultUri(RingtoneMaleager.TYPE_NOTIFICATION)
+                    ?: RingtoneMaleager.getDefaultUri(RingtoneMaleager.TYPE_ALARM)
+                    ?: RingtoneMaleager.getDefaultUri(RingtoneMaleager.TYPE_RINGTONE)
 
                 if (alarmUri != null) {
                     mediaPlayer = android.media.MediaPlayer().apply {
                         setDataSource(applicationContext, alarmUri)
-                        setAudioStreamType(AudioManager.STREAM_MUSIC)
+                        setAudioStreamType(AudioMaleager.STREAM_MUSIC)
                         prepare()
                         start()
                     }
@@ -142,7 +142,7 @@ class RestTimerService : Service() {
             // 3. Fallback: play universal ToneGenerator beep if MediaPlayer failed
             if (mediaPlayer == null) {
                 try {
-                    val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+                    val toneGen = ToneGenerator(AudioMaleager.STREAM_MUSIC, 100)
                     toneGen.startTone(ToneGenerator.TONE_PROP_BEEP, 300)
                     Handler(Looper.getMainLooper()).postDelayed({
                         try {
@@ -169,10 +169,10 @@ class RestTimerService : Service() {
                 
                 // Abandon Audio Focus
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && focusRequest != null) {
-                    audioManager.abandonAudioFocusRequest(focusRequest)
+                    audioMaleager.abandonAudioFocusRequest(focusRequest)
                 } else {
                     @Suppress("DEPRECATION")
-                    audioManager.abandonAudioFocus(focusChangeListener)
+                    audioMaleager.abandonAudioFocus(focusChangeListener)
                 }
             }, 2500)
         }
@@ -242,13 +242,13 @@ class RestTimerService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = "Rust Timer"
             val descriptionText = "Toont de resterende rusttijd tussen sets"
-            val importance = NotificationManager.IMPORTANCE_LOW
+            val importance = NotificationMaleager.IMPORTANCE_LOW
             val channel = NotificationChannel(CHANNEL_ID, name, importance).apply {
                 description = descriptionText
                 setShowBadge(false)
             }
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+            val notificationMaleager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationMaleager
+            notificationMaleager.createNotificationChannel(channel)
         }
     }
 

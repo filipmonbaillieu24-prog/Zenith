@@ -52,11 +52,11 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
     const name = profile.name ?? 'Atleet';
     const tsb = state.pmcData.tsb;
     if (tsb < -20) {
-      return `Hallo ${name}. Je lichaam staat momenteel onder aanzienlijke stress (TSB: ${Math.round(tsb)}). Focus today op actief herstel of neem een volledige rustdag.`;
+      return `Hello ${name}. Your body is currently under substantial stress (TSB: ${Math.round(tsb)}). Focus today on active recovery or take een volledige rustdag.`;
     } else if (tsb > 5) {
-      return `Hallo ${name}. Je bent uitgerust en je vorm is uitstekend (TSB: +${Math.round(tsb)}). Today is een perfecte dag voor een intensieve intervaltraining of een lange duurride!`;
+      return `Hello ${name}. You are well rested and your form is excellent (TSB: +${Math.round(tsb)}). Today is a great day for an intensive intervaltraining of een lange duurride!`;
     } else {
-      return `Hallo ${name}. Je trainingsopbouw verloopt stabiel en gecontroleerd. Blijf je zones respecteren en volg de onderstaande adviezen om blessures te voorkomen.`;
+      return `Hello ${name}. Your training build is steady and controlled. Keep respecting your zones and follow guidance to blessures te voorkomen.`;
     }
   };
 
@@ -100,7 +100,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
         target_hr_max: maxHR,
         target_cadence_min: b.zone === 1 ? 90 : b.zone === 5 ? 95 : 85,
         target_cadence_max: b.zone === 1 ? 100 : b.zone === 5 ? 105 : 95,
-        audio_notes: `Start met ${b.name}. Probeer je vermogen tussen ${minPower} en ${maxPower} Watt te houden.`,
+        audio_notes: `Start with ${b.name}. Try to keep your power between ${minPower} en ${maxPower} Watts.`,
         name: b.name,
         powerPct: b.powerPct,
         zone: b.zone,
@@ -139,11 +139,11 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
       };
       
       await savePlannedWorkout(workoutToSave);
-      setSaveSuccessMsg('✓ Training succesvol ingepland voor today!');
+      setSaveSuccessMsg('✓ Workout successfully scheduled for today!');
       setGeneratedWorkout(null);
     } catch (err) {
       console.error('Error saving geplande workout:', err);
-      setSaveSuccessMsg('✗ Kon training niet opslaan.');
+      setSaveSuccessMsg('✗ Could not save workout.');
     } finally {
       setIsSavingWorkout(false);
     }
@@ -195,35 +195,35 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
       const weeksLeft = Math.max(1, Math.ceil(state.phaseInfo.daysToEvent / 7));
       const ctlTarget = Math.round(state.pmcData.ctl + (weeksLeft * 0.8));
       items.push(
-        { icon: '📈', title: 'Volume opbouwen', text: `Bouw volume op met max. 5–10% per week. CTL-doel voor einde basisperiode: ~${ctlTarget}.`, action: 'Streef naar +0.8 CTL/week' },
-        { icon: '🚴', title: 'Aerobe drempel', text: 'Houd minimaal 80% van je trainingen in Zone 2 (conversatietempo) voor vetverbranding.', action: 'Focus op Zone 2' },
-        { icon: '⚡', title: 'TSS Volume', text: `Streef naar circa ${Math.round(state.pmcData.ctl * 7 * 0.9)} TSS per week in deze fase.`, action: `${Math.round(state.pmcData.ctl * 7 * 0.9)} TSS/week` }
+        { icon: '📈', title: 'Build Volume', text: `Build volume by max 5-10% per week. CTL target for base phase end: ~${ctlTarget}.`, action: 'Target +0.8 CTL/week' },
+        { icon: '🚴', title: 'Aerobic Threshold', text: 'Keep at least 80% of workouts in Zone 2 (conversational pace) for fat oxidation.', action: 'Focus op Zone 2' },
+        { icon: '⚡', title: 'TSS Volume', text: `Target circa ${Math.round(state.pmcData.ctl * 7 * 0.9)} TSS per week in this phase.`, action: `${Math.round(state.pmcData.ctl * 7 * 0.9)} TSS/week` }
       );
     } else if (phaseKey === 'build') {
       const weeksInBuild = Math.max(1, Math.min(9, Math.ceil(state.phaseInfo.daysToEvent / 7) - 3));
       const ctlBuildTarget = Math.round(state.pmcData.ctl + (weeksInBuild * 1.2));
       items.push(
-        { icon: '🏋️', title: 'Intensiteit verhogen', text: 'Voeg meer sweet spot en drempeltrainingen toe om FTP te verhogen.', action: 'Voeg intervallen toe' },
-        { icon: '📊', title: 'Belastbaarheid verhogen', text: `Streef naar CTL-doel van ~${ctlBuildTarget} voor de taperingperiode.`, action: 'Bouw CTL op' },
-        { icon: '😴', title: 'Overtrainingsrisico check', text: 'Houd je TSB in de gaten (boven de -30) om oververmoeidheid te voorkomen.', action: 'Check TSB' }
+        { icon: '🏋️', title: 'Increase Intensity', text: 'Add more sweet spot & threshold sessions to elevate FTP.', action: 'Voeg intervallen toe' },
+        { icon: '📊', title: 'Build Workload Capacity', text: `Target CTL-doel van ~${ctlBuildTarget} before taperingperiode.`, action: 'Bouw CTL op' },
+        { icon: '😴', title: 'Overtraining Risk Check', text: 'Monitor TSB (keep above -30) to prevent overfatigue.', action: 'Check TSB' }
       );
     } else if (phaseKey === 'peak') {
       items.push(
-        { icon: '⬇️', title: 'Volume afbouwen (Taper)', text: `Verlaag je wekelijkse volume met 40–50% om frisheid op te bouwen.`, action: 'Verminder TSS' },
-        { icon: '⚡', title: 'Scherpte behouden', text: 'Doe 2–3 korte, intensieve intervallen om de spierspanning hoog te houden.', action: 'Korte prikkels' },
-        { icon: '😴', title: 'Frisheid opbouwen', text: 'Streef naar een positieve TSB (+10 tot +20) op de racedag.', action: 'Streef naar TSB > 10' }
+        { icon: '⬇️', title: 'Reduce Volume (Taper)', text: `Reduce weekly volume by 40-50% to build freshness.`, action: 'Verminder TSS' },
+        { icon: '⚡', title: 'Maintain Sharpness', text: 'Do 2-3 short intensive intervals to maintain neuromuscular sharpness.', action: 'Korte prikkels' },
+        { icon: '😴', title: 'Build Freshness', text: 'Target een positieve TSB (+10 tot +20) op de racedag.', action: 'Target TSB > 10' }
       );
     } else if (phaseKey === 'race') {
       items.push(
-        { icon: '🏁', title: 'Racedag focus', text: 'Geen nieuwe trainingsprikkel meer. Rust en herstel is nu de enige taak.', action: 'Neem rust' },
-        { icon: '🚴', title: 'Activeringsride', text: 'Doe maximaal 1 korte activeringsride (30–45 min) met enkele korte acceleraties.', action: 'Korte activering' },
-        { icon: '🍝', title: 'Koolhydraten laden', text: 'Carbohydraat-laden 2–3 dagen voor het event (7–10g per kg lichaamsgewicht).', action: 'Carb-loading' }
+        { icon: '🏁', title: 'Race Day Focus', text: 'No new training stimulus. Rest and recovery is your sole focus.', action: 'Neem rust' },
+        { icon: '🚴', title: 'Opener Ride', text: 'Do max 1 short opener ride (30-45 min) with brief surges.', action: 'Korte activering' },
+        { icon: '🍝', title: 'Carbs laden', text: 'Carbo-load 2–3 days prior to event (7–10g per kg lichaamsgewicht).', action: 'Carb-loading' }
       );
     } else if (phaseKey === 'recovery') {
       items.push(
-        { icon: '🎉', title: 'Volledig herstel', text: 'Neem minimaal 1–2 weken volledige rust om fysiek en mentaal te herstellen.', action: 'Rustperiode' },
-        { icon: '🚶', title: 'Actief herstel', text: 'Wandelen, zwemmen of lichte yoga is prima. Vermijd intensieve rideten.', action: 'Lichte activiteit' },
-        { icon: '🎯', title: 'Nieuw doel stellen', text: `Je hebt ${rides.length} rideten afgerond met een CTL van ${Math.round(state.pmcData.ctl)}. Plan een nieuw doel!`, action: 'Stel doel in' }
+        { icon: '🎉', title: 'Complete Recovery', text: 'Take at least 1-2 weeks complete rest for physical and mental recovery.', action: 'Rustperiode' },
+        { icon: '🚶', title: 'Active Recovery', text: 'Walking, swimming or light yoga is fine. Avoid hard rides.', action: 'Lichte activiteit' },
+        { icon: '🎯', title: 'Set New Goal', text: `You completed ${rides.length} rides with a CTL of ${Math.round(state.pmcData.ctl)}. Plan een nieuw doel!`, action: 'Stel doel in' }
       );
     }
     return items;
@@ -265,7 +265,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
         </div>
         <div className="wd-coach-hero-content" style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900 }}>Jouw AI Training Coach</h3>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900 }}>Your AI Training Coach</h3>
             <div style={{ display: 'flex', gap: 8 }}>
               {state.todaySleepQuality !== null && (
                 <div style={{
@@ -413,7 +413,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
               }}>
                 {saveSuccessMsg} {saveSuccessMsg.startsWith('✓') && (
                   <span style={{ display: 'block', fontSize: 9, fontWeight: 500, color: '#94a3b8', marginTop: 4 }}>
-                    Open de <strong>Route Planner</strong> om een bijbehorende GPX-route met dynamische snelheidsdoelen te genereren!
+                    Open <strong>Route Planner</strong> to generate a matching GPX route with speed targets!
                   </span>
                 )}
               </div>
@@ -427,7 +427,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                     <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#fff' }}>{generatedWorkout.title}</h4>
                   </div>
                   <div style={{ display: 'flex', gap: 8, fontSize: 10 }}>
-                    <span>Duur: <strong style={{ color: '#cbd5e1' }}>{generatedWorkout.durationMinutes} min</strong></span>
+                    <span>Duration: <strong style={{ color: '#cbd5e1' }}>{generatedWorkout.durationMinutes} min</strong></span>
                     <span style={{ color: '#475569' }}>|</span>
                     <span>TSS: <strong style={{ color: '#ff7675' }}>{generatedWorkout.plannedTSS}</strong></span>
                   </div>
@@ -567,7 +567,7 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
                 <select value={state.activeFocus} onChange={e => state.setActiveFocus(e.target.value as any)}
                   style={{ width: '100%', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 6, color: '#f8fafc', padding: '6px 8px', fontSize: 11, fontFamily: 'inheride', boxSizing: 'border-box', outline: 'none' }}>
                   <option value="endurance">🌱 Fitnessopbouw & Endurance</option>
-                  <option value="ftp">⚡ FTP verhogen (Thresholdtraining)</option>
+                  <option value="ftp">⚡ FTP verhogen (Threshold Training)</option>
                   <option value="vo2max">🚀 VO2max & Hoge Intensiteit</option>
                   <option value="recovery">💤 Actief Recovery & Rust</option>
                 </select>

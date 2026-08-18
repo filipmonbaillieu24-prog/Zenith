@@ -2,7 +2,7 @@
  * Lokaal Offline Neuraal Netwerk (MLP) Engine voor Zenith
  * 
  * Dit bestand bevat de complete, zelflerende machine learning engine van Zenith.
- * Het gebruikt herbruikbare Multi-Layer Perceptrons (MLPs) met backpropagation (SGD)
+ * Het gebruikt herbruikbare Multi-Layer Perceptrons (MLPs) with backpropagation (SGD)
  * die volledig in de browser draaien en hun gewichten opslaan in LocalStorage.
  * 
  * Bevat 5 specifieke modellen:
@@ -44,7 +44,7 @@ const VOCAB_LIST: VocabItem[] = [
   { word: 'uitgeput', cat: 'fatigue', weight: 0.95 },
   { word: 'overtraind', cat: 'fatigue', weight: 1.0 },
   { word: 'zware benen', cat: 'fatigue', weight: 0.9 },
-  { word: 'geen kracht', cat: 'fatigue', weight: 0.95 },
+  { word: 'none kracht', cat: 'fatigue', weight: 0.95 },
   { word: 'pijnlijke benen', cat: 'fatigue', weight: 0.8 },
   { word: 'zwaarte', cat: 'fatigue', weight: 0.7 },
 
@@ -90,7 +90,7 @@ const VOCAB_LIST: VocabItem[] = [
 ];
 
 export const VOCABULARY = VOCAB_LIST.map(v => v.word);
-const NEGATION_WORDS = ['niet', 'geen', 'zonder', 'nauwelijks', 'weinig', 'nooit'];
+const NEGATION_WORDS = ['niet', 'none', 'zonder', 'nauwelijks', 'weinig', 'nooit'];
 
 function generateNotesDefaultWeights() {
   const W1: number[][] = Array.from({ length: VOCABULARY.length }, () => new Array(8).fill(0));
@@ -708,9 +708,9 @@ export function predictPacingStrategy(
 
   let tip = "Paceadvies: Je houdt je vermogen goed constant verdeeld over je rideten.";
   if (avgRatio < 0.90) {
-    tip = "Paceadvies: Je hebt de neiging om in de tweede helft veel vermogen te verliezen (>10% verval). Probeer de eerste 30% van je ride 10-15 Watt onder je streefvermogen te starten (een 'negative split' strategie).";
+    tip = "Paceadvies: You completed de neiging om in de tweede helft veel vermogen te verliezen (>10% verval). Probeer de eerste 30% van je ride 10-15 Watt onder je streefvermogen te starten (een 'negative split' strategie).";
   } else if (avgRatio > 1.03) {
-    tip = "Paceadvies: Je eindigt je rideten erg sterk met reserve over. Je kunt gerust 5-10 Watt intensiever starten tijdens je volgende duurride.";
+    tip = "Paceadvies: Je eindigt je rideten erg sterk with reserve over. Je kunt gerust 5-10 Watt intensiever starten tijdens je volgende duurride.";
   } else if (avgRatio >= 0.95 && avgRatio <= 1.02) {
     tip = "Paceadvies: Uitstekende pacing! Je gemiddelde verval is minimaal. Houd deze vlakke pacingstrategie aan.";
   }
@@ -904,19 +904,19 @@ export function classifyClimbingStyle(climbCadence: number): ClimbingStyleAdvice
   if (!climbCadence || climbCadence <= 0) {
     return {
       style: "Onbekend",
-      desc: "No klimgegevens met cadans beschikbaar."
+      desc: "No klimgegevens with cadans beschikbaar."
     };
   }
 
   if (climbCadence > 82) {
     return {
       style: "Cadence-klimmer (Froome-stijl)",
-      desc: "Je klimt met een hoge trapfrequentie. Dit ontlast je spieren en legt de nadruk op je hart-longsysteem. Zorg voor een licht verzet."
+      desc: "Je klimt with een hoge trapfrequentie. Dit ontlast je spieren en legt de nadruk op je hart-longsysteem. Zorg voor een licht verzet."
     };
   } else {
     return {
       style: "Kracht-klimmer (Ullrich-stijl)",
-      desc: "Je klimt op pure kracht met een lagere trapfrequentie. Dit vraagt veel van je spieren en glycogeenvoorraad. Let op verzuring!"
+      desc: "Je klimt op pure kracht with een lagere trapfrequentie. Dit vraagt veel van je spieren en glycononevoorraad. Let op verzuring!"
     };
   }
 }
@@ -961,7 +961,7 @@ export function classifyRiderType(
     confidence: 0.4,
     description: 'Je vermogensprofiel is gebalanceerd over alle duurcategorieën.',
     strengths: ['Veelzijdigheid', 'Stabiel vermogen'],
-    focusTip: 'Upload meer rideten met wattage voor een preciezere profilering.'
+    focusTip: 'Upload more rides with wattage voor een preciezere profilering.'
   };
 
   if (!bestEfforts) return defaults;
@@ -987,8 +987,8 @@ export function classifyRiderType(
       emoji: '🚀',
       confidence: Math.min(0.95, (sprintIndex - 3.5) / 2 + 0.6),
       description: `Je 5-seconden piek (${wkg5s.toFixed(1)} W/kg) is uitzonderlijk hoog t.o.v. je FTP. Typisch profiel van een sprinter of crideeriumspecialist.`,
-      strengths: ['Explosiviteit', 'Sprint', 'Kortse klimmetjes'],
-      focusTip: 'Versterk je drempeluithoudingsvermogen met langere sweet-spot trainingen om je FTP te verhogen.'
+      strengths: ['Explosiviteit', 'Sprint', 'Kortse klimwithjes'],
+      focusTip: 'Versterk je drempeluithoudingsvermogen with langere sweet-spot trainingen om je FTP te verhogen.'
     };
   }
 
@@ -1070,7 +1070,7 @@ export function analyzeTrainingProfile(
       emoji: '🏔️',
       avgWeeklyHours,
       avgIntensityFactor: parseFloat(avgIf.toFixed(2)),
-      description: `Je traint veel uren per week (${avgWeeklyHours}u) op een relatief lage intensiteit (IF ≈ ${avgIf.toFixed(2)}). Typisch profiel van een duuratleet die veel basiskilometers rijdt.`,
+      description: `Je traint veel uren per week (${avgWeeklyHours}u) op een relatief lage intensiteit (IF ≈ ${avgIf.toFixed(2)}). Typisch profiel van een duuratleet die veel basiskilowithers rijdt.`,
       tip: 'Voeg 1–2 intensieve sessies per week toe (threshold, VO2max) om sneller te verbeteren.'
     };
   }

@@ -86,7 +86,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Zap size={18} color="#cbd5e1" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Power Duration Curve & W' Balance</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Compare your max power outputs across seasons and analyzeyseer de uitputtingssnelheid van je anaerobe batterij.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Compare your max power outputs across seasons and analyze fatigue resistancenelheid van je anaerobe batterij.</div>
             </div>
           </div>
 

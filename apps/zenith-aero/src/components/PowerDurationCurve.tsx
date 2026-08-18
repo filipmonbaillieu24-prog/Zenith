@@ -49,7 +49,7 @@ export const PowerDurationCurve: React.FC<Props> = ({
         <div className="pdc-tooltip__label">{label}</div>
         {payload.map((p: any) => (
           <div key={p.dataKey} className="pdc-tooltip__row" style={{ color: p.color }}>
-            <span>{p.dataKey === 'allTime' ? 'All-time' : 'Laatste 90d'}</span>
+            <span>{p.dataKey === 'allTime' ? 'All-time' : 'Last 90d'}</span>
             <strong>
               {p.value} {unit}
               {hasPower && p.dataKey === 'allTime' && p.payload.wkg ? ` · ${p.payload.wkg} W/kg` : ''}
@@ -70,7 +70,7 @@ export const PowerDurationCurve: React.FC<Props> = ({
           <span className="pdc-legend__dot" style={{ background: '#cbd5e1' }} /> All-time
           {hasLast90Data && (
             <>
-              <span className="pdc-legend__dot" style={{ background: '#ffffff' }} /> Laatste 90d
+              <span className="pdc-legend__dot" style={{ background: '#ffffff' }} /> Last 90d
             </>
           )}
           {ftp && hasPower && (

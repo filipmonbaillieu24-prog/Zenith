@@ -33,7 +33,7 @@ export const AISettingsPanel: React.FC = () => {
       );
       setTestResult({
         success: true,
-        message: response || 'Verbinding tot stand gebracht, geen tekst ontvangen.',
+        message: response || 'Verbinding tot stand gebracht, none tekst ontvangen.',
       });
     } catch (e: any) {
       setTestResult({
@@ -70,7 +70,7 @@ export const AISettingsPanel: React.FC = () => {
           <option value="openai" style={{ background: '#0d0d14' }}>OpenAI API (Cloud)</option>
         </select>
         <p style={{ margin: '2px 0 0', fontSize: 10, color: '#64748b' }}>
-          Selecteer de AI-engine. Ollama draait 100% lokaal en offline op je eigen computer zonder API-sleutels.
+          Select AI engine. Ollama runs 100% locally and offline on your computer without API keys.
         </p>
       </div>
 

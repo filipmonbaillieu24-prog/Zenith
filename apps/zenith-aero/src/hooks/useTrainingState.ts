@@ -148,7 +148,7 @@ export function useTrainingState(
           color: '#fdcb6e',
           emoji: '⚡',
           label: 'FTP Verhogen',
-          description: 'Gerichte opbouw van je FTP en drempelvermogen.',
+          description: 'Targeted progression of your FTP and threshold power.',
           weekFocus: ['Duur', 'Sweet Spot', 'Rust', 'Threshold', 'Duur', 'Sweet Spot', 'Rust']
         };
       } else if (activeFocus === 'recovery') {
@@ -156,7 +156,7 @@ export function useTrainingState(
           color: '#94a3b8',
           emoji: '💤',
           label: 'Actief Recovery',
-          description: 'Recoverylen en onderhouden van je basis zonder stress.',
+          description: 'Recovery and base maintenance without stress.',
           weekFocus: ['Rust', 'Recovery', 'Rust', 'Recovery', 'Rust', 'Recovery', 'Rust']
         };
       } else if (activeFocus === 'vo2max') {
@@ -164,7 +164,7 @@ export function useTrainingState(
           color: '#ff7675',
           emoji: '🚀',
           label: 'VO2max Focus',
-          description: 'Korte, explosieve inspanningen om je aerobe plafond te verhogen.',
+          description: 'Short explosive efforts to raise your aerobic ceiling.',
           weekFocus: ['VO2max', 'Rust', 'VO2max', 'Rust', 'Duur', 'Rust', 'Rust']
         };
       } else {
@@ -173,7 +173,7 @@ export function useTrainingState(
           color: '#00b894',
           emoji: '🌱',
           label: 'Fitnessopbouw',
-          description: 'Gerichte opbouw van aerobe conditie en uithoudingsvermogen.',
+          description: 'Targeted build of aerobic fitness and endurance.',
           weekFocus: ['Duur (Z2)', 'Duur (Z2)', 'Rust', 'Duur (Z2)', 'Recovery', 'Duur (Z2)', 'Rust']
         };
       }
@@ -248,18 +248,18 @@ export function useTrainingState(
   } => {
     const days = trainingProfile.daysSinceLast;
     if (days === null || days === 0) {
-      return { type: 'recovery', emoji: '💙', title: 'Recovery of rust', reason: 'Je hebt today al gereden. Tomorrow kun je weer gaan.' };
+      return { type: 'recovery', emoji: '💙', title: 'Recovery or rest', reason: 'You already rode today. Tomorrow you can train again.' };
     }
     if (days === 1) {
-      return { type: 'endurance', emoji: '🟢', title: 'Rustige duurride', reason: '1 dag na je laatste ride. Lekker rustig Z2 rijden.' };
+      return { type: 'endurance', emoji: '🟢', title: 'Easy endurance ride', reason: '1 day after your last ride. Easy Z2 ride.' };
     }
     if (days <= 3) {
-      return { type: 'sweetspot', emoji: '🟡', title: 'Sweet Spot', reason: `${days} dagen rust. Je bent hersteld — maak er een kwaliteitsride van.` };
+      return { type: 'sweetspot', emoji: '🟡', title: 'Sweet Spot', reason: `${days} days rest. You are recovered — make it a quality session.` };
     }
     if (days <= 7) {
-      return { type: 'threshold', emoji: '🔴', title: 'Thresholdtraining', reason: `${days} dagen niet gereden. Lekker stevig trainen, je bent fris.` };
+      return { type: 'threshold', emoji: '🔴', title: 'Threshold Training', reason: `${days} days not ridden. Good day for a solid workout..` };
     }
-    return { type: 'endurance', emoji: '🟢', title: 'Rustig opstarten', reason: `${days} dagen niet gereden. Begin rustig — bouw het op.` };
+    return { type: 'endurance', emoji: '🟢', title: 'Easy start', reason: `${days} days not ridden. Start easy — rebuild consistency.` };
   }, [trainingProfile]);
 
   function capByPhase(type: WorkoutType): WorkoutType {
@@ -347,7 +347,7 @@ export function useTrainingState(
         return { type: 'rest' as const, reason: `Ziekte of acute pijn gedetecteerd in je ridenotities. Neem today volledige rust.`, score: analysis.illness };
       }
       if (analysis.fatigue >= 0.65) {
-        return { type: 'recovery' as const, reason: `Verhoogde spiervermoeidheid gedetecteerd in je ridenotities. Je training is aangepast naar een herstelride.`, score: analysis.fatigue };
+        return { type: 'recovery' as const, reason: `Increased muscle fatigue detected in ride notes. Workout adjusted to recoveryride.`, score: analysis.fatigue };
       }
     }
     return null;
@@ -544,7 +544,7 @@ export function useTrainingState(
   }, [rides, profile.ftp]);
 
   const typeCountWarning = (weekTypeCount[effectiveType] ?? 0) >= 2
-    ? `Je hebt al ${weekTypeCount[effectiveType]}x ${effectiveType} gereden deze week`
+    ? `You completed al ${weekTypeCount[effectiveType]}x ${effectiveType} gereden deze week`
     : null;
 
   return {

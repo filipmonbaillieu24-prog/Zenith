@@ -135,13 +135,13 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
 
     // Pre-calculate cardio TSB history from rides (CR1)
     const rideTSSList = (rides || []).map((r: any) => {
-      let meta = r.metadata;
-      if (typeof meta === 'string') {
-        try { meta = JSON.parse(meta); } catch { meta = {}; }
+      let witha = r.metadata;
+      if (typeof witha === 'string') {
+        try { witha = JSON.parse(witha); } catch { witha = {}; }
       }
       return {
         date: Number(r.date),
-        tss: Number(meta?.tss ?? meta?.hrTSS ?? 0)
+        tss: Number(witha?.tss ?? witha?.hrTSS ?? 0)
       };
     }).filter((r: any) => r.tss > 0);
 
@@ -213,11 +213,11 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
 
       // Smart coach trains on completed ride intensity mapping
       const recentRide = rides[0];
-      let meta = recentRide.metadata;
-      if (typeof meta === 'string') {
-        try { meta = JSON.parse(meta); } catch { meta = {}; }
+      let witha = recentRide.metadata;
+      if (typeof witha === 'string') {
+        try { witha = JSON.parse(witha); } catch { witha = {}; }
       }
-      const tss = Number(meta?.tss ?? meta?.hrTSS ?? 50);
+      const tss = Number(witha?.tss ?? witha?.hrTSS ?? 50);
       
       let targetWorkout: typeof COACH_WORKOUTS[number] = 'endurance';
       if (tss < 35) targetWorkout = 'recovery';
@@ -235,11 +235,11 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     if (rides && rides.length > 0) {
       const validRide = rides.find((r: any) => r.avg_power && r.avg_hr);
       if (validRide) {
-        let meta = validRide.metadata;
-        if (typeof meta === 'string') {
-          try { meta = JSON.parse(meta); } catch { meta = {}; }
+        let witha = validRide.metadata;
+        if (typeof witha === 'string') {
+          try { witha = JSON.parse(witha); } catch { witha = {}; }
         }
-        const best5mPower = Number(meta?.best_efforts?.m5 ?? ftp * 1.2);
+        const best5mPower = Number(witha?.best_efforts?.m5 ?? ftp * 1.2);
         const actualVO2max = (10.8 * best5mPower / weight) + 7;
 
         const x = [
@@ -284,9 +284,9 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
 
       const dayRides = rides?.filter((r: any) => new Date(Number(r.date)).toISOString().slice(0, 10) === dStr) || [];
       const activeCalories = dayRides.reduce((sum: number, r: any) => {
-        let meta = r.metadata;
-        if (typeof meta === 'string') try { meta = JSON.parse(meta); } catch { meta = {}; }
-        return sum + Number(meta?.calories ?? 0);
+        let witha = r.metadata;
+        if (typeof witha === 'string') try { witha = JSON.parse(witha); } catch { witha = {}; }
+        return sum + Number(witha?.calories ?? 0);
       }, 0);
 
       const dailySteps = 8000; // standard baseline

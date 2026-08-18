@@ -167,7 +167,7 @@ fun TodayScreen(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     MacroBarItem(
-                        label = "Vetten",
+                        label = "Fats",
                         currentG = Math.round(totalFat * 10) / 10.0,
                         targetG = macroGoals.fatTargetG,
                         progress = fatProgress,

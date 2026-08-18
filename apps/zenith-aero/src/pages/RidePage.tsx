@@ -223,7 +223,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
         color = "#fd79a8"; // Roze
       } else if (activeCategory === 'interval') {
         title = "Intervaltraining";
-        desc = "Intensieve intervallen met wisselende tempo's. Ideaal voor het verhogen van je maximale zuurstofopname (VO2max) en anaerobe capaciteit.";
+        desc = "Intensieve intervallen with wisselende tempo's. Ideaal voor het verhogen van je maximale zuurstofopname (VO2max) en anaerobe capaciteit.";
         category = "Interval / VO2max";
         color = "#a29bfe"; // Lilac
       } else if (activeCategory === 'wedstrijd') {
@@ -251,13 +251,13 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             color = "#a29bfe";
           } else {
             title = "Korte Kwaliteitsprikkel";
-            desc = "Een korte ride met wat intensiteit. Goed om de benen wakker te schudden zonder diepe vermoeidheid op te bouwen.";
+            desc = "Een korte ride with wat intensiteit. Goed om de benen wakker te schudden zonder diepe vermoeidheid op te bouwen.";
             category = "Tempo";
             color = "#fdcb6e";
           }
         } else {
           if (intensity >= 0.85) {
-            title = "Thresholdtraining (FTP)";
+            title = "Threshold Training (FTP)";
             desc = "Zeer zware training rond je anaerobe drempel. Dit vergroot je vermogen om langdurig een hoog tempo vol te houden.";
             category = "Threshold / FTP";
             color = "#ff7675";
@@ -268,7 +268,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             color = "#fdcb6e";
           } else {
             title = "Duurtraining (Vetverbranding)";
-            desc = "Een klassieke duurride. Dit verbetert de efficiëntie van je spieren en stimuleert de vetverbranding voor lange afstanden.";
+            desc = "A classic endurance ride. Improves muscular efficiency and promotes fat oxidation for long distances.";
             category = "Duurvermogen";
             color = "#00b894";
           }
@@ -279,33 +279,33 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
       if (hasHR && ride.decoupling != null) {
         const dec = ride.decoupling;
         if (Math.abs(dec) <= 5) {
-          points.push(`Je hartslag bleef zeer stabiel gedurende de hele ride (drift van slechts ${dec.toFixed(1)}%). Dit toont aan dat je een uitstekende aerobe basis hebt.`);
+          points.push(`Your heart rate remained very stable throughout the ride (drift of only ${dec.toFixed(1)}%). This shows an excellent aerobic base.nde aerobe basis hebt.`);
         } else if (dec > 5) {
-          points.push(`Je hartslag steeg met ${dec.toFixed(1)}% in de tweede helft van de ride bij gelijke intensiteit. Dit duidt op cardiale drift en opbouwende aerobe vermoeidheid.`);
+          points.push(`Your heart rate rose by ${dec.toFixed(1)}% in the second half of the ride at equal intensity. Indicates cardiac drift. opbouwende aerobe vermoeidheid.`);
         } else if (dec < -5) {
-          points.push(`Je hartslag daalde met ${Math.abs(dec).toFixed(1)}% in de second helft van de ride. Dit wijst op een daling in intensiteit, afkoeling of uitstekende aerobe efficiëntie.`);
+          points.push(`Your heart rate dropped by ${Math.abs(dec).toFixed(1)}% in the second half of the ride, reflecting reduced intensity.oeling of uitstekende aerobe efficiëntie.`);
         }
       }
 
       if (hasPower && (ride as any).variabilityIndex) {
         const vi = (ride as any).variabilityIndex;
         if (vi < 1.05) {
-          points.push(`Met een Variability Index van ${vi} heb je extreem constant en vlak gepaced. Ideaal voor een efficiënte verdeling van je krachten.`);
+          points.push(`With a Variability Index of ${vi} you paced extremely steadily. Ideal for efficient energy expenditure.en.`);
         } else if (vi > 1.10) {
-          points.push(`Je vermogensafgifte was erg variabel (VI: ${vi}). Dit duidt op veel sprintjes of heuvelachtig terrein, wat zwaarder is voor de spieren.`);
+          points.push(`Your power output was highly variable (VI: ${vi}). Indicates surges or hilly terrain, demanding more energy.spieren.`);
         }
       }
 
       if (hasHR && (ride as any).hrRecovery60) {
         const hrr = (ride as any).hrRecovery60;
         if (hrr >= 30) {
-          points.push(`Je hartslag herstelde met maar liefst ${hrr} slagen in de eerste minuut na je piek. Een teken van een zeer fitte cardiovasculaire reactie!`);
+          points.push(`Your heart rate recovered by an impressive ${hrr} bpm in the first minute after your peak. Sign of strong cardiovascular recovery.re reactie!`);
         }
       }
 
       return { title, desc, category, color, points };
     } catch (e) {
-      console.error("Fout bij berekenen training benefit:", e);
+      console.error("Error calculating training benefit:", e);
       return null;
     }
   }, [ride, maxHR, label, rpe, aiPredictedLabel, aiPredictedRpe]);
@@ -374,8 +374,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             <StatCard label="Tijd"         value={formatRideDuration(ride.duration)}         typeClass="rp-stat-card--gps" />
             <StatCard label="Elevation Gain" value={ride.elevGain}         unit="m"    typeClass="rp-stat-card--gps" />
             <StatCard label="Gem. snelheid" value={ride.avgSpeed}        unit="km/h" typeClass="rp-stat-card--gps" />
-            {ride.calories    && <StatCard label="Calorieën"     value={ride.calories}    unit="kcal" color="#fdcb6e"
-              sub={ride.hasPower ? (ride.isEstimatedPower ? 'HR-schatting (Keytel)' : 'Powersmeting') : ride.hasHR ? 'HR-schatting (Keytel)' : 'MET-schatting'} />}
+            {ride.calories    && <StatCard label="Calories"     value={ride.calories}    unit="kcal" color="#fdcb6e"
+              sub={ride.hasPower ? (ride.isEstimatedPower ? 'HR-schatting (Keytel)' : 'Powerswithing') : ride.hasHR ? 'HR-schatting (Keytel)' : 'MET-schatting'} />}
             {ride.avgPower    && <StatCard label="Gem. vermogen" value={ride.avgPower}    unit="W"    color="#a29bfe" typeClass="rp-stat-card--power"
               sub={ride.isEstimatedPower ? 'Berekend (Natuurkundig/HR)' : undefined} />}
             {ride.normPower   && <StatCard label="NP"            value={ride.normPower}   unit="W"    color="var(--color-primary,#cbd5e1)" typeClass="rp-stat-card--power"
@@ -436,9 +436,9 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
           </div>
 
           {/* Label + Notes */}
-          <div className="rp-meta-card">
-            <div className="rp-meta-card__row">
-              <span className="rp-meta-card__label">Categorie</span>
+          <div className="rp-witha-card">
+            <div className="rp-witha-card__row">
+              <span className="rp-witha-card__label">Categorie</span>
               <div className="rp-label-picker">
                 {RIDE_LABELS.map(l => {
                   const isPredicted = label === undefined && aiPredictedLabel === l.key;
@@ -454,7 +454,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                             : {}
                       }
                       onClick={() => saveLabel(label === l.key ? undefined : l.key)}
-                      title={isPredicted ? `${l.label} (AI Suggestie - Klik om te accepteren)` : l.label}
+                      title={isPredicted ? `${l.label} (AI Suggestion - Click to accept)` : l.label}
                     >
                       {l.icon} {l.label} {isPredicted && ' 🤖'}
                     </button>
@@ -462,8 +462,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 })}
               </div>
             </div>
-            <div className="rp-meta-card__row" style={{ marginTop: 10 }}>
-              <span className="rp-meta-card__label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="rp-witha-card__row" style={{ marginTop: 10 }}>
+              <span className="rp-witha-card__label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Inspanning (RPE)</span>
                 {rpe != null ? (
                   <span style={{ fontSize: 10, fontWeight: 800, color: rpe <= 3 ? '#00b894' : rpe <= 6 ? '#fdcb6e' : rpe <= 8 ? '#ff7675' : '#d63031' }}>
@@ -501,7 +501,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                         fontWeight: 800,
                         transition: 'all 0.15s',
                       }}
-                      title={isPredicted ? `AI schatting: ${n}/10 (Klik om te accepteren)` : undefined}
+                      title={isPredicted ? `AI Estimate: ${n}/10 (Click to accept)` : undefined}
                     >
                       {n}
                     </button>
@@ -527,19 +527,19 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                   }}
                 >
                   <Brain size={12} />
-                  <span>AI stelt <strong>{aiPredictedRpe}/10</strong> voor. Klik hier om te accepteren.</span>
+                  <span>AI suggests <strong>{aiPredictedRpe}/10</strong> proposed. Click here to accept.</span>
                 </div>
               )}
             </div>
-            <div className="rp-meta-card__row" style={{ marginTop: 10 }}>
-              <span className="rp-meta-card__label">Fiets / Gear</span>
+            <div className="rp-witha-card__row" style={{ marginTop: 10 }}>
+              <span className="rp-witha-card__label">Fiets / Gear</span>
               <select
                 className="select-input"
                 style={{ width: '100%', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', color: '#f8fafc', borderRadius: 8, outline: 'none' }}
                 value={selectedGearId ?? ''}
                 onChange={e => saveGearId(e.target.value || undefined)}
               >
-                <option value="" style={{ background: '#121216', color: '#f8fafc' }}>-- Geen fiets gekoppeld --</option>
+                <option value="" style={{ background: '#121216', color: '#f8fafc' }}>-- No bike linked --</option>
                 {gears.map(g => (
                   <option key={g.id} value={g.id} style={{ background: '#121216', color: '#f8fafc' }}>
                     {g.name}
@@ -547,11 +547,11 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 ))}
               </select>
             </div>
-            <div className="rp-meta-card__row" style={{ marginTop: 10 }}>
-              <span className="rp-meta-card__label">Notities</span>
+            <div className="rp-witha-card__row" style={{ marginTop: 10 }}>
+              <span className="rp-witha-card__label">Notities</span>
               <textarea
                 className="rp-notes"
-                placeholder="Voeg een notitie toe… (bijv. 'Benen voelden zwaar', 'Nieuwe route getest')"
+                placeholder="Add a note... (e.g. 'Legs felt heavy', 'Tested new route')"
                 value={notes}
                 onChange={e => saveNotes(e.target.value)}
                 rows={3}
@@ -822,7 +822,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
           {/* TAB 1: SAMENVATTING & COACH */}
           {activeDetailTab === 'samenvatting' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Polar-stijl Training Benefit Card */}
+              {/* Polar-style Training Benefit Card */}
               {trainingBenefit && (
                 <div className="rp-chart-card rp-benefit-card animate-slide-up" style={{ borderLeft: `4px solid ${trainingBenefit.color}`, margin: 0 }}>
                   <div className="rp-benefit-card__head">
@@ -881,7 +881,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                         <strong style={{ color: '#f8fafc', fontSize: 12 }}>{ride.calories ?? fuelPlan.totalCalories} kcal</strong>
                       </div>
                       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 8, padding: 8 }}>
-                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Koolhydraten Verbruikt</span>
+                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Carbs Verbruikt</span>
                         <strong style={{ color: '#39ff14', fontSize: 12 }}>{fuelPlan.totalCarbs}g ({fuelPlan.carbsPerHour}g/u)</strong>
                       </div>
                       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 8, padding: 8 }}>
@@ -972,7 +972,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               {ride.hasPower && <PowerHistogram points={ride.points} ftp={ftp} />}
               {!ride.hasPower && (
                 <div className="rp-chart-card" style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 11, margin: 0 }}>
-                  Powersgrafieken alleen beschikbaar voor rideten geregistreerd met een vermogensmeter.
+                  Power charts only available for rides recorded with a power wither.
                 </div>
               )}
             </div>

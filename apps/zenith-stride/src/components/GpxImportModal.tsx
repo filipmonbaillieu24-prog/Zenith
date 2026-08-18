@@ -110,24 +110,24 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
                 <span>{filename}</span>
               </div>
 
-              <div className="gpx-metrics-grid">
-                <div className="gpx-metric-card">
-                  <span className="metric-label">Distance</span>
-                  <span className="metric-val">{parsedRun.distanceKm} km</span>
+              <div className="gpx-withrics-grid">
+                <div className="gpx-withric-card">
+                  <span className="withric-label">Distance</span>
+                  <span className="withric-val">{parsedRun.distanceKm} km</span>
                 </div>
-                <div className="gpx-metric-card">
-                  <span className="metric-label">Tijdsduur</span>
-                  <span className="metric-val">
+                <div className="gpx-withric-card">
+                  <span className="withric-label">Tijdsduur</span>
+                  <span className="withric-val">
                     {Math.floor((parsedRun.durationSec || 0) / 60)}m {(parsedRun.durationSec || 0) % 60}s
                   </span>
                 </div>
-                <div className="gpx-metric-card">
-                  <span className="metric-label">Gem. Tempo</span>
-                  <span className="metric-val">{parsedRun.avgPaceMinKm} /km</span>
+                <div className="gpx-withric-card">
+                  <span className="withric-label">Gem. Tempo</span>
+                  <span className="withric-val">{parsedRun.avgPaceMinKm} /km</span>
                 </div>
-                <div className="gpx-metric-card">
-                  <span className="metric-label">Elevation Gain</span>
-                  <span className="metric-val">{parsedRun.elevationGainM} m</span>
+                <div className="gpx-withric-card">
+                  <span className="withric-label">Elevation Gain</span>
+                  <span className="withric-val">{parsedRun.elevationGainM} m</span>
                 </div>
               </div>
 

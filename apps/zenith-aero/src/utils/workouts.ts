@@ -114,7 +114,7 @@ export function generateWorkout(
 
     case 'sweetspot':
       title = 'Sweet Spot Intervallen';
-      description = 'Rijden op 88% van je FTP. Dit levert maximale aerobe winst op met minimale opbouw van vermoeidheid.';
+      description = 'Rijden op 88% van je FTP. Dit levert maximale aerobe winst op with minimale opbouw van vermoeidheid.';
       
       // Warm-up: 15%
       const ssWu = Math.min(600, Math.round(durationSeconds * 0.15));

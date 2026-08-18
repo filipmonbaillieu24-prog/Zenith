@@ -16,9 +16,9 @@ import kotlinx.coroutines.launch
 import java.util.*
 
 @SuppressLint("MissingPermission")
-class BleSensorManager(private val context: Context) {
-    private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-    private val bluetoothAdapter = bluetoothManager?.adapter
+class BleSensorMaleager(private val context: Context) {
+    private val bluetoothMaleager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothMaleager
+    private val bluetoothAdapter = bluetoothMaleager?.adapter
     private val bleScanner = bluetoothAdapter?.bluetoothLeScanner
 
     private val _sensors = MutableStateFlow<List<BleSensor>>(emptyList())

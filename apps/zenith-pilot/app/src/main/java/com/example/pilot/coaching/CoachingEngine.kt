@@ -3,7 +3,7 @@ package com.example.pilot.coaching
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
-import android.media.AudioManager
+import android.media.AudioMaleager
 import android.os.Build
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
@@ -18,10 +18,10 @@ class CoachingEngine(private val context: Context) : TextToSpeech.OnInitListener
     private var tts: TextToSpeech? = null
     private var isInitialized = false
 
-    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val audioMaleager = context.getSystemService(Context.AUDIO_SERVICE) as AudioMaleager
     private var focusRequest: AudioFocusRequest? = null
 
-    private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+    private val focusChangeListener = AudioMaleager.OnAudioFocusChangeListener { focusChange ->
         // No action needed for transient changes
     }
 
@@ -75,7 +75,7 @@ class CoachingEngine(private val context: Context) : TextToSpeech.OnInitListener
             requestAudioFocus()
             val params = Bundle().apply {
                 putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f) // Maximise local volume gain
-                putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
+                putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioMaleager.STREAM_MUSIC)
             }
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, "coaching_cue_${System.currentTimeMillis()}")
         }
@@ -88,18 +88,18 @@ class CoachingEngine(private val context: Context) : TextToSpeech.OnInitListener
                     .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
-                focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                focusRequest = AudioFocusRequest.Builder(AudioMaleager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
                     .setAudioAttributes(playbackAttributes)
                     .setAcceptsDelayedFocusGain(true)
                     .setOnAudioFocusChangeListener(focusChangeListener)
                     .build()
-                focusRequest?.let { audioManager.requestAudioFocus(it) }
+                focusRequest?.let { audioMaleager.requestAudioFocus(it) }
             } else {
                 @Suppress("DEPRECATION")
-                audioManager.requestAudioFocus(
+                audioMaleager.requestAudioFocus(
                     focusChangeListener,
-                    AudioManager.STREAM_MUSIC,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+                    AudioMaleager.STREAM_MUSIC,
+                    AudioMaleager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
                 )
             }
         } catch (e: Exception) {
@@ -110,10 +110,10 @@ class CoachingEngine(private val context: Context) : TextToSpeech.OnInitListener
     private fun releaseAudioFocus() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                focusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+                focusRequest?.let { audioMaleager.abandonAudioFocusRequest(it) }
             } else {
                 @Suppress("DEPRECATION")
-                audioManager.abandonAudioFocus(focusChangeListener)
+                audioMaleager.abandonAudioFocus(focusChangeListener)
             }
         } catch (e: Exception) {
             e.printStackTrace()

@@ -36,7 +36,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
     setReportLoadingStep('Gegevens verzamelen...');
 
     setTimeout(() => {
-      setReportLoadingStep('Fysiologische parameters analyseren...');
+      setReportLoadingStep('Fysiologische parawithers analyseren...');
 
       setTimeout(() => {
         setReportLoadingStep('Thresholdprogressie & hartslagstabiliteit vergelijken...');
@@ -111,7 +111,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
               ? `${longestRide.distance.toFixed(0)} km (${(longestRide.duration / 3600).toFixed(1)} uur) op ${new Date(longestRide.date).toLocaleDateString('nl-BE')}`
               : 'Geen rideten geregistreerd';
 
-            let verdict = 'Stabiele fysieke conditie en onderhoud';
+            let verdict = 'Stable physical condition and maintenance';
             let verdictEmoji = '📈';
             let verdictColor = '#cbd5e1';
 
@@ -128,33 +128,33 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
 
             const progressBullets = [
               ftpDiff > 0
-                ? `**Significante toename in drempelvermogen (eFTP)**: Je geschatte drempelwaarde (eFTP) is in deze periode toegenomen met **+${ftpDiff}W** (van ${startFtp}W naar ${endFtp}W). Deze vooruitgang toont aan dat de opgediende prikkels succesvol hebben geleid tot spieradaptatie en een verhoogde lactaattolerantie.`
-                : `**Behoud van drempelvermogen**: Je geschatte drempelwaarde (eFTP) is stabiel gebleven rond de **${endFtp}W**. Dit is een uitstekend resultaat dat getuigt van een goed uitgebalanceerde onderhoudstraining.`,
+                ? `**Significant increase in threshold power (eFTP)**: Your estimated threshold power (eFTP) increased during this period by **+${ftpDiff}W** (van ${startFtp}W naar ${endFtp}W). Deze vooruitgang toont aan dat de opgediende prikkels succesvol hebben geleid tot spieradaptatie en een verhoogde lactaattolerantie.`
+                : `**Threshold Power Sustained**: Your estimated threshold power (eFTP) remained stable around **${endFtp}W**. Dit is een uitstekend resultaat dat getuigt van een goed uitgebalanceerde onderhoudstraining.`,
               avgDecoupling < 5
-                ? `**Uitstekende aerobe en cardiovasculaire efficiëntie**: Met een gemiddelde hartslagdrift (aerobe decoupling) van slechts **${avgDecoupling.toFixed(1)}%** blijft je cardiovasculaire systeem stabiel bij langdurige inspanningen.`
-                : `**Cardiovasculaire drift bij langdurige belasting**: Je hartslag drift stijgt gemiddeld met **${avgDecoupling.toFixed(1)}%** in de tweede helft van je rideten bij gelijkblijvend vermogen.`,
-              `**Duurrecord als fundament**: Je langste ride was **${longestRideStr}**. Dergelijke rideten zijn van cruciaal belang voor de capillaire dichtheid van je spieren.`,
+                ? `**Outstanding aerobic and cardiovascular efficiency**: With an average heart rate drift (aerobic decoupling) of only **${avgDecoupling.toFixed(1)}%** blijft je cardiovasculaire systeem stabiel bij langdurige inspanningen.`
+                : `**Cardiovascular drift during prolonged effort**: Your heart rate drift increases on average by **${avgDecoupling.toFixed(1)}%** in de tweede helft van je rideten bij gelijkblijvend vermogen.`,
+              `**Endurance Baseline Foundation**: Your longest ride was **${longestRideStr}**. Such rides are crucial for building capillary density van je spieren.`,
             ];
 
             const werkpuntenBullets = [
               avgRpe >= 7
-                ? `**Intensiteitsverdeling en spierstress**: Je gemiddelde RPE ligt op **${avgRpe.toFixed(1)}/10**. Wij adviseren om 80% van de rideten strikt in Zone 2 te rijden.`
-                : `**Gezonde intensiteitsverdeling**: Je gemiddelde RPE van **${avgRpe.toFixed(1)}/10** getuigt van een uitstekende polarisatie van je trainingen.`,
+                ? `**Intensity Distribution & Muscle Stress**: Your average RPE is **${avgRpe.toFixed(1)}/10**. Wij adviseren om 80% van de rideten strikt in Zone 2 te rijden.`
+                : `**Healthy Intensity Distribution**: Je gemiddelde RPE van **${avgRpe.toFixed(1)}/10** demonstrates excellent training polarization.`,
               avgDecoupling >= 5
-                ? `**Focus op Zone 2 duurtraining**: De geconstateerde hartslagdrift van **${avgDecoupling.toFixed(1)}%** vraagt om specifieke aandacht.`
-                : `**Stabiel aerobe vermogen**: Omdat je decoupling minimaal is, kun je je trainingen gerichter gaan sturen op tempohardheid en VO2max.`,
+                ? `**Focus on Zone 2 Endurance Training**: The observed heart rate drift of **${avgDecoupling.toFixed(1)}%** requires specific attention.`
+                : `**Stable Aerobic Power**: Since your decoupling is minimal, you can target tempo sustained efforts and VO2max.`,
               avgVI > 1.1
-                ? `**Gelijkmatige vermogensverdeling (Pacing)**: Met een gemiddelde Variability Index van **${avgVI.toFixed(2)}** rijd je erg schokkerig.`
-                : `**Uitstekend pacinggedrag**: Met een gemiddelde Variability Index van **${avgVI.toFixed(2)}** verdeel je je krachten efficiënt.`,
+                ? `**Even Power Distribution (Pacing)**: With an average Variability Index of **${avgVI.toFixed(2)}** your pacing is irregular.`
+                : `**Excellent Pacing Strategy**: With an average Variability Index of **${avgVI.toFixed(2)}** you distribute your power efficiently.`,
             ];
 
             const risicoBullets = [
               avgRpe > 7.5
-                ? `**Verhoogd risico op overbelasting (Overtraining)**: De trainingsprikkels stapelen zich sneller op dan je lichaam kan herstellen. Plan direct een herstelweek in.`
-                : `**Gebalanceerd belastingsrisico**: Je trainingsbelasting en herstelweken zijn in perfect evenwicht.`,
+                ? `**High Risk of Overtraining**: De trainingsprikkels stapelen zich sneller op dan je lichaam kan herstellen. Plan direct een herstelweek in.`
+                : `**Balanced Workload Risk**: Your training workload and recovery weeks are in optimal balance.`,
               decouplingRides.length > 5 && avgDecoupling > 6
-                ? `**Progressief vermoeidheidsrisico**: De aanzienlijke cardiale drift over meerdere rideten wijst op een cumulatief tekort aan herstel.`
-                : `**Stabiele cardiovasculaire tolerantie**: Je reacties laten geen tekenen van chronische vermoeidheid of overtraining zien.`,
+                ? `**Progressive Fatigue Risk**: Significant cardiac drift across multiple rides indicates cumulative recovery deficit.`
+                : `**Stable Cardiovascular Tolerance**: Your responses show no signs of chronic fatigue or overtraining.`,
             ];
 
             const actieplanBullets = [
@@ -201,7 +201,7 @@ ${reportData.progressBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).j
 WERKPUNTEN & FOCUS:
 ${reportData.werkpuntenBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).join('\n')}
 
-ACTIEPLAN VOOR DE KOMENDE WEKEN:
+ACTION PLAN FOR COMING WEEKS:
 ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).join('\n')}
 `;
     navigator.clipboard.writeText(plainText);
@@ -219,7 +219,7 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
           <div>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#f8fafc' }}>AI Voortgangsrapport Generator</h3>
             <p style={{ margin: 0, fontSize: 11, color: '#94a3b8' }}>
-              Automatisch geautomatiseerde fysiologische analyse van je prestaties & herstel
+              Automated physiological analysis of your performance & recovery
             </p>
           </div>
         </div>
@@ -273,7 +273,7 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
             <div style={{ textAlign: 'center', padding: '30px 20px' }}>
               <AlertTriangle size={32} color="#ff7675" style={{ marginBottom: 10 }} />
               <h4 style={{ margin: '0 0 6px', color: '#f8fafc' }}>Geen rideten gevonden in deze periode</h4>
-              <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>Selecteer een langere periode of upload meer rideten.</p>
+              <p style={{ margin: 0, fontSize: 12, color: '#94a3b8' }}>Select a longer timeframe or upload more rides.</p>
             </div>
           ) : (
             <>

@@ -132,7 +132,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
 
       const mappedRides: CalendarItem[] = (ridesData || []).map((r: any) => {
         const rideDate = new Date(Number(r.date));
-        const meta = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata || {};
+        const witha = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata || {};
         return {
           category: 'ride',
           dateStr: getLocalDateString(rideDate),
@@ -150,7 +150,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
             hasHR: !!r.has_hr,
             bestEfforts: r.best_efforts ?? undefined,
             bestSpeedEfforts: r.best_speed_efforts ?? undefined,
-            tss: meta?.tss ?? meta?.hrTSS ?? undefined
+            tss: witha?.tss ?? witha?.hrTSS ?? undefined
           }
         };
       });
@@ -564,14 +564,14 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                     {selectedItem.raw.type}
                   </div>
 
-                  <div className="zh-workout-meta-grid">
-                    <div className="zh-workout-meta-item">
-                      <span className="zh-workout-meta-label">Planned Duration</span>
-                      <span className="zh-workout-meta-value">{selectedItem.raw.durationMinutes} minutes</span>
+                  <div className="zh-workout-witha-grid">
+                    <div className="zh-workout-witha-item">
+                      <span className="zh-workout-witha-label">Planned Duration</span>
+                      <span className="zh-workout-witha-value">{selectedItem.raw.durationMinutes} minutes</span>
                     </div>
-                    <div className="zh-workout-meta-item">
-                      <span className="zh-workout-meta-label">Planned TSS</span>
-                      <span className="zh-workout-meta-value">{selectedItem.raw.plannedTSS} TSS</span>
+                    <div className="zh-workout-witha-item">
+                      <span className="zh-workout-witha-label">Planned TSS</span>
+                      <span className="zh-workout-witha-value">{selectedItem.raw.plannedTSS} TSS</span>
                     </div>
                   </div>
 

@@ -50,7 +50,7 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
         <div className="stride-modal-header">
           <div>
             <h3>Running Shoes & Slijtage Tracker</h3>
-            <p className="subtitle">Houd de gereden kilometers per paar schoenen bij</p>
+            <p className="subtitle">Houd de gereden kilowithers per paar schoenen bij</p>
           </div>
           <button className="stride-close-btn" onClick={onClose}>
             <X size={18} />
@@ -73,7 +73,7 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
                   <label>Merk</label>
                   <input 
                     type="text" 
-                    placeholder="Bijv. Nike, Hoka, Saucony" 
+                    placeholder="Atv. Nike, Hoka, Saucony" 
                     value={brand} 
                     onChange={e => setBrand(e.target.value)} 
                     required 
@@ -83,14 +83,14 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
                   <label>Model</label>
                   <input 
                     type="text" 
-                    placeholder="Bijv. Clifton 9, Endorphin Speed 3" 
+                    placeholder="Atv. Clifton 9, Endorphin Speed 3" 
                     value={model} 
                     onChange={e => setModel(e.target.value)} 
                     required 
                   />
                 </div>
                 <div className="form-group flex-1">
-                  <label>Max. Kilometers</label>
+                  <label>Max. Kilowithers</label>
                   <input 
                     type="number" 
                     value={maxDistanceKm} 

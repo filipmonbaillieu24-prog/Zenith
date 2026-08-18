@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { X, Moon, Footprints, Scale, SlidersHorizontal } from 'lucide-react';
 
-interface ManualLogModalProps {
+interface MaleualLogModalProps {
   onClose: () => void;
   onSave: (type: 'weight' | 'sleep' | 'steps', payload: any) => Promise<void>;
 }
 
-export const ManualLogModal: React.FC<ManualLogModalProps> = ({
+export const MaleualLogModal: React.FC<MaleualLogModalProps> = ({
   onClose,
   onSave,
 }) => {
@@ -487,7 +487,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                   step="0.1"
                   className="form-input"
                   value={bodyFat}
-                  placeholder="Bijv. 14.5"
+                  placeholder="Atv. 14.5"
                   onChange={(e) => setBodyFat(e.target.value)}
                   min="2"
                   max="60"

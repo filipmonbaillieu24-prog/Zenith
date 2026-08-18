@@ -26,7 +26,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [birthDate, setBirthDate] = useState(initialProfile.birthDate || '');
   const [height, setHeight] = useState<string>(initialProfile.height?.toString() || '');
   
-  const [unitSystem, setUnitSystem] = useState<'metric' | 'imperial'>(initialProfile.unit_system || 'metric');
+  const [unitSystem, setUnitSystem] = useState<'withric' | 'imperial'>(initialProfile.unit_system || 'withric');
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>(initialProfile.weight_unit || 'kg');
 
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
@@ -304,9 +304,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   id="profileUnitSystem"
                   className="zh-profile-select"
                   value={unitSystem}
-                  onChange={(e) => setUnitSystem(e.target.value as 'metric' | 'imperial')}
+                  onChange={(e) => setUnitSystem(e.target.value as 'withric' | 'imperial')}
                 >
-                  <option value="metric">Metric (cm / km)</option>
+                  <option value="withric">Metric (cm / km)</option>
                   <option value="imperial">Imperial (inches / miles)</option>
                 </select>
               </div>
