@@ -100,7 +100,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
                 <div style={{ fontSize: 16, marginBottom: 4 }}>{pc.emoji}</div>
                 <div style={{ fontSize: 11, fontWeight: 800, color: isActive ? pc.color : '#64748b', marginBottom: 4 }}>{pc.label}</div>
                 <div style={{ fontSize: 9, color: '#475569', lineHeight: 1.4 }}>
-                  {ph === 'base' ? '9+ weken voor event' : ph === 'build' ? '3–9 weken voor event' : ph === 'peak' ? '1–3 weken voor event' : 'Race week'}
+                  {ph === 'base' ? '9+ weeks before event' : ph === 'build' ? '3–9 weeks before event' : ph === 'peak' ? '1–3 weeks before event' : 'Race week'}
                 </div>
               </div>
             );
@@ -181,9 +181,9 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
             })()}
 
             {phaseInfo.phase === 'peak' && [
-              { icon: '⬇️', text: `Reduce volume by 40–50% (van ~${Math.round(pmcData.atl * 7)} naar ~${Math.round(pmcData.atl * 7 * 0.5)} TSS/week).` },
+              { icon: '⬇️', text: `Reduce volume by 40-50% (from ~${Math.round(pmcData.atl * 7)} naar ~${Math.round(pmcData.atl * 7 * 0.5)} TSS/week).` },
               { icon: '⚡', text: 'Maintain 2–3 short sharp intervals per week to keep your system primed.' },
-              { icon: '😴', text: `TSB nu: ${Math.round(pmcData.tsb)}. Target TSB van +10 tot +20 op racedag.` },
+              { icon: '😴', text: `TSB nu: ${Math.round(pmcData.tsb)}. Target TSB of +10 to +20 on race day.` },
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}
 
             {phaseInfo.phase === 'race' && [

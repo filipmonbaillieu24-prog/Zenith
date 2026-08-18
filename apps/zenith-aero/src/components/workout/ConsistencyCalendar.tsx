@@ -42,7 +42,7 @@ export const ConsistencyCalendar: React.FC<ConsistencyCalendarProps> = ({ rides 
           <Activity size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5, color: '#cbd5e1' }} />
           Consistentie
         </span>
-        <span className="wd-section-card__sub">{activeDays} dagen · {totalKm.toFixed(0)} km</span>
+        <span className="wd-section-card__sub">{activeDays} days · {totalKm.toFixed(0)} km</span>
       </div>
       <div className="wd-cal-wrap">
         <div className="wd-cal-dow">{dowLabels.map((l, i) => <span key={i}>{l}</span>)}</div>

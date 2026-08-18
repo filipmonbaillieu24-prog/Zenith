@@ -30,7 +30,7 @@ export const AICoachChatWidget: React.FC<AICoachChatWidgetProps> = ({ profile, r
       setMessages([
         {
           role: 'assistant',
-          content: `Hoi ${name}! I am your personal Zenith AI Coach. I have access to your fitness data and history. Feel free to ask me anything al je vragen over je rideten, trainingszones, voeding of hersteladviezen. Hoe voelen de benen today?`,
+          content: `Hoi ${name}! I am your personal Zenith AI Coach. I have access to your fitness data and history. Feel free to ask me anything about your vragen over je rideten, trainingszones, voeding of hersteladviezen. Hoe voelen de benen today?`,
         },
       ]);
     }

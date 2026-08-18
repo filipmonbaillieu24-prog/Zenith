@@ -751,7 +751,7 @@ function App() {
         }, { onConflict: 'user_id,date' });
 
       if (error) throw error;
-      triggerNotification(newIsCompleteStatus ? "Daily log marked as complete!" : "Dag gemarkeerd als onvolledig (uitgesloten van Zenith).");
+      triggerNotification(newIsCompleteStatus ? "Daily log marked as complete!" : "Daily log marked as incomplete (excluded from Zenith).");
     } catch (err) {
       console.error("Incompleetheid toggle mislukt:", err);
       setWeeklyDayStates(weeklyDayStates);
@@ -1927,7 +1927,7 @@ function App() {
                 ) : (
                   <>
                     Kalibratie status: <strong>{zaneResult.calibrationDays}/14 days</strong> compleet logged. 
-                    Sleep Quality en -duur wegen nu al actief mee via sportwetenschappelijke herstelmatrices. Na 14 days schakelt Zenith over op uw unieke gepersonaliseerde slaapcoëfficiënten.
+                    Sleep quality and duration factor into recovery matrices. After 14 days Zenith adapts to your personalized model.sonaliseerde slaapcoëfficiënten.
                   </>
                 )}
               </div>
@@ -2060,11 +2060,11 @@ function App() {
               </div>
               <div className="zane-feedback-text" style={{ fontSize: '11px', marginTop: '4px', lineHeight: '1.4' }}>
                 {netDailyBalance <= -100 ? (
-                  <>You are in an energy deficit of {Math.abs(netDailyBalance)} kcal. Dit stimuleert vetverbranding with een gezonde, duurzame snelheid.</>
+                  <>You are in an energy deficit of {Math.abs(netDailyBalance)} kcal. This stimulates fat oxidation at a healthy, sustainable rate.</>
                 ) : netDailyBalance >= 100 ? (
                   <>You are in an energy surplus of {netDailyBalance} kcal. This supports muscle growth and recovery after heavy training.</>
                 ) : (
-                  <>Je energiebalans is stabiel. Je gewicht zal naar verwachting op onderhoudsniveau blijven schommelen.</>
+                  <>Your energy balance is stable. Weight is expected to fluctuate near maintenance.</>
                 )}
               </div>
             </div>
@@ -2208,14 +2208,14 @@ function App() {
                   </button>
                 )}
                 <button className="btn-submit" style={{ padding: '6px 12px', fontSize: 11, margin: 0 }} onClick={() => { setEditingLogEntry(null); resetLogForm(); setLogSource('quick'); setShowLogModal(true); }}>
-                  <Plus size={12} /> Log Maaltijd
+                  <Plus size={12} /> Log Meal
                 </button>
               </div>
             </div>
 
             {filteredFoodLogs.length === 0 ? (
               <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                Geen maaltijden geregistreerd voor deze datum. Klik op de knop om te loggen.
+                No meals logged for this date. Click the button to log.
               </div>
             ) : (
               <div className="timeline">
@@ -2283,7 +2283,7 @@ function App() {
 
             {ingredients.length === 0 ? (
               <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-                No ingredients found. Maak ingrediënten aan om uw database op te bouwen.
+                No ingredients found. Create ingredients to build your database.
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
@@ -2376,13 +2376,13 @@ function App() {
               Mijn Sportrecepten
             </h2>
             <button className="btn-submit" style={{ padding: '8px 16px', fontSize: 11 }} onClick={() => { resetRecipeForm(); setShowRecipeModal(true); }}>
-              <Plus size={14} /> Nieuw Recept
+              <Plus size={14} /> New Recipe
             </button>
           </div>
 
           {recipes.length === 0 ? (
             <div className="fuel-card" style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
-              U heeft nog none recepten aangemaakt. Maak uw eerste recept an!
+              You have not created any recipes yet. Create your first recipe!
             </div>
           ) : (
             <div className="recipes-grid">
@@ -2604,7 +2604,7 @@ function App() {
                   +{creatineStats.latestWaterWeight.toFixed(2)} kg
                 </div>
                 <p style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: '14px', margin: '8px 0 0 0' }}>
-                  ZANE past je weegschaalgewicht automatisch aan om watergewichtfluctuaties te compenseren.
+                  ZANE automatically adjusts your scale weight to compensate for water retention fluctuations.
                 </p>
               </div>
             </div>
@@ -2687,11 +2687,11 @@ function App() {
           {/* SUPPLEMENTS LOG HISTORY */}
           <div className="fuel-card col-12">
             <h2 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#fff', marginBottom: 20 }}>
-              Geregistreerde Supplements op {new Date(selectedDateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })}
+              Logged Supplements on {new Date(selectedDateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'long', year: 'numeric' })}
             </h2>
             {supplementsLogs.filter(s => toYYYYMMDD(s.logged_at) === selectedDateStr).length === 0 ? (
               <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-                Geen supplementen geregistreerd voor deze datum.
+                No supplements logged for this date.
               </div>
             ) : (
               <div className="timeline">
@@ -2752,7 +2752,7 @@ function App() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Tijdstip van nuttigen</label>
+                  <label className="form-label">Consumption Time</label>
                   <input 
                     type="time" 
                     className="form-input" 
@@ -2797,7 +2797,7 @@ function App() {
                 {logSource === 'quick' && (
                   <>
                     <div className="form-group">
-                      <label className="form-label">Naam Maaltijd / Product</label>
+                      <label className="form-label">Meal / Product Name</label>
                       <input 
                         type="text" 
                         className="form-input" 
@@ -2864,7 +2864,7 @@ function App() {
                         <input 
                           type="text" 
                           className="form-input" 
-                          placeholder="Typ ingrediënt naam om te zoeken..." 
+                          placeholder="Type ingredient name to search..." 
                           value={logIngredientSearch} 
                           onChange={e => {
                             setLogIngredientSearch(e.target.value);
@@ -2939,7 +2939,7 @@ function App() {
                         <input 
                           type="text" 
                           className="form-input" 
-                          placeholder="Typ recept naam om te zoeken..." 
+                          placeholder="Type recipe name to search..." 
                           value={logRecipeSearch} 
                           onChange={e => {
                             setLogRecipeSearch(e.target.value);
@@ -3144,7 +3144,7 @@ function App() {
                   <input 
                     type="number" 
                     className="form-input" 
-                    placeholder="Atv. 32 voor energy drink, 80 voor espresso" 
+                    placeholder="e.g. 32 for energy drink, 80 for espresso" 
                     value={ingCaffeine}
                     onChange={e => setIngCaffeine(e.target.value)}
                   />
@@ -3250,7 +3250,7 @@ function App() {
                         <input 
                           type="text" 
                           className="form-input" 
-                          placeholder="Typ om te zoeken..." 
+                          placeholder="Type to search..." 
                           value={recipeIngSearch} 
                           onChange={e => {
                             setRecipeIngSearch(e.target.value);
@@ -3391,7 +3391,7 @@ function App() {
             <form onSubmit={handleCopyDay}>
               <div className="modal-body">
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, lineHeight: '1.4' }}>
-                  Kopieer alle <strong>{filteredFoodLogs.length}</strong> maaltijden van <strong>{new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</strong> naar een andere datum. De tijdstippen van nuttigen blijven behouden.
+                  Copy all <strong>{filteredFoodLogs.length}</strong> meals from <strong>{new Date(selectedDateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</strong> naar een andere datum. De tijdstippen van nuttigen blijven behouden.
                 </p>
                 <div className="form-group">
                   <label className="form-label">Kies Goaldatum</label>
@@ -3406,7 +3406,7 @@ function App() {
               </div>
               <div style={{ padding: '0 24px 24px' }}>
                 <button type="submit" className="btn-submit" style={{ width: '100%' }}>
-                  Kopieer maaltijden
+                  Copy meals
                 </button>
               </div>
             </form>

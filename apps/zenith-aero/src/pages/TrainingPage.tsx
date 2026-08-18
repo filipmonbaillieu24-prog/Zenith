@@ -52,11 +52,11 @@ export const TrainingPage: React.FC<TrainingPageProps> = ({
     const name = profile.name ?? 'Atleet';
     const tsb = state.pmcData.tsb;
     if (tsb < -20) {
-      return `Hello ${name}. Your body is currently under substantial stress (TSB: ${Math.round(tsb)}). Focus today on active recovery or take een volledige rustdag.`;
+      return `Hello ${name}. Your body is currently under substantial stress (TSB: ${Math.round(tsb)}). Focus today on active recovery or take a rest day volledige rustdag.`;
     } else if (tsb > 5) {
-      return `Hello ${name}. You are well rested and your form is excellent (TSB: +${Math.round(tsb)}). Today is a great day for an intensive intervaltraining of een lange duurride!`;
+      return `Hello ${name}. You are well rested and your form is excellent (TSB: +${Math.round(tsb)}). Today is a great day for an intensive workoutrvaltraining of een lange duurride!`;
     } else {
-      return `Hello ${name}. Your training build is steady and controlled. Keep respecting your zones and follow guidance to blessures te voorkomen.`;
+      return `Hello ${name}. Your training build is steady and controlled. Keep respecting your zones and follow guidance to prevent injuryn.`;
     }
   };
 

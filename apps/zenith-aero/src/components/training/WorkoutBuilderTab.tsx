@@ -98,7 +98,7 @@ export const WorkoutBuilderTab: React.FC<WorkoutBuilderTabProps> = ({
         {/* Builder acties */}
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={addCustomBlock} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px dashed rgba(203, 213, 225,0.2)', background: 'rgba(203, 213, 225,0.04)', color: '#cbd5e1', cursor: 'pointer', fontFamily: 'inheride', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Plus size={14} /> Blok toevoegen
+            <Plus size={14} /> Add Block
           </button>
 
            <button onClick={() => {

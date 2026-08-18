@@ -133,13 +133,13 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
               avgDecoupling < 5
                 ? `**Outstanding aerobic and cardiovascular efficiency**: With an average heart rate drift (aerobic decoupling) of only **${avgDecoupling.toFixed(1)}%** blijft je cardiovasculaire systeem stabiel bij langdurige inspanningen.`
                 : `**Cardiovascular drift during prolonged effort**: Your heart rate drift increases on average by **${avgDecoupling.toFixed(1)}%** in de tweede helft van je rideten bij gelijkblijvend vermogen.`,
-              `**Endurance Baseline Foundation**: Your longest ride was **${longestRideStr}**. Such rides are crucial for building capillary density van je spieren.`,
+              `**Endurance Baseline Foundation**: Your longest ride was **${longestRideStr}**. Such rides are crucial for building capillary density of your muscles.`,
             ];
 
             const werkpuntenBullets = [
               avgRpe >= 7
                 ? `**Intensity Distribution & Muscle Stress**: Your average RPE is **${avgRpe.toFixed(1)}/10**. Wij adviseren om 80% van de rideten strikt in Zone 2 te rijden.`
-                : `**Healthy Intensity Distribution**: Je gemiddelde RPE van **${avgRpe.toFixed(1)}/10** demonstrates excellent training polarization.`,
+                : `**Healthy Intensity Distribution**: Your average RPE of **${avgRpe.toFixed(1)}/10** demonstrates excellent training polarization.`,
               avgDecoupling >= 5
                 ? `**Focus on Zone 2 Endurance Training**: The observed heart rate drift of **${avgDecoupling.toFixed(1)}%** requires specific attention.`
                 : `**Stable Aerobic Power**: Since your decoupling is minimal, you can target tempo sustained efforts and VO2max.`,
@@ -150,7 +150,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
 
             const risicoBullets = [
               avgRpe > 7.5
-                ? `**High Risk of Overtraining**: De trainingsprikkels stapelen zich sneller op dan je lichaam kan herstellen. Plan direct een herstelweek in.`
+                ? `**High Risk of Overtraining**: De trainingsprikkels stapelen zich sneller op dan je lichaam kan herstellen. Schedule a recovery week immediately.`
                 : `**Balanced Workload Risk**: Your training workload and recovery weeks are in optimal balance.`,
               decouplingRides.length > 5 && avgDecoupling > 6
                 ? `**Progressive Fatigue Risk**: Significant cardiac drift across multiple rides indicates cumulative recovery deficit.`
@@ -193,7 +193,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
     if (!reportData || reportData.empty) return;
     const plainText = `VOORTGANGSRAPPORT (Afgelopen ${selectedPeriod} Dagen)
 Verdict: ${reportData.verdict}
-Totaal: ${reportData.totalKm} km | ${reportData.totalHours} uur | ${reportData.totalRides} rideten
+Total: ${reportData.totalKm} km | ${reportData.totalHours} uur | ${reportData.totalRides} rideten
 
 PROGRESSIE & STERKE PUNTEN:
 ${reportData.progressBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).join('\n')}

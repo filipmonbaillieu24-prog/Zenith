@@ -29,7 +29,7 @@ export const AISettingsPanel: React.FC = () => {
     try {
       const response = await sendAIChat(
         [{ role: 'user', content: 'Zeg "Verbinding geslaagd!"' }],
-        'Je bent een test-agent.'
+        'You are a test agent.'
       );
       setTestResult({
         success: true,
@@ -38,7 +38,7 @@ export const AISettingsPanel: React.FC = () => {
     } catch (e: any) {
       setTestResult({
         success: false,
-        message: e.message || 'Onbekende fout bij verbinden.',
+        message: e.message || 'Unknown connection error.',
       });
     } finally {
       setTesting(false);
