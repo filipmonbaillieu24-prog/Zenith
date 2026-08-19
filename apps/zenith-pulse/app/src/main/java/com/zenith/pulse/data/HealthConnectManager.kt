@@ -137,33 +137,39 @@ class HealthConnectManager(private val context: Context) {
 
         // 1. Steps Today (Deduplicated per Data Origin to match QRing / Primary Tracker)
         try {
-            val stepsResponse = client.readRecords(
-                ReadRecordsRequest(
-                    recordType = StepsRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startTime30Days)
-                )
-            )
-            
             val stepsByDateAndOrigin = mutableMapOf<String, MutableMap<String, Long>>()
             val stepsByOrigin = mutableMapOf<String, Long>()
-            for (record in stepsResponse.records) {
-                val pkg = record.metadata.dataOrigin.packageName
-                if (!record.startTime.isBefore(localMidnight)) {
-                    stepsByOrigin[pkg] = (stepsByOrigin[pkg] ?: 0L) + record.count
-                }
-                val localDateStr = record.startTime.atZone(systemZone).toLocalDate().toString()
-                val originMap = stepsByDateAndOrigin.getOrPut(localDateStr) { mutableMapOf() }
-                originMap[pkg] = (originMap[pkg] ?: 0L) + record.count
+            var pageToken: String? = null
 
-                stepsMaps.add(
-                    mapOf(
-                        "count" to record.count,
-                        "start_time" to record.startTime.toString(),
-                        "end_time" to record.endTime.toString(),
-                        "metadata" to mapOf("data_origin" to pkg)
+            do {
+                val stepsResponse = client.readRecords(
+                    ReadRecordsRequest(
+                        recordType = StepsRecord::class,
+                        timeRangeFilter = TimeRangeFilter.after(startTime30Days),
+                        pageToken = pageToken
                     )
                 )
-            }
+
+                for (record in stepsResponse.records) {
+                    val pkg = record.metadata.dataOrigin.packageName
+                    if (!record.startTime.isBefore(localMidnight)) {
+                        stepsByOrigin[pkg] = (stepsByOrigin[pkg] ?: 0L) + record.count
+                    }
+                    val localDateStr = record.startTime.atZone(systemZone).toLocalDate().toString()
+                    val originMap = stepsByDateAndOrigin.getOrPut(localDateStr) { mutableMapOf() }
+                    originMap[pkg] = (originMap[pkg] ?: 0L) + record.count
+
+                    stepsMaps.add(
+                        mapOf(
+                            "count" to record.count,
+                            "start_time" to record.startTime.toString(),
+                            "end_time" to record.endTime.toString(),
+                            "metadata" to mapOf("data_origin" to pkg)
+                        )
+                    )
+                }
+                pageToken = stepsResponse.pageToken
+            } while (pageToken != null)
 
             for ((dateStr, originMap) in stepsByDateAndOrigin) {
                 val qringKey = originMap.keys.firstOrNull { it.contains("ring", ignoreCase = true) }
