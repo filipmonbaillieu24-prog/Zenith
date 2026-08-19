@@ -1502,10 +1502,12 @@ function App() {
   const gender = profile.gender || 'other';
   
   const baseBmr = Math.round(calculateMifflinBmr(latestWeight, height, age, gender));
-  const palFactor = 1.25;
+  // FIX 3: PAL 1.2 (NEAT-only baseline) — matches zane.ts. Exercise calories come from wearable.
+  const palFactor = 1.2;
   const baseTdee = Math.round(baseBmr * palFactor);
   const bmrOffset = zaneResult.isCalibrated ? (zaneResult.bmrOffset || 0) : 0;
-  const activeCalories = selectedDateActiveCalories;
+  // FIX 5: Cap active calories at 1,500 kcal to guard against wearable sensor spikes
+  const activeCalories = Math.min(1500, selectedDateActiveCalories);
   
   // Sleep average (excluding unrated 0 quality_score entries)
   const validSleepQualities = sleepLogs.map(s => Number(s.quality_score)).filter(q => !isNaN(q) && q > 0);
@@ -1532,17 +1534,9 @@ function App() {
     const qDiff = (todaySleepQuality ?? sleepQualityAvg) - sleepQualityAvg;
     const dDiff = (todaySleepDuration ?? sleepDurationAvg) - sleepDurationAvg;
     sleepAdjustment = (zaneResult.sleepQualityCoeff * qDiff) + (zaneResult.sleepDurationCoeff * dDiff);
-  } else {
-    let fallbackTdee = baseTdee + activeCalories;
-    let tdeeMultiplier = 1.0;
-    if (todaySleepQuality !== null && todaySleepQuality < 60) {
-      tdeeMultiplier *= 0.95;
-    }
-    if (todaySleepDuration !== null && todaySleepDuration < 6.5) {
-      tdeeMultiplier *= 0.95;
-    }
-    sleepAdjustment = (fallbackTdee * tdeeMultiplier) - fallbackTdee;
   }
+  // FIX 8: No fallback sleep adjustment in uncalibrated mode.
+  // Direction of sleep effect on TDEE is ambiguous before ZANE learns it from data.
   sleepAdjustment = Math.round(sleepAdjustment);
 
   let gymCalories = 0;
@@ -1559,14 +1553,12 @@ function App() {
       : Math.round(caffeineStats.activeDateCaffeine * 0.15);
   }
 
-  const tef = Math.round(intakeCalories * 0.1);
-
-  // SOTA ML wearable active calorie cross-calibration coefficient (beta_wearable)
-  const wearableCalibration = activeCalories > 0
-    ? Math.max(0.70, Math.min(1.25, 1.0 + (bmrOffset / Math.max(200, activeCalories))))
-    : 1.0;
-
-  const totalTdee = Math.round(baseTdee + (activeCalories * wearableCalibration) + bmrOffset + sleepAdjustment + tef + gymCalories + caffeineCalories);
+  // FIX 9: Apply active calories directly (trust wearable at 1.0×).
+  // bmrOffset already corrects for all systematic TDEE underestimation.
+  // Conflating metabolic offset with wearable calibration adds a compounding error.
+  // FIX 2: TEF removed from totalTdee. TEF is already implicit in the net balance:
+  // higher intake → more TEF → less stored — captured naturally without adding it to TDEE.
+  const totalTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + gymCalories + caffeineCalories);
 
   // SOTA ML ZenithFusionNet prediction
   const activeDateCreatine = supplementsLogs
@@ -1634,19 +1626,17 @@ function App() {
           ? Math.round((todaySleepQuality - 80) * (zaneResult.sleepQualityCoeff || 0) + (todaySleepDuration - 8.0) * (zaneResult.sleepDurationCoeff || 0))
           : 0;
 
-        const dayTef = Math.round(dayCalories * 0.10);
+        // FIX 2: TEF removed from dayTdee. Net balance = intake - TDEE already
+        // accounts for TEF implicitly (more food eaten → more TEF → less stored).
+        // FIX 5: Cap active calories per day to guard against wearable outliers.
+        // FIX 9: Trust wearable at 1.0× — bmrOffset covers all metabolic offsets.
+        const safeActive = Math.min(1500, activeCalories);
         const dayGymVolume = gymVolumeMap[dateStr] || 0;
         const dayGymCalories = Math.round(dayGymVolume * (zaneResult.gymVolumeCoeff || 0));
-        
         const dayCaffeineLog = supplementsLogs.filter(s => s.logged_at.split('T')[0] === dateStr && s.supplement_type === 'caffeine');
         const dayCaffeineAmount = dayCaffeineLog.reduce((sum, curr) => sum + Number(curr.amount), 0) + (weeklyFoodLogs.filter(f => f.logged_at.split('T')[0] === dateStr).reduce((sum, f) => sum + Number(f.caffeine_mg || 0), 0));
         const dayCaffeineCalories = Math.round(dayCaffeineAmount * (zaneResult.caffeineCoeff || 0));
-
-        const dayWearableCalibration = activeCalories > 0
-          ? Math.max(0.70, Math.min(1.25, 1.0 + ((zaneResult.bmrOffset || 0) / Math.max(200, activeCalories))))
-          : 1.0;
-
-        const dayTdee = Math.round(baseTdee + (activeCalories * dayWearableCalibration) + (zaneResult.bmrOffset || 0) + sleepAdjustment + dayTef + dayGymCalories + dayCaffeineCalories);
+        const dayTdee = Math.round(baseTdee + safeActive + (zaneResult.bmrOffset || 0) + sleepAdjustment + dayGymCalories + dayCaffeineCalories);
         totalTdeeVal += dayTdee;
       }
     });
@@ -2157,18 +2147,13 @@ function App() {
                 <span style={{ fontWeight: 700, color: '#fff' }}>{baseBmr} kcal</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>PAL Activity (x1.25):</span>
+                <span style={{ color: 'var(--text-muted)' }}>PAL Activity (x1.2):</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>+{baseTdee - baseBmr} kcal</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Cardio & Running (Aero & Stride):</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>
                   +{activeCalories} kcal
-                  {activeCalories > 0 && (
-                    <span style={{ fontSize: '9px', color: '#38bdf8', marginLeft: '6px', background: 'rgba(56, 189, 248, 0.12)', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                      Calibrated: {wearableCalibration.toFixed(2)}x
-                    </span>
-                  )}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
@@ -2201,7 +2186,7 @@ function App() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Thermic Effect of Food (TEF):</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>+{tef} kcal</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '11px' }}>~{Math.round(intakeCalories * 0.1)} kcal (implicit in net balance)</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 900, paddingBottom: '4px' }}>
                 <span style={{ color: 'var(--color-primary)' }}>Total TDEE Expenditure:</span>

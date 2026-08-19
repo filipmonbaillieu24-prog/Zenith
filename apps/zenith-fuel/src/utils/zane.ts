@@ -84,14 +84,14 @@ export function runZaneCalibration(
   // Sort logs chronologically
   const sortedLogs = [...logs].sort((a, b) => a.date.localeCompare(b.date));
 
-  // 1. Calculate Creatine Saturation (0.0 to 1.0) based on intake history
-  // Daily intake of 5g increases saturation by +0.33 (fully loaded in 3 days)
-  // 8% daily washout/decay when not taken
+  // 1. Calculate Creatine Saturation (0.0 to 1.0) based on intake history.
+  // FIX 10 (creatine): Slower, physiologically accurate loading rate.
+  // Full saturation takes ~28 days at 5g/day. Daily washout: 3% (half-life ~23 days).
   let currentSaturation = 0;
   const saturationMap: { [date: string]: number } = {};
   sortedLogs.forEach(log => {
     const intake = log.creatine || 0;
-    currentSaturation = Math.min(1.0, (currentSaturation * 0.92) + (intake / 15));
+    currentSaturation = Math.min(1.0, (currentSaturation * 0.97) + (intake / 140));
     saturationMap[log.date] = currentSaturation;
   });
 
@@ -113,7 +113,9 @@ export function runZaneCalibration(
   });
 
   // 3. Exponential Moving Average (EMA) Weight Trend (alpha = 0.15)
-  let emaWeight = logsWithWeight.find(l => l.weight !== null)?.weight ?? (latestWeightMeasured || 75);
+  // FIX 10: Use profile target weight as fallback instead of hardcoded 75 kg
+  const weightFallback = latestWeightMeasured ?? (profile.targetWeight ?? 75);
+  let emaWeight = logsWithWeight.find(l => l.weight !== null)?.weight ?? weightFallback;
   const trendWeights: number[] = [];
   logsWithWeight.forEach(l => {
     if (l.weight !== null) {
@@ -133,23 +135,35 @@ export function runZaneCalibration(
   let gymVolumeCoeff = 0.025; // baseline prior (0.025 kcal per kg moved in strength training)
   let caffeineCoeff = 0.15; // baseline prior (0.15 kcal per mg)
 
-  // Mifflin-St Jeor params
-  const currentWeight = latestWeightMeasured || (logsWithWeight[logsWithWeight.length - 1]?.weight ?? 75);
+  // BMR / profile params
+  // FIX 10: Use profile target weight as fallback instead of hardcoded 75 kg
+  const currentWeight = latestWeightMeasured ?? (logsWithWeight[logsWithWeight.length - 1]?.weight ?? weightFallback);
   const height = profile.height || 181;
   const age = calculateAge(profile.birthDate);
   const gender = profile.gender || 'male';
-  const palFactor = 1.25; // PAL baseline
+  // FIX 3: PAL 1.2 (NEAT-only baseline). Exercise calories are added explicitly from
+  // wearable data so the multiplier must not include structured exercise activity.
+  const palFactor = 1.2;
 
   // Find target log for the selected date
   const targetDate = selectedDateStr || logsWithWeight[logsWithWeight.length - 1]?.date;
   const targetLog = logsWithWeight.find(l => l.date === targetDate) || logsWithWeight[logsWithWeight.length - 1];
-  const targetActiveCalories = targetLog?.activeCalories ?? 0;
+  // FIX 5: Cap active calories at 1,500 kcal/day to guard against wearable sensor spikes
+  const targetActiveCalories = Math.min(1500, targetLog?.activeCalories ?? 0);
   const targetGymVolume = targetLog?.gymVolume ?? 0;
   const targetCaffeine = targetLog?.caffeine ?? 0;
   
   // 5. Multivariable Ridge Regression Solver
   // We solve for Y = X * theta where:
   // theta = [bmr_offset, sleep_quality_coeff, sleep_duration_coeff, delta_gym_coeff, delta_caffeine_coeff]
+
+  // FIX 1+4: Feature normalization scale constants.
+  // Dividing each feature by its typical std ensures lambda=15 provides equal
+  // regularization strength across all coefficient dimensions.
+  const SLEEP_Q_SCALE  = 20;   // typical σ of sleep-quality scores (0-100)
+  const SLEEP_D_SCALE  = 1.0;  // typical σ of sleep-duration deviations (hours)
+  const GYM_VOL_SCALE  = 3000; // typical σ of session gym volume (kg lifted)
+  const CAFFEINE_SCALE = 150;  // typical σ of daily caffeine intake (mg)
   
   // Calculate averages for sleep
   const validSleepQualityLogs = completeLogs.filter(l => l.sleepQuality !== null);
@@ -191,7 +205,9 @@ export function runZaneCalibration(
         todayBaselineBmr = calculateMifflinBmr(todayLog.weight, height, age, gender);
       }
 
-      const todayBaseTdee = todayBaselineBmr * palFactor + todayLog.activeCalories;
+      // FIX 5: Cap active calories to exclude wearable outlier days from the regression
+      const safeActiveCalories = Math.min(1500, todayLog.activeCalories);
+      const todayBaseTdee = todayBaselineBmr * palFactor + safeActiveCalories;
       const baseGymCalories = todayLog.gymVolume * 0.025;
       const todayCaffeine = todayLog.caffeine || 0;
       const baseCaffeineCalories = todayCaffeine * 0.15;
@@ -202,11 +218,13 @@ export function runZaneCalibration(
       const qVal = todayLog.sleepQuality !== null ? todayLog.sleepQuality : sleepQualityAvg;
       const dVal = todayLog.sleepDurationHours !== null ? todayLog.sleepDurationHours : sleepDurationAvg;
 
-      const x0 = -1;
-      const x1 = -(qVal - sleepQualityAvg);
-      const x2 = -(dVal - sleepDurationAvg);
-      const x3 = -todayLog.gymVolume;
-      const x4 = -todayCaffeine;
+      // FIX 1+4: Use correct signs (+intercept, +deviations) and normalize all
+      // features so ridge regularization is equally effective across dimensions.
+      const x0 = 1;                                               // intercept
+      const x1 = (qVal - sleepQualityAvg) / SLEEP_Q_SCALE;      // sleep quality (normalized)
+      const x2 = (dVal - sleepDurationAvg) / SLEEP_D_SCALE;     // sleep duration (normalized)
+      const x3 = todayLog.gymVolume / GYM_VOL_SCALE;            // gym volume (normalized)
+      const x4 = todayCaffeine / CAFFEINE_SCALE;                 // caffeine (normalized)
 
       X.push([x0, x1, x2, x3, x4]);
       Y.push(yVal);
@@ -215,18 +233,20 @@ export function runZaneCalibration(
 
   // Calculate regression coefficients if we have at least 5 equations
   if (X.length >= 5) {
-    const lambda = 15.0; // Regularization
+    const lambda = 15.0; // Regularization strength (equal across normalized features)
     const coefficients = solveRidgeRegression(X, Y, lambda);
-    // Clamp BMR offset to realistic physiological limits (+/- 250 kcal)
-    bmrOffset = Math.min(250, Math.max(-250, Math.round(coefficients[0] || 0)));
-    sleepQualityCoeff = Math.min(10, Math.max(-10, coefficients[1] || 0));
-    sleepDurationCoeff = Math.min(50, Math.max(-50, coefficients[2] || 0));
-    
-    const deltaGymCoeff = coefficients[3] || 0;
-    gymVolumeCoeff = Math.min(0.10, Math.max(0.01, 0.025 + deltaGymCoeff));
 
-    const deltaCaffeineCoeff = coefficients[4] || 0;
-    caffeineCoeff = Math.min(0.50, Math.max(0.02, 0.15 + deltaCaffeineCoeff));
+    // FIX 1+4: Un-normalize on retrieval: coeff_raw = coeff_normalized / scale
+    // so that the forward pass can use raw feature values directly.
+    bmrOffset          = Math.min(250,  Math.max(-250, Math.round(coefficients[0] || 0)));
+    sleepQualityCoeff  = Math.min(10,   Math.max(-10,  (coefficients[1] || 0) / SLEEP_Q_SCALE));
+    sleepDurationCoeff = Math.min(50,   Math.max(-50,  (coefficients[2] || 0) / SLEEP_D_SCALE));
+
+    const deltaGymCoeff      = (coefficients[3] || 0) / GYM_VOL_SCALE;
+    gymVolumeCoeff  = Math.min(0.10, Math.max(0.01, 0.025 + deltaGymCoeff));
+
+    const deltaCaffeineCoeff = (coefficients[4] || 0) / CAFFEINE_SCALE;
+    caffeineCoeff   = Math.min(0.50, Math.max(0.02, 0.15 + deltaCaffeineCoeff));
   }
 
   // 5. Calculate today's dynamic calorie target
@@ -269,13 +289,10 @@ export function runZaneCalibration(
     const sleepDurationDiff = (todaySleepDuration ?? sleepDurationAvg) - sleepDurationAvg;
     todayTdee += (sleepQualityCoeff * sleepQualityDiff) + (sleepDurationCoeff * sleepDurationDiff);
   } else {
+    // FIX 8: In uncalibrated mode, do not apply a sleep penalty/bonus.
+    // The direction of sleep's effect on TDEE is ambiguous before data is learned,
+    // and guessing the wrong direction adds more error than doing nothing.
     todayTdee = todayBmr * palFactor + targetActiveCalories + gymCalories + caffeineCalories;
-    if (todaySleepQuality !== null && todaySleepQuality < 60) {
-      todayTdee *= 0.95;
-    }
-    if (todaySleepDuration !== null && todaySleepDuration < 6.5) {
-      todayTdee *= 0.95;
-    }
   }
 
   const trendWeightMap: { [date: string]: number } = {};
@@ -286,7 +303,9 @@ export function runZaneCalibration(
     ? Math.round(trendWeights[trendWeights.length - 1] * 100) / 100 
     : currentWeight;
 
-  return generateTargets(todayTdee, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, calibrationDays, isCalibrated, trendWeightMap, currentTrendWeight);
+  // FIX 7: Pass todayBmr so the safety floor uses the same formula (Katch-McArdle
+  // or Mifflin) as the TDEE calculation — no more inconsistency.
+  return generateTargets(todayTdee, todayBmr, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, calibrationDays, isCalibrated, trendWeightMap, currentTrendWeight);
 }
 
 /**
@@ -442,9 +461,12 @@ function solveLinearSystem(A: number[][], B: number[]): number[] | null {
 
 /**
  * Generates nutritional macro targets based on TDEE, weight, and user profile parameters.
+ * FIX 7: todayBmr is now received so the safety floor uses the same BMR formula
+ * (Katch-McArdle or Mifflin-St Jeor) as the TDEE — no formula mismatch.
  */
 function generateTargets(
   tdee: number,
+  todayBmr: number,
   weight: number,
   profile: ZaneProfile,
   bmrOffset: number,
@@ -463,9 +485,10 @@ function generateTargets(
   const targetRate = profile.targetRateKgPerWeek ?? 0.5;
   let phase: 'cut' | 'bulk' | 'maintain' = 'maintain';
 
-  // Athlete BMR Safety Floor (intake target must never drop below 95% of BMR)
-  const bmrEstimate = calculateMifflinBmr(weight, profile.height || 181, calculateAge(profile.birthDate), profile.gender || 'male');
-  const bmrSafetyFloor = Math.max(1550, Math.round(bmrEstimate * 0.95));
+  // FIX 7: Safety floor uses todayBmr (same formula as TDEE) + gender-aware absolute minimum.
+  // Clinical guidelines (ACSM/AND): men ≥ 1500 kcal/day, women ≥ 1200 kcal/day.
+  const absoluteFloor = (profile.gender === 'female') ? 1200 : 1500;
+  const bmrSafetyFloor = Math.max(absoluteFloor, Math.round(todayBmr * 0.95));
   // 25% Max Deficit Cap (max 600 kcal/day deficit to preserve LBM)
   const maxAllowableDeficit = Math.min(600, Math.round(tdee * 0.25));
 
@@ -480,9 +503,11 @@ function generateTargets(
       dailyCalorieTarget = Math.max(bmrSafetyFloor, tdee - safeDeficit);
       phase = 'cut';
     } else if (diff < -weightMargin) {
-      // Gain weight: surplus
-      const surplus = (targetRate * 7700) / 7;
-      dailyCalorieTarget = tdee + surplus;
+      // FIX 6: Cap lean-bulk surplus at 500 kcal/day.
+      // Exceeding this primarily adds fat rather than muscle (Helms et al. 2014).
+      const desiredSurplus = (targetRate * 7700) / 7;
+      const cappedSurplus = Math.min(500, desiredSurplus);
+      dailyCalorieTarget = tdee + cappedSurplus;
       phase = 'bulk';
     }
   }
