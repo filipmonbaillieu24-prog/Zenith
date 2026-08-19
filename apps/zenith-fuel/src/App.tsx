@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
 import { calculateZenithSleepScore, ZenithFusionNet } from '@zenith/shared';
-import { runZaneCalibration, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, calculateMifflinBmr, calculateAge } from './utils/zane';
+import { runZaneCalibration, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateAge } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface Ingredient {
@@ -127,6 +127,9 @@ function App() {
     sleepDurationCoeff: 0,
     gymVolumeCoeff: 0.15,
     caffeineCoeff: 0.15,
+    weekendCoeff: 0,
+    adaptationFactor: 1.0,
+    sustainedCutDays: 0,
     calculatedAt: '',
     isCalibrated: false,
     calibrationDays: 0,
@@ -325,6 +328,7 @@ function App() {
 
       const heightVal = ssotProfile?.height_cm || 175;
       const targetWeightVal = profileData?.target_weight || 75;
+      const priorWeights = await loadZaneCoefficients(supabase, userId);
 
       setProfile({
         height: heightVal,
@@ -332,7 +336,13 @@ function App() {
         birthDate: ssotProfile?.birth_date || '1990-01-01',
         targetWeight: targetWeightVal,
         targetRateKgPerWeek: profileData?.target_rate_kg_per_week ?? 0.5,
-        dietType: profileData?.diet_type ?? 'balanced'
+        dietType: profileData?.diet_type ?? 'balanced',
+        priorBmrOffset: priorWeights?.bmrOffset ?? profileData?.learned_bmr_offset ?? undefined,
+        priorSleepQualityCoeff: priorWeights?.sleepQualityCoeff ?? profileData?.learned_sleep_quality_coeff ?? undefined,
+        priorSleepDurationCoeff: priorWeights?.sleepDurationCoeff ?? profileData?.learned_sleep_duration_coeff ?? undefined,
+        priorGymVolumeCoeff: priorWeights?.gymVolumeCoeff ?? undefined,
+        priorCaffeineCoeff: priorWeights?.caffeineCoeff ?? undefined,
+        priorWeekendCoeff: priorWeights?.weekendCoeff ?? undefined
       });
 
       // 2. Fetch Ingredients
@@ -502,6 +512,33 @@ function App() {
     return map;
   }, [weeklyFoodLogs]);
 
+  const dailyProteinMap = useMemo(() => {
+    const map: { [date: string]: number } = {};
+    weeklyFoodLogs.forEach(log => {
+      const dStr = log.logged_at.split('T')[0];
+      map[dStr] = (map[dStr] || 0) + Number(log.protein || 0);
+    });
+    return map;
+  }, [weeklyFoodLogs]);
+
+  const dailyCarbsMap = useMemo(() => {
+    const map: { [date: string]: number } = {};
+    weeklyFoodLogs.forEach(log => {
+      const dStr = log.logged_at.split('T')[0];
+      map[dStr] = (map[dStr] || 0) + Number(log.carbs || 0);
+    });
+    return map;
+  }, [weeklyFoodLogs]);
+
+  const dailyFatMap = useMemo(() => {
+    const map: { [date: string]: number } = {};
+    weeklyFoodLogs.forEach(log => {
+      const dStr = log.logged_at.split('T')[0];
+      map[dStr] = (map[dStr] || 0) + Number(log.fat || 0);
+    });
+    return map;
+  }, [weeklyFoodLogs]);
+
   // Complete status map
   const dailyCompletionMap = useMemo(() => {
     const map: { [date: string]: boolean } = {};
@@ -514,6 +551,9 @@ function App() {
   const selectedDateActiveCalories = useMemo(() => activeCaloriesMap[selectedDateStr] || 0, [activeCaloriesMap, selectedDateStr]);
   const selectedDateGymVolume = useMemo(() => gymVolumeMap[selectedDateStr] || 0, [gymVolumeMap, selectedDateStr]);
   const selectedDateCaloriesIntake = useMemo(() => dailyCaloriesMap[selectedDateStr] || 0, [dailyCaloriesMap, selectedDateStr]);
+  const selectedDateProtein = useMemo(() => dailyProteinMap[selectedDateStr] || 0, [dailyProteinMap, selectedDateStr]);
+  const selectedDateCarbs = useMemo(() => dailyCarbsMap[selectedDateStr] || 0, [dailyCarbsMap, selectedDateStr]);
+  const selectedDateFat = useMemo(() => dailyFatMap[selectedDateStr] || 0, [dailyFatMap, selectedDateStr]);
   const selectedDateComplete = useMemo(() => dailyCompletionMap[selectedDateStr] ?? true, [dailyCompletionMap, selectedDateStr]);
 
   // Run ZANE Adaptive Calibration
@@ -537,7 +577,10 @@ function App() {
         isComplete: true,
         gymVolume: 0,
         creatine: 0,
-        caffeine: 0
+        caffeine: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0
       };
     }
 
@@ -571,7 +614,7 @@ function App() {
 
       const { data: foodHist } = await supabase
         .from('fuel_logs')
-        .select('logged_at, calories, caffeine_mg')
+        .select('logged_at, calories, caffeine_mg, protein, carbs, fat')
         .eq('user_id', userId)
         .gte('logged_at', startOf30Days.toISOString());
 
@@ -582,6 +625,9 @@ function App() {
         if (logsMap[dStr]) {
           logsMap[dStr].calories += Number(f.calories);
           logsMap[dStr].caffeine = (logsMap[dStr].caffeine || 0) + Number(f.caffeine_mg || 0);
+          logsMap[dStr].protein = (logsMap[dStr].protein || 0) + Number(f.protein || 0);
+          logsMap[dStr].carbs = (logsMap[dStr].carbs || 0) + Number(f.carbs || 0);
+          logsMap[dStr].fat = (logsMap[dStr].fat || 0) + Number(f.fat || 0);
         }
       });
 
@@ -644,6 +690,9 @@ function App() {
 
       if (logsMap[selectedDateStr]) {
         logsMap[selectedDateStr].calories = selectedDateCaloriesIntake;
+        logsMap[selectedDateStr].protein = selectedDateProtein;
+        logsMap[selectedDateStr].carbs = selectedDateCarbs;
+        logsMap[selectedDateStr].fat = selectedDateFat;
         logsMap[selectedDateStr].activeCalories = selectedDateActiveCalories;
         logsMap[selectedDateStr].gymVolume = selectedDateGymVolume;
         logsMap[selectedDateStr].isComplete = selectedDateComplete;
@@ -657,9 +706,12 @@ function App() {
         todayTrainingType = 'endurance';
       }
 
+      const completeLogsCount = Object.values(logsMap).filter(log => log.isComplete && log.calories >= 1000 && log.weight !== null).length;
+
       const activeProfile = {
         ...profile,
-        todayTrainingType
+        todayTrainingType,
+        priorConfidence: Math.min(1.0, completeLogsCount / 30)
       };
 
       const latestWeight = weightLogs[weightLogs.length - 1]?.weight || null;
@@ -693,20 +745,20 @@ function App() {
       setZaneHistory(formattedHist);
 
       if (zOutput.isCalibrated) {
-        saveLearnedState(zOutput.bmrOffset, zOutput.sleepQualityCoeff, zOutput.sleepDurationCoeff, zOutput.gymVolumeCoeff, zOutput.caffeineCoeff);
+        saveLearnedState(zOutput.bmrOffset, zOutput.sleepQualityCoeff, zOutput.sleepDurationCoeff, zOutput.gymVolumeCoeff, zOutput.caffeineCoeff, zOutput.weekendCoeff);
       }
     };
 
     fetchCalibrationLogs();
-  }, [userId, weightLogs, sleepLogs, weeklyFoodLogs, supplementsLogs, bodyMeasurementsLogs, selectedDateActiveCalories, selectedDateGymVolume, selectedDateCaloriesIntake, selectedDateComplete, profile, selectedDateStr]);
+  }, [userId, weightLogs, sleepLogs, weeklyFoodLogs, supplementsLogs, bodyMeasurementsLogs, selectedDateActiveCalories, selectedDateGymVolume, selectedDateCaloriesIntake, selectedDateProtein, selectedDateCarbs, selectedDateFat, selectedDateComplete, profile, selectedDateStr]);
 
   // Save ZANE coefficients to database
-  const saveLearnedState = async (offset: number, qCoeff: number, dCoeff: number, gCoeff: number, cCoeff: number) => {
+  const saveLearnedState = async (offset: number, qCoeff: number, dCoeff: number, gCoeff: number, cCoeff: number, wCoeff: number) => {
     try {
       const todayDateStr = new Date().toISOString().split('T')[0];
       
       // Save to ml_weights (Fase 3 persistent backup)
-      await saveZaneCoefficients(supabase, userId, offset, qCoeff, dCoeff, gCoeff, cCoeff);
+      await saveZaneCoefficients(supabase, userId, offset, qCoeff, dCoeff, gCoeff, cCoeff, wCoeff);
 
       await supabase
         .from('fuel_profile')
@@ -1558,7 +1610,12 @@ function App() {
   // Conflating metabolic offset with wearable calibration adds a compounding error.
   // FIX 2: TEF removed from totalTdee. TEF is already implicit in the net balance:
   // higher intake → more TEF → less stored — captured naturally without adding it to TDEE.
-  const totalTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + gymCalories + caffeineCalories);
+  const isTargetWeekend = [0, 6].includes(new Date(selectedDateStr + 'T12:00:00').getDay()) ? 1 : 0;
+  const weekendAdjustment = zaneResult.isCalibrated ? ((zaneResult.weekendCoeff || 0) * isTargetWeekend) : 0;
+  const preAdaptationTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + gymCalories + caffeineCalories + weekendAdjustment);
+  const adaptationFactor = zaneResult.adaptationFactor ?? 1.0;
+  const adaptationPenalty = Math.round(preAdaptationTdee * (1 - adaptationFactor));
+  const totalTdee = preAdaptationTdee - adaptationPenalty;
 
   // SOTA ML ZenithFusionNet prediction
   const activeDateCreatine = supplementsLogs
@@ -2184,9 +2241,25 @@ function App() {
                   {sleepAdjustment >= 0 ? `+${sleepAdjustment}` : sleepAdjustment} kcal
                 </span>
               </div>
+              {zaneResult.isCalibrated && isTargetWeekend === 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Weekend Influence:</span>
+                  <span style={{ fontWeight: 700, color: (zaneResult.weekendCoeff || 0) >= 0 ? '#55efc4' : '#ff7675' }}>
+                    {(zaneResult.weekendCoeff || 0) >= 0 ? `+${zaneResult.weekendCoeff}` : zaneResult.weekendCoeff} kcal
+                  </span>
+                </div>
+              )}
+              {zaneResult.adaptationFactor < 0.99 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Metabolic Adaptation ({zaneResult.sustainedCutDays}d cut):</span>
+                  <span style={{ fontWeight: 700, color: '#ff7675' }}>
+                    -{adaptationPenalty} kcal
+                  </span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Thermic Effect of Food (TEF):</span>
-                <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '11px' }}>~{Math.round(intakeCalories * 0.1)} kcal (implicit in net balance)</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '11px' }}>~{Math.round(intakeProtein * 4 * 0.25 + intakeCarbs * 4 * 0.08 + intakeFat * 9 * 0.03)} kcal (implicit in net balance)</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 900, paddingBottom: '4px' }}>
                 <span style={{ color: 'var(--color-primary)' }}>Total TDEE Expenditure:</span>

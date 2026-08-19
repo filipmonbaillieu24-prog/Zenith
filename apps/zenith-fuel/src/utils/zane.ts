@@ -6,6 +6,13 @@ export interface ZaneProfile {
   targetRateKgPerWeek?: number; // default 0.5
   dietType?: string; // balanced, high-carb, low-carb
   todayTrainingType?: 'intense' | 'endurance' | 'rest' | null;
+  priorBmrOffset?: number;
+  priorSleepQualityCoeff?: number;
+  priorSleepDurationCoeff?: number;
+  priorGymVolumeCoeff?: number;
+  priorCaffeineCoeff?: number;
+  priorConfidence?: number; // 0.0–1.0
+  priorWeekendCoeff?: number;
 }
 
 export interface DailyLogData {
@@ -21,6 +28,9 @@ export interface DailyLogData {
   caffeine?: number; // in mg
   bodyFat?: number | null; // body fat %
   muscleMass?: number | null; // muscle mass kg
+  protein?: number;
+  carbs?: number;
+  fat?: number;
 }
 
 export interface ZaneOutput {
@@ -29,6 +39,9 @@ export interface ZaneOutput {
   sleepDurationCoeff: number;
   gymVolumeCoeff: number;
   caffeineCoeff: number;
+  weekendCoeff: number;
+  adaptationFactor: number;
+  sustainedCutDays: number;
   calculatedAt: string;
   isCalibrated: boolean;
   calibrationDays: number;
@@ -73,7 +86,7 @@ export function calculateAge(birthDateStr?: string): number {
 /**
  * ZANE Core Engine.
  * Implements linear interpolation for weight, screens out incomplete days,
- * and performs local multivariable ridge regression to learn withabolic & sleep coefficients.
+ * and performs local multivariable ridge regression to learn metabolic & sleep coefficients.
  */
 export function runZaneCalibration(
   logs: DailyLogData[],
@@ -134,6 +147,7 @@ export function runZaneCalibration(
   let sleepDurationCoeff = 0;
   let gymVolumeCoeff = 0.025; // baseline prior (0.025 kcal per kg moved in strength training)
   let caffeineCoeff = 0.15; // baseline prior (0.15 kcal per mg)
+  let weekendCoeff = 0; // baseline weekend coefficient (0 kcal)
 
   // BMR / profile params
   // FIX 10: Use profile target weight as fallback instead of hardcoded 75 kg
@@ -155,7 +169,7 @@ export function runZaneCalibration(
   
   // 5. Multivariable Ridge Regression Solver
   // We solve for Y = X * theta where:
-  // theta = [bmr_offset, sleep_quality_coeff, sleep_duration_coeff, delta_gym_coeff, delta_caffeine_coeff]
+  // theta = [bmr_offset, sleep_quality_coeff, sleep_duration_coeff, delta_gym_coeff, delta_caffeine_coeff, weekend_coeff]
 
   // FIX 1+4: Feature normalization scale constants.
   // Dividing each feature by its typical std ensures lambda=15 provides equal
@@ -181,6 +195,10 @@ export function runZaneCalibration(
 
   let lastBodyFat: number | null = null;
 
+  // Track the last date in logs to calculate daysAgo for recency weighting
+  const lastDate = logsWithWeight.length > 0 ? logsWithWeight[logsWithWeight.length - 1].date : new Date().toISOString().split('T')[0];
+  const lastDateMs = new Date(lastDate + 'T12:00:00').getTime();
+
   for (let i = 1; i < logsWithWeight.length; i++) {
     const todayLog = logsWithWeight[i];
     const yesterdayLog = logsWithWeight[i - 1];
@@ -189,7 +207,26 @@ export function runZaneCalibration(
       lastBodyFat = todayLog.bodyFat;
     }
 
+    // Invariant check: isComplete is a hard gate. Incomplete days are never loaded.
     if (todayLog.isComplete && todayLog.calories >= 1000 && todayLog.weight !== null && yesterdayLog.weight !== null) {
+      // Recency weight: exponential decay with half-weight at ~23 days (λ = 0.97)
+      const daysAgo = (lastDateMs - new Date(todayLog.date + 'T12:00:00').getTime()) / 86400000;
+      const recencyWeight = Math.pow(0.97, Math.max(0, daysAgo));
+
+      // Data quality weight: 0.0 - 1.0 based on signal presence
+      const hasWeight  = todayLog.weight !== null ? 0.40 : 0;
+      const hasSleepQ  = todayLog.sleepQuality !== null ? 0.25 : 0;
+      const hasSleepD  = todayLog.sleepDurationHours !== null ? 0.25 : 0;
+      const hasBodyFat = (todayLog.bodyFat !== null && todayLog.bodyFat !== undefined) ? 0.10 : 0;
+      const dataQuality = hasWeight + hasSleepQ + hasSleepD + hasBodyFat;
+
+      const rowWeight = recencyWeight * dataQuality;
+      
+      // Skip day if it has no data quality at all
+      if (rowWeight < 1e-4) continue;
+
+      const sqrtW = Math.sqrt(rowWeight);
+
       // 7-day EMA trend slope (kg per day) to eliminate single-day water retention fluctuations
       const windowStartIdx = Math.max(0, i - 7);
       const daysSpan = i - windowStartIdx;
@@ -212,11 +249,27 @@ export function runZaneCalibration(
       const todayCaffeine = todayLog.caffeine || 0;
       const baseCaffeineCalories = todayCaffeine * 0.15;
 
-      // Realized daily energy balance from 7-day trend slope
-      const yVal = (trendRatePerDay * 7700) - (todayLog.calories - (todayBaseTdee + baseGymCalories + baseCaffeineCalories));
+      // Improvement 1: Macro-specific TEF instead of flat 10%
+      const macroTef = ((todayLog.protein || 0) * 4 * 0.25)
+                     + ((todayLog.carbs || 0) * 4 * 0.08)
+                     + ((todayLog.fat || 0) * 9 * 0.03);
+
+      // Improvement 5: Energy-equivalent weight change based on body composition split
+      let energyPerKg = 7700;
+      if (lastBodyFat !== null) {
+        const fatFraction  = Math.max(0.05, Math.min(0.60, lastBodyFat / 100));
+        const leanFraction = 1 - fatFraction;
+        energyPerKg = fatFraction * 7700 + leanFraction * 900;
+      }
+
+      // Realized daily energy balance from trend slope
+      const yVal = (trendRatePerDay * energyPerKg) - (todayLog.calories - macroTef - (todayBaseTdee + baseGymCalories + baseCaffeineCalories));
 
       const qVal = todayLog.sleepQuality !== null ? todayLog.sleepQuality : sleepQualityAvg;
       const dVal = todayLog.sleepDurationHours !== null ? todayLog.sleepDurationHours : sleepDurationAvg;
+
+      // DOW: Weekend coefficient feature (Feature 5)
+      const isWeekend = [0, 6].includes(new Date(todayLog.date + 'T12:00:00').getDay()) ? 1 : 0;
 
       // FIX 1+4: Use correct signs (+intercept, +deviations) and normalize all
       // features so ridge regularization is equally effective across dimensions.
@@ -225,9 +278,53 @@ export function runZaneCalibration(
       const x2 = (dVal - sleepDurationAvg) / SLEEP_D_SCALE;     // sleep duration (normalized)
       const x3 = todayLog.gymVolume / GYM_VOL_SCALE;            // gym volume (normalized)
       const x4 = todayCaffeine / CAFFEINE_SCALE;                 // caffeine (normalized)
+      const x5 = isWeekend;                                     // weekend flag
 
-      X.push([x0, x1, x2, x3, x4]);
-      Y.push(yVal);
+      X.push([x0, x1, x2, x3, x4, x5].map(v => v * sqrtW));
+      Y.push(yVal * sqrtW);
+    }
+  }
+
+  // Improvement 4: Bayesian Warm-Starting Anchor Rows
+  if (profile.priorBmrOffset !== undefined && X.length >= 5) {
+    const anchorWeight = Math.sqrt((profile.priorConfidence ?? 0.5) * X.length);
+    
+    // Anchor for bmrOffset (Feature 0)
+    X.push([anchorWeight, 0, 0, 0, 0, 0]);
+    Y.push((profile.priorBmrOffset ?? 0) * anchorWeight);
+
+    // Anchor for sleepQualityCoeff (Feature 1: normalized prior)
+    if (profile.priorSleepQualityCoeff !== undefined) {
+      const priorNormQ = profile.priorSleepQualityCoeff * SLEEP_Q_SCALE;
+      X.push([0, anchorWeight, 0, 0, 0, 0]);
+      Y.push(priorNormQ * anchorWeight);
+    }
+
+    // Anchor for sleepDurationCoeff (Feature 2: normalized prior)
+    if (profile.priorSleepDurationCoeff !== undefined) {
+      const priorNormD = profile.priorSleepDurationCoeff * SLEEP_D_SCALE;
+      X.push([0, 0, anchorWeight, 0, 0, 0]);
+      Y.push(priorNormD * anchorWeight);
+    }
+
+    // Anchor for gymVolumeCoeff (Feature 3: normalized delta prior)
+    if (profile.priorGymVolumeCoeff !== undefined) {
+      const priorNormG = (profile.priorGymVolumeCoeff - 0.025) * GYM_VOL_SCALE;
+      X.push([0, 0, 0, anchorWeight, 0, 0]);
+      Y.push(priorNormG * anchorWeight);
+    }
+
+    // Anchor for caffeineCoeff (Feature 4: normalized delta prior)
+    if (profile.priorCaffeineCoeff !== undefined) {
+      const priorNormC = (profile.priorCaffeineCoeff - 0.15) * CAFFEINE_SCALE;
+      X.push([0, 0, 0, 0, anchorWeight, 0]);
+      Y.push(priorNormC * anchorWeight);
+    }
+
+    // Anchor for weekendCoeff (Feature 5)
+    if (profile.priorWeekendCoeff !== undefined) {
+      X.push([0, 0, 0, 0, 0, anchorWeight]);
+      Y.push(profile.priorWeekendCoeff * anchorWeight);
     }
   }
 
@@ -247,6 +344,9 @@ export function runZaneCalibration(
 
     const deltaCaffeineCoeff = (coefficients[4] || 0) / CAFFEINE_SCALE;
     caffeineCoeff   = Math.min(0.50, Math.max(0.02, 0.15 + deltaCaffeineCoeff));
+
+    // DOW Weekend coefficient retrieval
+    weekendCoeff       = Math.min(400,  Math.max(-400, Math.round(coefficients[5] || 0)));
   }
 
   // 5. Calculate today's dynamic calorie target
@@ -287,13 +387,36 @@ export function runZaneCalibration(
     todayTdee = todayBmr * palFactor + targetActiveCalories + gymCalories + caffeineCalories + bmrOffset;
     const sleepQualityDiff = (todaySleepQuality ?? sleepQualityAvg) - sleepQualityAvg;
     const sleepDurationDiff = (todaySleepDuration ?? sleepDurationAvg) - sleepDurationAvg;
-    todayTdee += (sleepQualityCoeff * sleepQualityDiff) + (sleepDurationCoeff * sleepDurationDiff);
+    const isTargetWeekend = [0, 6].includes(new Date(targetDate + 'T12:00:00').getDay()) ? 1 : 0;
+    todayTdee += (sleepQualityCoeff * sleepQualityDiff) + (sleepDurationCoeff * sleepDurationDiff) + (weekendCoeff * isTargetWeekend);
   } else {
     // FIX 8: In uncalibrated mode, do not apply a sleep penalty/bonus.
-    // The direction of sleep's effect on TDEE is ambiguous before data is learned,
-    // and guessing the wrong direction adds more error than doing nothing.
     todayTdee = todayBmr * palFactor + targetActiveCalories + gymCalories + caffeineCalories;
   }
+
+  // Improvement 7: Metabolic Adaptation Modeling (Adaptive Thermogenesis)
+  let adaptationFactor = 1.0;
+  let sustainedCutDays = 0;
+  if (completeLogs.length >= 21) {
+    const recentLogs = [...completeLogs].reverse();
+    for (const log of recentLogs) {
+      const logBaselineBmr = calculateMifflinBmr(log.weight ?? currentWeight, height, age, gender);
+      const logTdee = logBaselineBmr * palFactor + Math.min(1500, log.activeCalories);
+      if (log.calories < logTdee - 150) {
+        sustainedCutDays++;
+      } else {
+        break; // break on first non-deficit day
+      }
+    }
+    if (sustainedCutDays >= 21) {
+      // Max adaptation: 10% TDEE down-regulation at 60 days of cut
+      const adaptationDays = sustainedCutDays - 21;
+      const maxAdaptation = 0.10;
+      adaptationFactor = 1.0 - Math.min(maxAdaptation, adaptationDays * (maxAdaptation / 39));
+    }
+  }
+
+  todayTdee = Math.round(todayTdee * adaptationFactor);
 
   const trendWeightMap: { [date: string]: number } = {};
   logsWithWeight.forEach((l, idx) => {
@@ -305,7 +428,7 @@ export function runZaneCalibration(
 
   // FIX 7: Pass todayBmr so the safety floor uses the same formula (Katch-McArdle
   // or Mifflin) as the TDEE calculation — no more inconsistency.
-  return generateTargets(todayTdee, todayBmr, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, calibrationDays, isCalibrated, trendWeightMap, currentTrendWeight);
+  return generateTargets(todayTdee, todayBmr, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, weekendCoeff, adaptationFactor, sustainedCutDays, calibrationDays, isCalibrated, trendWeightMap, currentTrendWeight);
 }
 
 /**
@@ -474,6 +597,9 @@ function generateTargets(
   sleepDurationCoeff: number,
   gymVolumeCoeff: number,
   caffeineCoeff: number,
+  weekendCoeff: number,
+  adaptationFactor: number,
+  sustainedCutDays: number,
   calibrationDays: number,
   isCalibrated: boolean,
   trendWeightMap: { [date: string]: number } = {},
@@ -582,6 +708,9 @@ function generateTargets(
     sleepDurationCoeff: Math.round(sleepDurationCoeff * 10) / 10,
     gymVolumeCoeff: Math.round(gymVolumeCoeff * 1000) / 1000,
     caffeineCoeff: Math.round(caffeineCoeff * 1000) / 1000,
+    weekendCoeff: Math.round(weekendCoeff),
+    adaptationFactor: Math.round(adaptationFactor * 100) / 100,
+    sustainedCutDays,
     calculatedAt: new Date().toISOString(),
     isCalibrated,
     calibrationDays,
@@ -605,12 +734,13 @@ export async function saveZaneCoefficients(
   sleepQualityCoeff: number,
   sleepDurationCoeff: number,
   gymVolumeCoeff: number,
-  caffeineCoeff: number
+  caffeineCoeff: number,
+  weekendCoeff: number
 ): Promise<void> {
   await supabase.from('ml_weights').upsert({
     user_id: userId,
-    model_name: 'zane_withabolic_coefficients',
-    weights: { bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff },
+    model_name: 'zane_metabolic_coefficients',
+    weights: { bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, weekendCoeff },
     updated_at: new Date().toISOString()
   }, { onConflict: 'user_id,model_name' });
 }
@@ -618,11 +748,11 @@ export async function saveZaneCoefficients(
 export async function loadZaneCoefficients(
   supabase: any,
   userId: string
-): Promise<{ bmrOffset: number; sleepQualityCoeff: number; sleepDurationCoeff: number; gymVolumeCoeff: number; caffeineCoeff?: number } | null> {
+): Promise<{ bmrOffset: number; sleepQualityCoeff: number; sleepDurationCoeff: number; gymVolumeCoeff: number; caffeineCoeff?: number; weekendCoeff?: number } | null> {
   const { data } = await supabase.from('ml_weights')
     .select('weights')
     .eq('user_id', userId)
-    .eq('model_name', 'zane_withabolic_coefficients')
+    .eq('model_name', 'zane_metabolic_coefficients')
     .maybeSingle();
   return data?.weights ?? null;
 }
