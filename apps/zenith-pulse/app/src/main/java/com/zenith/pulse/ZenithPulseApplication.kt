@@ -29,13 +29,13 @@ class ZenithPulseApplication : Application() {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val syncRequest = PeriodicWorkRequestBuilder<SyncWorker>(15, TimeUnit.MINUTES)
+        val syncRequest = PeriodicWorkRequestBuilder<SyncWorker>(1, TimeUnit.HOURS)
             .setConstraints(constraints)
             .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "ZenithPulseSyncWorker",
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.REPLACE,
             syncRequest
         )
     }

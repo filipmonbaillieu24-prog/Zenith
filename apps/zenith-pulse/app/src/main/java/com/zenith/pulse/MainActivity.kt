@@ -26,10 +26,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.PermissionController
 import com.zenith.pulse.data.HealthConnectManager
-import com.zenith.pulse.data.HealthDataPayload
 import com.zenith.pulse.sync.ZenithSyncManager
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.net.NetworkInterface
 
 class MainActivity : ComponentActivity() {
 
@@ -42,30 +48,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             ZenithPulseTheme {
                 ZenithPulseScreen(
-                    healthConnectManager = healthConnectManager,
-                    getLocalIpAddress = ::getLocalIpAddress
+                    healthConnectManager = healthConnectManager
                 )
             }
         }
-    }
-
-    private fun getLocalIpAddress(): String {
-        try {
-            val interfaces = NetworkInterface.getNetworkInterfaces()
-            while (interfaces.hasMoreElements()) {
-                val intf = interfaces.nextElement()
-                val addrs = intf.inetAddresses
-                while (addrs.hasMoreElements()) {
-                    val addr = addrs.nextElement()
-                    if (!addr.isLoopbackAddress && addr.hostAddress?.contains(":") == false) {
-                        return addr.hostAddress ?: "127.0.0.1"
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return "192.168.x.x"
     }
 }
 
@@ -74,13 +60,12 @@ val ZenithBgDark = Color(0xFF09090B)
 val ZenithCardBg = Color(0xFF141824)
 val ZenithSteelGrey = Color(0xFF1E293B)
 val ZenithSteelBorder = Color(0xFF334155)
-val ZenithCyan = Color(0xFF38BDF8)
+val ZenithAccent = Color(0xFF39FF14) // Zenith Hub neon green accent
 val ZenithPurple = Color(0xFFA855F7)
-val ZenithGreen = Color(0xFF10B981)
-val ZenithRed = Color(0xFFEF4444)
 val ZenithTextMain = Color(0xFFF8FAFC)
 val ZenithTextMuted = Color(0xFF94A3B8)
 val ZenithTextSub = Color(0xFF64748B)
+val ZenithRed = Color(0xFFEF4444)
 
 @Composable
 fun ZenithPulseTheme(content: @Composable () -> Unit) {
@@ -88,7 +73,7 @@ fun ZenithPulseTheme(content: @Composable () -> Unit) {
         colorScheme = darkColorScheme(
             background = ZenithBgDark,
             surface = ZenithCardBg,
-            primary = ZenithCyan,
+            primary = ZenithAccent,
             secondary = ZenithPurple,
             onBackground = ZenithTextMain,
             onSurface = ZenithTextMain
@@ -99,15 +84,27 @@ fun ZenithPulseTheme(content: @Composable () -> Unit) {
 
 @Composable
 fun ZenithPulseScreen(
-    healthConnectManager: HealthConnectManager,
-    getLocalIpAddress: () -> String
+    healthConnectManager: HealthConnectManager
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Authentication States
+    var isLoggedInState by remember { mutableStateOf(com.zenith.pulse.auth.UserAuthManager.isLoggedIn(context)) }
+    var userEmailState by remember { mutableStateOf(com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: "") }
+    
+    // Auth Input Fields (prefill with standard email)
+    val emailInput = remember { mutableStateOf("filip.monbaillieu.24@gmail.com") }
+    val passwordInput = remember { mutableStateOf("") }
+    var isLoggingIn by remember { mutableStateOf(false) }
+    var authMessage by remember { mutableStateOf<String?>(null) }
+
+    // Sync States
     var hasPermissions by remember { mutableStateOf(false) }
     var isSyncing by remember { mutableStateOf(false) }
-    var payload by remember { mutableStateOf(HealthDataPayload()) }
-    var syncMessage by remember { mutableStateOf(ZenithSyncManager.lastSyncStatus) }
+    var syncSuccess by remember { mutableStateOf(false) }
 
+    // Update States
     var updateInfo by remember { mutableStateOf<com.zenith.pulse.update.UpdateInfo?>(null) }
     var isDownloadingUpdate by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableStateOf(0f) }
@@ -117,17 +114,12 @@ fun ZenithPulseScreen(
     ) { granted ->
         coroutineScope.launch {
             hasPermissions = healthConnectManager.hasAllPermissions()
-            if (hasPermissions) {
-                payload = healthConnectManager.fetchLatestHealthData()
-            }
         }
     }
 
     LaunchedEffect(Unit) {
         hasPermissions = healthConnectManager.hasAllPermissions()
-        if (hasPermissions) {
-            payload = healthConnectManager.fetchLatestHealthData()
-        }
+        
         // Auto update check using dynamic versionCode
         val currentCode = com.zenith.pulse.BuildConfig.VERSION_CODE
         val info = com.zenith.pulse.update.UpdateManager.checkForUpdates(currentCode)
@@ -136,570 +128,442 @@ fun ZenithPulseScreen(
         }
     }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val localIp = remember { getLocalIpAddress() }
+    // A. Update Dialog Popup
+    updateInfo?.let { info ->
+        AlertDialog(
+            onDismissRequest = { /* Prevent dismissal during update */ },
+            title = {
+                Text(
+                    text = "Update Beschikbaar",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = ZenithAccent
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Er is een nieuwe versie van Zenith Pulse (v${info.versionName}) beschikbaar.",
+                        color = ZenithTextMain,
+                        fontSize = 14.sp
+                    )
+                    if (isDownloadingUpdate) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LinearProgressIndicator(
+                            progress = { downloadProgress },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = ZenithAccent,
+                            trackColor = ZenithSteelBorder
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Downloaden: ${(downloadProgress * 100).toInt()}%",
+                            color = ZenithTextMuted,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (!isDownloadingUpdate) {
+                    Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                isDownloadingUpdate = true
+                                com.zenith.pulse.update.UpdateManager.downloadAndInstallApk(
+                                    context = context,
+                                    downloadUrl = info.downloadUrl,
+                                    onProgress = { p -> downloadProgress = p },
+                                    onError = { err ->
+                                        isDownloadingUpdate = false
+                                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                                    }
+                                )
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = ZenithAccent)
+                    ) {
+                        Text("UPDATE NU", color = Color(0xFF09090B), fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                if (!isDownloadingUpdate) {
+                    TextButton(onClick = { updateInfo = null }) {
+                        Text("LATER", color = ZenithTextMuted)
+                    }
+                }
+            },
+            containerColor = ZenithCardBg,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
 
+    // Background Gradient for entire screen
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(ZenithBgDark, Color(0xFF0F172A), Color(0xFF18181B))
+                    colors = listOf(ZenithBgDark, Color(0xFF0C0E14), Color(0xFF09090B))
                 )
             )
-            .padding(16.dp)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(12.dp))
+        if (!isLoggedInState) {
+            // ==========================================
+            // SCREEN 1: LOGIN SCREEN (Minimalist)
+            // ==========================================
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Circle Logo
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, ZenithAccent, CircleShape)
+                        .background(ZenithCardBg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_zenith_pulse),
+                        contentDescription = "Emblem",
+                        modifier = Modifier
+                            .size(70.dp)
+                            .clip(CircleShape)
+                    )
+                }
 
-            // Update Available Card Banner
-            updateInfo?.let { info ->
-                Card(
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "ZENITH PULSE",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Black,
+                    color = ZenithAccent,
+                    letterSpacing = 3.sp
+                )
+                Text(
+                    text = "Health Connect Ingestion Client",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = ZenithTextMuted
+                )
+
+                Spacer(modifier = Modifier.height(36.dp))
+
+                OutlinedTextField(
+                    value = emailInput.value,
+                    onValueChange = { emailInput.value = it },
+                    label = { Text("E-mailadres") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF141824),
+                        unfocusedContainerColor = Color(0xFF141824),
+                        focusedBorderColor = ZenithAccent,
+                        unfocusedBorderColor = ZenithSteelBorder,
+                        focusedLabelColor = ZenithAccent,
+                        unfocusedLabelColor = ZenithTextMuted,
+                        focusedTextColor = ZenithTextMain,
+                        unfocusedTextColor = ZenithTextMain
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = passwordInput.value,
+                    onValueChange = { passwordInput.value = it },
+                    label = { Text("Wachtwoord") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF141824),
+                        unfocusedContainerColor = Color(0xFF141824),
+                        focusedBorderColor = ZenithAccent,
+                        unfocusedBorderColor = ZenithSteelBorder,
+                        focusedLabelColor = ZenithAccent,
+                        unfocusedLabelColor = ZenithTextMuted,
+                        focusedTextColor = ZenithTextMain,
+                        unfocusedTextColor = ZenithTextMain
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                authMessage?.let { msg ->
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(text = msg, fontSize = 12.sp, color = ZenithRed)
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            isLoggingIn = true
+                            authMessage = null
+                            val (success, msg) = com.zenith.pulse.auth.UserAuthManager.loginWithSupabase(
+                                context,
+                                emailInput.value,
+                                passwordInput.value
+                            )
+                            isLoggingIn = false
+                            if (success) {
+                                isLoggedInState = true
+                                userEmailState = com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: emailInput.value
+                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                            } else {
+                                authMessage = msg
+                            }
+                        }
+                    },
+                    enabled = !isLoggingIn,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ZenithAccent,
+                        disabledContainerColor = ZenithSteelGrey
+                    ),
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B4B)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, ZenithPurple)
+                        .height(50.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (isLoggingIn) "INLOGGEN..." else "INLOGGEN",
+                        color = Color(0xFF09090B),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+        } else {
+            // ==========================================
+            // SCREEN 2: SYNC SCREEN (Zero-UI Concept)
+            // ==========================================
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Top bar: Account & Logout
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = userEmailState,
+                        color = ZenithTextMuted,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    Text(
+                        text = "UITLOGGEN",
+                        color = ZenithRed,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.clickable {
+                            com.zenith.pulse.auth.UserAuthManager.logout(context)
+                            isLoggedInState = false
+                            userEmailState = ""
+                            syncSuccess = false
+                            isSyncing = false
+                        }
+                    )
+                }
+
+                // Center logo & pulse animation
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Double concentric pulse animation
+                    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+                    val scale1 by infiniteTransition.animateFloat(
+                        initialValue = 1.0f,
+                        targetValue = 2.0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1800, easing = LinearOutSlowInEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "scale1"
+                    )
+                    val alpha1 by infiniteTransition.animateFloat(
+                        initialValue = 0.8f,
+                        targetValue = 0.0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1800, easing = LinearOutSlowInEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "alpha1"
+                    )
+
+                    val scale2 by infiniteTransition.animateFloat(
+                        initialValue = 1.0f,
+                        targetValue = 2.0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1800, delayMillis = 900, easing = LinearOutSlowInEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "scale2"
+                    )
+                    val alpha2 by infiniteTransition.animateFloat(
+                        initialValue = 0.8f,
+                        targetValue = 0.0f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1800, delayMillis = 900, easing = LinearOutSlowInEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "alpha2"
+                    )
+
+                    Box(contentAlignment = Alignment.Center) {
+                        if (isSyncing) {
                             Box(
                                 modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(ZenithPurple)
+                                    .size(160.dp)
+                                    .graphicsLayer {
+                                        scaleX = scale1
+                                        scaleY = scale1
+                                        alpha = alpha1
+                                    }
+                                    .background(ZenithAccent.copy(alpha = 0.35f), CircleShape)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Nieuwe Zenith Pulse Update (v${info.versionName})",
-                                fontWeight = FontWeight.Bold,
-                                color = ZenithPurple,
-                                fontSize = 14.sp
+                            Box(
+                                modifier = Modifier
+                                    .size(160.dp)
+                                    .graphicsLayer {
+                                        scaleX = scale2
+                                        scaleY = scale2
+                                        alpha = alpha2
+                                    }
+                                    .background(ZenithAccent.copy(alpha = 0.35f), CircleShape)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "A new version of Zenith Pulse is available with latest features.",
-                            fontSize = 12.sp,
-                            color = ZenithTextMain
-                        )
+                        // Circular Logo Button
+                        Box(
+                            modifier = Modifier
+                                .size(160.dp)
+                                .clip(CircleShape)
+                                .background(ZenithCardBg)
+                                .border(
+                                    width = 3.dp,
+                                    color = if (syncSuccess) ZenithAccent else if (hasPermissions) ZenithAccent.copy(alpha = 0.6f) else ZenithRed,
+                                    shape = CircleShape
+                                )
+                                .clickable(enabled = !isSyncing && hasPermissions) {
+                                    coroutineScope.launch {
+                                        isSyncing = true
+                                        val success = ZenithSyncManager.performSync(context)
+                                        isSyncing = false
+                                        if (success) {
+                                            syncSuccess = true
+                                            delay(3000)
+                                            syncSuccess = false
+                                        } else {
+                                            Toast.makeText(context, "Synchronisatie mislukt.", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (syncSuccess) {
+                                Canvas(modifier = Modifier.size(64.dp)) {
+                                    val path = androidx.compose.ui.graphics.Path().apply {
+                                        moveTo(size.width * 0.25f, size.height * 0.5f)
+                                        lineTo(size.width * 0.45f, size.height * 0.7f)
+                                        lineTo(size.width * 0.75f, size.height * 0.3f)
+                                    }
+                                    drawPath(
+                                        path = path,
+                                        color = ZenithAccent,
+                                        style = Stroke(
+                                            width = 6.dp.toPx(),
+                                            cap = StrokeCap.Round,
+                                            join = StrokeJoin.Round
+                                        )
+                                    )
+                                }
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.ic_zenith_pulse),
+                                    contentDescription = "Zenith Logo",
+                                    modifier = Modifier
+                                        .size(100.dp)
+                                        .clip(CircleShape)
+                                )
+                            }
+                        }
+                    }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(28.dp))
 
-                        if (isDownloadingUpdate) {
-                            LinearProgressIndicator(
-                                progress = { downloadProgress },
-                                modifier = Modifier.fillMaxWidth(),
-                                color = ZenithCyan,
-                                trackColor = ZenithSteelBorder
+                    Text(
+                        text = if (isSyncing) "SYNCHRONISEREN..." else if (syncSuccess) "GESLAAGD!" else "TIK OM TE SYNCHRONISEREN",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (syncSuccess) ZenithAccent else ZenithTextMain,
+                        letterSpacing = 1.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = if (isSyncing) "Data wordt overgedragen naar Zenith..." else if (syncSuccess) "Biometrische gegevens up-to-date" else "Volledige offline synchronisatie",
+                        fontSize = 12.sp,
+                        color = ZenithTextMuted
+                    )
+                }
+
+                // Bottom permissions alert (if missing)
+                if (!hasPermissions) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2D1616)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ZenithRed)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Health Connect Permissies Vereist",
+                                fontWeight = FontWeight.Bold,
+                                color = ZenithRed,
+                                fontSize = 14.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Update downloaden ${(downloadProgress * 100).toInt()}%...",
-                                fontSize = 11.sp,
-                                color = ZenithTextMuted
+                                text = "Geef toegang tot Health Connect om biometrische gegevens uit te lezen.",
+                                fontSize = 12.sp,
+                                color = ZenithTextMain,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
-                        } else {
+                            Spacer(modifier = Modifier.height(12.dp))
                             Button(
                                 onClick = {
-                                    coroutineScope.launch {
-                                        isDownloadingUpdate = true
-                                        com.zenith.pulse.update.UpdateManager.downloadAndInstallApk(
-                                            context = context,
-                                            downloadUrl = info.downloadUrl,
-                                            onProgress = { p -> downloadProgress = p },
-                                            onError = { err ->
-                                                isDownloadingUpdate = false
-                                                Toast.makeText(context, err, Toast.LENGTH_LONG).show()
-                                            }
-                                        )
-                                    }
+                                    permissionLauncher.launch(healthConnectManager.requiredPermissions)
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = ZenithCyan),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.fillMaxWidth()
+                                colors = ButtonDefaults.buttonColors(containerColor = ZenithRed),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text(
-                                    text = "UPDATE AUTOMATICALLY NOW",
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color(0xFF09090B)
-                                )
+                                Text("TOEGANG VERLENEN", color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
             }
-
-            // App Header (Zenith Brand System)
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(ZenithCardBg)
-                    .border(1.dp, ZenithSteelBorder, RoundedCornerShape(20.dp))
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_zenith_pulse),
-                        contentDescription = "Zenith Pulse Logo",
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, ZenithCyan, CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "ZENITH PULSE",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Black,
-                                color = ZenithCyan,
-                                letterSpacing = 2.sp
-                            )
-                        }
-                        Text(
-                            text = "Health Connect Ecosystem Sync",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = ZenithTextMuted
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Zenith User Account & Maledatory Login Card (Steel Grey Theme)
-            val userEmail = remember { mutableStateOf(com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: "") }
-            val isLoggedIn = remember { mutableStateOf(com.zenith.pulse.auth.UserAuthManager.isLoggedIn(context)) }
-            val emailInput = remember { mutableStateOf("filip.monbaillieu.24@gmail.com") }
-            val passwordInput = remember { mutableStateOf("") }
-            val isLoggingIn = remember { mutableStateOf(false) }
-            val authMessage = remember { mutableStateOf<String?>(null) }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = ZenithCardBg),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (isLoggedIn.value) ZenithGreen else ZenithSteelBorder
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(if (isLoggedIn.value) ZenithGreen else ZenithRed)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isLoggedIn.value) "Gekoppeld with Zenith Profiel" else "Inloggen Verplicht",
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (isLoggedIn.value) ZenithGreen else ZenithRed,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    if (isLoggedIn.value) {
-                        Text(
-                            text = "Ingelogd als: ${userEmail.value}",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ZenithTextMain
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Alle Health Connect gegevens worden automatisch toegewezen aan jouw Zenith atletenprofiel.",
-                            fontSize = 12.sp,
-                            color = ZenithTextMuted
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = {
-                                com.zenith.pulse.auth.UserAuthManager.logout(context)
-                                isLoggedIn.value = false
-                                userEmail.value = ""
-                                Toast.makeText(context, "Account uitgelogd", Toast.LENGTH_SHORT).show()
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, ZenithRed),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Account Ontkoppelen / Uitloggen", color = ZenithRed, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        Text(
-                            text = "Meld je verplicht aan with je Zenith account (e-mailadres & wachtwoord) om je biowithrische data te synchroniseren.",
-                            fontSize = 12.sp,
-                            color = ZenithTextMuted
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        OutlinedTextField(
-                            value = emailInput.value,
-                            onValueChange = { emailInput.value = it },
-                            label = { Text("Zenith Emailadres") },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = ZenithSteelGrey,
-                                unfocusedContainerColor = ZenithSteelGrey,
-                                focusedBorderColor = ZenithCyan,
-                                unfocusedBorderColor = ZenithSteelBorder,
-                                focusedLabelColor = ZenithCyan,
-                                unfocusedLabelColor = ZenithTextMuted,
-                                focusedTextColor = ZenithTextMain,
-                                unfocusedTextColor = ZenithTextMain
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        OutlinedTextField(
-                            value = passwordInput.value,
-                            onValueChange = { passwordInput.value = it },
-                            label = { Text("Wachtwoord") },
-                            singleLine = true,
-                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = ZenithSteelGrey,
-                                unfocusedContainerColor = ZenithSteelGrey,
-                                focusedBorderColor = ZenithCyan,
-                                unfocusedBorderColor = ZenithSteelBorder,
-                                focusedLabelColor = ZenithCyan,
-                                unfocusedLabelColor = ZenithTextMuted,
-                                focusedTextColor = ZenithTextMain,
-                                unfocusedTextColor = ZenithTextMain
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        authMessage.value?.let { msg ->
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = msg, fontSize = 12.sp, color = ZenithRed)
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    isLoggingIn.value = true
-                                    authMessage.value = null
-                                    val (success, msg) = com.zenith.pulse.auth.UserAuthManager.loginWithSupabase(
-                                        context,
-                                        emailInput.value,
-                                        passwordInput.value
-                                    )
-                                    isLoggingIn.value = false
-                                    if (success) {
-                                        isLoggedIn.value = true
-                                        userEmail.value = com.zenith.pulse.auth.UserAuthManager.getUserEmail(context) ?: emailInput.value
-                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        authMessage.value = msg
-                                    }
-                                }
-                            },
-                            enabled = !isLoggingIn.value,
-                            colors = ButtonDefaults.buttonColors(containerColor = ZenithCyan),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = if (isLoggingIn.value) "Inloggen..." else "INLOGGEN OP ZENITH ACCOUNT",
-                                color = Color(0xFF09090B),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 13.sp
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Health Connect Status Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = ZenithCardBg),
-                border = androidx.compose.foundation.BorderStroke(1.dp, ZenithSteelBorder)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(if (hasPermissions) ZenithGreen else ZenithRed)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (hasPermissions) "Health Connect Actief" else "Permissies vereist",
-                            fontWeight = FontWeight.Bold,
-                            color = ZenithTextMain
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Status: $syncMessage",
-                        fontSize = 13.sp,
-                        color = ZenithTextMuted
-                    )
-
-                    if (!hasPermissions) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Button(
-                            onClick = {
-                                permissionLauncher.launch(healthConnectManager.requiredPermissions)
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = ZenithPurple),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Health Connect Permissies Verlenen", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Live Metrics Grid (Steel Grey Cards)
-            Text(
-                text = "Live Healthstatistieken",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = ZenithTextMain,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            )
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetricTile(
-                    title = "Stappen",
-                    value = "${payload.stepsCount}",
-                    unit = "stappen",
-                    accentColor = ZenithCyan,
-                    modifier = Modifier.weight(1f)
-                )
-                MetricTile(
-                    title = "Heart Rate",
-                    value = if (payload.latestHeartRate > 0) "${payload.latestHeartRate}" else "--",
-                    unit = "BPM",
-                    accentColor = ZenithRed,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetricTile(
-                    title = "HRV",
-                    value = if (payload.latestHrvRmssd > 0) "${payload.latestHrvRmssd.toInt()}" else "--",
-                    unit = "ms RMSSD",
-                    accentColor = ZenithPurple,
-                    modifier = Modifier.weight(1f)
-                )
-                MetricTile(
-                    title = "Slaapduur",
-                    value = "${payload.sleepDurationMinutes / 60}u ${payload.sleepDurationMinutes % 60}m",
-                    unit = "nacht",
-                    accentColor = Color(0xFF6366F1),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetricTile(
-                    title = "Calories",
-                    value = "${payload.activeCaloriesBurned.toInt()}",
-                    unit = "kcal actief",
-                    accentColor = Color(0xFFF59E0B),
-                    modifier = Modifier.weight(1f)
-                )
-                MetricTile(
-                    title = "Gewicht",
-                    value = if (payload.latestWeightKg > 0) "${payload.latestWeightKg} kg" else "--",
-                    unit = "biowithrisch",
-                    accentColor = ZenithGreen,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetricTile(
-                    title = "Afstand",
-                    value = if (payload.distanceMeters > 0) String.format("%.1f km", payload.distanceMeters / 1000.0) else "--",
-                    unit = "vandaag",
-                    accentColor = Color(0xFF38BDF8),
-                    modifier = Modifier.weight(1f)
-                )
-                MetricTile(
-                    title = "Rusthartslag",
-                    value = if (payload.restingHeartRate > 0) "${payload.restingHeartRate}" else "--",
-                    unit = "BPM (rust)",
-                    accentColor = Color(0xFFEC4899),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MetricTile(
-                    title = "Hydratatie",
-                    value = if (payload.hydrationMl > 0) "${payload.hydrationMl.toInt()} ml" else "--",
-                    unit = "waterinname",
-                    accentColor = Color(0xFF0EA5E9),
-                    modifier = Modifier.weight(1f)
-                )
-                MetricTile(
-                    title = "Ademhaling",
-                    value = if (payload.respiratoryRate > 0) "${payload.respiratoryRate.toInt()}" else "--",
-                    unit = "rpm (rust)",
-                    accentColor = Color(0xFF10B981),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Local HTTP Bridge Server Info (Steel Grey Card)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = ZenithCardBg),
-                border = androidx.compose.foundation.BorderStroke(1.dp, ZenithSteelBorder)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Lokale Wi-Fi HTTP Server (Zenith Hub Bridge)",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = ZenithCyan
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(ZenithSteelGrey, RoundedCornerShape(8.dp))
-                            .border(1.dp, ZenithSteelBorder, RoundedCornerShape(8.dp))
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = "URL: http://$localIp:8787",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ZenithTextMain
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Endpoints: /ping, /latest",
-                        fontSize = 11.sp,
-                        color = ZenithTextMuted
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Manual Sync Trigger Button (Zenith Cyan Accent)
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        isSyncing = true
-                        val success = ZenithSyncManager.performSync(context)
-                        payload = healthConnectManager.fetchLatestHealthData()
-                        syncMessage = ZenithSyncManager.lastSyncStatus
-                        isSyncing = false
-                    }
-                },
-                enabled = !isSyncing && hasPermissions && isLoggedIn.value,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isLoggedIn.value) ZenithCyan else ZenithSteelGrey,
-                    disabledContainerColor = ZenithSteelGrey
-                ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                if (isSyncing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = Color.Black,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(
-                        text = if (!isLoggedIn.value) "🔐 EERST INLOGGEN MET ZENITH ACCOUNT" else "Sync Now with Zenith",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (isLoggedIn.value) Color(0xFF09090B) else ZenithTextSub
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-fun MetricTile(
-    title: String,
-    value: String,
-    unit: String,
-    accentColor: Color,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = ZenithSteelGrey),
-        border = androidx.compose.foundation.BorderStroke(1.dp, ZenithSteelBorder)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth()
-        ) {
-            Text(text = title, fontSize = 12.sp, color = ZenithTextMuted)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = accentColor
-            )
-            Text(text = unit, fontSize = 10.sp, color = ZenithTextSub)
         }
     }
 }
