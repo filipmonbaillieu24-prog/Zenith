@@ -134,7 +134,7 @@ fun ZenithPulseScreen(
             onDismissRequest = { /* Prevent dismissal during update */ },
             title = {
                 Text(
-                    text = "Update Beschikbaar",
+                    text = "Update Available",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     color = ZenithAccent
@@ -143,7 +143,7 @@ fun ZenithPulseScreen(
             text = {
                 Column {
                     Text(
-                        text = "Er is een nieuwe versie van Zenith Pulse (v${info.versionName}) beschikbaar.",
+                        text = "A new version of Zenith Pulse (v${info.versionName}) is available.",
                         color = ZenithTextMain,
                         fontSize = 14.sp
                     )
@@ -157,7 +157,7 @@ fun ZenithPulseScreen(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Downloaden: ${(downloadProgress * 100).toInt()}%",
+                            text = "Downloading: ${(downloadProgress * 100).toInt()}%",
                             color = ZenithTextMuted,
                             fontSize = 12.sp
                         )
@@ -183,7 +183,7 @@ fun ZenithPulseScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = ZenithAccent)
                     ) {
-                        Text("UPDATE NU", color = Color(0xFF09090B), fontWeight = FontWeight.Bold)
+                        Text("UPDATE NOW", color = Color(0xFF09090B), fontWeight = FontWeight.Bold)
                     }
                 }
             },
@@ -260,7 +260,7 @@ fun ZenithPulseScreen(
                 OutlinedTextField(
                     value = emailInput.value,
                     onValueChange = { emailInput.value = it },
-                    label = { Text("E-mailadres") },
+                    label = { Text("Email Address") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFF141824),
@@ -280,7 +280,7 @@ fun ZenithPulseScreen(
                 OutlinedTextField(
                     value = passwordInput.value,
                     onValueChange = { passwordInput.value = it },
-                    label = { Text("Wachtwoord") },
+                    label = { Text("Password") },
                     singleLine = true,
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -334,7 +334,7 @@ fun ZenithPulseScreen(
                         .height(50.dp)
                 ) {
                     Text(
-                        text = if (isLoggingIn) "INLOGGEN..." else "INLOGGEN",
+                        text = if (isLoggingIn) "LOGGING IN..." else "SIGN IN",
                         color = Color(0xFF09090B),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
@@ -363,7 +363,7 @@ fun ZenithPulseScreen(
                     )
 
                     Text(
-                        text = "UITLOGGEN",
+                        text = "LOGOUT",
                         color = ZenithRed,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -467,7 +467,7 @@ fun ZenithPulseScreen(
                                             delay(3000)
                                             syncSuccess = false
                                         } else {
-                                            Toast.makeText(context, "Synchronisatie mislukt.", Toast.LENGTH_LONG).show()
+                                            Toast.makeText(context, "Synchronization failed.", Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 },
@@ -505,7 +505,7 @@ fun ZenithPulseScreen(
                     Spacer(modifier = Modifier.height(28.dp))
 
                     Text(
-                        text = if (isSyncing) "SYNCHRONISEREN..." else if (syncSuccess) "GESLAAGD!" else "TIK OM TE SYNCHRONISEREN",
+                        text = if (isSyncing) "SYNCING..." else if (syncSuccess) "SUCCESS!" else "TAP TO SYNC",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (syncSuccess) ZenithAccent else ZenithTextMain,
@@ -515,7 +515,7 @@ fun ZenithPulseScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = if (isSyncing) "Data wordt overgedragen naar Zenith..." else if (syncSuccess) "Biometrische gegevens up-to-date" else "Volledige offline synchronisatie",
+                        text = if (isSyncing) "Transferring data to Zenith..." else if (syncSuccess) "Biometrics are up to date" else "Full offline synchronization",
                         fontSize = 12.sp,
                         color = ZenithTextMuted
                     )
@@ -537,14 +537,14 @@ fun ZenithPulseScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Health Connect Permissies Vereist",
+                                text = "Health Connect Permissions Required",
                                 fontWeight = FontWeight.Bold,
                                 color = ZenithRed,
                                 fontSize = 14.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Geef toegang tot Health Connect om biometrische gegevens uit te lezen.",
+                                text = "Grant access to Health Connect to read biometric data.",
                                 fontSize = 12.sp,
                                 color = ZenithTextMain,
                                 modifier = Modifier.fillMaxWidth(),
@@ -558,7 +558,7 @@ fun ZenithPulseScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = ZenithRed),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text("TOEGANG VERLENEN", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("GRANT ACCESS", color = Color.White, fontWeight = FontWeight.Bold)
                             }
                         }
                     }

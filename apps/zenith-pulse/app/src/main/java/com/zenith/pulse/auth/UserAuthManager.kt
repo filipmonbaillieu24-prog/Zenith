@@ -71,7 +71,7 @@ object UserAuthManager {
         val password = passwordInput.trim()
 
         if (email.isEmpty() || password.isEmpty()) {
-            return@withContext Pair(false, "Vul a.u.b. emailadres en wachtwoord in.")
+            return@withContext Pair(false, "Please enter email address and password.")
         }
 
         try {
@@ -102,7 +102,7 @@ object UserAuthManager {
                 val userEmail = userObj?.get("email")?.jsonPrimitive?.content ?: email
 
                 saveUserAccount(context, userEmail, userId, accessToken)
-                return@withContext Pair(true, "Succesvol ingelogd als $userEmail!")
+                return@withContext Pair(true, "Successfully logged in as $userEmail!")
             } else {
                 val errorReason = try {
                     val json = Json.parseToJsonElement(bodyText).jsonObject
@@ -111,20 +111,20 @@ object UserAuthManager {
                         ?: json["message"]?.jsonPrimitive?.content
                         ?: json["error"]?.jsonPrimitive?.content
                     if (msg == "Invalid login credentials") {
-                        "Ongeldige inloggegevens. Controleer je e-mailadres en wachtwoord."
+                        "Invalid login credentials. Please check your email and password."
                     } else {
-                        msg ?: "Fout ${response.status.value}"
+                        msg ?: "Error ${response.status.value}"
                     }
                 } catch (e: Exception) {
                     "Status ${response.status.value}"
                 }
 
                 Log.w("UserAuthManager", "Supabase auth failed: $errorReason")
-                return@withContext Pair(false, "Inloggen mislukt: $errorReason")
+                return@withContext Pair(false, "Login failed: $errorReason")
             }
         } catch (e: Exception) {
             Log.e("UserAuthManager", "Auth exception", e)
-            return@withContext Pair(false, "Verbindingsfout: ${e.localizedMessage}")
+            return@withContext Pair(false, "Connection error: ${e.localizedMessage}")
         }
     }
 }
