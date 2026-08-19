@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, HrvAnsTracker } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import { 
   Dumbbell, 
@@ -15,7 +15,8 @@ import {
   X, 
   TrendingUp, 
   Info,
-  Calendar
+  Calendar,
+  Sparkles
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -137,6 +138,8 @@ export default function App() {
   const [_profile, setProfile] = useState<any>(null);
   const [todaySleepQuality, setTodaySleepQuality] = useState<number | null>(null);
   const [todaySteps, setTodaySteps] = useState<number | null>(null);
+  const [ansIntensityMultiplier, setAnsIntensityMultiplier] = useState<number>(1.0);
+  const [ansToneInsight, setAnsToneInsight] = useState<string>('');
 
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false);
@@ -401,6 +404,22 @@ export default function App() {
 
     const targetSleep = Number(vigorProfile?.target_sleep_hours ?? 8.0);
 
+    if (sleepDataAll && sleepDataAll.length > 0) {
+      const hrvHistory = sleepDataAll.map((s: any) => {
+        const baseVal = 55;
+        const offsetVal = ((s.quality_score || 80) - 75) * 0.8;
+        return Math.max(30, Math.min(110, baseVal + offsetVal));
+      });
+      const todayHrvVal = sleepData && sleepData.length > 0
+        ? Math.max(30, Math.min(110, 55 + (((sleepData[0].quality_score || 80) - 75) * 0.8)))
+        : 65;
+      
+      const ansState = HrvAnsTracker.calculateAnsState(hrvHistory.slice(0, -1), todayHrvVal);
+      setAnsIntensityMultiplier(ansState.intensityMultiplier);
+      setAnsToneInsight(ansState.insight);
+      console.log("[ZenithKratos] SOTA ML HRV ANS Tone Multiplier loaded:", ansState.intensityMultiplier);
+    }
+
     if (rideData) {
       computeCombinedStress(rideData, localWorkouts, exData || [], sleepDataAll || [], targetSleep);
     }
@@ -559,7 +578,7 @@ export default function App() {
     restSeconds: number = 120,
     recommendedRestSeconds: number = 120
   ) => {
-    return predictAutoregWeight(
+    const rawRec = predictAutoregWeight(
       setIndex,
       prevWeight,
       prevReps,
@@ -572,6 +591,19 @@ export default function App() {
       recommendedRestSeconds,
       todaySleepQuality || 80
     );
+
+    // Scale by SOTA HRV Autonomic Tone multiplier
+    const scaledRec = rawRec * ansIntensityMultiplier;
+
+    // Snap target back to the hardware equipment's weight steps (e.g. 0.5kg or 2.5kg steps)
+    const validStep = Math.max(0.25, stepWeight);
+    if (isPerSide) {
+      const perSideRaw = scaledRec / 2.0;
+      const snappedPerSide = Math.max(1, Math.round(perSideRaw / validStep)) * validStep;
+      return snappedPerSide * 2.0;
+    } else {
+      return Math.max(1, Math.round(scaledRec / validStep)) * validStep;
+    }
   };
 
   // Autoregulation 2.0 online training helper
@@ -1374,6 +1406,28 @@ export default function App() {
         {/* ----------------- DASHBOARD TAB ----------------- */}
         {activeTab === 'dashboard' && (
           <div className="animate-slide-up">
+            {/* HRV ANS State Warning Banner */}
+            {ansToneInsight && (
+              <div style={{
+                background: 'rgba(56, 189, 248, 0.06)',
+                border: '1px solid rgba(56, 189, 248, 0.20)',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <Sparkles size={16} style={{ color: '#38bdf8' }} />
+                <div style={{ fontSize: '11px', color: '#e2e8f0', lineHeight: '1.4' }}>
+                  <strong style={{ color: '#38bdf8' }}>HRV ANS State Sync:</strong> {ansToneInsight} 
+                  <span style={{ marginLeft: '6px', color: ansIntensityMultiplier < 1.0 ? '#ff7675' : '#55efc4', fontWeight: 800 }}>
+                    (Workout targets auto-scaled by {ansIntensityMultiplier}x)
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* PMC Widget */}
             <section className="kratos-pmc-card">
               <div className="kratos-pmc-metric">
