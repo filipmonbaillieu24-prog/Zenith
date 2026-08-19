@@ -611,10 +611,15 @@ export default function App() {
     const validStep = Math.max(0.25, stepWeight);
     if (isPerSide) {
       const perSideRaw = scaledRec / 2.0;
-      const snappedPerSide = Math.max(1, Math.round(perSideRaw / validStep)) * validStep;
-      return snappedPerSide * 2.0;
+      const perSidePrev = prevWeight > 0 ? prevWeight / 2.0 : 0;
+      const diff = perSideRaw - perSidePrev;
+      const snappedPerSide = perSidePrev + Math.round(diff / validStep) * validStep;
+      return Math.max(validStep * 2.0, snappedPerSide * 2.0);
     } else {
-      return Math.max(1, Math.round(scaledRec / validStep)) * validStep;
+      const prevW = prevWeight > 0 ? prevWeight : 0;
+      const diff = scaledRec - prevW;
+      const snapped = prevW + Math.round(diff / validStep) * validStep;
+      return Math.max(validStep, snapped);
     }
   };
 
@@ -800,15 +805,40 @@ export default function App() {
   const handleAcceptDeload = () => {
     setIsDeloadAccepted(true);
     const updatedSets = baselineWorkoutFormSets.map(exLog => {
+      const ex = exercises.find(e => e.id === exLog.exercise_id);
+      const step = ex?.increment_weight || 2.5;
+      const isPerSide = ex?.increment_per_side || false;
+
       const workingSets = exLog.sets.filter((s: any) => s.type === 'working');
       const warmups = exLog.sets.filter((s: any) => s.type === 'warmup');
       
       const newWorkingCount = Math.max(1, Math.round(workingSets.length * 0.5));
-      const keptWorking = workingSets.slice(0, newWorkingCount).map((s: any) => ({
-        ...s,
-        weight: Math.round((s.weight * 0.70) * 4) / 4, // 70% weight snapped to 0.25kg steps
-        rir: 4 // low intensity RPE 6
-      }));
+      const keptWorking = workingSets.slice(0, newWorkingCount).map((s: any) => {
+        const rawWeight = s.weight * 0.70;
+        let deloadWeight = rawWeight;
+        
+        // Snap to valid hardware increment relative to previous weight
+        const validStep = Math.max(0.25, step);
+        const prevWeightVal = s.weight; // previous set weight
+        if (isPerSide) {
+          const perSideRaw = rawWeight / 2.0;
+          const perSidePrev = prevWeightVal > 0 ? prevWeightVal / 2.0 : 0;
+          const diff = perSideRaw - perSidePrev;
+          const snappedPerSide = perSidePrev + Math.round(diff / validStep) * validStep;
+          deloadWeight = Math.max(validStep * 2.0, snappedPerSide * 2.0);
+        } else {
+          const prevW = prevWeightVal > 0 ? prevWeightVal : 0;
+          const diff = rawWeight - prevW;
+          const snapped = prevW + Math.round(diff / validStep) * validStep;
+          deloadWeight = Math.max(validStep, snapped);
+        }
+
+        return {
+          ...s,
+          weight: deloadWeight,
+          rir: 4 // low intensity RPE 6
+        };
+      });
       return {
         ...exLog,
         sets: [...warmups, ...keptWorking]

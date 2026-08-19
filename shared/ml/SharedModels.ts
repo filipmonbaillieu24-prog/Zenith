@@ -186,12 +186,15 @@ export function predictAutoregWeight(
   const validStep = Math.max(0.25, stepWeight);
   if (isPerSide) {
     const perSideRaw = rawClampedWeight / 2.0;
-    const multiPerSide = Math.max(1, Math.round(perSideRaw / validStep));
-    const snappedPerSide = multiPerSide * validStep;
-    return snappedPerSide * 2.0;
+    const perSidePrev = prevWeight > 0 ? prevWeight / 2.0 : 0;
+    const diff = perSideRaw - perSidePrev;
+    const snappedPerSide = perSidePrev + Math.round(diff / validStep) * validStep;
+    return Math.max(validStep * 2.0, snappedPerSide * 2.0);
   } else {
-    const multiTotal = Math.max(1, Math.round(rawClampedWeight / validStep));
-    return multiTotal * validStep;
+    const prevW = prevWeight > 0 ? prevWeight : 0;
+    const diff = rawClampedWeight - prevW;
+    const snapped = prevW + Math.round(diff / validStep) * validStep;
+    return Math.max(validStep, snapped);
   }
 }
 
