@@ -108,7 +108,17 @@ export function runZaneCalibration(
     };
   });
 
-  // 3. Identify complete days
+  // 3. Exponential Moving Average (EMA) Weight Trend (alpha = 0.15)
+  let emaWeight = logsWithWeight.find(l => l.weight !== null)?.weight ?? (latestWeightMeasured || 75);
+  const trendWeights: number[] = [];
+  logsWithWeight.forEach(l => {
+    if (l.weight !== null) {
+      emaWeight = 0.15 * l.weight + 0.85 * emaWeight;
+    }
+    trendWeights.push(emaWeight);
+  });
+
+  // 4. Identify complete days
   const completeLogs = logsWithWeight.filter(log => log.isComplete && log.calories >= 1000 && log.weight !== null);
   const calibrationDays = completeLogs.length;
   const isCalibrated = calibrationDays >= 14;
@@ -133,10 +143,9 @@ export function runZaneCalibration(
   const targetGymVolume = targetLog?.gymVolume ?? 0;
   const targetCaffeine = targetLog?.caffeine ?? 0;
   
-  // 4. Multivariable Ridge Regression Solver
+  // 5. Multivariable Ridge Regression Solver
   // We solve for Y = X * theta where:
   // theta = [bmr_offset, sleep_quality_coeff, sleep_duration_coeff, delta_gym_coeff, delta_caffeine_coeff]
-  // We assume a gym baseline of 0.15 kcal/kg and caffeine baseline of 0.15 kcal/mg.
   
   // Calculate averages for sleep
   const validSleepQualityLogs = completeLogs.filter(l => l.sleepQuality !== null);
@@ -163,7 +172,12 @@ export function runZaneCalibration(
     }
 
     if (todayLog.isComplete && todayLog.calories >= 1000 && todayLog.weight !== null && yesterdayLog.weight !== null) {
-      const weightDiff = todayLog.weight - yesterdayLog.weight;
+      // 7-day EMA trend slope (kg per day) to eliminate single-day water retention fluctuations
+      const windowStartIdx = Math.max(0, i - 7);
+      const daysSpan = i - windowStartIdx;
+      const trendRatePerDay = daysSpan > 0 
+        ? (trendWeights[i] - trendWeights[windowStartIdx]) / daysSpan
+        : 0;
       
       let todayBaselineBmr = 0;
       if (lastBodyFat !== null && todayLog.weight !== null) {
@@ -174,11 +188,12 @@ export function runZaneCalibration(
       }
 
       const todayBaseTdee = todayBaselineBmr * palFactor + todayLog.activeCalories;
-      const baseGymCalories = todayLog.gymVolume * 0.15;
+      const baseGymCalories = todayLog.gymVolume * 0.025;
       const todayCaffeine = todayLog.caffeine || 0;
       const baseCaffeineCalories = todayCaffeine * 0.15;
 
-      const yVal = (weightDiff * 7700) - (todayLog.calories - (todayBaseTdee + baseGymCalories + baseCaffeineCalories));
+      // Realized daily energy balance from 7-day trend slope
+      const yVal = (trendRatePerDay * 7700) - (todayLog.calories - (todayBaseTdee + baseGymCalories + baseCaffeineCalories));
 
       const qVal = todayLog.sleepQuality !== null ? todayLog.sleepQuality : sleepQualityAvg;
       const dVal = todayLog.sleepDurationHours !== null ? todayLog.sleepDurationHours : sleepDurationAvg;
@@ -194,17 +209,17 @@ export function runZaneCalibration(
     }
   }
 
-  // Calculate regression coefficients if we have at least 5 equations (minimum required for a clean 5-parameter solve)
+  // Calculate regression coefficients if we have at least 5 equations
   if (X.length >= 5) {
-    const lambda = 15.0; // Higher regularization to prevent day-to-day scale noise spikes
+    const lambda = 15.0; // Regularization
     const coefficients = solveRidgeRegression(X, Y, lambda);
-    // Clamp BMR offset to realistic physiological limits (+/- 500 kcal)
-    bmrOffset = Math.min(500, Math.max(-500, Math.round(coefficients[0] || 0)));
+    // Clamp BMR offset to realistic physiological limits (+/- 250 kcal)
+    bmrOffset = Math.min(250, Math.max(-250, Math.round(coefficients[0] || 0)));
     sleepQualityCoeff = Math.min(10, Math.max(-10, coefficients[1] || 0));
     sleepDurationCoeff = Math.min(50, Math.max(-50, coefficients[2] || 0));
     
     const deltaGymCoeff = coefficients[3] || 0;
-    gymVolumeCoeff = Math.min(0.50, Math.max(0.02, 0.15 + deltaGymCoeff));
+    gymVolumeCoeff = Math.min(0.10, Math.max(0.01, 0.025 + deltaGymCoeff));
 
     const deltaCaffeineCoeff = coefficients[4] || 0;
     caffeineCoeff = Math.min(0.50, Math.max(0.02, 0.15 + deltaCaffeineCoeff));
