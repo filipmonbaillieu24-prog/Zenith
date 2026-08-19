@@ -1549,7 +1549,8 @@ function App() {
   const netDailyBalance = intakeCalories - totalTdee;
   const projectedWeightChange = (netDailyBalance * 28) / 7700;
   const weeklyWeightRate = (netDailyBalance * 7) / 7700;
-  const projectedWeight = Math.round((latestWeight + projectedWeightChange) * 100) / 100;
+  const startingWeightForProjection = zaneResult.currentTrendWeight || latestWeight;
+  const projectedWeight = Math.round((startingWeightForProjection + projectedWeightChange) * 100) / 100;
 
   // Build the list of 7 days in the viewed week
   const weekDays = useMemo(() => {
