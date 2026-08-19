@@ -309,19 +309,19 @@ function App() {
         }
       }
 
-      const { data: vigorProfile } = await supabase
-        .from('vigor_profile')
+      const { data: ssotProfile } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('user_id', userId)
-        .single();
+        .eq('id', userId)
+        .maybeSingle();
 
-      const heightVal = vigorProfile?.height || profileData?.height || 175;
-      const targetWeightVal = vigorProfile?.target_weight || profileData?.target_weight || 75;
+      const heightVal = ssotProfile?.height_cm || 175;
+      const targetWeightVal = profileData?.target_weight || 75;
 
       setProfile({
         height: heightVal,
-        gender: vigorProfile?.gender || 'other',
-        birthDate: vigorProfile?.birth_date || '1990-01-01',
+        gender: ssotProfile?.gender || 'other',
+        birthDate: ssotProfile?.birth_date || '1990-01-01',
         targetWeight: targetWeightVal,
         targetRateKgPerWeek: profileData?.target_rate_kg_per_week ?? 0.5,
         dietType: profileData?.diet_type ?? 'balanced'
