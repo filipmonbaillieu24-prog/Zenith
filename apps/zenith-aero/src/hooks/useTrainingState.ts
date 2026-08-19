@@ -34,14 +34,11 @@ export function useTrainingState(
       const userId = data.session?.user?.id;
       if (!userId) return;
 
-      const today = new Date().toISOString().slice(0, 10);
-      
       // Fetch today's sleep quality (CR4)
       supabase
         .from('vigor_sleep')
         .select('quality_score')
         .eq('user_id', userId)
-        .gte('logged_at', today)
         .order('logged_at', { ascending: false })
         .limit(1)
         .then(({ data: sleepData }) => {
