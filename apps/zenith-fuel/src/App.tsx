@@ -178,6 +178,10 @@ function App() {
   const [quickProtein, setQuickProtein] = useState('');
   const [quickFat, setQuickFat] = useState('');
 
+  // Edit quantity and base macros states
+  const [logQuantity, setLogQuantity] = useState('1.0');
+  const [baseMacros, setBaseMacros] = useState<{ calories: number; carbs: number; protein: number; fat: number } | null>(null);
+
   // Log Ingredient Selection
   const [selectedLogIngredient, setSelectedLogIngredient] = useState<string>('');
   const [logIngredientWeightMode, setLogIngredientWeightMode] = useState<'grams' | 'portions'>('grams');
@@ -1158,7 +1162,7 @@ function App() {
       user_id: userId,
       logged_at: logTimestamp,
       meal_type: logMealType,
-      quantity: 1.0
+      quantity: parseFloat(logQuantity) || 1.0
     };
 
     if (logSource === 'quick') {
@@ -1247,6 +1251,8 @@ function App() {
     setLogRecipeSearch('');
     setLogRecipeServings('1.0');
     setLogIngredientWeightValue('100');
+    setLogQuantity('1.0');
+    setBaseMacros(null);
   };
 
   // Delete Log Entry
@@ -1281,8 +1287,28 @@ function App() {
     setQuickCarbs(String(log.carbs));
     setQuickProtein(String(log.protein || 0));
     setQuickFat(String(log.fat || 0));
+
+    const qty = log.quantity || 1.0;
+    setLogQuantity(String(qty));
+    setBaseMacros({
+      calories: log.calories / qty,
+      carbs: log.carbs / qty,
+      protein: (log.protein || 0) / qty,
+      fat: (log.fat || 0) / qty
+    });
     
     setShowLogModal(true);
+  };
+
+  const handleQuantityChange = (valStr: string) => {
+    setLogQuantity(valStr);
+    const val = parseFloat(valStr) || 0;
+    if (baseMacros) {
+      setQuickCalories(String(Math.round(baseMacros.calories * val)));
+      setQuickCarbs(String(Math.round(baseMacros.carbs * val * 10) / 10));
+      setQuickProtein(String(Math.round(baseMacros.protein * val * 10) / 10));
+      setQuickFat(String(Math.round(baseMacros.fat * val * 10) / 10));
+    }
   };
 
   // Supplement Handlers
@@ -2949,6 +2975,24 @@ function App() {
                         onChange={e => setQuickName(e.target.value)}
                         required
                       />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Servings / Quantity Multiplier</label>
+                      <input 
+                        type="number" 
+                        step="any" 
+                        min="0"
+                        className="form-input" 
+                        placeholder="1.0" 
+                        value={logQuantity}
+                        onChange={e => handleQuantityChange(e.target.value)}
+                        required
+                      />
+                      {baseMacros && (
+                        <p className="form-note" style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Changing quantity scales macros automatically.
+                        </p>
+                      )}
                     </div>
                     <div className="form-row">
                       <div className="form-group">
