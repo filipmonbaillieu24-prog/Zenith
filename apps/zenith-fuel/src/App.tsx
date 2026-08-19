@@ -180,6 +180,7 @@ function App() {
 
   // Edit quantity and base macros states
   const [logQuantity, setLogQuantity] = useState('1.0');
+  const [logGrams, setLogGrams] = useState('100');
   const [baseMacros, setBaseMacros] = useState<{ calories: number; carbs: number; protein: number; fat: number } | null>(null);
 
   // Log Ingredient Selection
@@ -1252,6 +1253,7 @@ function App() {
     setLogRecipeServings('1.0');
     setLogIngredientWeightValue('100');
     setLogQuantity('1.0');
+    setLogGrams('100');
     setBaseMacros(null);
   };
 
@@ -1290,6 +1292,7 @@ function App() {
 
     const qty = log.quantity || 1.0;
     setLogQuantity(String(qty));
+    setLogGrams(String(Math.round(qty * 100)));
     setBaseMacros({
       calories: log.calories / qty,
       carbs: log.carbs / qty,
@@ -1303,6 +1306,20 @@ function App() {
   const handleQuantityChange = (valStr: string) => {
     setLogQuantity(valStr);
     const val = parseFloat(valStr) || 0;
+    setLogGrams(String(Math.round(val * 100)));
+    if (baseMacros) {
+      setQuickCalories(String(Math.round(baseMacros.calories * val)));
+      setQuickCarbs(String(Math.round(baseMacros.carbs * val * 10) / 10));
+      setQuickProtein(String(Math.round(baseMacros.protein * val * 10) / 10));
+      setQuickFat(String(Math.round(baseMacros.fat * val * 10) / 10));
+    }
+  };
+
+  const handleGramsChange = (valStr: string) => {
+    setLogGrams(valStr);
+    const grams = parseFloat(valStr) || 0;
+    const val = grams / 100;
+    setLogQuantity(String(val));
     if (baseMacros) {
       setQuickCalories(String(Math.round(baseMacros.calories * val)));
       setQuickCarbs(String(Math.round(baseMacros.carbs * val * 10) / 10));
@@ -2976,24 +2993,39 @@ function App() {
                         required
                       />
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Servings / Quantity Multiplier</label>
-                      <input 
-                        type="number" 
-                        step="any" 
-                        min="0"
-                        className="form-input" 
-                        placeholder="1.0" 
-                        value={logQuantity}
-                        onChange={e => handleQuantityChange(e.target.value)}
-                        required
-                      />
-                      {baseMacros && (
-                        <p className="form-note" style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          Changing quantity scales macros automatically.
-                        </p>
-                      )}
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Servings / Multiplier</label>
+                        <input 
+                          type="number" 
+                          step="any" 
+                          min="0"
+                          className="form-input" 
+                          placeholder="1.0" 
+                          value={logQuantity}
+                          onChange={e => handleQuantityChange(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Weight (grams)</label>
+                        <input 
+                          type="number" 
+                          step="any" 
+                          min="0"
+                          className="form-input" 
+                          placeholder="100" 
+                          value={logGrams}
+                          onChange={e => handleGramsChange(e.target.value)}
+                          required
+                        />
+                      </div>
                     </div>
+                    {baseMacros && (
+                      <p className="form-note" style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '-12px', marginBottom: '14px', paddingLeft: '4px' }}>
+                        Changing servings or grams scales calories and macronutrients automatically.
+                      </p>
+                    )}
                     <div className="form-row">
                       <div className="form-group">
                         <label className="form-label">Calories (kcal)</label>
