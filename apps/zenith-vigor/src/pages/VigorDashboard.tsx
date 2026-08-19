@@ -880,7 +880,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   // RENDER TABS
   const renderHomeTab = () => {
     // Calculate BMI
-    const heightInMeters = (profile.height || 180) / 100;
+    const heightInMeters = (dbProfile?.height || 180) / 100;
     const bmi = latestWeight ? Math.round((latestWeight.weight / (heightInMeters * heightInMeters)) * 10) / 10 : null;
     let bmiCategory = '';
     let bmiColor = '';
@@ -1127,7 +1127,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   </span>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Calculated based on your height of <strong>{profile.height} cm</strong> and your latest weight measurement.
+                  Calculated based on your height of <strong>{dbProfile?.height || 180} cm</strong> and your latest weight measurement.
                 </div>
               </div>
             ) : (
