@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, HrvAnsTracker } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, HrvAnsTracker, AcwrForecaster } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import { 
   Dumbbell, 
@@ -140,6 +140,9 @@ export default function App() {
   const [todaySteps, setTodaySteps] = useState<number | null>(null);
   const [ansIntensityMultiplier, setAnsIntensityMultiplier] = useState<number>(1.0);
   const [ansToneInsight, setAnsToneInsight] = useState<string>('');
+  const [todayAcwr, setTodayAcwr] = useState<number>(1.0);
+  const [isDeloadAccepted, setIsDeloadAccepted] = useState<boolean>(false);
+  const [baselineWorkoutFormSets, setBaselineWorkoutFormSets] = useState<any[]>([]);
 
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false);
@@ -368,15 +371,24 @@ export default function App() {
       setTodaySleepQuality(Number(sleepData[0].quality_score ?? sleepData[0].quality ?? 0));
     }
 
-    // Load today's steps from vigor_steps
-    const { data: stepsData } = await supabase
+    // Load 28-day steps history from vigor_steps to calculate ACWR
+    const twentyEightDaysAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: stepsDataAll } = await supabase
       .from('vigor_steps')
-      .select('*')
+      .select('step_count, logged_at')
       .eq('user_id', uid)
-      .order('logged_at', { ascending: false })
-      .limit(1);
-    if (stepsData && stepsData.length > 0) {
-      setTodaySteps(Number(stepsData[0].step_count ?? stepsData[0].steps ?? 0));
+      .gte('logged_at', twentyEightDaysAgo)
+      .order('logged_at', { ascending: true });
+    
+    if (stepsDataAll && stepsDataAll.length > 0) {
+      const dailyLoads = stepsDataAll.map(st => Math.round((st.step_count || 5000) / 100));
+      const workloadInsight = AcwrForecaster.calculateWorkloadInsight(dailyLoads);
+      setTodayAcwr(workloadInsight.acwr);
+      const latestSteps = stepsDataAll[stepsDataAll.length - 1];
+      if (latestSteps) {
+        setTodaySteps(Number(latestSteps.step_count));
+      }
+      console.log("[ZenithKratos] SOTA ML ACWR Workload calculated:", workloadInsight.acwr);
     }
 
     // Load rides for PMC
@@ -773,13 +785,49 @@ export default function App() {
 
   const handleEditWorkoutClick = (w: Workout) => {
     setEditingWorkout(w);
+    const parsedSets = JSON.parse(JSON.stringify(w.sets));
     setWorkoutForm({
       name: w.name,
       completed_at: new Date(new Date(w.completed_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
       started_at: new Date(new Date(w.started_at).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
-      sets: JSON.parse(JSON.stringify(w.sets))
+      sets: parsedSets
     });
+    setBaselineWorkoutFormSets(JSON.parse(JSON.stringify(parsedSets)));
+    setIsDeloadAccepted(w.name.endsWith(' (Deload)'));
     setIsWorkoutModalOpen(true);
+  };
+
+  const handleAcceptDeload = () => {
+    setIsDeloadAccepted(true);
+    const updatedSets = baselineWorkoutFormSets.map(exLog => {
+      const workingSets = exLog.sets.filter((s: any) => s.type === 'working');
+      const warmups = exLog.sets.filter((s: any) => s.type === 'warmup');
+      
+      const newWorkingCount = Math.max(1, Math.round(workingSets.length * 0.5));
+      const keptWorking = workingSets.slice(0, newWorkingCount).map((s: any) => ({
+        ...s,
+        weight: Math.round((s.weight * 0.70) * 4) / 4, // 70% weight snapped to 0.25kg steps
+        rir: 4 // low intensity RPE 6
+      }));
+      return {
+        ...exLog,
+        sets: [...warmups, ...keptWorking]
+      };
+    });
+    setWorkoutForm(prev => ({
+      ...prev,
+      name: prev.name.endsWith(' (Deload)') ? prev.name : prev.name + ' (Deload)',
+      sets: updatedSets
+    }));
+  };
+
+  const handleDeclineDeload = () => {
+    setIsDeloadAccepted(false);
+    setWorkoutForm(prev => ({
+      ...prev,
+      name: prev.name.replace(' (Deload)', ''),
+      sets: JSON.parse(JSON.stringify(baselineWorkoutFormSets))
+    }));
   };
 
   const handleSaveWorkout = async (e: React.FormEvent) => {
@@ -2226,6 +2274,66 @@ export default function App() {
             </div>
 
             <form onSubmit={handleSaveWorkout} style={{ overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {todayAcwr > 1.5 && (
+                <div style={{
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  marginBottom: '8px'
+                }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <Sparkles size={16} style={{ color: '#ef4444' }} />
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#ef4444' }}>
+                      Injury Risk: ACWR Overuse Alert ({todayAcwr.toFixed(2)})
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8', lineHeight: 1.4 }}>
+                    Your acute workload is significantly higher than your chronic workload. We strongly recommend a deload session (70% weight, 50% working sets) to recover.
+                  </p>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {!isDeloadAccepted ? (
+                      <button
+                        type="button"
+                        onClick={handleAcceptDeload}
+                        style={{
+                          background: '#ef4444',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Accept Deload Recommendation
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleDeclineDeload}
+                        style={{
+                          background: 'rgba(255,255,255,0.06)',
+                          color: '#cbd5e1',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Decline / Restore Progression
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="kratos-input-group">
                 <label className="kratos-label">Workout Naam</label>
                 <input 
