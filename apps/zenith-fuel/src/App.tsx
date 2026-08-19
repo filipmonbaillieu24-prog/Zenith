@@ -276,6 +276,9 @@ function App() {
     if (!userId) return;
 
     try {
+      // Initialize SOTA ML ZenithFusionNet weights
+      await ZenithFusionNet.getInstance().init(supabase, userId);
+
       // 1. Fetch Profile
       let { data: profileData, error: pError } = await supabase
         .from('fuel_profile')
