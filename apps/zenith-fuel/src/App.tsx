@@ -1478,8 +1478,15 @@ function App() {
       : Math.min(280, Math.max(50, Math.round(selectedDateGymVolume * 0.025)));
   }
 
+  let caffeineCalories = 0;
+  if (caffeineStats.activeDateCaffeine > 0) {
+    caffeineCalories = zaneResult.isCalibrated
+      ? Math.round(caffeineStats.activeDateCaffeine * zaneResult.caffeineCoeff)
+      : Math.round(caffeineStats.activeDateCaffeine * 0.15);
+  }
+
   const tef = Math.round(intakeCalories * 0.1);
-  const totalTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + tef + gymCalories);
+  const totalTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + tef + gymCalories + caffeineCalories);
 
   // Weight Projection
   const netDailyBalance = intakeCalories - totalTdee;
@@ -2011,6 +2018,14 @@ function App() {
                 <span style={{ fontWeight: 700, color: '#fff' }}>
                   +{gymCalories} kcal <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
                     ({selectedDateGymVolume} kg{zaneResult.isCalibrated ? ` @ ${zaneResult.gymVolumeCoeff.toFixed(3)}/kg` : ''})
+                  </span>
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Caffeine Thermogenesis:</span>
+                <span style={{ fontWeight: 700, color: '#ff9f43' }}>
+                  +{caffeineCalories} kcal <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                    ({caffeineStats.activeDateCaffeine} mg{zaneResult.isCalibrated ? ` @ ${zaneResult.caffeineCoeff.toFixed(3)}/mg` : ''})
                   </span>
                 </span>
               </div>
