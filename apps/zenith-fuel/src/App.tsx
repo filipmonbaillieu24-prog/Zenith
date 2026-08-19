@@ -1545,13 +1545,6 @@ function App() {
     zaneResult.currentTrendWeight || latestWeight
   );
 
-  // Weight Projection
-  const netDailyBalance = intakeCalories - totalTdee;
-  const projectedWeightChange = (netDailyBalance * 28) / 7700;
-  const weeklyWeightRate = (netDailyBalance * 7) / 7700;
-  const startingWeightForProjection = zaneResult.currentTrendWeight || latestWeight;
-  const projectedWeight = Math.round((startingWeightForProjection + projectedWeightChange) * 100) / 100;
-
   // Build the list of 7 days in the viewed week
   const weekDays = useMemo(() => {
     const days = [];
@@ -1572,6 +1565,63 @@ function App() {
     }
     return days;
   }, [currentWeekMonday, dailyCaloriesMap, dailyCompletionMap]);
+
+  // SOTA ML / ZANE robust average weekly net balance
+  const averageWeeklyNetBalance = useMemo(() => {
+    let totalIntake = 0;
+    let totalTdeeVal = 0;
+    let loggedDays = 0;
+
+    weekDays.forEach(day => {
+      const dateStr = day.dateStr;
+      const dayLogs = weeklyFoodLogs.filter(log => log.logged_at.split('T')[0] === dateStr);
+      const dayCalories = dayLogs.reduce((sum, f) => sum + f.calories, 0);
+      
+      if (dayCalories > 0) {
+        loggedDays++;
+        totalIntake += dayCalories;
+
+        // Calculate TDEE for this day
+        const activeCalories = activeCaloriesMap[dateStr] || 0;
+        const todaySleepLog = sleepLogs.find(s => s.logged_at.split('T')[0] === dateStr);
+        const todaySleepQuality = todaySleepLog ? Number(todaySleepLog.quality_score) : null;
+        const todaySleepDuration = todaySleepLog ? Number(todaySleepLog.duration_minutes) / 60 : null;
+
+        const sleepAdjustment = todaySleepQuality !== null && todaySleepDuration !== null
+          ? Math.round((todaySleepQuality - 80) * (zaneResult.sleepQualityCoeff || 0) + (todaySleepDuration - 8.0) * (zaneResult.sleepDurationCoeff || 0))
+          : 0;
+
+        const dayTef = Math.round(dayCalories * 0.10);
+        const dayGymVolume = gymVolumeMap[dateStr] || 0;
+        const dayGymCalories = Math.round(dayGymVolume * (zaneResult.gymVolumeCoeff || 0));
+        
+        const dayCaffeineLog = supplementsLogs.filter(s => s.logged_at.split('T')[0] === dateStr && s.supplement_type === 'caffeine');
+        const dayCaffeineAmount = dayCaffeineLog.reduce((sum, curr) => sum + Number(curr.amount), 0) + (weeklyFoodLogs.filter(f => f.logged_at.split('T')[0] === dateStr).reduce((sum, f) => sum + Number(f.caffeine_mg || 0), 0));
+        const dayCaffeineCalories = Math.round(dayCaffeineAmount * (zaneResult.caffeineCoeff || 0));
+
+        const dayWearableCalibration = activeCalories > 0
+          ? Math.max(0.70, Math.min(1.25, 1.0 + ((zaneResult.bmrOffset || 0) / Math.max(200, activeCalories))))
+          : 1.0;
+
+        const dayTdee = Math.round(baseTdee + (activeCalories * dayWearableCalibration) + (zaneResult.bmrOffset || 0) + sleepAdjustment + dayTef + dayGymCalories + dayCaffeineCalories);
+        totalTdeeVal += dayTdee;
+      }
+    });
+
+    if (loggedDays > 0) {
+      return Math.round((totalIntake / loggedDays) - (totalTdeeVal / loggedDays));
+    }
+    
+    // Fallback to today's balance if no data logged this week
+    return intakeCalories - totalTdee;
+  }, [weekDays, weeklyFoodLogs, activeCaloriesMap, sleepLogs, gymVolumeMap, supplementsLogs, zaneResult, baseTdee, intakeCalories, totalTdee]);
+
+  // Weight Projection (Using average weekly balance for stability)
+  const netDailyBalance = averageWeeklyNetBalance;
+  const projectedWeightChange = (netDailyBalance * 28) / 7700;
+  const weeklyWeightRate = (netDailyBalance * 7) / 7700;
+  const startingWeightForProjection = zaneResult.currentTrendWeight || latestWeight;
+  const projectedWeight = Math.round((startingWeightForProjection + projectedWeightChange) * 100) / 100;
 
   const weeklyStats = useMemo(() => {
     let totalIntakeCalories = 0;
