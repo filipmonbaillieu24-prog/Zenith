@@ -728,6 +728,34 @@ function App() {
             calculated_at: new Date().toISOString()
           });
       }
+
+      // Self-Correction Loop: Backpropagate learning targets to SOTA ZenithFusionNet
+      if (userId) {
+        const net = ZenithFusionNet.getInstance();
+        await net.init(supabase, userId);
+        
+        const inputVec = [
+          selectedDateCaloriesIntake,
+          selectedDateGymVolume,
+          selectedDateActiveCalories > 0 ? 80 : 0, // TSS proxy
+          todaySleepQuality !== null ? todaySleepQuality : 80,
+          todaySleepDuration !== null ? todaySleepDuration : 8.0,
+          0.25, // Deep sleep % proxy
+          0.18, // REM sleep % proxy
+          todaySleepQuality !== null ? (55 + (todaySleepQuality - 75) * 0.8) : 65, // HRV rMSSD proxy
+          0, // Delta RHR proxy
+          caffeineStats.activeDateCaffeine,
+          activeDateCreatine > 0 ? 1.0 : 0.0,
+          zaneResult.currentTrendWeight || latestWeight
+        ];
+
+        const actualTdee = totalTdee;
+        const actualRecovery = todaySleepQuality !== null ? todaySleepQuality : 80;
+        const actualCapacity = todaySleepQuality !== null ? Math.min(100, Math.max(30, todaySleepQuality + 5)) : 75;
+
+        await net.train(supabase, userId, inputVec, actualTdee, actualRecovery, actualCapacity);
+        console.log("[ZenithFusionNet] Backpropagation online training loop complete for user:", userId);
+      }
     } catch (err) {
       console.error("Failed to save ZANE status:", err);
     }
