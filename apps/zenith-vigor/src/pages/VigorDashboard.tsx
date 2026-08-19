@@ -2329,7 +2329,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         </div>
 
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button onClick={() => setShowSettings(true)} className="vigor-nav-btn" style={{ background: 'rgba(255, 255, 255, 0.03)', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
+          <button onClick={() => window.parent.postMessage({ type: 'NAVIGATE_TAB', tab: 'profile' }, '*')} className="vigor-nav-btn" style={{ background: 'rgba(255, 255, 255, 0.03)', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
             <Settings size={15} /> Set Goals
           </button>
           

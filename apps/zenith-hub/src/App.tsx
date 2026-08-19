@@ -364,6 +364,9 @@ function App() {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'close-app') {
         setActiveTab('hub');
+      } else if (event.data?.type === 'NAVIGATE_TAB') {
+        const targetTab = event.data.tab;
+        setActiveTab(targetTab);
       } else if (event.data?.type === 'open-bug-report') {
         console.log("Hub received open-bug-report event from iframe:", event.data);
         setBugPrefilledCategory(event.data.category || null);

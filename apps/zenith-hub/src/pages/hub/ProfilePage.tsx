@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { User, AlertCircle, Check, Sparkles, CreditCard, ShieldCheck, CheckCircle2, XCircle, Zap } from 'lucide-react';
+import { User, AlertCircle, Check, Sparkles, CreditCard, ShieldCheck, CheckCircle2, XCircle, Zap, Target } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 import { PayPalModal } from '../../components/PayPalModal';
 import './ProfilePage.css';
@@ -32,6 +32,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
   const [weightDate, setWeightDate] = useState<string | null>(null);
 
+  // Zenith Health Goals states
+  const [targetWeight, setTargetWeight] = useState<string>('');
+  const [targetSteps, setTargetSteps] = useState<string>('10000');
+  const [targetSleep, setTargetSleep] = useState<string>('8');
+  const [targetRate, setTargetRate] = useState<string>('0.5');
+  const [dietType, setDietType] = useState<string>('balanced');
+  const [scaleModel, setScaleModel] = useState<string>('neo-health-onyx-se');
+  const [ringModel, setRingModel] = useState<string>('colbi-r02');
+
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -42,6 +51,49 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   }, [userEmail]);
 
   const [isProUser, setIsProUser] = useState<boolean>(isFounder || initialProfile.isPro === true);
+
+  // Fetch Vigor Profile & Fuel Profile Health Goals
+  useEffect(() => {
+    const fetchGoals = async () => {
+      try {
+        // Fetch Vigor Profile
+        const { data: vigorData, error: vError } = await supabase
+          .from('vigor_profile')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+
+        if (vError && vError.code !== 'PGRST116') throw vError;
+        if (vigorData) {
+          setTargetWeight(vigorData.target_weight?.toString() || '');
+          setTargetSteps(vigorData.target_steps?.toString() || '10000');
+          setTargetSleep(vigorData.target_sleep_hours?.toString() || '8');
+          setScaleModel(vigorData.scale_model || 'neo-health-onyx-se');
+          setRingModel(vigorData.ring_model || 'colbi-r02');
+        }
+
+        // Fetch Fuel Profile
+        const { data: fuelData, error: fError } = await supabase
+          .from('fuel_profile')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+
+        if (fError && fError.code !== 'PGRST116') throw fError;
+        if (fuelData) {
+          // Sync target weight if Vigor didn't have it set
+          if (!vigorData?.target_weight && fuelData.target_weight) {
+            setTargetWeight(fuelData.target_weight.toString());
+          }
+          setTargetRate(fuelData.target_rate_kg_per_week?.toString() || '0.5');
+          setDietType(fuelData.diet_type || 'balanced');
+        }
+      } catch (err) {
+        console.error('Error fetching user goals:', err);
+      }
+    };
+    fetchGoals();
+  }, [userId]);
 
   // Fetch the latest weight measurement from Vigor weight logs & sync Pro metadata
   useEffect(() => {
@@ -107,7 +159,37 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
       };
 
       await onSave(updatedProfile);
-      setSuccessMsg('Profile successfully updated!');
+
+      const parsedWeight = targetWeight ? parseFloat(targetWeight) : null;
+
+      // 2. Save Vigor Profile Goals
+      const { error: vigorErr } = await supabase
+        .from('vigor_profile')
+        .upsert({
+          user_id: userId,
+          target_weight: parsedWeight,
+          target_steps: targetSteps ? parseInt(targetSteps) : null,
+          target_sleep_hours: targetSleep ? parseFloat(targetSleep) : null,
+          scale_model: scaleModel,
+          ring_model: ringModel,
+          updated_at: new Date().toISOString()
+        });
+      if (vigorErr) throw vigorErr;
+
+      // 3. Save Fuel Profile Goals
+      const { error: fuelErr } = await supabase
+        .from('fuel_profile')
+        .upsert({
+          user_id: userId,
+          target_weight: parsedWeight,
+          target_rate_kg_per_week: targetRate ? parseFloat(targetRate) : 0.5,
+          diet_type: dietType,
+          height: height ? parseFloat(height) : null,
+          last_calculated_at: new Date().toISOString()
+        });
+      if (fuelErr) throw fuelErr;
+
+      setSuccessMsg('Profile and Health Goals successfully updated!');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Error updating profile.');
@@ -217,143 +299,257 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
       {/* TAB 1: Profile Basics */}
       {activeTab === 'profile' && (
-        <div className="zh-profile-grid animate-slide-up">
-          <div className="zh-profile-card">
-            <h2 className="zh-profile-card-title">
-              <User size={16} style={{ color: '#10b981' }} />
-              Personal Information
-            </h2>
+        <form onSubmit={handleSubmit} className="zh-profile-form" style={{ display: 'block' }}>
+          <div className="zh-profile-grid animate-slide-up">
+            {/* Card 1: Personal Information */}
+            <div className="zh-profile-card">
+              <h2 className="zh-profile-card-title">
+                <User size={16} style={{ color: '#10b981' }} />
+                Personal Information
+              </h2>
 
-            <form onSubmit={handleSubmit} className="zh-profile-form">
-              {/* Name */}
-              <div className="zh-profile-row">
-                <label htmlFor="profileName">Full Name</label>
-                <input
-                  id="profileName"
-                  type="text"
-                  className="zh-profile-input"
-                  placeholder="Your full name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* Name */}
+                <div className="zh-profile-row">
+                  <label htmlFor="profileName">Full Name</label>
+                  <input
+                    id="profileName"
+                    type="text"
+                    className="zh-profile-input"
+                    placeholder="Your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
 
-              {/* Gender */}
-              <div className="zh-profile-row">
-                <label htmlFor="profileGender">Gender</label>
-                <select
-                  id="profileGender"
-                  className="zh-profile-select"
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                >
-                  <option value="">Not specified</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
+                {/* Gender */}
+                <div className="zh-profile-row">
+                  <label htmlFor="profileGender">Gender</label>
+                  <select
+                    id="profileGender"
+                    className="zh-profile-select"
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                  >
+                    <option value="">Not specified</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
 
-              {/* Date of Birth */}
-              <div className="zh-profile-row">
-                <label htmlFor="profileBirth">Date of Birth</label>
-                <input
-                  id="profileBirth"
-                  type="date"
-                  className="zh-profile-input"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  max={new Date().toISOString().split('T')[0]}
-                />
-              </div>
+                {/* Date of Birth */}
+                <div className="zh-profile-row">
+                  <label htmlFor="profileBirth">Date of Birth</label>
+                  <input
+                    id="profileBirth"
+                    type="date"
+                    className="zh-profile-input"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    max={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
 
-              {/* Height */}
-              <div className="zh-profile-row">
-                <label htmlFor="profileHeight">Height <span>(cm)</span></label>
-                <input
-                  id="profileHeight"
-                  type="number"
-                  min="50"
-                  max="250"
-                  className="zh-profile-input"
-                  placeholder="—"
-                  value={height}
-                  onChange={(e) => setHeight(e.target.value)}
-                />
-              </div>
+                {/* Height */}
+                <div className="zh-profile-row">
+                  <label htmlFor="profileHeight">Height <span>(cm)</span></label>
+                  <input
+                    id="profileHeight"
+                    type="number"
+                    min="50"
+                    max="250"
+                    className="zh-profile-input"
+                    placeholder="—"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                  />
+                </div>
 
-              {/* Weight Unit */}
-              <div className="zh-profile-row">
-                <label htmlFor="profileWeightUnit">Weight Unit</label>
-                <select
-                  id="profileWeightUnit"
-                  className="zh-profile-select"
-                  value={weightUnit}
-                  onChange={(e) => setWeightUnit(e.target.value as 'kg' | 'lbs')}
-                >
-                  <option value="kg">Kilograms (kg)</option>
-                  <option value="lbs">Pounds (lbs)</option>
-                </select>
-              </div>
+                {/* Weight Unit */}
+                <div className="zh-profile-row">
+                  <label htmlFor="profileWeightUnit">Weight Unit</label>
+                  <select
+                    id="profileWeightUnit"
+                    className="zh-profile-select"
+                    value={weightUnit}
+                    onChange={(e) => setWeightUnit(e.target.value as 'kg' | 'lbs')}
+                  >
+                    <option value="kg">Kilograms (kg)</option>
+                    <option value="lbs">Pounds (lbs)</option>
+                  </select>
+                </div>
 
-              {/* Unit System */}
-              <div className="zh-profile-row">
-                <label htmlFor="profileUnitSystem">System Measurement</label>
-                <select
-                  id="profileUnitSystem"
-                  className="zh-profile-select"
-                  value={unitSystem}
-                  onChange={(e) => setUnitSystem(e.target.value as 'metric' | 'imperial')}
-                >
-                  <option value="metric">Metric (cm / km)</option>
-                  <option value="imperial">Imperial (inches / miles)</option>
-                </select>
-              </div>
+                {/* Unit System */}
+                <div className="zh-profile-row">
+                  <label htmlFor="profileUnitSystem">System Measurement</label>
+                  <select
+                    id="profileUnitSystem"
+                    className="zh-profile-select"
+                    value={unitSystem}
+                    onChange={(e) => setUnitSystem(e.target.value as 'metric' | 'imperial')}
+                  >
+                    <option value="metric">Metric (cm / km)</option>
+                    <option value="imperial">Imperial (inches / miles)</option>
+                  </select>
+                </div>
 
-              {/* Weight (Read-only, linked to Vigor) */}
-              <div className="zh-profile-row">
-                <label>Weight <span>(kg)</span></label>
-                <input
-                  type="text"
-                  className="zh-profile-input"
-                  disabled
-                  value={latestWeight !== null ? `${latestWeight} kg` : 'No measurement yet'}
-                />
-                <p className="zh-profile-note">
-                  {latestWeight !== null ? (
-                    <>
-                      Last logged: <strong>{latestWeight} kg</strong> on {weightDate} via Zenith Vigor.
-                    </>
-                  ) : (
-                    <>
-                      No weight log found yet. Log a measurement using the <strong>Vigor</strong> extension.
-                    </>
-                  )}
-                </p>
+                {/* Weight (Read-only, linked to Vigor) */}
+                <div className="zh-profile-row">
+                  <label>Weight <span>(kg)</span></label>
+                  <input
+                    type="text"
+                    className="zh-profile-input"
+                    disabled
+                    value={latestWeight !== null ? `${latestWeight} kg` : 'No measurement yet'}
+                  />
+                  <p className="zh-profile-note">
+                    {latestWeight !== null ? (
+                      <>
+                        Last logged: <strong>{latestWeight} kg</strong> on {weightDate} via Zenith Vigor.
+                      </>
+                    ) : (
+                      <>
+                        No weight log found yet. Log a measurement using the <strong>Vigor</strong> extension.
+                      </>
+                    )}
+                  </p>
+                </div>
               </div>
+            </div>
 
-              {/* Actions */}
-              <div className="zh-profile-actions">
-                <button
-                  type="button"
-                  className="zh-btn-cancel"
-                  onClick={onBack}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="zh-btn-save"
-                  disabled={saving}
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </button>
+            {/* Card 2: Health Goals & Devices */}
+            <div className="zh-profile-card">
+              <h2 className="zh-profile-card-title">
+                <Target size={16} style={{ color: '#10b981' }} />
+                Zenith Health Goals
+              </h2>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* Target Weight */}
+                <div className="zh-profile-row">
+                  <label htmlFor="goalWeight">Target Weight <span>(kg)</span></label>
+                  <input
+                    id="goalWeight"
+                    type="number"
+                    step="0.1"
+                    className="zh-profile-input"
+                    placeholder="e.g. 78.0"
+                    value={targetWeight}
+                    onChange={(e) => setTargetWeight(e.target.value)}
+                  />
+                </div>
+
+                {/* Step Goal */}
+                <div className="zh-profile-row">
+                  <label htmlFor="goalSteps">Daily Step Goal</label>
+                  <input
+                    id="goalSteps"
+                    type="number"
+                    className="zh-profile-input"
+                    value={targetSteps}
+                    onChange={(e) => setTargetSteps(e.target.value)}
+                  />
+                </div>
+
+                {/* Sleep Goal */}
+                <div className="zh-profile-row">
+                  <label htmlFor="goalSleep">Sleep Goal <span>(hours)</span></label>
+                  <input
+                    id="goalSleep"
+                    type="number"
+                    step="0.5"
+                    className="zh-profile-input"
+                    value={targetSleep}
+                    onChange={(e) => setTargetSleep(e.target.value)}
+                  />
+                </div>
+
+                {/* targetRate (deficit/surplus target speed) */}
+                <div className="zh-profile-row">
+                  <label htmlFor="goalRate">Weekly Target Rate <span>(kg/week)</span></label>
+                  <input
+                    id="goalRate"
+                    type="number"
+                    step="0.05"
+                    min="0.1"
+                    max="1.5"
+                    className="zh-profile-input"
+                    value={targetRate}
+                    onChange={(e) => setTargetRate(e.target.value)}
+                  />
+                </div>
+
+                {/* dietType */}
+                <div className="zh-profile-row">
+                  <label htmlFor="goalDiet">Diet Preference</label>
+                  <select
+                    id="goalDiet"
+                    className="zh-profile-select"
+                    value={dietType}
+                    onChange={(e) => setDietType(e.target.value)}
+                  >
+                    <option value="balanced">Balanced (2.0g/kg Pro, moderate Carbs/Fat)</option>
+                    <option value="high-carb">High-Carb (1.7g/kg Pro, high Carbs)</option>
+                    <option value="low-carb">Low-Carb (2.3g/kg Pro, low Carbs)</option>
+                  </select>
+                </div>
+
+                {/* scaleModel */}
+                <div className="zh-profile-row">
+                  <label htmlFor="goalScale">Paired Body Composition Scale</label>
+                  <select
+                    id="goalScale"
+                    className="zh-profile-select"
+                    value={scaleModel}
+                    onChange={(e) => setScaleModel(e.target.value)}
+                  >
+                    <option value="neo-health-onyx-se">Neo Health Onyx SE (BLE)</option>
+                    <option value="withings-body-cardio">Withings Body Cardio (WiFi/Cloud)</option>
+                    <option value="garmin-index-s2">Garmin Index S2 (WiFi/Cloud)</option>
+                    <option value="manual">Manual Entry Only</option>
+                  </select>
+                </div>
+
+                {/* ringModel */}
+                <div className="zh-profile-row">
+                  <label htmlFor="goalRing">Paired Smart Ring</label>
+                  <select
+                    id="goalRing"
+                    className="zh-profile-select"
+                    value={ringModel}
+                    onChange={(e) => setRingModel(e.target.value)}
+                  >
+                    <option value="colbi-r02">Colbi Ring R02 (BLE)</option>
+                    <option value="oura-ring-gen3">Oura Ring Gen 3 (Cloud API)</option>
+                    <option value="ultrahuman-ring-air">Ultrahuman Ring Air (Cloud API)</option>
+                    <option value="manual">Manual Entry Only</option>
+                  </select>
+                </div>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
+
+          {/* Form Actions */}
+          <div className="zh-profile-actions" style={{ maxWidth: 1000, margin: '24px auto 0' }}>
+            <button
+              type="button"
+              className="zh-btn-cancel"
+              onClick={onBack}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="zh-btn-save"
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
       )}
 
       {/* TAB 2: Subscription & Zenith Pro */}
