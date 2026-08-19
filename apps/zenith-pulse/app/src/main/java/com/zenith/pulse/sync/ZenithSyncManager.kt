@@ -48,7 +48,7 @@ object ZenithSyncManager {
     var lastSyncStatus: String = "Nooit gesynchroniseerd"
         private set
 
-    suspend fun performSync(context: Context): Boolean = withContext(Dispatchers.IO) {
+    suspend fun performSync(context: Context, syncType: String = "MANUAL"): Boolean = withContext(Dispatchers.IO) {
         try {
             if (!UserAuthManager.isLoggedIn(context)) {
                 lastSyncStatus = "⛔ Inloggen verplicht: Geen gekoppeld Zenith account"
@@ -123,7 +123,7 @@ object ZenithSyncManager {
 
             val rpcBodyJson = buildJsonObject {
                 put("timestamp", System.currentTimeMillis())
-                put("synctype", "MANUAL")
+                put("synctype", syncType)
                 put("datatype", "BIOMETRIC_FULL")
                 put("recordcount", 1)
                 put("payload", innerPayloadJson)
