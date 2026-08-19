@@ -71,6 +71,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         birth_date: birthDate || null,
         height_cm: heightInCm || null,
         training_goal: goal,
+        unit_system: unitSystem,
+        weight_unit: weightUnit,
         updated_at: new Date().toISOString()
       };
 

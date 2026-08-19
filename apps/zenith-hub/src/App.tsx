@@ -1203,7 +1203,12 @@ ${logsMarkdown}
         initialName={fitnessProfile?.name}
         onCompleted={async (_profilePayload, isProChosen) => {
           setShowOnboarding(false);
-          if (session?.user?.id) {
+          // Refresh the user session in local state to ensure metadata updates propagate
+          const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+          if (refreshedSession) {
+            setSession(refreshedSession);
+            await loadFitnessProfile(refreshedSession.user.id, refreshedSession.user.user_metadata);
+          } else if (session?.user?.id) {
             await loadFitnessProfile(session.user.id, { ...session.user.user_metadata, onboarding_completed: true, is_pro: isProChosen });
           }
         }}
