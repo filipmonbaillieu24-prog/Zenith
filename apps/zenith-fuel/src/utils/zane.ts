@@ -101,7 +101,9 @@ export function runZaneCalibration(
     const rawWeight = weightsWithInterpolation[idx];
     const saturation = saturationMap[log.date] || 0;
     // Creatine water retention estimate: 1.2kg at 100% saturation
-    const adjustedWeight = rawWeight !== null ? rawWeight - (1.2 * saturation) : null;
+    // Post-workout gym fluid retention: up to 0.8kg on heavy gym volume days
+    const gymFluidOffset = Math.min(0.8, (log.gymVolume || 0) * 0.00004);
+    const adjustedWeight = rawWeight !== null ? rawWeight - (1.2 * saturation) - gymFluidOffset : null;
     return {
       ...log,
       weight: adjustedWeight
@@ -449,14 +451,21 @@ function generateTargets(
   const targetRate = profile.targetRateKgPerWeek ?? 0.5;
   let phase: 'cut' | 'bulk' | 'maintain' = 'maintain';
 
+  // Athlete BMR Safety Floor (intake target must never drop below 95% of BMR)
+  const bmrEstimate = calculateMifflinBmr(weight, profile.height || 181, calculateAge(profile.birthDate), profile.gender || 'male');
+  const bmrSafetyFloor = Math.max(1550, Math.round(bmrEstimate * 0.95));
+  // 25% Max Deficit Cap (max 600 kcal/day deficit to preserve LBM)
+  const maxAllowableDeficit = Math.min(600, Math.round(tdee * 0.25));
+
   if (targetWeight) {
     const weightMargin = 0.2; // 200 grams margin
     const diff = currentWeightDiff(weight, targetWeight);
     
     if (diff > weightMargin) {
-      // Lose weight: deficit (each kg is 7700 kcal, so 0.5kg/week = 3850 kcal/week = 550 kcal/day deficit)
-      const deficit = (targetRate * 7700) / 7;
-      dailyCalorieTarget = Math.max(1200, tdee - deficit); // Ensure minimum 1200 kcal/day safety limit
+      // Lose weight: deficit capped at maxAllowableDeficit and bounded by bmrSafetyFloor
+      const desiredDeficit = (targetRate * 7700) / 7;
+      const safeDeficit = Math.min(desiredDeficit, maxAllowableDeficit);
+      dailyCalorieTarget = Math.max(bmrSafetyFloor, tdee - safeDeficit);
       phase = 'cut';
     } else if (diff < -weightMargin) {
       // Gain weight: surplus

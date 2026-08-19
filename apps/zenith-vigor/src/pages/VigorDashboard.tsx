@@ -891,9 +891,70 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       else { bmiCategory = 'Obese'; bmiColor = '#ef4444'; }
     }
 
+    // Weight Fluctuation Telemetry Explainer Analysis
+    const recentWeights = weights.slice(0, 3);
+    const weightDiff = (recentWeights.length >= 2 && recentWeights[0] && recentWeights[1])
+      ? Math.round((recentWeights[0].weight - recentWeights[1].weight) * 10) / 10
+      : 0;
+
+    let fluctuationInsight: { title: string; desc: string; icon: string; color: string } | null = null;
+
+    if (weightDiff >= 0.4) {
+      fluctuationInsight = {
+        title: `Scale Shift Detected (+${weightDiff} kg)`,
+        desc: "Heavy strength workouts cause localized muscle inflammation (DOMS) and glycogen supercompensation (1g glycogen holds 3g water). This is healthy recovery fluid, not fat mass. Expect scale weight to stabilize over 24-48 hours.",
+        icon: "⚡",
+        color: "#cbd5e1"
+      };
+    } else if (weightDiff <= -0.5) {
+      fluctuationInsight = {
+        title: `Scale Drop (-${Math.abs(weightDiff)} kg)`,
+        desc: "Water and glycogen flushing combined with active fat oxidation. True fat loss is tracked by your 7-day EMA trend weight.",
+        icon: "💧",
+        color: "#38bdf8"
+      };
+    }
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} className="animate-fade-in">
         
+        {fluctuationInsight && (
+          <div style={{
+            background: 'rgba(28, 28, 35, 0.75)',
+            border: `1px solid ${fluctuationInsight.color}30`,
+            borderRadius: '16px',
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '12px',
+              background: 'rgba(255,255,255,0.05)',
+              border: `1px solid ${fluctuationInsight.color}40`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '20px',
+              flexShrink: 0
+            }}>
+              {fluctuationInsight.icon}
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: 900, color: fluctuationInsight.color, textTransform: 'uppercase', fontFamily: 'Outfit', letterSpacing: '0.5px' }}>
+                {fluctuationInsight.title}
+              </div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px', lineHeight: '1.45' }}>
+                {fluctuationInsight.desc}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Quick Metrics Grid */}
         <div className="vigor-grid">
           {/* Card 1: Weight */}
