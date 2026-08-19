@@ -28,7 +28,8 @@ import {
   Legend, 
   ResponsiveContainer, 
   LineChart, 
-  Line 
+  Line,
+  ComposedChart
 } from 'recharts';
 
 // Type Definitions
@@ -143,6 +144,7 @@ export default function App() {
   const [todayAcwr, setTodayAcwr] = useState<number>(1.0);
   const [isDeloadAccepted, setIsDeloadAccepted] = useState<boolean>(false);
   const [baselineWorkoutFormSets, setBaselineWorkoutFormSets] = useState<any[]>([]);
+  const [sleepLogs, setSleepLogs] = useState<any[]>([]);
 
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [isExerciseModalOpen, setIsExerciseModalOpen] = useState(false);
@@ -417,6 +419,7 @@ export default function App() {
     const targetSleep = Number(vigorProfile?.target_sleep_hours ?? 8.0);
 
     if (sleepDataAll && sleepDataAll.length > 0) {
+      setSleepLogs(sleepDataAll);
       const hrvHistory = sleepDataAll.map((s: any) => {
         const baseVal = 55;
         const offsetVal = ((s.quality_score || 80) - 75) * 0.8;
@@ -1204,6 +1207,60 @@ export default function App() {
     return getSparklineData(selectedExercise1RM);
   }, [selectedExercise1RM, workouts]);
 
+  // CNS Readiness vs. Lift Volume Correlation Chart Data (last 14 days)
+  const cnsVolumeCorrelationData = useMemo(() => {
+    const dataList = [];
+    const dateMap = new Map<string, { dateStr: string; volume: number; hrv: number }>();
+
+    // Generate dates for the last 14 days
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const yyyymmdd = d.toISOString().slice(0, 10);
+      const dateStr = d.toLocaleDateString('nl-NL', { month: 'short', day: 'numeric' });
+      dateMap.set(yyyymmdd, { dateStr, volume: 0, hrv: 65 }); // default baseline HRV
+    }
+
+    // 1. Accumulate workout volume per day
+    workouts.forEach(w => {
+      if (w.completed_at) {
+        try {
+          const wDate = new Date(w.completed_at).toISOString().slice(0, 10);
+          if (dateMap.has(wDate)) {
+            const item = dateMap.get(wDate)!;
+            item.volume += w.volume || 0;
+          }
+        } catch (e) {
+          console.error("Error parsing workout completed_at date:", e);
+        }
+      }
+    });
+
+    // 2. Map sleep quality to daily HRV rMSSD proxy
+    sleepLogs.forEach(s => {
+      if (s.logged_at) {
+        try {
+          const sDate = new Date(s.logged_at).toISOString().slice(0, 10);
+          if (dateMap.has(sDate)) {
+            const item = dateMap.get(sDate)!;
+            const baseVal = 55;
+            const offsetVal = ((s.quality_score || 80) - 75) * 0.8;
+            item.hrv = Math.round(Math.max(30, Math.min(110, baseVal + offsetVal)));
+          }
+        } catch (e) {
+          console.error("Error parsing sleep logged_at date:", e);
+        }
+      }
+    });
+
+    // Convert map to array sorted chronologically
+    for (const [_, val] of dateMap.entries()) {
+      dataList.push(val);
+    }
+
+    return dataList;
+  }, [workouts, sleepLogs]);
+
   // Loading screen
   if (loadingSession) {
     return (
@@ -1652,6 +1709,35 @@ export default function App() {
                 )}
               </div>
 
+            </div>
+
+            {/* CNS Readiness vs. Lift Volume Trend Card */}
+            <div className="kratos-card" style={{ marginTop: '24px', width: '100%' }}>
+              <div className="kratos-card-header" style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                <h3 className="kratos-card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Activity size={16} style={{ color: '#38bdf8' }} /> CNS Readiness vs. Daily Lift Volume (Last 14 Days)
+                </h3>
+                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                  Visualizes how Autonomic CNS readiness (Sleep HRV proxy) correlates with actual training volume
+                </span>
+              </div>
+              <div style={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer>
+                  <ComposedChart data={cnsVolumeCorrelationData} margin={{ top: 10, right: -10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                    <XAxis dataKey="dateStr" stroke="#94a3b8" style={{ fontSize: 10 }} />
+                    <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: 10 }} />
+                    <YAxis yAxisId="right" orientation="right" domain={[30, 110]} stroke="#38bdf8" style={{ fontSize: 10 }} />
+                    <Tooltip 
+                      contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }}
+                      labelStyle={{ color: '#fff', fontWeight: 700 }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
+                    <Bar yAxisId="left" dataKey="volume" name="Lifted Volume (kg)" fill="rgba(255, 255, 255, 0.08)" radius={[4, 4, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="hrv" name="CNS Readiness (HRV ms)" stroke="#38bdf8" strokeWidth={2.5} activeDot={{ r: 5 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         )}
