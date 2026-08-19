@@ -61,9 +61,12 @@ object ZenithSyncManager {
             val userEmail = UserAuthManager.getUserEmail(context) ?: ""
             val userId = UserAuthManager.getUserId(context) ?: ""
 
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            val currentVersionName = packageInfo.versionName ?: "1.0.20"
+
             val innerPayloadJson = buildJsonObject {
                 put("app_name", "Zenith Pulse")
-                put("app_version", "1.0.14")
+                put("app_version", currentVersionName)
                 put("user_email", userEmail)
                 put("user_id", userId)
                 put("timestamp", data.timestamp)
