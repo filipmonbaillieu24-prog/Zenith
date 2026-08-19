@@ -41,6 +41,9 @@ data class HealthDataPayload(
     val rawStepsList: List<Map<String, Any>> = emptyList(),
     val rawSleepList: List<Map<String, Any>> = emptyList(),
     val rawExerciseList: List<Map<String, Any>> = emptyList(),
+    val dailyStepsList: List<Map<String, Any>> = emptyList(),
+    val dailySleepList: List<Map<String, Any>> = emptyList(),
+    val dailyWeightList: List<Map<String, Any>> = emptyList(),
     val timestamp: String = Instant.now().toString()
 )
 
@@ -128,6 +131,9 @@ class HealthConnectManager(private val context: Context) {
         val stepsMaps = mutableListOf<Map<String, Any>>()
         val sleepMaps = mutableListOf<Map<String, Any>>()
         val exerciseMaps = mutableListOf<Map<String, Any>>()
+        val dailyStepsList = mutableListOf<Map<String, Any>>()
+        val dailySleepList = mutableListOf<Map<String, Any>>()
+        val dailyWeightList = mutableListOf<Map<String, Any>>()
 
         // 1. Steps Today (Deduplicated per Data Origin to match QRing / Primary Tracker)
         try {
@@ -138,12 +144,17 @@ class HealthConnectManager(private val context: Context) {
                 )
             )
             
+            val stepsByDateAndOrigin = mutableMapOf<String, MutableMap<String, Long>>()
             val stepsByOrigin = mutableMapOf<String, Long>()
             for (record in stepsResponse.records) {
                 val pkg = record.metadata.dataOrigin.packageName
                 if (!record.startTime.isBefore(localMidnight)) {
                     stepsByOrigin[pkg] = (stepsByOrigin[pkg] ?: 0L) + record.count
                 }
+                val localDateStr = record.startTime.atZone(systemZone).toLocalDate().toString()
+                val originMap = stepsByDateAndOrigin.getOrPut(localDateStr) { mutableMapOf() }
+                originMap[pkg] = (originMap[pkg] ?: 0L) + record.count
+
                 stepsMaps.add(
                     mapOf(
                         "count" to record.count,
@@ -152,6 +163,18 @@ class HealthConnectManager(private val context: Context) {
                         "metadata" to mapOf("data_origin" to pkg)
                     )
                 )
+            }
+
+            for ((dateStr, originMap) in stepsByDateAndOrigin) {
+                val qringKey = originMap.keys.firstOrNull { it.contains("ring", ignoreCase = true) }
+                val stepsValue = if (qringKey != null && (originMap[qringKey] ?: 0L) > 0L) {
+                    originMap[qringKey]!!
+                } else if (originMap.isNotEmpty()) {
+                    originMap.values.maxOrNull() ?: 0L
+                } else {
+                    0L
+                }
+                dailyStepsList.add(mapOf("date" to dateStr, "steps" to stepsValue))
             }
 
             // Deduplication logic: Prioritize QRing ("cq.ring" / "qring") or take max single origin total to avoid phone+ring double counting
@@ -320,14 +343,28 @@ class HealthConnectManager(private val context: Context) {
             }
         }
 
-        // 7. Sleep Sessions (Pick Latest Night Session - Fix 18h doubling bug)
+        // 7. Sleep Sessions (Aggregated last 30 days)
         try {
             val sleepRes = client.readRecords(
                 ReadRecordsRequest(
                     recordType = SleepSessionRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(startTime48h)
+                    timeRangeFilter = TimeRangeFilter.after(startTime30Days)
                 )
             )
+
+            // Group by date (using local date string of session end time)
+            val sleepByDate = mutableMapOf<String, Long>()
+            for (record in sleepRes.records) {
+                val dateStr = record.endTime.atZone(systemZone).toLocalDate().toString()
+                val durMins = ChronoUnit.MINUTES.between(record.startTime, record.endTime)
+                if (durMins > (sleepByDate[dateStr] ?: 0L)) {
+                    sleepByDate[dateStr] = durMins
+                }
+            }
+            for ((dateStr, mins) in sleepByDate) {
+                dailySleepList.add(mapOf("date" to dateStr, "duration_minutes" to mins))
+            }
+
             val latestSession = sleepRes.records.maxByOrNull { it.endTime }
             if (latestSession != null) {
                 val durSec = ChronoUnit.SECONDS.between(latestSession.startTime, latestSession.endTime)
@@ -388,6 +425,22 @@ class HealthConnectManager(private val context: Context) {
                     timeRangeFilter = TimeRangeFilter.after(startTime30Days)
                 )
             )
+
+            // Group by date (using local date string of weight logged time)
+            val weightByDate = mutableMapOf<String, Double>()
+            val weightTimeByDate = mutableMapOf<String, Instant>()
+            for (record in weightRes.records) {
+                val dateStr = record.time.atZone(systemZone).toLocalDate().toString()
+                val existingTime = weightTimeByDate[dateStr]
+                if (existingTime == null || record.time.isAfter(existingTime)) {
+                    weightByDate[dateStr] = record.weight.inKilograms
+                    weightTimeByDate[dateStr] = record.time
+                }
+            }
+            for ((dateStr, wt) in weightByDate) {
+                dailyWeightList.add(mapOf("date" to dateStr, "weight_kg" to wt))
+            }
+
             if (weightRes.records.isNotEmpty()) {
                 latestWeight = weightRes.records.maxByOrNull { it.time }?.weight?.inKilograms ?: 0.0
             }
@@ -540,7 +593,10 @@ class HealthConnectManager(private val context: Context) {
             exerciseSessionsCount = exerciseMaps.size,
             rawStepsList = stepsMaps,
             rawSleepList = sleepMaps,
-            rawExerciseList = exerciseMaps
+            rawExerciseList = exerciseMaps,
+            dailyStepsList = dailyStepsList,
+            dailySleepList = dailySleepList,
+            dailyWeightList = dailyWeightList
         )
     }
 }

@@ -18,6 +18,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.add
 
 object ZenithSyncManager {
 
@@ -93,6 +95,30 @@ object ZenithSyncManager {
                 put("avg_power_watts", data.avgPowerWatts)
                 put("avg_speed_kmh", data.avgSpeedKmh)
                 put("exercise_sessions_count", data.exerciseSessionsCount)
+                put("daily_steps", buildJsonArray {
+                    for (s in data.dailyStepsList) {
+                        add(buildJsonObject {
+                            put("date", (s["date"] as? String) ?: "")
+                            put("steps", (s["steps"] as? Long) ?: ((s["steps"] as? Int)?.toLong()) ?: 0)
+                        })
+                    }
+                })
+                put("daily_sleep", buildJsonArray {
+                    for (sl in data.dailySleepList) {
+                        add(buildJsonObject {
+                            put("date", (sl["date"] as? String) ?: "")
+                            put("duration_minutes", (sl["duration_minutes"] as? Long) ?: ((sl["duration_minutes"] as? Int)?.toLong()) ?: 0)
+                        })
+                    }
+                })
+                put("daily_weight", buildJsonArray {
+                    for (w in data.dailyWeightList) {
+                        add(buildJsonObject {
+                            put("date", (w["date"] as? String) ?: "")
+                            put("weight_kg", (w["weight_kg"] as? Double) ?: ((w["weight_kg"] as? Float)?.toDouble()) ?: 0.0)
+                        })
+                    }
+                })
             }.toString()
 
             val rpcBodyJson = buildJsonObject {
