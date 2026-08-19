@@ -252,13 +252,15 @@ export async function syncPhoneDataToEcosystem(userId?: string): Promise<{ succe
       for (const item of stepsTransformed) {
         const loggedAtIso = `${item.date}T12:00:00.000Z`;
 
-        const { data: existing } = await supabase
+        const { data: existingList } = await supabase
           .from('vigor_steps')
           .select('id')
           .eq('user_id', activeUserId)
           .gte('logged_at', `${item.date}T00:00:00.000Z`)
           .lte('logged_at', `${item.date}T23:59:59.999Z`)
-          .maybeSingle();
+          .limit(1);
+
+        const existing = existingList && existingList.length > 0 ? existingList[0] : null;
 
         if (existing) {
           await supabase.from('vigor_steps').update({ step_count: item.steps }).eq('id', existing.id);
@@ -328,13 +330,15 @@ export async function syncPhoneDataToEcosystem(userId?: string): Promise<{ succe
         const remScore = Math.min(15, Math.round((remMins / 100) * 15));
         const qualityScore = Math.min(96, Math.max(60, durationScore + deepScore + remScore));
 
-        const { data: existing } = await supabase
+        const { data: existingList } = await supabase
           .from('vigor_sleep')
           .select('id')
           .eq('user_id', activeUserId)
           .gte('logged_at', `${dateStr}T00:00:00.000Z`)
           .lte('logged_at', `${dateStr}T23:59:59.999Z`)
-          .maybeSingle();
+          .limit(1);
+
+        const existing = existingList && existingList.length > 0 ? existingList[0] : null;
 
         if (existing) {
           await supabase.from('vigor_sleep').update({

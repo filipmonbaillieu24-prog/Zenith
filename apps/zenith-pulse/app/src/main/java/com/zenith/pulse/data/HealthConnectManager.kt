@@ -134,14 +134,16 @@ class HealthConnectManager(private val context: Context) {
             val stepsResponse = client.readRecords(
                 ReadRecordsRequest(
                     recordType = StepsRecord::class,
-                    timeRangeFilter = TimeRangeFilter.after(localMidnight)
+                    timeRangeFilter = TimeRangeFilter.after(startTime30Days)
                 )
             )
             
             val stepsByOrigin = mutableMapOf<String, Long>()
             for (record in stepsResponse.records) {
                 val pkg = record.metadata.dataOrigin.packageName
-                stepsByOrigin[pkg] = (stepsByOrigin[pkg] ?: 0L) + record.count
+                if (!record.startTime.isBefore(localMidnight)) {
+                    stepsByOrigin[pkg] = (stepsByOrigin[pkg] ?: 0L) + record.count
+                }
                 stepsMaps.add(
                     mapOf(
                         "count" to record.count,
