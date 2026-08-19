@@ -2071,8 +2071,12 @@ function App() {
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Current Weight:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Current Scale Weight:</span>
                 <span style={{ fontWeight: 700, color: '#fff' }}>{latestWeight} kg</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>True Fat Trend Weight:</span>
+                <span style={{ fontWeight: 800, color: '#38bdf8' }}>{zaneResult.currentTrendWeight || latestWeight} kg</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Projected Weight (28d):</span>

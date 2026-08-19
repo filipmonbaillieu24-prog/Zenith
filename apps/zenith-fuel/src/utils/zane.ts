@@ -36,6 +36,8 @@ export interface ZaneOutput {
   dailyCarbTarget: number;
   dailyProteinTarget: number;
   dailyFatTarget: number;
+  trendWeightMap?: { [date: string]: number };
+  currentTrendWeight?: number;
 }
 
 /**
@@ -276,7 +278,15 @@ export function runZaneCalibration(
     }
   }
 
-  return generateTargets(todayTdee, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, calibrationDays, isCalibrated);
+  const trendWeightMap: { [date: string]: number } = {};
+  logsWithWeight.forEach((l, idx) => {
+    trendWeightMap[l.date] = Math.round(trendWeights[idx] * 100) / 100;
+  });
+  const currentTrendWeight = trendWeights.length > 0 
+    ? Math.round(trendWeights[trendWeights.length - 1] * 100) / 100 
+    : currentWeight;
+
+  return generateTargets(todayTdee, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, calibrationDays, isCalibrated, trendWeightMap, currentTrendWeight);
 }
 
 /**
@@ -443,7 +453,9 @@ function generateTargets(
   gymVolumeCoeff: number,
   caffeineCoeff: number,
   calibrationDays: number,
-  isCalibrated: boolean
+  isCalibrated: boolean,
+  trendWeightMap: { [date: string]: number } = {},
+  currentTrendWeight: number = weight
 ): ZaneOutput {
   // Apply calorie surplus or deficit to reach target weight
   let dailyCalorieTarget = tdee;
@@ -528,19 +540,12 @@ function generateTargets(
   let finalCarbCalories = baseCarbCalories + adjustmentCalories;
   let finalFatCalories = baseFatCalories - adjustmentCalories;
 
-  // 4. Safe guards: hormonal fat safety minimum (0.6g/kg) and glycogen minimum (30g)
-  const minFatCalories = (weight * 0.6) * 9;
+  // Safeguard: Ensure fat doesn't drop below 0.6g/kg for hormonal health
+  const minFatGrams = Math.round(weight * 0.6);
+  const minFatCalories = minFatGrams * 9;
   if (finalFatCalories < minFatCalories) {
-    const diff = minFatCalories - finalFatCalories;
     finalFatCalories = minFatCalories;
-    finalCarbCalories = Math.max(30 * 4, finalCarbCalories - diff);
-  }
-
-  const minCarbCalories = 30 * 4;
-  if (finalCarbCalories < minCarbCalories) {
-    const diff = minCarbCalories - finalCarbCalories;
-    finalCarbCalories = minCarbCalories;
-    finalFatCalories = Math.max(minFatCalories, finalFatCalories - diff);
+    finalCarbCalories = Math.max(0, caloriesForCarbsAndFat - finalFatCalories);
   }
 
   const dailyCarbTarget = Math.round(finalCarbCalories / 4);
@@ -558,7 +563,9 @@ function generateTargets(
     dailyCalorieTarget,
     dailyCarbTarget,
     dailyProteinTarget,
-    dailyFatTarget
+    dailyFatTarget,
+    trendWeightMap,
+    currentTrendWeight
   };
 }
 
