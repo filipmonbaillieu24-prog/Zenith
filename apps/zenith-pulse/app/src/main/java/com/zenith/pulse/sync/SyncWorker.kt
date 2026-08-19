@@ -3,11 +3,11 @@ package com.zenith.pulse.sync
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
-import androidx.work.WorkerParawithers
+import androidx.work.WorkerParameters
 
 class SyncWorker(
     context: Context,
-    params: WorkerParawithers
+    params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {

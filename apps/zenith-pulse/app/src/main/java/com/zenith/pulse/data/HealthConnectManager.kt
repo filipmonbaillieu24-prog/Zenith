@@ -477,8 +477,8 @@ class HealthConnectManager(private val context: Context) {
             if (bpRes.records.isNotEmpty()) {
                 val lastBp = bpRes.records.maxByOrNull { it.time }
                 if (lastBp != null) {
-                    sysBp = lastBp.systolic.inMilliwithersOfMercury
-                    diaBp = lastBp.diastolic.inMilliwithersOfMercury
+                    sysBp = lastBp.systolic.inMillimetersOfMercury
+                    diaBp = lastBp.diastolic.inMillimetersOfMercury
                 }
             }
         } catch (e: Exception) {
