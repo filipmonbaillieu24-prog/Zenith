@@ -1583,6 +1583,8 @@ function App() {
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (caloriesPercentage / 100) * circumference;
+  const remainingCalories = zaneResult.dailyCalorieTarget - intakeCalories;
+  const calorieRingColor = remainingCalories < 0 ? '#ff7675' : 'var(--color-primary)';
 
   const latestWeight = weightLogs[weightLogs.length - 1]?.weight || 75;
   const height = profile.height || 175;
@@ -2047,13 +2049,13 @@ function App() {
                     cy="70"
                     r={radius}
                     fill="transparent"
-                    stroke="var(--color-primary)"
+                    stroke={calorieRingColor}
                     strokeWidth="10"
                     strokeDasharray={circumference}
                     strokeDashoffset={strokeDashoffset}
                     strokeLinecap="round"
                     transform="rotate(-90 70 70)"
-                    style={{ transition: 'stroke-dashoffset 0.3s' }}
+                    style={{ transition: 'stroke-dashoffset 0.3s, stroke 0.3s' }}
                   />
                 </svg>
                 <div className="cal-circle-text">
@@ -2072,9 +2074,9 @@ function App() {
                   <span className="cal-detail-val">{intakeCalories} kcal</span>
                 </div>
                 <div className="cal-detail-row">
-                  <span style={{ color: 'var(--text-muted)' }}>Remaining</span>
-                  <span className="cal-detail-val" style={{ color: 'var(--color-primary)' }}>
-                    {zaneResult.dailyCalorieTarget - intakeCalories} kcal
+                  <span style={{ color: 'var(--text-muted)' }}>{remainingCalories < 0 ? 'Over Goal' : 'Remaining'}</span>
+                  <span className="cal-detail-val" style={{ color: calorieRingColor }}>
+                    {remainingCalories < 0 ? `+${Math.abs(remainingCalories)}` : remainingCalories} kcal
                   </span>
                 </div>
               </div>
@@ -2155,7 +2157,7 @@ function App() {
             <div className="zane-insights-wrap">
               <div className="zane-stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
                 <div className="zane-stat-item">
-                  <span className="zane-stat-lbl">BMR Offset</span>
+                  <span className="zane-stat-lbl">Metabolic Adjustment</span>
                   <div className="zane-stat-val" style={{ color: zaneResult.bmrOffset >= 0 ? '#55efc4' : '#ff7675' }}>
                     {zaneResult.bmrOffset >= 0 ? `+${zaneResult.bmrOffset}` : zaneResult.bmrOffset} kcal
                   </div>
@@ -2175,15 +2177,15 @@ function App() {
                   <span className="zane-stat-lbl">Sleep Duration</span>
                   <div className="zane-stat-val" style={{ color: '#a855f7' }}>
                     {zaneResult.isCalibrated 
-                      ? `${zaneResult.sleepDurationCoeff >= 0 ? '+' : ''}${zaneResult.sleepDurationCoeff} kcal/u` 
-                      : (todaySleepDuration !== null ? `${Math.floor(todaySleepDuration)}u ${Math.round((todaySleepDuration % 1) * 60)}m` : `${Math.floor(sleepDurationAvg)}u`)}
+                      ? `${zaneResult.sleepDurationCoeff >= 0 ? '+' : ''}${zaneResult.sleepDurationCoeff} kcal/hr`
+                      : (todaySleepDuration !== null ? `${Math.floor(todaySleepDuration)}h ${Math.round((todaySleepDuration % 1) * 60)}m` : `${Math.floor(sleepDurationAvg)}h`)}
                   </div>
                   <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
                     {zaneResult.isCalibrated ? 'Coefficient' : 'Current measurement'}
                   </span>
                 </div>
                 <div className="zane-stat-item">
-                  <span className="zane-stat-lbl">Gym Coeff</span>
+                  <span className="zane-stat-lbl">Strength Training Effect</span>
                   <div className="zane-stat-val" style={{ color: 'var(--color-protein)' }}>
                     {zaneResult.isCalibrated ? `${zaneResult.gymVolumeCoeff.toFixed(3)}` : '0.150'}
                   </div>
@@ -2192,7 +2194,7 @@ function App() {
                   </span>
                 </div>
                 <div className="zane-stat-item">
-                  <span className="zane-stat-lbl">Caffeine Coeff</span>
+                  <span className="zane-stat-lbl">Caffeine Effect</span>
                   <div className="zane-stat-val" style={{ color: 'var(--color-carb)' }}>
                     {zaneResult.isCalibrated ? `${zaneResult.caffeineCoeff.toFixed(3)}` : '0.150'}
                   </div>
@@ -2205,13 +2207,13 @@ function App() {
               <div className="zane-feedback-text">
                 {zaneResult.isCalibrated ? (
                   <>
-                    Zenith is fully calibrated based on <strong>{zaneResult.calibrationDays} days</strong> of data. 
-                    The algorithm directly adjusts your energy needs based on your actual metabolic variance and sleep quality.
+                    Zenith is fully calibrated from <strong>{zaneResult.calibrationDays} days</strong> of your data.
+                    It now adjusts your calorie target using your own metabolism, training, and sleep patterns instead of generic estimates.
                   </>
                 ) : (
                   <>
-                    Calibration status: <strong>{zaneResult.calibrationDays}/14 days</strong> completely logged. 
-                    Sleep quality and duration factor into recovery matrices. After 14 days Zenith adapts to your personalized sleep coefficients.
+                    Calibration progress: <strong>{zaneResult.calibrationDays}/14 days</strong> fully logged.
+                    Keep logging your meals and sleep — once you reach 14 complete days, Zenith switches from generic estimates to a calorie target personalized to you.
                   </>
                 )}
               </div>
@@ -2225,7 +2227,7 @@ function App() {
                   style={{ width: 18, height: 18, accentColor: 'var(--color-primary)', cursor: 'pointer' }}
                 />
                 <label htmlFor="dayIncompleteCheck" style={{ fontSize: 12, fontWeight: 700, cursor: 'pointer', color: !selectedDateComplete ? '#ff9f43' : 'var(--text-muted)' }}>
-                  Mark this day as INCOMPLETE (exclude from Zenith regression)
+                  Mark this day as incomplete (won't be used for calibration)
                 </label>
               </div>
             </div>
@@ -2234,7 +2236,7 @@ function App() {
           {/* Zenith Evolution Chart Card */}
           <div className="fuel-card col-7">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Zenith Parameter Evolution
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Zenith Calibration Trend
             </h3>
             {zaneHistory.length === 0 ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12, minHeight: 180, textAlign: 'center' }}>
@@ -2251,16 +2253,16 @@ function App() {
                       contentStyle={{ background: '#121218', borderColor: 'var(--border-color)', borderRadius: 8, fontSize: 11 }}
                       labelStyle={{ fontWeight: 800, color: 'var(--color-primary)' }}
                       formatter={(value: any, name: any) => {
-                        if (name && typeof name === 'string' && name.includes("Foutmarge") && Array.isArray(value)) {
-                          return [`${value[0]} tot ${value[1]} kcal`, "BMR Offset Range"];
+                        if (name && typeof name === 'string' && name.includes("Margin of Error") && Array.isArray(value)) {
+                          return [`${value[0]} to ${value[1]} kcal`, "Metabolic Adjustment Range"];
                         }
                         return [value, name];
                       }}
                     />
-                    <Area name="BMR Offset Margin of Error" type="monotone" dataKey="offsetRange" stroke="none" fill="rgba(255, 159, 67, 0.08)" />
-                    <Line name="BMR Offset (kcal)" type="monotone" dataKey="offset" stroke="var(--color-primary)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line name="Sleep Quality Coeff" type="monotone" dataKey="quality" stroke="var(--color-protein)" strokeWidth={2} dot={false} />
-                    <Line name="Sleep Duration Coeff" type="monotone" dataKey="duration" stroke="var(--color-fat)" strokeWidth={2} dot={false} />
+                    <Area name="Metabolic Adjustment Margin of Error" type="monotone" dataKey="offsetRange" stroke="none" fill="rgba(255, 159, 67, 0.08)" />
+                    <Line name="Metabolic Adjustment (kcal)" type="monotone" dataKey="offset" stroke="var(--color-primary)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    <Line name="Sleep Quality Effect" type="monotone" dataKey="quality" stroke="var(--color-protein)" strokeWidth={2} dot={false} />
+                    <Line name="Sleep Duration Effect" type="monotone" dataKey="duration" stroke="var(--color-fat)" strokeWidth={2} dot={false} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -2304,7 +2306,7 @@ function App() {
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Zenith Metabolism Offset:</span>
+                <span style={{ color: 'var(--text-muted)' }}>Zenith Metabolic Adjustment:</span>
                 <span style={{ fontWeight: 700, color: bmrOffset >= 0 ? '#55efc4' : '#ff7675' }}>
                   {bmrOffset >= 0 ? `+${bmrOffset}` : bmrOffset} kcal
                 </span>
@@ -2949,7 +2951,7 @@ function App() {
               </div>
 
               <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: '14px', textAlign: 'center' }}>
-                Learnede coëfficiënt: <strong>{zaneResult.caffeineCoeff || 0.15} kcal</strong> per mg cafeïne.
+                Learned effect: <strong>{zaneResult.caffeineCoeff || 0.15} kcal</strong> per mg of caffeine.
               </div>
             </div>
           </div>
