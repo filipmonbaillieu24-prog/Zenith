@@ -2211,7 +2211,7 @@ function App() {
                 ) : (
                   <>
                     Calibration status: <strong>{zaneResult.calibrationDays}/14 days</strong> completely logged. 
-                    Sleep quality and duration factor into recovery matrices. After 14 days Zenith adapts to your personalized personalized sleep coefficients.
+                    Sleep quality and duration factor into recovery matrices. After 14 days Zenith adapts to your personalized sleep coefficients.
                   </>
                 )}
               </div>
