@@ -279,10 +279,15 @@ fun TodayScreen(
                                             if (log != null && log.sets.isNotEmpty()) {
                                                 val workingSetsInLog = log.sets.filter { it.type == "working" }
                                                 val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }
-                                                val allSuccess = workingSetsInLog.isNotEmpty() && workingSetsInLog.all { s ->
-                                                    val maxReps = tempEx?.sets?.filter { it.type == "working" }?.firstOrNull()?.maxReps ?: 10
-                                                    val targetRir = tempEx?.sets?.filter { it.type == "working" }?.firstOrNull()?.targetRir ?: 2
-                                                    
+                                                val workingTargets = tempEx?.sets?.filter { it.type == "working" } ?: emptyList()
+                                                val allSuccess = workingSetsInLog.isNotEmpty() && workingSetsInLog.withIndex().all { (idx, s) ->
+                                                    // Compare each logged set against its own positional target spec,
+                                                    // not always the first set's - templates can have per-set targets
+                                                    // (e.g. a pyramid scheme).
+                                                    val target = workingTargets.getOrNull(idx) ?: workingTargets.lastOrNull()
+                                                    val maxReps = target?.maxReps ?: 10
+                                                    val targetRir = target?.targetRir ?: 2
+
                                                     s.reps >= maxReps && s.rir <= targetRir
                                                 }
 

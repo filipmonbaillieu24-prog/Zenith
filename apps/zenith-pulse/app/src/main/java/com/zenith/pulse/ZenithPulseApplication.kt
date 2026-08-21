@@ -20,7 +20,7 @@ class ZenithPulseApplication : Application() {
         // Start embedded Local HTTP Server on port 8787
         LocalHttpServer.startServer(applicationContext)
 
-        // Schedule periodic background sync worker (runs every 15 mins)
+        // Schedule periodic background sync worker (runs hourly)
         setupBackgroundSync()
     }
 

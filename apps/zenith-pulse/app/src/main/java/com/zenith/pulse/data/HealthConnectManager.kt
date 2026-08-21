@@ -86,12 +86,6 @@ class HealthConnectManager(private val context: Context) {
     suspend fun hasAllPermissions(): Boolean {
         val client = healthConnectClient ?: return false
         val granted = client.permissionController.getGrantedPermissions()
-        if (granted.contains(HealthPermission.getReadPermission(StepsRecord::class)) ||
-            granted.contains(HealthPermission.getReadPermission(HeartRateRecord::class)) ||
-            granted.contains(HealthPermission.getReadPermission(SleepSessionRecord::class)) ||
-            granted.size >= 3) {
-            return true
-        }
         return granted.containsAll(requiredPermissions)
     }
 
