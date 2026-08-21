@@ -586,8 +586,16 @@ function App() {
         activeCalories: 0,
         sleepQuality: null,
         sleepDurationHours: null,
-        // Bug #1 fix: default false — only rows confirmed in fuel_days pass the gate
-        isComplete: false,
+        // Default true (a day counts unless explicitly marked incomplete), matching
+        // selectedDateComplete's own default a few lines up and the "mark day
+        // incomplete" toggle's own framing ("excluded from Zenith"). The prior
+        // "Bug #1 fix" comment here inverted this to default false, which meant a
+        // day only ever counted toward calibration if the user had explicitly
+        // clicked "mark complete" on it via fuel_days - so real users who never
+        // touch that toggle could never reach the 14-day calibration threshold
+        // no matter how much they'd actually logged. The calories>=1000 && weight
+        // check below already guards against empty/placeholder days counting.
+        isComplete: true,
         gymVolume: 0,
         creatine: 0,
         caffeine: 0,
