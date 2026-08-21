@@ -16,14 +16,6 @@ The Zenith ecosystem consists of modular applications that communicate seamlessl
   - **Coach Panel**: Analyzes rides, manages the physiological PMC (Performance Management Chart) simulation, and generates personalized workouts.
   - **Calendar**: Schedules workouts and training plans.
 
-### 🚴 Zenith Pilot (Android App)
-* **Location in monorepo**: `apps/zenith-pilot`
-* **Tech Stack**: Kotlin + Jetpack Compose + Ktor + Supabase Kotlin SDK.
-* **Role**:
-  - **Bike Computer**: Mounted on handlebars. Displays real-time metrics (speed, power, heart rate, cadence).
-  - **Sensor Pairing**: Connects directly to BLE sensors (heart rate straps, power meters, cadence sensors).
-  - **Audio Coach**: Delivers live in-ear audio guidance based on active interval workouts and route targets.
-
 ---
 
 ## 2. Data Synchronization & Cloud Architecture
