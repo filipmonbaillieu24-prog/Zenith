@@ -67,7 +67,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
       <div className="stride-modal-container" onClick={e => e.stopPropagation()}>
         <div className="stride-modal-header">
           <div>
-            <h3>GPX / FIT / TCX Bestand Importeren</h3>
+            <h3>Import GPX / FIT / TCX File</h3>
             <p className="subtitle">Upload a GPS file from your sports watch or app</p>
           </div>
           <button className="stride-close-btn" onClick={onClose}>
@@ -98,7 +98,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
                 id="gpx-file-input"
               />
               <label htmlFor="gpx-file-input" className="btn-browse">
-                Bestand Kiezen
+                Choose File
               </label>
 
               {errorMsg && <p className="error-text">{errorMsg}</p>}
@@ -116,13 +116,13 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
                   <span className="metric-val">{parsedRun.distanceKm} km</span>
                 </div>
                 <div className="gpx-metric-card">
-                  <span className="metric-label">Tijdsduur</span>
+                  <span className="metric-label">Duration</span>
                   <span className="metric-val">
                     {Math.floor((parsedRun.durationSec || 0) / 60)}m {(parsedRun.durationSec || 0) % 60}s
                   </span>
                 </div>
                 <div className="gpx-metric-card">
-                  <span className="metric-label">Gem. Tempo</span>
+                  <span className="metric-label">Avg Pace</span>
                   <span className="metric-val">{parsedRun.avgPaceMinKm} /km</span>
                 </div>
                 <div className="gpx-metric-card">
@@ -174,7 +174,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
           {parsedRun && (
             <button className="btn-save" onClick={handleConfirmImport}>
               <Check size={16} style={{ marginRight: 6 }} />
-              GPX Importeren in Zenith Stride
+              Import GPX into Zenith Stride
             </button>
           )}
         </div>

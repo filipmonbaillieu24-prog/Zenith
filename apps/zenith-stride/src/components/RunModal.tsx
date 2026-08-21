@@ -67,7 +67,7 @@ export const RunModal: React.FC<RunModalProps> = ({
 
     const newRun: RunActivity = {
       id: initialRun?.id || `run-${Date.now()}`,
-      title: title || (isTreadmill ? 'Loopband Sessie' : 'Hardloopsessie'),
+      title: title || (isTreadmill ? 'Treadmill Session' : 'Run Session'),
       date,
       timeOfDay,
       type: isTreadmill ? 'treadmill' : type,
@@ -163,7 +163,7 @@ export const RunModal: React.FC<RunModalProps> = ({
 
             {isTreadmill ? (
               <div className="form-group flex-1 highlight-group">
-                <label style={{ color: '#38bdf8' }}>Helling Loopband (%)</label>
+                <label style={{ color: '#38bdf8' }}>Treadmill Incline (%)</label>
                 <input 
                   type="number" 
                   step="0.5" 
@@ -200,7 +200,7 @@ export const RunModal: React.FC<RunModalProps> = ({
               />
             </div>
             <div className="form-group flex-1">
-              <label>Tijdsduur (Minuten : Seconden)</label>
+              <label>Duration (Minutes : Seconds)</label>
               <div style={{ display: 'flex', gap: 6 }}>
                 <input 
                   type="number" 

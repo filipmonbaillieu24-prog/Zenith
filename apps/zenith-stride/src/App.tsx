@@ -222,18 +222,18 @@ export function App() {
             <Footprints size={14} style={{ color: '#38bdf8' }} />
             <span>Zenith Stride Running Ecosystem</span>
           </div>
-          <h1>Hardloop & Loopband Performance</h1>
+          <h1>Running & Treadmill Performance</h1>
           <p>Analyze your outdoor runs, GPX files, and indoor treadmill sessions with Polar, Strava & Health Connect integration.</p>
         </div>
 
         <div className="stride-header-actions">
           <button className="btn-action primary" onClick={() => setIsRunModalOpen(true)}>
             <Plus size={16} />
-            <span>Handmatig Invoeren</span>
+            <span>Log Manually</span>
           </button>
           <button className="btn-action secondary" onClick={() => setIsGpxModalOpen(true)}>
             <UploadCloud size={16} />
-            <span>GPX Importeren</span>
+            <span>Import GPX</span>
           </button>
           <button className="btn-action secondary" onClick={() => setIsIntegrationsModalOpen(true)}>
             <Zap size={16} style={{ color: '#f59e0b' }} />
@@ -286,9 +286,9 @@ export function App() {
             <Layers size={20} />
           </div>
           <div>
-            <span className="kpi-label">Loopband Volume</span>
-            <span className="kpi-value">{runs.filter(r => r.isTreadmill).length} <small>sessies</small></span>
-            <span className="kpi-subtext">Geïnclineerd indoor trainen</span>
+            <span className="kpi-label">Treadmill Volume</span>
+            <span className="kpi-value">{runs.filter(r => r.isTreadmill).length} <small>sessions</small></span>
+            <span className="kpi-subtext">Incline indoor training</span>
           </div>
         </div>
       </div>
@@ -309,9 +309,9 @@ export function App() {
           <div className="filter-chips">
             {[
               { id: 'all', label: 'All Runs' },
-              { id: 'treadmill', label: 'Loopband' },
-              { id: 'long_run', label: 'Lange Duurloop' },
-              { id: 'intervals', label: 'Intervallen' },
+              { id: 'treadmill', label: 'Treadmill' },
+              { id: 'long_run', label: 'Long Run' },
+              { id: 'intervals', label: 'Intervals' },
               { id: 'easy', label: 'Easy Run' },
               { id: 'trail', label: 'Trail' }
             ].map(chip => (
@@ -329,13 +329,13 @@ export function App() {
         {/* Activity Table */}
         <div className="stride-activity-table">
           <div className="table-header">
-            <span>Datum & Titel</span>
-            <span>Type & Modus</span>
+            <span>Date & Title</span>
+            <span>Type & Mode</span>
             <span>Distance</span>
-            <span>Tempo</span>
+            <span>Pace</span>
             <span>Heart Rate / Cadence</span>
-            <span>Schoen / Bron</span>
-            <span>Actie</span>
+            <span>Shoe / Source</span>
+            <span>Action</span>
           </div>
 
           {filteredRuns.length === 0 && (
@@ -358,7 +358,7 @@ export function App() {
 
               <div className="col-type">
                 <span className={`type-badge ${run.isTreadmill ? 'treadmill' : run.type}`}>
-                  {run.isTreadmill ? `Loopband (${run.inclinePercent || 0}%)` : run.type.replace('_', ' ').toUpperCase()}
+                  {run.isTreadmill ? `Treadmill (${run.inclinePercent || 0}%)` : run.type.replace('_', ' ').toUpperCase()}
                 </span>
               </div>
 
@@ -407,10 +407,10 @@ export function App() {
             <div className="stride-modal-header">
               <div>
                 <span className="detail-category">
-                  {selectedRunDetail.isTreadmill ? 'Loopbandsessie (Indoor)' : 'Buiten Hardloopsessie'}
+                  {selectedRunDetail.isTreadmill ? 'Treadmill Session (Indoor)' : 'Outdoor Run'}
                 </span>
                 <h3>{selectedRunDetail.title}</h3>
-                <p className="subtitle">{selectedRunDetail.date} • Bron: {selectedRunDetail.source.toUpperCase()}</p>
+                <p className="subtitle">{selectedRunDetail.date} • Source: {selectedRunDetail.source.toUpperCase()}</p>
               </div>
               <button className="stride-close-btn" onClick={() => setSelectedRunDetail(null)}>✕</button>
             </div>
@@ -422,15 +422,15 @@ export function App() {
                   <span className="stat-val">{selectedRunDetail.distanceKm > 0 ? `${selectedRunDetail.distanceKm} km` : '0 km (Indoor)'}</span>
                 </div>
                 <div className="detail-stat-box">
-                  <span className="stat-label">Totale Duur</span>
+                  <span className="stat-label">Total Duration</span>
                   <span className="stat-val">{formatDuration(selectedRunDetail.durationSec)}</span>
                 </div>
                 <div className="detail-stat-box">
-                  <span className="stat-label">Gem. Tempo</span>
+                  <span className="stat-label">Avg Pace</span>
                   <span className="stat-val">{selectedRunDetail.avgPaceMinKm > 0 ? `${formatPace(selectedRunDetail.avgPaceMinKm)} /km` : '0:00 /km'}</span>
                 </div>
                 <div className="detail-stat-box">
-                  <span className="stat-label">{selectedRunDetail.isTreadmill ? 'Loopband Helling' : 'Elevation Gain'}</span>
+                  <span className="stat-label">{selectedRunDetail.isTreadmill ? 'Treadmill Incline' : 'Elevation Gain'}</span>
                   <span className="stat-val">
                     {selectedRunDetail.isTreadmill ? `${selectedRunDetail.inclinePercent || 0}%` : `${selectedRunDetail.elevationGainM} m`}
                   </span>
@@ -514,7 +514,7 @@ export function App() {
                       <span>Kilometer</span>
                       <span>Pace min/km</span>
                       <span>Avg Heart Rate</span>
-                      <span>Hoogte</span>
+                      <span>Elevation</span>
                     </div>
                     {selectedRunDetail.splits.map(s => (
                       <div key={s.km} className="split-row">
@@ -537,7 +537,7 @@ export function App() {
             </div>
 
             <div className="stride-modal-footer">
-              <button className="btn-cancel" onClick={() => setSelectedRunDetail(null)}>Sluiten</button>
+              <button className="btn-cancel" onClick={() => setSelectedRunDetail(null)}>Close</button>
             </div>
           </div>
         </div>
