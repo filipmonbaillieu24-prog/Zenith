@@ -25,7 +25,7 @@ import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { ProPaywallModal } from './components/common/ProPaywallModal';
 import { calibrateSummaryModels, calibrateFullModels, analyzeCardiacDrift, initializeModels } from './utils/localNeuralNet';
 import { supabase } from './utils/supabaseClient';
-import { isTrustedZenithOrigin } from '@zenith/shared';
+import { isTrustedZenithOrigin, ExtensionSessionGate } from '@zenith/shared';
 import { planWorkoutInCalendar } from './utils/trainingHelpers';
 import './index.css';
 
@@ -631,19 +631,6 @@ function App() {
 
   const isDashboardTab = activeTab === 'dashboard' || activeTab === 'rides' || activeTab === 'prs' || activeTab === 'heatmap';
 
-  const navigateBackToHub = () => {
-    if (window.parent && window.parent !== window) {
-      const hubOrigin = import.meta.env.DEV ? 'http://localhost:1420' : window.location.origin;
-      window.parent.postMessage({ type: 'close-app' }, hubOrigin);
-    } else {
-      const isDev = import.meta.env.DEV;
-      const hubUrl = isDev
-        ? 'http://localhost:1420'
-        : `${window.location.origin}/index.html`;
-      window.location.href = hubUrl;
-    }
-  };
-
   if (sessionLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#09090b' }}>
@@ -653,18 +640,7 @@ function App() {
   }
 
   if (!session) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#09090b', color: '#fff', fontFamily: 'Outfit, sans-serif' }}>
-        <h2 style={{ fontSize: 20, marginBottom: 10 }}>No Active Zenith Session</h2>
-        <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 20 }}>Open the Zenith Hub application to log in and access this extension.</p>
-        <button 
-          onClick={navigateBackToHub}
-          style={{ background: '#cbd5e1', color: '#09090b', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, cursor: 'pointer' }}
-        >
-          Open Zenith Hub
-        </button>
-      </div>
-    );
+    return <ExtensionSessionGate appName="Aero" icon={<Bike size={28} />} />;
   }
 
   const userName = session?.user?.user_metadata?.name || fitnessProfile?.name || 'Atleet';

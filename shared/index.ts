@@ -18,6 +18,7 @@ export * from './ml/ZenithFusionNet';
 export * from './pmc';
 export * from './trustedOrigins';
 export * from './gpxParser';
+export * from './components/ExtensionSessionGate';
 export * from './components/ZenithModuleHeader';
 export * from './components/ZenithCard';
 export * from './components/ZenithStatWidget';

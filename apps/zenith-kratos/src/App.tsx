@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, HrvAnsTracker, AcwrForecaster } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import { 
   Dumbbell, 
@@ -1290,15 +1290,7 @@ export default function App() {
 
   // Not logged in fallback
   if (!session) {
-    return (
-      <div className="kratos-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: 24, textAlign: 'center' }}>
-        <Dumbbell size={48} style={{ color: '#cbd5e1', marginBottom: 20 }} />
-        <h1 style={{ fontFamily: 'Outfit', fontWeight: 900, color: '#fff', margin: '0 0 10px' }}>ZENITH KRATOS</h1>
-        <p style={{ color: '#94a3b8', fontSize: 13, maxWidth: 360, margin: '0 0 24px', lineHeight: 1.6 }}>
-          Log in via the main screen of Zenith Hub to access the Kratos Strength & Conditioning extension.
-        </p>
-      </div>
-    );
+    return <ExtensionSessionGate appName="Kratos" icon={<Dumbbell size={28} />} />;
   }
 
   const renderHypertrophyTab = () => {
