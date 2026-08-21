@@ -22,6 +22,8 @@ import { BugReportModal, BugReportSubmitData } from './components/BugReportModal
 import { OnboardingModal } from './components/OnboardingModal';
 import { AccountConfirmedModal } from './components/AccountConfirmedModal';
 
+const EXTENSION_TABS = new Set<TabKey>(['aero', 'vigor', 'kratos', 'fuel', 'stride']);
+
 function App() {
   const [session, setSession] = useState<any>(null);
   const sessionRef = useRef<any>(null);
@@ -900,7 +902,7 @@ ${logsMarkdown}
         />
         <div style={{ flex: 1, height: isTauri ? 'calc(100vh - 32px)' : '100vh', marginTop: 0, overflowY: 'auto', position: 'relative' }}>
           <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
-          <div key={activeTab} className="zenith-page-transition" style={{ width: '100%', height: '100%' }}>
+          <div key={activeTab} className="zenith-page-transition" style={{ width: '100%', height: '100%', display: EXTENSION_TABS.has(activeTab) ? 'none' : 'block' }}>
           {activeTab === 'hub' && (
             <ZenithHubPage
               fitnessProfile={fitnessProfile}
@@ -962,60 +964,56 @@ ${logsMarkdown}
           {activeTab === 'integrations' && (
             <IntegrationsPage />
           )}
-          {activeTab === 'aero' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
-              <iframe
-                id="aero-iframe"
-                src={getAeroUrl()}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                title="Zenith Aero"
-                allow="bluetooth"
-              />
-            </div>
-          )}
-          {activeTab === 'vigor' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
-              <iframe
-                id="vigor-iframe"
-                src={vigorUrl}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                title="Zenith Vigor"
-                allow="bluetooth"
-              />
-            </div>
-          )}
-          {activeTab === 'kratos' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
-              <iframe
-                id="kratos-iframe"
-                src={kratosUrl}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                title="Zenith Kratos"
-              />
-            </div>
-          )}
-          {activeTab === 'fuel' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
-              <iframe
-                id="fuel-iframe"
-                src={fuelUrl}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                title="Zenith Fuel"
-              />
-            </div>
-          )}
-          {activeTab === 'stride' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
-              <iframe
-                id="stride-iframe"
-                src={strideUrl}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-                title="Zenith Stride"
-              />
-            </div>
-          )}
           </div>
           </Suspense>
+
+          {/* Extensions stay mounted permanently once loaded and are shown/hidden with
+              display, instead of being destroyed and recreated on every tab switch.
+              Switching away from an extension used to unmount its iframe entirely, so
+              switching back forced a full reload (re-auth, re-fetch, re-render) every
+              single time - this is what made app-to-app navigation feel clunky. */}
+          <div style={{ width: '100%', height: '100%', display: activeTab === 'aero' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <iframe
+              id="aero-iframe"
+              src={getAeroUrl()}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="Zenith Aero"
+              allow="bluetooth"
+            />
+          </div>
+          <div style={{ width: '100%', height: '100%', display: activeTab === 'vigor' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <iframe
+              id="vigor-iframe"
+              src={vigorUrl}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="Zenith Vigor"
+              allow="bluetooth"
+            />
+          </div>
+          <div style={{ width: '100%', height: '100%', display: activeTab === 'kratos' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <iframe
+              id="kratos-iframe"
+              src={kratosUrl}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="Zenith Kratos"
+            />
+          </div>
+          <div style={{ width: '100%', height: '100%', display: activeTab === 'fuel' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <iframe
+              id="fuel-iframe"
+              src={fuelUrl}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="Zenith Fuel"
+            />
+          </div>
+          <div style={{ width: '100%', height: '100%', display: activeTab === 'stride' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <iframe
+              id="stride-iframe"
+              src={strideUrl}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              title="Zenith Stride"
+            />
+          </div>
         </div>
       </div>
 
