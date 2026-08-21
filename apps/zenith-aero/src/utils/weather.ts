@@ -25,7 +25,7 @@ export async function fetchRideWeather(
   const date = new Date(dateMs).toISOString().slice(0, 10);
   // Can't fetch data less than 5 days old from archive
   if (Date.now() - dateMs < 5 * 86400000) return null;
-  const url = `https://archive-api.open-witheo.com/v1/archive?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}&start_date=${date}&end_date=${date}&daily=temperature_2m_mean,windspeed_10m_max,winddirection_10m_dominant,precipitation_sum,weathercode&timezone=auto&windspeed_unit=kmh`;
+  const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat.toFixed(4)}&longitude=${lng.toFixed(4)}&start_date=${date}&end_date=${date}&daily=temperature_2m_mean,windspeed_10m_max,winddirection_10m_dominant,precipitation_sum,weathercode&timezone=auto&windspeed_unit=kmh`;
   try {
     const res  = await fetch(url);
     if (!res.ok) return null;

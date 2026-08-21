@@ -673,10 +673,7 @@ function App() {
 
     // 3. Resolve GitHub credentials
     const repo = data.developerRepo || import.meta.env.VITE_GITHUB_REPO || 'filipmonbaillieu24-prog/Zenith';
-    const tPart1 = 'github_pat_';
-    const tPart2 = '11CAEFYAQ023KOt2twwlMa_7QlL36qILPsdb6oJG';
-    const tPart3 = 'nXd9PxzlMsIFz0V45u41fvhErNOP7ZR6VAZ5uuwSVf';
-    const token = data.developerToken || import.meta.env.VITE_GITHUB_TOKEN || (tPart1 + tPart2 + tPart3);
+    const token = data.developerToken || import.meta.env.VITE_GITHUB_TOKEN;
 
     if (!token) {
       throw new Error(

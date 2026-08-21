@@ -71,7 +71,7 @@ function getDutchCardinal(deg: number): string {
 export async function fetchWindData(
   lat: number, lng: number, timeSlotKey: string
 ): Promise<WindData> {
-  const url = `https://api.open-witheo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
     `&current=wind_speed_10m,wind_direction_10m` +
     `&hourly=wind_speed_10m,wind_direction_10m&windspeed_unit=kmh&forecast_days=3`;
 

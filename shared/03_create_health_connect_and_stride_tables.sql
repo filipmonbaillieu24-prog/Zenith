@@ -30,11 +30,10 @@ ON public.health_connect_logs FOR INSERT
 TO authenticated, anon
 WITH CHECK (true);
 
+-- No client-side SELECT policy: this table is a write-only ingestion log for the
+-- unauthenticated Health Connect webhook bridge (it has no Supabase session to
+-- scope reads to). Nothing in the app reads it back client-side; it's insert-only.
 DROP POLICY IF EXISTS "Allow select for all" ON public.health_connect_logs;
-CREATE POLICY "Allow select for all"
-ON public.health_connect_logs FOR SELECT
-TO authenticated, anon
-USING (true);
 
 -- RPC Function for raw JSON ingestion
 CREATE OR REPLACE FUNCTION public.health_connect_ingest(payload jsonb DEFAULT '{}'::jsonb)
@@ -83,8 +82,9 @@ CREATE TABLE IF NOT EXISTS public.stride_activities (
 ALTER TABLE public.stride_activities ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow insert and select for authenticated users on stride_activities" ON public.stride_activities;
-CREATE POLICY "Allow insert and select for authenticated users on stride_activities"
+DROP POLICY IF EXISTS "Users can manage their own stride activities" ON public.stride_activities;
+CREATE POLICY "Users can manage their own stride activities"
 ON public.stride_activities FOR ALL
-TO authenticated, anon
-USING (true)
-WITH CHECK (true);
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);

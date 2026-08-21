@@ -48,69 +48,7 @@ export function App() {
         console.error("Error loading stride runs:", e);
       }
     }
-    return [
-      {
-        id: 'run-1',
-        title: 'Zondagse Drempelduurloop (Veluwe)',
-        date: '2026-08-14',
-        timeOfDay: '09:15',
-        type: 'long_run',
-        isTreadmill: false,
-        distanceKm: 14.2,
-        durationSec: 4140, // ~4:51 min/km
-        avgPaceMinKm: 4.86,
-        elevationGainM: 112,
-        avgHeartRate: 148,
-        maxHeartRate: 168,
-        avgCadenceSpm: 174,
-        calories: 960,
-        rpe: 7,
-        shoeName: 'Nike ZoomX Vaporfly',
-        source: 'strava',
-        notes: 'Strong marathon tempo blocks in the middle section.'
-      },
-      {
-        id: 'run-2',
-        title: 'Technogym Loopband Incline 2.5% Workout',
-        date: '2026-08-12',
-        timeOfDay: '18:30',
-        type: 'treadmill',
-        isTreadmill: true,
-        inclinePercent: 2.5,
-        distanceKm: 8.5,
-        durationSec: 2430, // ~4:45 min/km
-        avgPaceMinKm: 4.76,
-        elevationGainM: 0,
-        avgHeartRate: 156,
-        maxHeartRate: 172,
-        avgCadenceSpm: 178,
-        calories: 580,
-        rpe: 8,
-        shoeName: 'Hoka Clifton 9',
-        source: 'manual',
-        notes: 'Controlled treadmill run with a steady incline.'
-      },
-      {
-        id: 'run-3',
-        title: 'Vo2Max Intervallen 6x800m',
-        date: '2026-08-10',
-        timeOfDay: '07:45',
-        type: 'intervals',
-        isTreadmill: false,
-        distanceKm: 10.8,
-        durationSec: 2900,
-        avgPaceMinKm: 4.47,
-        elevationGainM: 35,
-        avgHeartRate: 165,
-        maxHeartRate: 182,
-        avgCadenceSpm: 180,
-        calories: 740,
-        rpe: 9,
-        shoeName: 'Saucony Endorphin Speed',
-        source: 'polar',
-        notes: 'Excellent intervals around 3:45/km on the track.'
-      }
-    ];
+    return [];
   });
 
   const [shoes, setShoes] = useState<RunningShoe[]>(() => {
@@ -142,9 +80,17 @@ export function App() {
   useEffect(() => {
     async function loadActivitiesFromDb() {
       try {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+        if (!userId) {
+          console.warn('Cannot load stride activities: User is not authenticated.');
+          return;
+        }
+
         const { data, error } = await supabase
           .from('stride_activities')
           .select('*')
+          .eq('user_id', userId)
           .order('date', { ascending: false });
 
         if (data && data.length > 0) {
@@ -394,6 +340,12 @@ export function App() {
             <span>Schoen / Bron</span>
             <span>Actie</span>
           </div>
+
+          {filteredRuns.length === 0 && (
+            <div className="table-empty-state" style={{ padding: '32px 16px', textAlign: 'center', opacity: 0.6 }}>
+              No runs logged yet. Add one manually or import from GPX/TCX to get started.
+            </div>
+          )}
 
           {filteredRuns.map(run => (
             <div key={run.id} className="table-row" onClick={() => setSelectedRunDetail(run)}>

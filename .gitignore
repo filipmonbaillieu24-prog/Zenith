@@ -2,6 +2,10 @@
 node_modules/
 dist/
 .env
+*.exe
+*.dmg
+*.msi
+*.AppImage
 
 # Workspace ignores
 apps/zenith-aero/node_modules/

@@ -1,4 +1,4 @@
-package com.zenith.pilot.data
+package com.example.pilot.data
 
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest

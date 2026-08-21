@@ -3,7 +3,7 @@
 // ==========================================================
 
 export * from './types';
-export { supabase } from './supabaseClient';
+export { supabase, supabaseUrl, supabaseAnonKey } from './supabaseClient';
 export * from './services/healthConnectSync';
 export * from './services/zenithSleepEngine';
 export * from './ml/SimpleMLP';
