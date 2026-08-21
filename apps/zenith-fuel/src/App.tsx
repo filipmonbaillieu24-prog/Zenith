@@ -563,6 +563,15 @@ function App() {
   useEffect(() => {
     if (!userId) return;
 
+    // Debounced: this effect does an O(n^2) regression re-solve (one full
+    // ridge-regression call per historical day, for the trend chart) plus
+    // four Supabase fetches, and several of the dependencies below change on
+    // every keystroke while editing today's log. Coalesce rapid edits into a
+    // single recompute after a short pause instead of re-running the whole
+    // pipeline on every keystroke. Indentation below is left as-is (not
+    // re-indented into the new closure) to keep this diff reviewable.
+    const zaneDebounceId = setTimeout(() => {
+
     const logsMap: { [date: string]: DailyLogData } = {};
     const today = new Date();
 
@@ -758,6 +767,10 @@ function App() {
     };
 
     fetchCalibrationLogs();
+
+    }, 500);
+
+    return () => clearTimeout(zaneDebounceId);
   }, [userId, weightLogs, sleepLogs, weeklyFoodLogs, supplementsLogs, bodyMeasurementsLogs, selectedDateActiveCalories, selectedDateGymVolume, selectedDateCaloriesIntake, selectedDateProtein, selectedDateCarbs, selectedDateFat, selectedDateComplete, profile, selectedDateStr]);
 
   // Save ZANE coefficients to database
