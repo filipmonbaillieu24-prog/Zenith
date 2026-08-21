@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { isTrustedZenithOrigin } from '@zenith/shared';
 import { 
   Scale, 
   Moon, 
@@ -425,6 +426,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     }
 
     const handleMessage = (event: MessageEvent) => {
+      if (!isTrustedZenithOrigin(event.origin)) return;
       if (event.data?.type === 'native-weight-received') {
         const weight = event.data.weight;
         console.log("Dashboard received native weight forwarded from parent Hub:", weight);

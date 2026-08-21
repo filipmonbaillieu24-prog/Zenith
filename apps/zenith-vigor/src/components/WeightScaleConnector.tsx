@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bluetooth, Scale, X, HelpCircle } from 'lucide-react';
+import { isTrustedZenithOrigin } from '@zenith/shared';
 
 interface WeightScaleConnectorProps {
   onClose: () => void;
@@ -223,6 +224,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
     }
 
     const handleMessage = (event: MessageEvent) => {
+      if (!isTrustedZenithOrigin(event.origin)) return;
       if (event.data?.type === 'native-weight-received') {
         const weight = event.data.weight;
         const raw_bytes = event.data.raw_bytes;

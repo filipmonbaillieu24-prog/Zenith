@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, RefreshCw, Radio, Check } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
+import { isTrustedZenithOrigin } from '@zenith/shared';
 
 interface ColmiRingConnectorProps {
   onClose: () => void;
@@ -17,6 +18,19 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
   const addLog = (msg: string) => {
     setSyncLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
   };
+
+  const activeSyncListenerRef = useRef<((event: MessageEvent) => void) | null>(null);
+
+  // Ensure the sync response listener doesn't outlive the component if it
+  // unmounts (e.g. user navigates away) before the Hub replies.
+  useEffect(() => {
+    return () => {
+      if (activeSyncListenerRef.current) {
+        window.removeEventListener('message', activeSyncListenerRef.current);
+        activeSyncListenerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
@@ -71,16 +85,18 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
       addLog('Sending request to Zenith Hub for Bluetooth synchronization...');
       
       const messageListener = async (event: MessageEvent) => {
+        if (!isTrustedZenithOrigin(event.origin)) return;
         if (event.data) {
           if (event.data.type === 'colmi-sync-status-update') {
             const payload = typeof event.data.payload === 'string' ? JSON.parse(event.data.payload) : event.data.payload;
             addLog(payload.status);
             return;
           }
-          
+
           if (event.data.type === 'colmi-sync-result') {
             window.removeEventListener('message', messageListener);
-          
+            activeSyncListenerRef.current = null;
+
             if (event.data.success) {
               try {
                 const result = JSON.parse(event.data.data);
@@ -172,8 +188,10 @@ export default function ColmiRingConnector({ onClose, userId, onSyncComplete, on
         }
       };
 
+      activeSyncListenerRef.current = messageListener;
       window.addEventListener('message', messageListener);
-      window.parent.postMessage({ type: 'request-colmi-sync', simulate, targetMac }, '*');
+      const hubOrigin = import.meta.env.DEV ? 'http://localhost:1420' : window.location.origin;
+      window.parent.postMessage({ type: 'request-colmi-sync', simulate, targetMac }, hubOrigin);
       setStatus('connecting');
       addLog('Scanning for Colmi Smart Ring nearby...');
       addLog('Waiting for response from Zenith Hub...');

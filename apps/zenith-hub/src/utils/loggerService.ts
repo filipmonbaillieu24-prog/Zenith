@@ -1,3 +1,5 @@
+import { isTrustedZenithOrigin } from '@zenith/shared';
+
 export interface LogEntry {
   id: string;
   timestamp: string;
@@ -44,6 +46,7 @@ class LoggerService {
 
   private initWindowPostMessageListener() {
     window.addEventListener('message', (event) => {
+      if (!isTrustedZenithOrigin(event.origin)) return;
       if (event.data && typeof event.data === 'object') {
         const { type } = event.data;
         if (type === 'native-weight-received') {

@@ -15,7 +15,7 @@ const FeatureRequestsPage = lazy(() => import('./pages/community/FeatureRequests
 import { loggerService } from './utils/loggerService';
 import { Sidebar, TabKey } from './components/Sidebar';
 import { computePMC } from './utils/pmc';
-import { recoveryModel, syncPhoneDataToEcosystem } from '@zenith/shared';
+import { recoveryModel, syncPhoneDataToEcosystem, isTrustedZenithOrigin } from '@zenith/shared';
 import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
@@ -362,6 +362,7 @@ function App() {
     setupTauriListener();
 
     const handleMessage = (event: MessageEvent) => {
+      if (!isTrustedZenithOrigin(event.origin)) return;
       if (event.data?.type === 'close-app') {
         setActiveTab('hub');
       } else if (event.data?.type === 'NAVIGATE_TAB') {

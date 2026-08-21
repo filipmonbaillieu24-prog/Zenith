@@ -25,6 +25,7 @@ import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { ProPaywallModal } from './components/common/ProPaywallModal';
 import { calibrateSummaryModels, calibrateFullModels, analyzeCardiacDrift, initializeModels } from './utils/localNeuralNet';
 import { supabase } from './utils/supabaseClient';
+import { isTrustedZenithOrigin } from '@zenith/shared';
 import { planWorkoutInCalendar } from './utils/trainingHelpers';
 import './index.css';
 
@@ -370,6 +371,7 @@ function App() {
   // ── Listen to message events from parent Zenith Hub to open a specific ride ──
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
+      if (!isTrustedZenithOrigin(e.origin)) return;
       if (e.data && e.data.type === 'OPEN_RIDE') {
         setSelectedRide(e.data.rideId);
         setActiveTab('dashboard');
@@ -631,7 +633,8 @@ function App() {
 
   const navigateBackToHub = () => {
     if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: 'close-app' }, '*');
+      const hubOrigin = import.meta.env.DEV ? 'http://localhost:1420' : window.location.origin;
+      window.parent.postMessage({ type: 'close-app' }, hubOrigin);
     } else {
       const isDev = import.meta.env.DEV;
       const hubUrl = isDev

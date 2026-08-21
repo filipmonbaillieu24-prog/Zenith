@@ -1,6 +1,40 @@
+/// These commands let the user write ride/route exports into an arbitrary,
+/// user-configured sync folder (e.g. a Google Drive folder), so the target
+/// path can legitimately be anywhere on disk and can't be sandboxed to a
+/// single app-data directory. Instead, reject path traversal and refuse to
+/// touch OS/program directories a legitimate export would never target.
+fn reject_unsafe_path(path: &str) -> Result<(), String> {
+    if path.split(['/', '\\']).any(|seg| seg == "..") {
+        return Err("Path traversal ('..') is not allowed.".to_string());
+    }
+
+    let lower = path.to_lowercase();
+    const DENYLIST_SUBSTRINGS: &[&str] = &[
+        "\\windows\\",
+        "\\program files\\",
+        "\\program files (x86)\\",
+        "\\start menu\\",
+        "\\startup\\",
+        "/system/",
+        "/library/launchagents",
+        "/library/launchdaemons",
+        "/applications/",
+        "/usr/",
+        "/bin/",
+        "/sbin/",
+        "/etc/",
+    ];
+    if DENYLIST_SUBSTRINGS.iter().any(|s| lower.contains(s)) {
+        return Err("Refusing to write to a system/program directory.".to_string());
+    }
+
+    Ok(())
+}
+
 /// Schrijft een bestand naar een opgegeven pad op het bestandssysteem.
 #[tauri::command]
 pub async fn save_file(path: String, content: String) -> Result<(), String> {
+    reject_unsafe_path(&path)?;
     std::fs::write(&path, content.as_bytes())
         .map_err(|e| format!("Kon bestand niet opslaan op '{}': {}", path, e))
 }
@@ -14,6 +48,7 @@ pub fn dir_exists(path: String) -> bool {
 /// Maakt een map aan als die nog niet bestaat (inclusief alle parents).
 #[tauri::command]
 pub fn ensure_dir(path: String) -> Result<(), String> {
+    reject_unsafe_path(&path)?;
     std::fs::create_dir_all(&path)
         .map_err(|e| format!("Kon map niet aanmaken '{}': {}", path, e))
 }
