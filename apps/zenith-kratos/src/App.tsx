@@ -223,6 +223,9 @@ export default function App() {
       
       for (const w of historyWorkouts) {
         if (!w.sets || w.id === workout.id) continue;
+        // Only consider PRs achieved before this workout, so a workout's TSS
+        // isn't normalized against a 1RM the athlete hadn't hit yet (look-ahead bias).
+        if (new Date(w.completed_at).getTime() >= new Date(workout.completed_at).getTime()) continue;
         const matchingEx = w.sets.find((s: any) => s.exercise_id === exerciseId);
         if (matchingEx && matchingEx.sets) {
           for (const s of matchingEx.sets) {
@@ -291,11 +294,18 @@ export default function App() {
       await kratosAutoregModel.loadFromSupabase(supabase, uid);
       const lr = 0.05;
       for (let epoch = 0; epoch < 50; epoch++) {
-        trainingPairs.sort(() => Math.random() - 0.5);
+        // Fisher-Yates shuffle (unbiased) instead of sort-by-random-comparator.
+        for (let i = trainingPairs.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [trainingPairs[i], trainingPairs[j]] = [trainingPairs[j], trainingPairs[i]];
+        }
         for (const pair of trainingPairs) {
-          await kratosAutoregModel.train(supabase, uid, pair.x, [pair.y], lr);
+          // Train locally (synchronous, no network call) for every sample/epoch;
+          // only the final result needs to be persisted to Supabase.
+          kratosAutoregModel.trainLocal(pair.x, [pair.y], lr);
         }
       }
+      await kratosAutoregModel.saveToSupabase(supabase, uid);
       console.log("Kratos Autoreg model retrained with", trainingPairs.length, "samples.");
     } catch (err) {
       console.error("Retrain error:", err);
@@ -734,7 +744,8 @@ export default function App() {
       const { error } = await supabase
         .from('kratos_exercises')
         .update(payload)
-        .eq('id', editingExercise.id);
+        .eq('id', editingExercise.id)
+        .eq('user_id', session.user.id);
       
       if (!error) {
         setEditingExercise(null);
@@ -772,7 +783,8 @@ export default function App() {
     const { error } = await supabase
       .from('kratos_exercises')
       .update({ deleted: true })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', session.user.id);
 
     if (!error) fetchData();
   };
@@ -782,7 +794,8 @@ export default function App() {
     const { error } = await supabase
       .from('kratos_workouts')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', session.user.id);
 
     if (!error) {
       fetchData();
@@ -893,7 +906,8 @@ export default function App() {
     const { error } = await supabase
       .from('kratos_workouts')
       .update(payload)
-      .eq('id', editingWorkout.id);
+      .eq('id', editingWorkout.id)
+      .eq('user_id', session.user.id);
 
     if (!error) {
       setIsWorkoutModalOpen(false);
@@ -965,7 +979,8 @@ export default function App() {
       const { error } = await supabase
         .from('kratos_templates')
         .update(payload)
-        .eq('id', editingTemplate.id);
+        .eq('id', editingTemplate.id)
+        .eq('user_id', session.user.id);
       
       if (!error) {
         setIsTemplateModalOpen(false);
@@ -996,7 +1011,8 @@ export default function App() {
     const { error } = await supabase
       .from('kratos_templates')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', session.user.id);
 
     if (!error) fetchData();
   };

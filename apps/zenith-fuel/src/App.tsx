@@ -125,7 +125,7 @@ function App() {
     bmrOffset: 0,
     sleepQualityCoeff: 0,
     sleepDurationCoeff: 0,
-    gymVolumeCoeff: 0.15,
+    gymVolumeCoeff: 0.025, // matches the engine's own baseline prior in zane.ts
     caffeineCoeff: 0.15,
     weekendCoeff: 0,
     adaptationFactor: 1.0,
@@ -946,6 +946,7 @@ function App() {
           .from('fuel_ingredients')
           .update(ingPayload)
           .eq('id', editingIngredientId)
+          .eq('user_id', userId)
           .select()
           .single();
 
@@ -995,7 +996,8 @@ function App() {
       const { error } = await supabase
         .from('fuel_ingredients')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', userId);
 
       if (error) throw error;
       setIngredients(ingredients.filter(i => i.id !== id));
@@ -1092,6 +1094,7 @@ function App() {
           .from('fuel_recipes')
           .update(recPayload)
           .eq('id', editingRecipeId)
+          .eq('user_id', userId)
           .select()
           .single();
 
@@ -1137,7 +1140,8 @@ function App() {
       const { error } = await supabase
         .from('fuel_recipes')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', userId);
 
       if (error) throw error;
       setRecipes(recipes.filter(r => r.id !== id));
@@ -1272,6 +1276,7 @@ function App() {
           .from('fuel_logs')
           .update(entry)
           .eq('id', editingLogEntry.id)
+          .eq('user_id', userId)
           .select()
           .single();
 
@@ -1323,7 +1328,8 @@ function App() {
       const { error } = await supabase
         .from('fuel_logs')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', userId);
 
       if (error) throw error;
       setWeeklyFoodLogs(weeklyFoodLogs.filter(f => f.id !== id));
@@ -1427,7 +1433,8 @@ function App() {
       const { error } = await supabase
         .from('fuel_supplements_log')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', userId);
 
       if (error) throw error;
       setSupplementsLogs(prev => prev.filter(s => s.id !== id));
