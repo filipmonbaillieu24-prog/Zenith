@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
 import { calculateZenithSleepScore, ZenithFusionNet } from '@zenith/shared';
-import { runZaneCalibration, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateAge } from './utils/zane';
+import { runZaneCalibration, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface Ingredient {
@@ -136,7 +136,10 @@ function App() {
     dailyCalorieTarget: 2000,
     dailyCarbTarget: 250,
     dailyProteinTarget: 100,
-    dailyFatTarget: 67
+    dailyFatTarget: 67,
+    sleepQualityAvg: 75,
+    sleepDurationAvg: 8,
+    energyPerKgTissue: 7700
   });
 
   // UI States
@@ -574,7 +577,8 @@ function App() {
         activeCalories: 0,
         sleepQuality: null,
         sleepDurationHours: null,
-        isComplete: true,
+        // Bug #1 fix: default false — only rows confirmed in fuel_days pass the gate
+        isComplete: false,
         gymVolume: 0,
         creatine: 0,
         caffeine: 0,
@@ -688,7 +692,11 @@ function App() {
         }
       });
 
-      if (logsMap[selectedDateStr]) {
+      // Bug #7 fix: only override today's slot with live state. For historical dates the
+      // DB data is authoritative — overriding it with the currently-viewed date's values
+      // would corrupt that day's historical regression row.
+      const todayDateStrForOverride = new Date().toISOString().split('T')[0];
+      if (selectedDateStr === todayDateStrForOverride && logsMap[selectedDateStr]) {
         logsMap[selectedDateStr].calories = selectedDateCaloriesIntake;
         logsMap[selectedDateStr].protein = selectedDateProtein;
         logsMap[selectedDateStr].carbs = selectedDateCarbs;
@@ -1553,7 +1561,19 @@ function App() {
   const age = calculateAge(profile.birthDate);
   const gender = profile.gender || 'other';
   
-  const baseBmr = Math.round(calculateMifflinBmr(latestWeight, height, age, gender));
+  // Design #9 fix: mirror zane.ts — use Katch-McArdle BMR when body fat data exists
+  // so that adaptationFactor is applied to the same BMR formula used during calibration.
+  const latestBodyMeasurement = bodyMeasurementsLogs[bodyMeasurementsLogs.length - 1];
+  const latestBodyFatPct = latestBodyMeasurement?.body_fat_pct != null
+    ? Number(latestBodyMeasurement.body_fat_pct)
+    : null;
+  let baseBmr: number;
+  if (latestBodyFatPct !== null) {
+    const lbm = latestWeight * (1 - latestBodyFatPct / 100);
+    baseBmr = Math.round(calculateKatchMcArdleBmr(lbm));
+  } else {
+    baseBmr = Math.round(calculateMifflinBmr(latestWeight, height, age, gender));
+  }
   // FIX 3: PAL 1.2 (NEAT-only baseline) — matches zane.ts. Exercise calories come from wearable.
   const palFactor = 1.2;
   const baseTdee = Math.round(baseBmr * palFactor);
@@ -1659,6 +1679,10 @@ function App() {
   }, [currentWeekMonday, dailyCaloriesMap, dailyCompletionMap]);
 
   // SOTA ML / ZANE robust average weekly net balance
+  // Use the baselines that ZANE learned, not hardcoded constants
+  const zSleepQualityAvg = zaneResult.sleepQualityAvg ?? sleepQualityAvg;
+  const zSleepDurationAvg = zaneResult.sleepDurationAvg ?? sleepDurationAvg;
+
   const averageWeeklyNetBalance = useMemo(() => {
     let totalIntake = 0;
     let totalTdeeVal = 0;
@@ -1668,32 +1692,43 @@ function App() {
       const dateStr = day.dateStr;
       const dayLogs = weeklyFoodLogs.filter(log => log.logged_at.split('T')[0] === dateStr);
       const dayCalories = dayLogs.reduce((sum, f) => sum + f.calories, 0);
-      
+
       if (dayCalories > 0) {
         loggedDays++;
         totalIntake += dayCalories;
 
-        // Calculate TDEE for this day
-        const activeCalories = activeCaloriesMap[dateStr] || 0;
-        const todaySleepLog = sleepLogs.find(s => s.logged_at.split('T')[0] === dateStr);
-        const todaySleepQuality = todaySleepLog ? Number(todaySleepLog.quality_score) : null;
-        const todaySleepDuration = todaySleepLog ? Number(todaySleepLog.duration_minutes) / 60 : null;
+        // Calculate TDEE for this day using the same model as totalTdee
+        const dayActiveCalories = activeCaloriesMap[dateStr] || 0;
+        const daySleepLog = sleepLogs.find(s => s.logged_at.split('T')[0] === dateStr);
+        const daySleepQuality = daySleepLog ? Number(daySleepLog.quality_score) : null;
+        const daySleepDuration = daySleepLog ? Number(daySleepLog.duration_minutes) / 60 : null;
 
-        const sleepAdjustment = todaySleepQuality !== null && todaySleepDuration !== null
-          ? Math.round((todaySleepQuality - 80) * (zaneResult.sleepQualityCoeff || 0) + (todaySleepDuration - 8.0) * (zaneResult.sleepDurationCoeff || 0))
+        // Bug #5 fix: use ZANE-learned baselines, not hardcoded 80/8.0
+        const daySleepAdjustment = daySleepQuality !== null && daySleepDuration !== null
+          ? Math.round(
+              (daySleepQuality - zSleepQualityAvg) * (zaneResult.sleepQualityCoeff || 0) +
+              (daySleepDuration - zSleepDurationAvg) * (zaneResult.sleepDurationCoeff || 0)
+            )
           : 0;
 
-        // FIX 2: TEF removed from dayTdee. Net balance = intake - TDEE already
-        // accounts for TEF implicitly (more food eaten → more TEF → less stored).
-        // FIX 5: Cap active calories per day to guard against wearable outliers.
-        // FIX 9: Trust wearable at 1.0× — bmrOffset covers all metabolic offsets.
-        const safeActive = Math.min(1500, activeCalories);
+        const safeActive = Math.min(1500, dayActiveCalories);
         const dayGymVolume = gymVolumeMap[dateStr] || 0;
-        const dayGymCalories = Math.round(dayGymVolume * (zaneResult.gymVolumeCoeff || 0));
+        // Design #10 fix: use 0.025 fallback (ZANE prior), not 0
+        const dayGymCalories = Math.round(dayGymVolume * (zaneResult.gymVolumeCoeff || 0.025));
         const dayCaffeineLog = supplementsLogs.filter(s => s.logged_at.split('T')[0] === dateStr && s.supplement_type === 'caffeine');
-        const dayCaffeineAmount = dayCaffeineLog.reduce((sum, curr) => sum + Number(curr.amount), 0) + (weeklyFoodLogs.filter(f => f.logged_at.split('T')[0] === dateStr).reduce((sum, f) => sum + Number(f.caffeine_mg || 0), 0));
+        const dayCaffeineAmount = dayCaffeineLog.reduce((sum, curr) => sum + Number(curr.amount), 0) +
+          (weeklyFoodLogs.filter(f => f.logged_at.split('T')[0] === dateStr).reduce((sum, f) => sum + Number(f.caffeine_mg || 0), 0));
         const dayCaffeineCalories = Math.round(dayCaffeineAmount * (zaneResult.caffeineCoeff || 0));
-        const dayTdee = Math.round(baseTdee + safeActive + (zaneResult.bmrOffset || 0) + sleepAdjustment + dayGymCalories + dayCaffeineCalories);
+
+        // Bug #4 fix: include weekendAdjustment and adaptationPenalty — they are part of totalTdee
+        const dayIsWeekend = [0, 6].includes(new Date(dateStr + 'T12:00:00').getDay()) ? 1 : 0;
+        const dayWeekendAdj = zaneResult.isCalibrated ? ((zaneResult.weekendCoeff || 0) * dayIsWeekend) : 0;
+        const dayPreAdaptTdee = Math.round(
+          baseTdee + safeActive + (zaneResult.bmrOffset || 0) +
+          daySleepAdjustment + dayGymCalories + dayCaffeineCalories + dayWeekendAdj
+        );
+        const dayAdaptFactor = zaneResult.adaptationFactor ?? 1.0;
+        const dayTdee = dayPreAdaptTdee - Math.round(dayPreAdaptTdee * (1 - dayAdaptFactor));
         totalTdeeVal += dayTdee;
       }
     });
@@ -1701,15 +1736,17 @@ function App() {
     if (loggedDays > 0) {
       return Math.round((totalIntake / loggedDays) - (totalTdeeVal / loggedDays));
     }
-    
+
     // Fallback to today's balance if no data logged this week
     return intakeCalories - totalTdee;
-  }, [weekDays, weeklyFoodLogs, activeCaloriesMap, sleepLogs, gymVolumeMap, supplementsLogs, zaneResult, baseTdee, intakeCalories, totalTdee]);
+  }, [weekDays, weeklyFoodLogs, activeCaloriesMap, sleepLogs, gymVolumeMap, supplementsLogs, zaneResult, baseTdee, intakeCalories, totalTdee, zSleepQualityAvg, zSleepDurationAvg]);
 
   // Weight Projection (Using average weekly balance for stability)
+  // Bug #6 fix: use body-composition-aware energy density from ZANE instead of flat 7700
+  const projectionEnergyPerKg = zaneResult.energyPerKgTissue ?? 7700;
   const netDailyBalance = averageWeeklyNetBalance;
-  const projectedWeightChange = (netDailyBalance * 28) / 7700;
-  const weeklyWeightRate = (netDailyBalance * 7) / 7700;
+  const projectedWeightChange = (netDailyBalance * 28) / projectionEnergyPerKg;
+  const weeklyWeightRate = (netDailyBalance * 7) / projectionEnergyPerKg;
   const startingWeightForProjection = zaneResult.currentTrendWeight || latestWeight;
   const projectedWeight = Math.round((startingWeightForProjection + projectedWeightChange) * 100) / 100;
 
@@ -1745,10 +1782,15 @@ function App() {
         activeCalories: 0,
         sleepQuality: null,
         sleepDurationHours: null,
-        isComplete: true,
+        // Bug #2 fix: default false, same as main calibration useEffect
+        isComplete: false,
         gymVolume: 0,
         creatine: 0,
-        caffeine: 0
+        caffeine: 0,
+        // Bug #3 fix: include macro fields so TEF calculation is correct
+        protein: 0,
+        carbs: 0,
+        fat: 0
       };
     }
     weightLogs.forEach(w => {
@@ -1762,11 +1804,15 @@ function App() {
         baseLogsMap[dStr].sleepDurationHours = Number(s.duration_minutes) / 60;
       }
     });
+    // Bug #3 fix: accumulate protein/carbs/fat so macro TEF in ZANE is not always 0
     weeklyFoodLogs.forEach(f => {
       const dStr = f.logged_at.split('T')[0];
       if (baseLogsMap[dStr]) {
         baseLogsMap[dStr].calories += Number(f.calories);
         baseLogsMap[dStr].caffeine = (baseLogsMap[dStr].caffeine || 0) + Number(f.caffeine_mg || 0);
+        baseLogsMap[dStr].protein = (baseLogsMap[dStr].protein || 0) + Number(f.protein || 0);
+        baseLogsMap[dStr].carbs = (baseLogsMap[dStr].carbs || 0) + Number(f.carbs || 0);
+        baseLogsMap[dStr].fat = (baseLogsMap[dStr].fat || 0) + Number(f.fat || 0);
       }
     });
     gymLogs.forEach(k => {

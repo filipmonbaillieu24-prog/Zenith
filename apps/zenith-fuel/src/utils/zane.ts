@@ -51,6 +51,11 @@ export interface ZaneOutput {
   dailyFatTarget: number;
   trendWeightMap?: { [date: string]: number };
   currentTrendWeight?: number;
+  // Exported baselines so App.tsx uses the exact same reference points
+  sleepQualityAvg: number;
+  sleepDurationAvg: number;
+  // Body-composition-aware energy density (kcal/kg) used in regression
+  energyPerKgTissue: number;
 }
 
 /**
@@ -426,9 +431,17 @@ export function runZaneCalibration(
     ? Math.round(trendWeights[trendWeights.length - 1] * 100) / 100 
     : currentWeight;
 
+  // Compute body-composition-aware energy density (kcal/kg) for projection in App.tsx
+  let energyPerKgTissue = 7700; // default: pure adipose tissue
+  if (finalBodyFat !== null) {
+    const fatFraction  = Math.max(0.05, Math.min(0.60, finalBodyFat / 100));
+    const leanFraction = 1 - fatFraction;
+    energyPerKgTissue = Math.round(fatFraction * 7700 + leanFraction * 900);
+  }
+
   // FIX 7: Pass todayBmr so the safety floor uses the same formula (Katch-McArdle
   // or Mifflin) as the TDEE calculation — no more inconsistency.
-  return generateTargets(todayTdee, todayBmr, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, weekendCoeff, adaptationFactor, sustainedCutDays, calibrationDays, isCalibrated, trendWeightMap, currentTrendWeight);
+  return generateTargets(todayTdee, todayBmr, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, weekendCoeff, adaptationFactor, sustainedCutDays, calibrationDays, isCalibrated, trendWeightMap, currentTrendWeight, sleepQualityAvg, sleepDurationAvg, energyPerKgTissue);
 }
 
 /**
@@ -603,7 +616,10 @@ function generateTargets(
   calibrationDays: number,
   isCalibrated: boolean,
   trendWeightMap: { [date: string]: number } = {},
-  currentTrendWeight: number = weight
+  currentTrendWeight: number = weight,
+  sleepQualityAvg: number = 75,
+  sleepDurationAvg: number = 8,
+  energyPerKgTissue: number = 7700
 ): ZaneOutput {
   // Apply calorie surplus or deficit to reach target weight
   let dailyCalorieTarget = tdee;
@@ -702,6 +718,8 @@ function generateTargets(
   const dailyCarbTarget = Math.round(finalCarbCalories / 4);
   const dailyFatTarget = Math.round(finalFatCalories / 9);
 
+  // energyPerKgTissue is passed in from runZaneCalibration (computed from finalBodyFat)
+
   return {
     bmrOffset: Math.round(bmrOffset),
     sleepQualityCoeff: Math.round(sleepQualityCoeff * 10) / 10,
@@ -719,7 +737,10 @@ function generateTargets(
     dailyProteinTarget,
     dailyFatTarget,
     trendWeightMap,
-    currentTrendWeight
+    currentTrendWeight,
+    sleepQualityAvg,
+    sleepDurationAvg,
+    energyPerKgTissue
   };
 }
 

@@ -68,7 +68,10 @@ export function useFuelData() {
     dailyCalorieTarget: 2000,
     dailyCarbTarget: 250,
     dailyProteinTarget: 100,
-    dailyFatTarget: 67
+    dailyFatTarget: 67,
+    sleepQualityAvg: 75,
+    sleepDurationAvg: 8,
+    energyPerKgTissue: 7700
   });
 
   // Handle Session Handshake
