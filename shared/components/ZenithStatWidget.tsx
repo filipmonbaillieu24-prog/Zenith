@@ -19,32 +19,63 @@ export const ZenithStatWidget: React.FC<ZenithStatWidgetProps> = ({
   columns = 4,
   className = ''
 }) => {
-  const gridColsClass = 
-    columns === 2 ? 'grid-cols-1 sm:grid-cols-2' :
-    columns === 3 ? 'grid-cols-1 sm:grid-cols-3' :
-    'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
-
   return (
-    <div className={`grid ${gridColsClass} gap-4 ${className}`}>
+    <div
+      className={className}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(auto-fit, minmax(${Math.floor(320 / columns) + 100}px, 1fr))`,
+        gap: 16
+      }}
+    >
       {stats.map((item, idx) => (
-        <div 
-          key={idx} 
-          className="p-4 rounded-xl bg-zinc-900/60 border border-white/[0.08] backdrop-blur-md transition-all hover:border-slate-300/30 hover:-translate-y-0.5"
+        <div
+          key={idx}
+          style={{
+            padding: 16,
+            borderRadius: 14,
+            background: 'rgba(24, 24, 27, 0.6)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            transition: 'transform 0.2s ease, border-color 0.2s ease'
+          }}
         >
-          <div className="flex items-center justify-between gap-2 mb-1">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-zinc-400 font-outfit">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+            <span style={{
+              fontSize: 11,
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              color: '#a1a1aa',
+              fontFamily: "'Outfit', 'Inter', system-ui, sans-serif"
+            }}>
               {item.label}
             </span>
-            {item.icon && <div className="text-slate-400">{item.icon}</div>}
+            {item.icon && <div style={{ color: '#94a3b8' }}>{item.icon}</div>}
           </div>
-          <div 
-            className="text-2xl font-black font-outfit tabular-nums tracking-tight my-1"
-            style={{ color: item.valueColor || '#cbd5e1' }}
-          >
+          <div style={{
+            fontSize: 24,
+            fontWeight: 900,
+            fontFamily: "'Outfit', 'Inter', system-ui, sans-serif",
+            fontVariantNumeric: 'tabular-nums',
+            letterSpacing: '-0.02em',
+            margin: '4px 0',
+            color: item.valueColor || '#cbd5e1'
+          }}>
             {item.value}
           </div>
           {item.subtext && (
-            <span className="text-[10px] font-semibold text-zinc-500 tracking-wide block truncate">
+            <span style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: '#71717a',
+              letterSpacing: '0.02em',
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
               {item.subtext}
             </span>
           )}
