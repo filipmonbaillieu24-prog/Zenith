@@ -7,15 +7,12 @@ import { ImportIntegrationsModal } from './components/ImportIntegrationsModal';
 import { ShoeTrackerModal } from './components/ShoeTrackerModal';
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
-  ReferenceLine
+  CartesianGrid
 } from 'recharts';
 import { 
   Footprints, 
@@ -466,70 +463,46 @@ export function App() {
 
               {selectedRunDetail.avgHeartRate && (
                 <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {/* Hartslagverloop Chart */}
+                  {/* Heart Rate Summary - only the values actually recorded for this run.
+                      No per-minute trace or zone breakdown is stored, so none is shown here
+                      rather than fabricating one. */}
                   <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '20px', borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <h4 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Heart size={14} style={{ color: '#ef4444' }} /> Hartslagverloop Gedurende Sessie
-                      </h4>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Peak: <strong style={{ color: '#ef4444' }}>{selectedRunDetail.maxHeartRate || 159} bpm</strong></span>
-                    </div>
-                    <div style={{ height: 160, width: '100%' }}>
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={
-                          Array.from({ length: Math.round((selectedRunDetail.durationSec || 1231) / 60) + 1 }, (_, i) => {
-                            const avg = selectedRunDetail.avgHeartRate || 147;
-                            const max = selectedRunDetail.maxHeartRate || 159;
-                            let hr = 98 + (avg - 98) * Math.min(1, i / 3);
-                            if (i > 3) hr = avg + Math.sin(i * 0.7) * 4 + (i === 14 ? (max - avg) : 0);
-                            return { minuut: `${i}m`, bpm: Math.round(hr) };
-                          })
-                        } margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="hrGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                          <XAxis dataKey="minuut" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                          <YAxis domain={['dataMin - 10', 'dataMax + 10']} stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                          <Tooltip contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12, color: '#fff' }} />
-                          <ReferenceLine y={selectedRunDetail.avgHeartRate || 147} stroke="rgba(239, 68, 68, 0.5)" strokeDasharray="3 3" label={{ value: `Gem: ${selectedRunDetail.avgHeartRate} bpm`, fill: '#ef4444', fontSize: 10 }} />
-                          <Area type="monotone" dataKey="bpm" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#hrGrad)" />
-                        </AreaChart>
-                      </ResponsiveContainer>
+                    <h4 style={{ margin: '0 0 14px 0', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Heart size={14} style={{ color: '#ef4444' }} /> Heart Rate Summary
+                    </h4>
+                    <div style={{ display: 'flex', gap: 24 }}>
+                      <div>
+                        <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)' }}>Average</span>
+                        <strong style={{ fontSize: 20, color: '#ef4444' }}>{selectedRunDetail.avgHeartRate} bpm</strong>
+                      </div>
+                      {selectedRunDetail.maxHeartRate && (
+                        <div>
+                          <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)' }}>Peak</span>
+                          <strong style={{ fontSize: 20, color: '#ef4444' }}>{selectedRunDetail.maxHeartRate} bpm</strong>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Heart Rate Zones Breakdown Bars (Matching Polar Flow) */}
-                  <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '20px', borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                    <h4 style={{ margin: '0 0 14px 0', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#cbd5e1' }}>
-                      Polar Heart Rate Zones Distribution
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {[
-                        { name: 'Zone 5 (Anaerobe Max >164 bpm)', pct: 0, time: '00:00', color: '#ef4444' },
-                        { name: 'Zone 4 (Drempel / Anaerob 150-164 bpm)', pct: 26, time: '05:16', color: '#f97316' },
-                        { name: 'Zone 3 (Tempo / Aerob 137-150 bpm)', pct: 62, time: '12:19', color: '#22c55e' },
-                        { name: 'Zone 2 (Licht / Vetverbranding 124-137 bpm)', pct: 12, time: '02:26', color: '#eab308' },
-                        { name: 'Zone 1 (Warming-up <124 bpm)', pct: 0, time: '00:00', color: '#3b82f6' }
-                      ].map(z => (
-                        <div key={z.name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#cbd5e1' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: z.color }} />
-                              {z.name}
-                            </span>
-                            <span style={{ fontWeight: 800 }}>{z.pct}% ({z.time})</span>
-                          </div>
-                          <div style={{ height: 8, width: '100%', borderRadius: 4, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-                            <div style={{ width: `${z.pct}%`, height: '100%', background: z.color, transition: 'width 0.4s ease' }} />
-                          </div>
-                        </div>
-                      ))}
+                  {/* Per-km heart rate, when splits recorded it - real data, not a fabricated series */}
+                  {selectedRunDetail.splits && selectedRunDetail.splits.some(s => s.hr) && (
+                    <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '20px', borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                      <h4 style={{ margin: '0 0 14px 0', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#cbd5e1' }}>
+                        Heart Rate per Kilometer
+                      </h4>
+                      <div style={{ height: 140, width: '100%' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={selectedRunDetail.splits.map(s => ({ km: `${s.km}`, bpm: s.hr || 0 }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                            <XAxis dataKey="km" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
+                            <YAxis domain={['dataMin - 10', 'dataMax + 10']} stroke="var(--text-muted)" fontSize={10} tickLine={false} />
+                            <Tooltip contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12, color: '#fff' }} />
+                            <Bar dataKey="bpm" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 

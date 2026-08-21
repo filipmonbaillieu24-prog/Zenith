@@ -878,7 +878,7 @@ function App() {
 
     setBarcodeSearching(true);
     try {
-      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${ingBarcode}.json`);
+      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(ingBarcode)}.json`);
       const data = await response.json();
 
       if (data.status === 1 && data.product) {
