@@ -177,6 +177,12 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
             connectToServiceInstance(WorkoutService.activeService!!)
         }
 
+        if (serviceConnection != null) {
+            // Already bound (or a bind is in flight) - avoid leaking the previous
+            // ServiceConnection by registering a second one on top of it.
+            return
+        }
+
         serviceConnection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                 val binder = service as? WorkoutService.WorkoutBinder

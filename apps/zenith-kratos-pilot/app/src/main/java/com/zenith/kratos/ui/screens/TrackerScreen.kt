@@ -199,7 +199,7 @@ fun TrackerScreen(
                             loggedList.forEach { loggedEx ->
                                 loggedEx.sets.forEach { set ->
                                     if (set.type == "working" && set.reps > 0) {
-                                        val est1RM = set.weight * (1 + set.reps / 30.0)
+                                        val est1RM = set.weight * (1 + (set.reps + set.rir) / 30.0)
                                         val rounded = Math.round(est1RM * 2) / 2.0
                                         val currentMax = mapPR[loggedEx.exerciseId] ?: 0.0
                                         if (rounded > currentMax) {
@@ -702,7 +702,7 @@ fun TrackerScreen(
 
                                                     // PR Celebration Logic (Trigger only if a prior PR exists)
                                                     if (setVal.type == "working" && r > 0) {
-                                                        val est1RM = w * (1 + r / 30.0)
+                                                        val est1RM = w * (1 + (r + rir) / 30.0)
                                                         val rounded1RM = Math.round(est1RM * 2) / 2.0
                                                         val prevPR = historical1RMs[exState.exerciseId] ?: 0.0
 
@@ -892,7 +892,10 @@ fun TrackerScreen(
                             if (s.isCompleted && s.type == "working") {
                                 val w = s.weightInput.toDoubleOrNull() ?: s.targetWeight
                                 val r = s.repsInput.toIntOrNull() ?: s.targetReps
-                                val effectiveW = if (ex.isBodyweight) (bodyWeight + w) else w
+                                // bodyWeight always comes from vigor_weight in kg; convert to the
+                                // exercise's own unit before combining with its per-set weight input.
+                                val bodyWeightInExerciseUnit = if (ex.weightUnit == "lb") bodyWeight * 2.2046226218 else bodyWeight
+                                val effectiveW = if (ex.isBodyweight) (bodyWeightInExerciseUnit + w) else w
                                 totalVolume += (effectiveW * r)
                             }
                         }

@@ -28,7 +28,9 @@ fun recalculateWarmupTargets(
                 warmupIndex == 0 -> workingWeight * 0.5
                 warmupIndex == count - 1 -> workingWeight * 0.75
                 else -> {
-                    val fraction = 0.5 + (0.4 * warmupIndex.toDouble() / (count - 1).coerceAtLeast(1).toDouble())
+                    // Linear ramp from the first set's 0.5 to the last set's 0.75,
+                    // so interior sets stay strictly between them.
+                    val fraction = 0.5 + (0.25 * warmupIndex.toDouble() / (count - 1).coerceAtLeast(1).toDouble())
                     workingWeight * fraction
                 }
             }

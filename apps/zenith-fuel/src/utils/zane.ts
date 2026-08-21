@@ -88,6 +88,17 @@ export function calculateAge(birthDateStr?: string): number {
   return age;
 }
 
+// Creatine loading model: slower, physiologically accurate rate.
+// Full saturation takes ~28 days at 5g/day; daily washout ~3% (half-life ~23 days).
+// Single source of truth - both the calorie/water-retention model below and any
+// UI chart of creatine saturation must use this, not a separately hand-tuned copy.
+const CREATINE_DAILY_DECAY = 0.97;
+const CREATINE_SATURATION_DIVISOR = 140;
+
+export function creatineSaturationStep(previousSaturation: number, intakeGrams: number): number {
+  return Math.min(1.0, (previousSaturation * CREATINE_DAILY_DECAY) + (intakeGrams / CREATINE_SATURATION_DIVISOR));
+}
+
 /**
  * ZANE Core Engine.
  * Implements linear interpolation for weight, screens out incomplete days,
@@ -103,13 +114,10 @@ export function runZaneCalibration(
   const sortedLogs = [...logs].sort((a, b) => a.date.localeCompare(b.date));
 
   // 1. Calculate Creatine Saturation (0.0 to 1.0) based on intake history.
-  // FIX 10 (creatine): Slower, physiologically accurate loading rate.
-  // Full saturation takes ~28 days at 5g/day. Daily washout: 3% (half-life ~23 days).
   let currentSaturation = 0;
   const saturationMap: { [date: string]: number } = {};
   sortedLogs.forEach(log => {
-    const intake = log.creatine || 0;
-    currentSaturation = Math.min(1.0, (currentSaturation * 0.97) + (intake / 140));
+    currentSaturation = creatineSaturationStep(currentSaturation, log.creatine || 0);
     saturationMap[log.date] = currentSaturation;
   });
 

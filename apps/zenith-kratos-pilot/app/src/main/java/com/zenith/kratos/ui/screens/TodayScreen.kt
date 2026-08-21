@@ -90,6 +90,14 @@ fun TodayScreen(
 
                 Button(
                     onClick = {
+                        if (unsyncedCount > 0) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "You have $unsyncedCount unsynced workout(s). Sync before logging out or they will be lost.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                            return@Button
+                        }
                         scope.launch {
                             try {
                                 db.exerciseDao().deleteAll()

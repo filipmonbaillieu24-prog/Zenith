@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
 import { calculateZenithSleepScore, ZenithFusionNet } from '@zenith/shared';
-import { runZaneCalibration, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge } from './utils/zane';
+import { runZaneCalibration, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface Ingredient {
@@ -1467,7 +1467,7 @@ function App() {
     const chartData: any[] = [];
     dates30Days.forEach(date => {
       const intake = intakeMap[date] || 0;
-      currentSat = Math.min(1.0, (currentSat * 0.92) + (intake / 15));
+      currentSat = creatineSaturationStep(currentSat, intake);
       chartData.push({
         dateStr: new Date(date + 'T12:00:00').toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
         intake: intake,
