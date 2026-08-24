@@ -349,110 +349,64 @@ function App() {
         priorWeekendCoeff: priorWeights?.weekendCoeff ?? undefined
       });
 
-      // 2. Fetch Ingredients
-      const { data: ingData } = await supabase
-        .from('fuel_ingredients')
-        .select('*')
-        .eq('user_id', userId)
-        .order('name');
-      setIngredients(ingData || []);
-
-      // 3. Fetch Recipes
-      const { data: recData } = await supabase
-        .from('fuel_recipes')
-        .select('*')
-        .eq('user_id', userId)
-        .order('name');
-      setRecipes(recData || []);
-
-      // 4. Fetch Food Logs for the Viewed Week
+      // 2-8. The viewed week's food/supplement/completeness data plus 30-day Vigor/
+      // Aero/Stride/Kratos history — 11 reads, all independent of each other and of
+      // the profile resolution above. Batched in groups of 3 (not fired all 11 at
+      // once, and not run fully sequentially): this project's Supabase compute tier
+      // has been observed to time out otherwise-trivial queries under a full
+      // simultaneous burst, while 11 sequential round trips made mount noticeably slow.
       const startOfWeek = new Date(currentWeekMonday);
       startOfWeek.setHours(0, 0, 0, 0);
       const endOfWeek = addDays(startOfWeek, 7);
-
-      const { data: logData } = await supabase
-        .from('fuel_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('logged_at', startOfWeek.toISOString())
-        .lt('logged_at', endOfWeek.toISOString())
-        .order('logged_at');
-      setWeeklyFoodLogs(logData || []);
-
-      const startOf30DaysForSupp = new Date();
-      startOf30DaysForSupp.setDate(startOf30DaysForSupp.getDate() - 30);
-
-      const { data: suppLogData } = await supabase
-        .from('fuel_supplements_log')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('logged_at', startOf30DaysForSupp.toISOString())
-        .order('logged_at');
-      setSupplementsLogs(suppLogData || []);
-
-      // 5. Fetch Daily Completeness Status for the Viewed Week
       const startOfWeekStr = formatDateString(startOfWeek);
       const endOfWeekStr = formatDateString(addDays(startOfWeek, 6));
-
-      const { data: completeData } = await supabase
-        .from('fuel_days')
-        .select('date, is_complete')
-        .eq('user_id', userId)
-        .gte('date', startOfWeekStr)
-        .lte('date', endOfWeekStr);
-      setWeeklyDayStates(completeData || []);
-
-      // 6. Fetch 30-Day weight logs from Vigor
       const startOf30Days = new Date();
       startOf30Days.setDate(startOf30Days.getDate() - 30);
 
-      const { data: wLogs } = await supabase
-        .from('vigor_weight')
-        .select('weight, logged_at')
-        .eq('user_id', userId)
-        .gte('logged_at', startOf30Days.toISOString())
-        .order('logged_at');
+      const chunk = <T,>(arr: T[], size: number): T[][] =>
+        Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
+
+      const bulkQueries = [
+        () => supabase.from('fuel_ingredients').select('*').eq('user_id', userId).order('name'),
+        () => supabase.from('fuel_recipes').select('*').eq('user_id', userId).order('name'),
+        () => supabase.from('fuel_logs').select('*').eq('user_id', userId).gte('logged_at', startOfWeek.toISOString()).lt('logged_at', endOfWeek.toISOString()).order('logged_at'),
+        () => supabase.from('fuel_supplements_log').select('*').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()).order('logged_at'),
+        () => supabase.from('fuel_days').select('date, is_complete').eq('user_id', userId).gte('date', startOfWeekStr).lte('date', endOfWeekStr),
+        () => supabase.from('vigor_weight').select('weight, logged_at').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()).order('logged_at'),
+        () => supabase.from('vigor_body_measurements').select('body_fat_pct, muscle_mass_kg, logged_at').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()).order('logged_at'),
+        () => supabase.from('vigor_sleep').select('duration_minutes, quality_score, deep_minutes, rem_minutes, hrv_ms, logged_at').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()).order('logged_at'),
+        () => supabase.from('rides').select('date, metadata').eq('user_id', userId).gte('date', startOfWeek.getTime()).lt('date', endOfWeek.getTime()),
+        () => supabase.from('stride_activities').select('date, calories, duration_sec').eq('user_id', userId).gte('date', startOfWeekStr).lte('date', endOfWeekStr),
+        () => supabase.from('kratos_workouts').select('volume, completed_at').eq('user_id', userId).gte('completed_at', startOfWeek.toISOString()).lt('completed_at', endOfWeek.toISOString()),
+      ];
+
+      const bulkResults: any[] = [];
+      for (const batch of chunk(bulkQueries, 3)) {
+        bulkResults.push(...await Promise.all(batch.map(q => q())));
+      }
+
+      const [
+        { data: ingData },
+        { data: recData },
+        { data: logData },
+        { data: suppLogData },
+        { data: completeData },
+        { data: wLogs },
+        { data: bMeasureLogs },
+        { data: sLogs },
+        { data: ridesData },
+        { data: strideData },
+        { data: kratosData },
+      ] = bulkResults;
+
+      setIngredients(ingData || []);
+      setRecipes(recData || []);
+      setWeeklyFoodLogs(logData || []);
+      setSupplementsLogs(suppLogData || []);
+      setWeeklyDayStates(completeData || []);
       setWeightLogs(wLogs || []);
-
-      // 6b. Fetch 30-Day body measurements from Vigor
-      const { data: bMeasureLogs } = await supabase
-        .from('vigor_body_measurements')
-        .select('body_fat_pct, muscle_mass_kg, logged_at')
-        .eq('user_id', userId)
-        .gte('logged_at', startOf30Days.toISOString())
-        .order('logged_at');
       setBodyMeasurementsLogs(bMeasureLogs || []);
-
-      // 7. Fetch 30-Day sleep logs from Vigor
-      const { data: sLogs } = await supabase
-        .from('vigor_sleep')
-        .select('duration_minutes, quality_score, deep_minutes, rem_minutes, hrv_ms, logged_at')
-        .eq('user_id', userId)
-        .gte('logged_at', startOf30Days.toISOString())
-        .order('logged_at');
       setSleepLogs(sLogs || []);
-
-      // 8. Fetch active training calories for the viewed week (Aero Rides & Stride Runs)
-      const { data: ridesData } = await supabase
-        .from('rides')
-        .select('date, metadata')
-        .eq('user_id', userId)
-        .gte('date', startOfWeek.getTime())
-        .lt('date', endOfWeek.getTime());
-
-      const { data: strideData } = await supabase
-        .from('stride_activities')
-        .select('date, calories, duration_sec')
-        .eq('user_id', userId)
-        .gte('date', startOfWeekStr)
-        .lte('date', endOfWeekStr);
-
-      const { data: kratosData } = await supabase
-        .from('kratos_workouts')
-        .select('volume, completed_at')
-        .eq('user_id', userId)
-        .gte('completed_at', startOfWeek.toISOString())
-        .lt('completed_at', endOfWeek.toISOString());
 
       const activeCalMap: { [date: string]: number } = {};
       for (let i = 0; i < 7; i++) {
@@ -634,11 +588,19 @@ function App() {
       startOf30Days.setDate(startOf30Days.getDate() - 30);
       const startOf30DaysMs = startOf30Days.getTime();
 
-      const { data: foodHist } = await supabase
-        .from('fuel_logs')
-        .select('logged_at, calories, caffeine_mg, protein, carbs, fat')
-        .eq('user_id', userId)
-        .gte('logged_at', startOf30Days.toISOString());
+      // These 4 reads are independent of each other (each only feeds its own slice
+      // of logsMap below) — fired together instead of as 4 sequential round trips.
+      const [
+        { data: foodHist },
+        { data: daysHist },
+        { data: ridesHist },
+        { data: gymHist },
+      ] = await Promise.all([
+        supabase.from('fuel_logs').select('logged_at, calories, caffeine_mg, protein, carbs, fat').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()),
+        supabase.from('fuel_days').select('date, is_complete').eq('user_id', userId).gte('date', startOf30Days.toISOString().split('T')[0]),
+        supabase.from('rides').select('date, metadata').eq('user_id', userId).gte('date', startOf30DaysMs),
+        supabase.from('kratos_workouts').select('volume, completed_at').eq('user_id', userId).gte('completed_at', startOf30Days.toISOString()),
+      ]);
 
       setThirtyDayFoodLogs(foodHist || []);
 
@@ -653,24 +615,11 @@ function App() {
         }
       });
 
-      const { data: daysHist } = await supabase
-        .from('fuel_days')
-        .select('date, is_complete')
-        .eq('user_id', userId)
-        .gte('date', startOf30Days.toISOString().split('T')[0]);
-
       daysHist?.forEach(d => {
         if (logsMap[d.date]) {
           logsMap[d.date].isComplete = d.is_complete;
         }
       });
-
-      // CR2: Fetch 30-Day rides for active calories calibration
-      const { data: ridesHist } = await supabase
-        .from('rides')
-        .select('date, metadata')
-        .eq('user_id', userId)
-        .gte('date', startOf30DaysMs);
 
       ridesHist?.forEach(r => {
         const dStr = new Date(Number(r.date)).toISOString().split('T')[0];
@@ -682,13 +631,6 @@ function App() {
           logsMap[dStr].activeCalories += Number(witha?.calories ?? 0);
         }
       });
-
-      // CR3: Fetch 30-Day Kratos gym workouts for active calories calibration
-      const { data: gymHist } = await supabase
-        .from('kratos_workouts')
-        .select('volume, completed_at')
-        .eq('user_id', userId)
-        .gte('completed_at', startOf30Days.toISOString());
 
       setGymLogs(gymHist || []);
 

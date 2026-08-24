@@ -388,84 +388,72 @@ export default function App() {
     if (!session?.user?.id) return;
     const uid = session.user.id;
 
-    // Load exercises
-    const { data: exData } = await supabase
-      .from('kratos_exercises')
-      .select('*')
-      .eq('user_id', uid)
-      .eq('deleted', false);
-    if (exData) setExercises(exData);
+    const twentyEightDaysAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Load templates
-    const { data: tempData } = await supabase
-      .from('kratos_templates')
-      .select('*')
-      .eq('user_id', uid);
+    // All of these reads are independent of each other. The separate "latest sleep
+    // log" query that used to run here (for todaySleepQuality) was a pure duplicate
+    // of the 90-day sleep query below — today's log is always within the last 90
+    // days for an actively-syncing user — so it's now derived client-side instead of
+    // hitting the DB twice. Batched in groups of 3 rather than fired all 10 at once
+    // or run fully sequentially: this project's Supabase compute tier has been
+    // observed to time out otherwise-trivial queries under a full simultaneous
+    // burst, while 10 fully sequential round trips made mount noticeably slow.
+    const chunk = <T,>(arr: T[], size: number): T[][] =>
+      Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
+
+    const queries = [
+      () => supabase.from('kratos_exercises').select('*').eq('user_id', uid).eq('deleted', false),
+      () => supabase.from('kratos_templates').select('*').eq('user_id', uid),
+      () => supabase.from('kratos_workouts').select('*').eq('user_id', uid).order('completed_at', { ascending: false }),
+      () => supabase.from('vigor_weight').select('weight').eq('user_id', uid).order('logged_at', { ascending: false }).limit(1),
+      () => supabase.from('vigor_body_measurements').select('*').eq('user_id', uid).order('logged_at', { ascending: true }),
+      () => supabase.from('profiles').select('*').eq('id', uid).maybeSingle(),
+      () => supabase.from('vigor_steps').select('step_count, logged_at').eq('user_id', uid).gte('logged_at', twentyEightDaysAgo).order('logged_at', { ascending: true }),
+      () => supabase.from('rides').select('date, metadata').eq('user_id', uid).order('date', { ascending: true }),
+      () => supabase.from('vigor_sleep').select('logged_at, duration_minutes, quality_score, hrv_ms').eq('user_id', uid).gte('logged_at', ninetyDaysAgo).order('logged_at', { ascending: true }),
+      () => supabase.from('vigor_profile').select('target_sleep_hours').eq('user_id', uid).maybeSingle(),
+    ];
+
+    const results: any[] = [];
+    for (const batch of chunk(queries, 3)) {
+      results.push(...await Promise.all(batch.map(q => q())));
+    }
+
+    const [
+      { data: exData },
+      { data: tempData },
+      { data: woData },
+      { data: weightData },
+      { data: bMeasData },
+      { data: profData },
+      { data: stepsDataAll },
+      { data: rideData },
+      { data: sleepDataAll },
+      { data: vigorProfile },
+    ] = results;
+
+    if (exData) setExercises(exData);
     if (tempData) setTemplates(tempData);
 
-    // Load workouts
-    const { data: woData } = await supabase
-      .from('kratos_workouts')
-      .select('*')
-      .eq('user_id', uid)
-      .order('completed_at', { ascending: false });
     let localWorkouts: Workout[] = [];
     if (woData) {
       setWorkouts(woData);
       localWorkouts = woData;
     }
 
-    // Load latest body weight
-    const { data: weightData } = await supabase
-      .from('vigor_weight')
-      .select('weight')
-      .eq('user_id', uid)
-      .order('logged_at', { ascending: false })
-      .limit(1);
     if (weightData && weightData.length > 0) {
       setLatestBodyweight(Number(weightData[0].weight));
     }
 
-    // Load body measurements
-    const { data: bMeasData } = await supabase
-      .from('vigor_body_measurements')
-      .select('*')
-      .eq('user_id', uid)
-      .order('logged_at', { ascending: true });
     if (bMeasData) {
       setMeasurements(bMeasData);
     }
 
-    // Load athlete profile
-    const { data: profData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', uid)
-      .maybeSingle();
     if (profData) setProfile(profData);
 
-    // Load today's sleep quality from vigor_sleep
-    const { data: sleepData } = await supabase
-      .from('vigor_sleep')
-      .select('*')
-      .eq('user_id', uid)
-      .order('logged_at', { ascending: false })
-      .limit(1);
-    if (sleepData && sleepData.length > 0) {
-      setTodaySleepQuality(Number(sleepData[0].quality_score ?? sleepData[0].quality ?? 0));
-    }
-
-    // Load 28-day steps history from vigor_steps to calculate ACWR
-    const twentyEightDaysAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: stepsDataAll } = await supabase
-      .from('vigor_steps')
-      .select('step_count, logged_at')
-      .eq('user_id', uid)
-      .gte('logged_at', twentyEightDaysAgo)
-      .order('logged_at', { ascending: true });
-    
     if (stepsDataAll && stepsDataAll.length > 0) {
-      const dailyLoads = stepsDataAll.map(st => Math.round((st.step_count || 5000) / 100));
+      const dailyLoads = stepsDataAll.map((st: any) => Math.round((st.step_count || 5000) / 100));
       const workloadInsight = AcwrForecaster.calculateWorkloadInsight(dailyLoads);
       setTodayAcwr(workloadInsight.acwr);
       const latestSteps = stepsDataAll[stepsDataAll.length - 1];
@@ -475,32 +463,10 @@ export default function App() {
       console.log("[ZenithKratos] SOTA ML ACWR Workload calculated:", workloadInsight.acwr);
     }
 
-    // Load rides for PMC
-    const { data: rideData } = await supabase
-      .from('rides')
-      .select('date, metadata')
-      .eq('user_id', uid)
-      .order('date', { ascending: true });
-
-    // Load all sleep logs for last 90 days
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: sleepDataAll } = await supabase
-      .from('vigor_sleep')
-      .select('logged_at, duration_minutes, quality_score, hrv_ms')
-      .eq('user_id', uid)
-      .gte('logged_at', ninetyDaysAgo)
-      .order('logged_at', { ascending: true });
-
-    // Load vigor_profile
-    const { data: vigorProfile } = await supabase
-      .from('vigor_profile')
-      .select('target_sleep_hours')
-      .eq('user_id', uid)
-      .maybeSingle();
-
     const targetSleep = Number(vigorProfile?.target_sleep_hours ?? 8.0);
 
     if (sleepDataAll && sleepDataAll.length > 0) {
+      setTodaySleepQuality(Number(sleepDataAll[sleepDataAll.length - 1].quality_score ?? 0));
       setSleepLogs(sleepDataAll);
 
       // ANS/HRV readiness state must come from a REAL wearable rMSSD reading

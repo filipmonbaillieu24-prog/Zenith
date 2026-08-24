@@ -1260,17 +1260,33 @@ export function calibrateFullModels(
 }
 
 // Initialization function that Aero calls on login
+//
+// Used to fire 8 concurrent per-model ml_weights queries (one per SimpleMLP instance
+// below, via loadOrInit) — a genuine 8-way simultaneous burst against a single table
+// on every login. This project's Supabase compute tier has been observed to time out
+// otherwise-trivial queries under bursts of this shape, so all 8 models' rows are now
+// fetched in one query and handed to each model directly (loadFromPreloaded), instead
+// of each model querying for itself.
 export async function initializeModels(supabase: any, userId: string): Promise<void> {
-  await Promise.all([
-    notesModel.loadOrInit(supabase, userId),
-    coachModel.loadOrInit(supabase, userId),
-    rpeModel.loadOrInit(supabase, userId),
-    labelModel.loadOrInit(supabase, userId),
-    ftpModel.loadOrInit(supabase, userId),
-    injuryModel.loadOrInit(supabase, userId),
-    cadenceModel.loadOrInit(supabase, userId),
-    routeDurationModel.loadOrInit(supabase, userId),
-  ]);
+  const models = [notesModel, coachModel, rpeModel, labelModel, ftpModel, injuryModel, cadenceModel, routeDurationModel];
+  const modelNames = models.map(m => m.modelName);
+
+  const byModel = new Map<string, any>();
+  try {
+    const { data, error } = await supabase
+      .from('ml_weights')
+      .select('model_name, weights')
+      .eq('user_id', userId)
+      .in('model_name', modelNames);
+    if (!error && data) {
+      for (const row of data) byModel.set(row.model_name, row.weights);
+    }
+  } catch {
+    // Falls through to loadFromPreloaded(..., undefined) for every model below,
+    // which degrades to the same localStorage/defaults fallback loadOrInit used.
+  }
+
+  await Promise.all(models.map(m => m.loadFromPreloaded(supabase, userId, byModel.get(m.modelName))));
 }
 
 export function resetAllWeights() {

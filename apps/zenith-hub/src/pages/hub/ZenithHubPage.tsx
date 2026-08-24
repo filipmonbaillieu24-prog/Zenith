@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp } from 'lucide-react';
+import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 import { predictRecoveryScore, recoveryModel, calculateZenithSleepScore, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
@@ -69,7 +69,9 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   const [weeklyStrideDistance, setWeeklyStrideDistance] = useState<number>(0);
   const [weeklyKratosCount, setWeeklyKratosCount] = useState<number>(0);
   const [weeklyGymVolume, setWeeklyGymVolume] = useState<number>(0);
-  const [loadingDashboard, setLoadingDashboard] = useState(false);
+  // Starts true (not false) so the dashboard never flashes zero-state PMC/Recovery
+  // numbers on first paint before fetchDashboardData's effect has had a chance to run.
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
 
   const fetchDashboardData = async () => {
     setLoadingDashboard(true);
@@ -88,12 +90,47 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       const startOfWeekMs = startOfWeek.getTime();
 
       // All of these reads are independent of each other (none filters on a prior
-      // query's result — only on userId and locally-computed date boundaries), so
-      // firing them together cuts the ~11 sequential round-trips this used to take
-      // down to the latency of a single one. The three "weekly" queries this used
-      // to run separately (rides/stride/kratos filtered to this week) were also
-      // pure duplicates of the full-history queries a few lines below them — those
-      // are now derived client-side instead of hitting Supabase twice per table.
+      // query's result — only on userId and locally-computed date boundaries). The
+      // three "weekly" queries this used to run separately (rides/stride/kratos
+      // filtered to this week) were also pure duplicates of the full-history queries
+      // a few lines below them — those are now derived client-side instead of
+      // hitting Supabase twice per table, cutting 11 queries down to 9.
+      //
+      // Firing all 9 at once (via a single Promise.all) sounds strictly faster, but
+      // this project runs on a small Supabase instance shared by all 6 Zenith apps —
+      // Hub's dashboard, Aero, Vigor, Kratos, Fuel and Stride all mount at roughly
+      // the same moment (Hub embeds the other five as iframes), so a 9-wide burst
+      // from Hub alone lands on top of each of those apps' own mount-time queries.
+      // That combined spike was blowing past the instance's burst capacity and
+      // causing Postgres to cancel queries with "statement timeout" — on tables with
+      // single-digit row counts, so it was never about query cost, only concurrency.
+      // Batching into groups of 3 keeps most of the parallelization win (~3 round
+      // trips instead of 11) while capping Hub's own peak concurrent connections.
+      const chunk = <T,>(arr: T[], size: number): T[][] =>
+        Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
+
+      const queries = [
+        () => supabase.from('vigor_weight').select('*').eq('user_id', userId).order('logged_at', { ascending: false }).limit(1),
+        () => supabase.from('vigor_sleep').select('*').eq('user_id', userId).order('logged_at', { ascending: false }).limit(14),
+        () => supabase.from('vigor_steps').select('*').eq('user_id', userId).gte('logged_at', todayStart.toISOString()).lte('logged_at', todayEnd.toISOString()).order('logged_at', { ascending: false }),
+        () => supabase.from('fuel_logs').select('calories').eq('user_id', userId).gte('logged_at', todayStart.toISOString()).lte('logged_at', todayEnd.toISOString()),
+        () => supabase.from('planned_workouts').select('*').eq('user_id', userId),
+        () => supabase.from('rides').select('date, distance, metadata').eq('user_id', userId),
+        () => supabase.from('stride_activities').select('*').eq('user_id', userId),
+        () => supabase.from('kratos_workouts').select('id, name, completed_at, sets, volume').eq('user_id', userId),
+        () => supabase.from('kratos_exercises').select('id, name, category, primary_muscle, secondary_muscles').eq('user_id', userId),
+      ];
+
+      // Safety net: a hung network request (as opposed to a clean server-side error,
+      // which rejects quickly on its own) has no built-in timeout here otherwise, and
+      // would leave loadingDashboard — and its full-screen overlay — stuck forever.
+      const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+        Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Dashboard fetch timed out')), ms))]);
+
+      const results: any[] = [];
+      for (const batch of chunk(queries, 3)) {
+        results.push(...await withTimeout(Promise.all(batch.map(q => q())), 15000));
+      }
       const [
         { data: wData },
         { data: sData },
@@ -104,17 +141,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         { data: strideData },
         { data: allKData },
         { data: exCatalog },
-      ] = await Promise.all([
-        supabase.from('vigor_weight').select('*').eq('user_id', userId).order('logged_at', { ascending: false }).limit(1),
-        supabase.from('vigor_sleep').select('*').eq('user_id', userId).order('logged_at', { ascending: false }).limit(14),
-        supabase.from('vigor_steps').select('*').eq('user_id', userId).gte('logged_at', todayStart.toISOString()).lte('logged_at', todayEnd.toISOString()).order('logged_at', { ascending: false }),
-        supabase.from('fuel_logs').select('calories').eq('user_id', userId).gte('logged_at', todayStart.toISOString()).lte('logged_at', todayEnd.toISOString()),
-        supabase.from('planned_workouts').select('*').eq('user_id', userId),
-        supabase.from('rides').select('date, distance, metadata').eq('user_id', userId),
-        supabase.from('stride_activities').select('*').eq('user_id', userId),
-        supabase.from('kratos_workouts').select('id, name, completed_at, sets, volume').eq('user_id', userId),
-        supabase.from('kratos_exercises').select('id, name, category, primary_muscle, secondary_muscles').eq('user_id', userId),
-      ]);
+      ] = results;
 
       if (wData && wData.length > 0) {
         setLatestWeight(wData[0]);
@@ -213,6 +240,13 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   useEffect(() => {
     if (userId) {
       fetchDashboardData();
+    } else {
+      // loadingDashboard defaults to true so the dashboard never flashes zero-state
+      // values before this effect gets a chance to run. But if userId is ever falsy
+      // here, fetchDashboardData never fires, and nothing else would ever flip
+      // loadingDashboard back to false — leaving the loading overlay stuck forever
+      // instead of just showing empty state like it did before that default changed.
+      setLoadingDashboard(false);
     }
   }, [userId]);
 
@@ -755,7 +789,33 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       <div className="zh-hub-glow" />
 
       {/* DASHBOARD VIEW */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} className="animate-fade-in">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, position: 'relative' }} className="animate-fade-in">
+          {/* One loading state for the whole dashboard instead of each card popping in
+              on its own — the real cards underneath still mount immediately (so layout
+              doesn't jump once this clears), this just covers their zero-state values
+              until fetchDashboardData resolves. */}
+          {loadingDashboard && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              minHeight: 420,
+              background: 'rgba(9, 9, 11, 0.78)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              borderRadius: 16,
+            }}>
+              <Loader2 size={28} className="zh-spin" style={{ color: '#cbd5e1' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.3px' }}>
+                Loading your dashboard...
+              </span>
+            </div>
+          )}
           {/* PMC & Recovery Stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 20 }}>
             {/* PMC Card */}

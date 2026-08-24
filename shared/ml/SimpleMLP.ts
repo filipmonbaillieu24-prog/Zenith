@@ -122,6 +122,33 @@ export class SimpleMLP {
     // 3. Keep default weights (from constructor)
   }
 
+  /**
+   * Apply an already-fetched ml_weights row instead of querying Supabase directly —
+   * for callers that bulk-fetch several models' rows in a single query (one table
+   * scan instead of N concurrent per-model queries) and then hand each model its own
+   * row. Falls back to localStorage/defaults exactly like loadOrInit's non-Supabase
+   * path when no valid row is passed in, but never makes its own network request.
+   */
+  async loadFromPreloaded(supabase: any, userId: string, weights: any | null | undefined): Promise<void> {
+    if (weights && weights.W1 && weights.B1 && weights.W2 && weights.B2 &&
+        weights.W1.length === this.W1.length && weights.B1.length === this.B1.length) {
+      this.W1 = weights.W1;
+      this.B1 = weights.B1;
+      this.W2 = weights.W2;
+      this.B2 = weights.B2;
+      this._loaded = true;
+      this._cacheToLocalStorage();
+      return;
+    }
+
+    if (this._loadFromLocalStorage()) {
+      this._loaded = true;
+      this.saveToSupabase(supabase, userId).catch(() => {});
+      return;
+    }
+    // Keep default weights (from constructor).
+  }
+
   /** Load weights from Supabase public.ml_weights table */
   async loadFromSupabase(supabase: any, userId: string): Promise<boolean> {
     try {
