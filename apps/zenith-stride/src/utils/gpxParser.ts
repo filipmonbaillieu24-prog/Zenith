@@ -32,7 +32,7 @@ export function parseGpxFile(content: string, filename?: string): Partial<RunAct
   }
 
   return {
-    title: filename ? filename.replace(/\.(gpx|xml|tcx)$/i, '') : 'Geïmporteerde Loop',
+    title: filename ? filename.replace(/\.(gpx|xml|tcx)$/i, '') : 'Imported Route',
     date: new Date(startMs).toISOString().slice(0, 10),
     distanceKm,
     durationSec,

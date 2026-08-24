@@ -42,7 +42,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
     if (!parsedRun) return;
     const finalRun: RunActivity = {
       id: `gpx-${Date.now()}`,
-      title: parsedRun.title || 'Geïmporteerde GPX Loop',
+      title: parsedRun.title || 'Imported GPX Route',
       date: parsedRun.date || new Date().toISOString().slice(0, 10),
       type: parsedRun.type || 'easy',
       isTreadmill: false,
@@ -134,7 +134,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
               {/* Route Polyline Preview */}
               {parsedRun.routeCoordinates && parsedRun.routeCoordinates.length > 0 && (
                 <div className="gpx-route-preview">
-                  <span className="preview-label">GPS Route Preview ({parsedRun.routeCoordinates.length} punten)</span>
+                  <span className="preview-label">GPS Route Preview ({parsedRun.routeCoordinates.length} points)</span>
                   <svg viewBox="0 0 400 120" className="route-svg">
                     {(() => {
                       const coords = parsedRun.routeCoordinates!;

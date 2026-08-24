@@ -31,7 +31,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
   const recent = useMemo(() => {
     if (timeRange === 'all') return pmc.map(p => ({ ...p, date: fmtShortDate(p.date) }));
     const cutoff = Date.now() - timeRange * 24 * 3600 * 1000;
-    // We willen ten minste 3 punten tonen voor de grafiek
+    // We want to show at least 3 points on the chart
     const filtered = pmc.filter(p => p.date >= cutoff);
     if (filtered.length >= 3) {
       return filtered.map(p => ({ ...p, date: fmtShortDate(p.date) }));
