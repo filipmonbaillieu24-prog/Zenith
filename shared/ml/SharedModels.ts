@@ -212,13 +212,26 @@ export function predictAutoregWeight(
   const repsToFailure = targetReps + targetRir;
   const predictedWeight = predictedE1RM / (1.0 + repsToFailure / 30.0);
   
-  // Safety guardrails: clamp predicted weight within 80%..120% of previous weight and Epley
+  // Safety guardrails: how far a single set's load may swing off the previous set.
+  // Scaled by rirDelta so a small overperformance (e.g. 1 rep in reserve above target)
+  // only earns a small bump, while a larger, genuine overperformance can justify more.
+  // A flat 20%/15% band here previously let any positive rirDelta jump straight to the
+  // ceiling every time (e.g. 100 -> 120 lbs off just 1 extra rep in reserve), and since
+  // the bound is relative to the previous *set*, repeated overperformance within one
+  // exercise compounded into unrealistic same-session escalation (75 -> 90 -> 105 kg).
   const repsToFailurePrev = prevReps + prevRir;
   const e1RMPrev = prevWeight * (1.0 + repsToFailurePrev / 30.0);
   const epleyW = e1RMPrev / (1.0 + (targetReps + targetRir) / 30.0);
-  
-  const minSafeW = Math.max(prevWeight * 0.80, epleyW * 0.85);
-  const maxSafeW = Math.min(prevWeight * 1.20, epleyW * 1.15);
+
+  const RIR_ADJUSTMENT_PCT = 0.025; // ~2.5% weight change per RIR point of delta
+  const BASE_ADJUSTMENT_PCT = 0.02; // small allowance at rirDelta 0 (equipment step noise)
+  const MAX_ADJUSTMENT_PCT = 0.15; // hard ceiling even for a large rirDelta
+
+  const growthPct = Math.min(MAX_ADJUSTMENT_PCT, BASE_ADJUSTMENT_PCT + RIR_ADJUSTMENT_PCT * Math.max(0, rirDelta));
+  const shrinkPct = Math.min(MAX_ADJUSTMENT_PCT, BASE_ADJUSTMENT_PCT + RIR_ADJUSTMENT_PCT * Math.max(0, -rirDelta));
+
+  const minSafeW = Math.max(prevWeight * (1 - shrinkPct), epleyW * 0.92);
+  const maxSafeW = Math.min(prevWeight * (1 + growthPct), epleyW * 1.08);
   
   const rawClampedWeight = Math.max(0.0, Math.min(maxSafeW, Math.max(minSafeW, predictedWeight)));
 

@@ -745,8 +745,15 @@ fun TrackerScreen(
                                                                 e1RM / (1.0 + (nextTargetReps + nextTargetRir) / 30.0)
                                                             }()
 
-                                                            val minSafeW = Math.max(w * 0.85, epleyW * 0.9)
-                                                            val maxSafeW = Math.min(w * 1.15, epleyW * 1.1)
+                                                            // Scale the safety band by rirDelta so a small overperformance
+                                                            // (e.g. 1 rep in reserve above target) only earns a small bump,
+                                                            // instead of a flat +/-15% swing every time regardless of how
+                                                            // close the actual set was to the prescribed RIR.
+                                                            val rirDelta = rir - nextTargetRir
+                                                            val growthPct = Math.min(0.15, 0.02 + 0.025 * Math.max(0, rirDelta))
+                                                            val shrinkPct = Math.min(0.15, 0.02 + 0.025 * Math.max(0, -rirDelta))
+                                                            val minSafeW = Math.max(w * (1.0 - shrinkPct), epleyW * 0.92)
+                                                            val maxSafeW = Math.min(w * (1.0 + growthPct), epleyW * 1.08)
 
                                                             val predictedW = if (KratosAutoregModel.isLoaded()) {
                                                                 val rawML = KratosAutoregModel.predictWeight(
@@ -763,7 +770,12 @@ fun TrackerScreen(
                                                                 epleyW
                                                             }
 
-                                                            val roundedW = Math.round(predictedW / step) * step
+                                                            // Snap relative to the last actually-lifted weight (w), not to an
+                                                            // absolute zero-based grid: w itself proves that grid offset is
+                                                            // achievable, but Math.round(predictedW / step) * step does not
+                                                            // (e.g. step=15, w=70 -> nearest absolute multiple is 75, which
+                                                            // was never reachable from 70 on this machine).
+                                                            val roundedW = w + Math.round((predictedW - w) / step) * step
                                                             val diff = Math.abs(w - roundedW)
                                                             if (diff >= 0.5 * step) {
                                                                 nextSet.targetWeight = roundedW
