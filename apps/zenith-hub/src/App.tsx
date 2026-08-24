@@ -543,50 +543,81 @@ function App() {
     }
   }, [fetchRides, session]);
 
-  // Supabase Realtime channel to orchestrate background MLP training cycles
+  // Supabase Realtime channel to orchestrate background MLP training cycles.
+  //
+  // Debounced + serialized: a single phone sync can insert dozens of historical
+  // rows (steps/sleep/weight backfill) in quick succession, each firing its own
+  // INSERT event. Without debouncing, every one of those re-ran the full training
+  // cycle (5 models, one of which loops 31 days) — thousands of redundant Supabase
+  // upserts per sync. Now a burst of events collapses into one run fired after the
+  // events go quiet, and a run already in flight queues at most one follow-up
+  // instead of overlapping.
   useEffect(() => {
     if (!session?.user) return;
     const userId = session.user.id;
 
-    const triggerTraining = async () => {
-      // 1. Initialise models in memory for UI immediately
-      await recoveryModel.loadOrInit(supabase, userId);
-      setMlModelsLoaded(true);
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let isTraining = false;
+    let rerunQueued = false;
 
-      // 2. Run background training
-      const { runBackgroundTraining } = await import('./utils/backgroundTrainer');
-      await runBackgroundTraining(supabase, userId);
+    const runTrainingCycle = async () => {
+      if (isTraining) { rerunQueued = true; return; }
+      isTraining = true;
+      try {
+        // 1. Initialise models in memory for UI immediately
+        await recoveryModel.loadOrInit(supabase, userId);
+        setMlModelsLoaded(true);
 
-      // 3. Re-load the freshly trained weights into memory and trigger UI updates
-      await recoveryModel.loadOrInit(supabase, userId);
-      setMlModelsLoaded(prev => !prev);
+        // 2. Run background training
+        const { runBackgroundTraining } = await import('./utils/backgroundTrainer');
+        await runBackgroundTraining(supabase, userId);
+
+        // 3. Re-load the freshly trained weights into memory and trigger UI updates
+        await recoveryModel.loadOrInit(supabase, userId);
+        setMlModelsLoaded(prev => !prev);
+      } finally {
+        isTraining = false;
+        if (rerunQueued) {
+          rerunQueued = false;
+          runTrainingCycle();
+        }
+      }
     };
 
-    // Trigger initial train run on load
-    triggerTraining();
+    const scheduleTraining = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        runTrainingCycle();
+      }, 4000);
+    };
+
+    // Initial run on load doesn't need debouncing — nothing to coalesce with yet.
+    runTrainingCycle();
 
     const channel = supabase
       .channel('hub-db-ml-trigger')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
         fetchRides();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'vigor_weight', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'vigor_sleep', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'vigor_steps', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kratos_workouts', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
+      if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [session, fetchRides]);
 
