@@ -820,7 +820,12 @@ function App() {
       }
 
       // Self-Correction Loop: Backpropagate learning targets to SOTA ZenithFusionNet
-      if (userId) {
+      // Bug fix #3: skip entirely on days marked incomplete (the same "mark day
+      // incomplete" flag ZANE's own calibration already respects via completeLogsCount
+      // above) — an incomplete day's selectedDateCaloriesIntake is known-partial, not a
+      // real measurement, so training on it would feed the network a fabricated ground
+      // truth for that day no matter how the weight-trend side is computed.
+      if (userId && selectedDateComplete) {
         const net = ZenithFusionNet.getInstance();
         await net.init(supabase, userId);
         
@@ -847,18 +852,48 @@ function App() {
         // (zaneResult.trendWeightMap, an EMA of real scale weighings) versus actual
         // intake, i.e. intake - (measured weight change * kcal/kg). This is a real,
         // independently-measured outcome rather than an echo of the displayed estimate.
+        //
+        // Bug fix #2: pairing a SINGLE day's intake (often 0 on days nothing was logged
+        // yet) with the weight-change between just the two most recent EMA points was
+        // wildly noisy — at ~7700 kcal/kg, a ~0.1kg day-to-day EMA wobble swings the
+        // implied TDEE by ~770 kcal, and an unlogged (0 kcal) day gets misread as "TDEE
+        // achieved on zero food," producing implausible training targets (e.g. ~1225
+        // kcal next to a genuine ~2144 kcal estimate). Average both sides of the energy
+        // balance over the same multi-day window instead, so the training target stays
+        // internally consistent.
         const trendMap = zaneResult.trendWeightMap || {};
         const trendDates = Object.keys(trendMap).filter(d => d <= selectedDateStr).sort();
         let actualTdee: number | null = null;
+        const WEIGHT_TREND_WINDOW_DAYS = 7;
         if (trendDates.length >= 2) {
           const lastDate = trendDates[trendDates.length - 1];
-          const prevDate = trendDates[trendDates.length - 2];
+          const startIdx = Math.max(0, trendDates.length - 1 - WEIGHT_TREND_WINDOW_DAYS);
+          const prevDate = trendDates[startIdx];
           const daysBetween = Math.max(1, Math.round(
             (new Date(lastDate + 'T12:00:00').getTime() - new Date(prevDate + 'T12:00:00').getTime()) / 86400000
           ));
-          const dailyWeightChangeKg = (trendMap[lastDate] - trendMap[prevDate]) / daysBetween;
-          const energyPerKg = zaneResult.energyPerKgTissue || 7700;
-          actualTdee = Math.round(selectedDateCaloriesIntake - dailyWeightChangeKg * energyPerKg);
+          // Require a few real days of spread before trusting the implied rate at all.
+          if (daysBetween >= 3) {
+            const dailyWeightChangeKg = (trendMap[lastDate] - trendMap[prevDate]) / daysBetween;
+            const energyPerKg = zaneResult.energyPerKgTissue || 7700;
+
+            let windowIntakeSum = 0;
+            let windowIntakeDays = 0;
+            for (let i = startIdx; i <= trendDates.length - 1; i++) {
+              const d = trendDates[i];
+              const dayCal = dailyCaloriesMap[d] || 0;
+              const dayComplete = dailyCompletionMap[d] ?? true;
+              if (dayCal > 0 && dayComplete) {
+                windowIntakeSum += dayCal;
+                windowIntakeDays++;
+              }
+            }
+
+            if (windowIntakeDays > 0) {
+              const avgIntake = windowIntakeSum / windowIntakeDays;
+              actualTdee = Math.round(avgIntake - dailyWeightChangeKg * energyPerKg);
+            }
+          }
         }
 
         const actualRecovery = todaySleepQuality !== null ? todaySleepQuality : 80;

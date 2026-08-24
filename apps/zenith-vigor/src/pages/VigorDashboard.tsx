@@ -834,6 +834,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
   // Formatted chart data
   const chartWeightData = useMemo(() => {
+    // Trend = exponential moving average of scale weighings (alpha = 0.15, matching
+    // Zenith Fuel's ZANE trend-weight convention) — smooths out day-to-day water/
+    // glycogen noise so the underlying direction is visible next to the raw readings.
+    let emaWeight: number | null = null;
     return weights.map(w => {
       const weight = parseFloat(w.weight);
       const fat = w.body_fat ? parseFloat(w.body_fat) : null;
@@ -843,9 +847,13 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       if (fat !== null && water !== null) {
         other = Math.max(0, Math.round((100 - fat - water) * 10) / 10);
       }
+      if (!Number.isNaN(weight)) {
+        emaWeight = emaWeight === null ? weight : 0.15 * weight + 0.85 * emaWeight;
+      }
       return {
         date: new Date(w.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
         weight,
+        trend: emaWeight !== null ? Math.round(emaWeight * 100) / 100 : null,
         fat,
         water,
         muscle,
@@ -1327,7 +1335,8 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     {profile.target_weight && (
                       <ReferenceLine y={profile.target_weight} stroke="rgba(239, 68, 68, 0.4)" strokeDasharray="3 3" label={{ value: `Goal: ${profile.target_weight}kg`, fill: '#ef4444', fontSize: 9, position: 'right' }} />
                     )}
-                    <Line type="monotone" dataKey="weight" stroke="#cbd5e1" strokeWidth={2.5} dot={{ r: 4, stroke: '#cbd5e1', strokeWidth: 1.5, fill: '#09090b' }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" name="Weight" dataKey="weight" stroke="rgba(203, 213, 225, 0.35)" strokeWidth={1.5} dot={{ r: 3, stroke: 'rgba(203, 213, 225, 0.35)', strokeWidth: 1, fill: '#09090b' }} activeDot={{ r: 5 }} />
+                    <Line type="monotone" name="Trend" dataKey="trend" stroke="var(--color-primary-bright)" strokeWidth={2.5} dot={false} activeDot={{ r: 6 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
               )}

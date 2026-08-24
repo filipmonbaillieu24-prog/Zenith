@@ -374,6 +374,16 @@
   display: flex;
 }
 
+/* The rule above turns the grid item into a row-flex container so its
+   height can stretch to match a taller sibling (cross-axis, handled by the
+   default align-items:stretch) — but on the main axis a flex child with no
+   explicit width just shrinks to its content, leaving the rest of the grid
+   column empty. Grow it to fill the row. */
+.zenith-span-8:has(> .zenith-hero-card:only-child) > .zenith-hero-card,
+.zenith-span-4:has(> .zenith-hero-card:only-child) > .zenith-hero-card {
+  flex: 1;
+}
+
 /* Some pages (e.g. Fuel) put the span and hero-card classes on the same
    element instead of wrapping — no stacked sibling content inside that
    node, so height:100% is safe there and needed since there's no separate
