@@ -16,7 +16,8 @@ import {
   Ruler,
   Zap,
   Droplet,
-  HeartPulse
+  HeartPulse,
+  Wind
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -2296,6 +2297,29 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{awakePct}% (Micro-awakenings)</div>
                   </div>
                 </div>
+
+                {/* Overnight vitals from Health Connect (via Zenith Pulse), when available.
+                    Not fabricated — simply omitted when the reading doesn't exist. */}
+                {(latestSleep.spo2_percent || latestSleep.respiratory_rate) && (
+                  <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                    {latestSleep.spo2_percent && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(56, 189, 248, 0.06)', border: '1px solid rgba(56, 189, 248, 0.15)', padding: '8px 14px', borderRadius: 10 }}>
+                        <Droplet size={14} style={{ color: '#38bdf8' }} />
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          Blood Oxygen: <strong style={{ color: '#38bdf8' }}>{Math.round(latestSleep.spo2_percent * 10) / 10}%</strong>
+                        </span>
+                      </div>
+                    )}
+                    {latestSleep.respiratory_rate && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(56, 189, 248, 0.06)', border: '1px solid rgba(56, 189, 248, 0.15)', padding: '8px 14px', borderRadius: 10 }}>
+                        <Wind size={14} style={{ color: '#38bdf8' }} />
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          Respiratory Rate: <strong style={{ color: '#38bdf8' }}>{Math.round(latestSleep.respiratory_rate * 10) / 10} br/min</strong>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
