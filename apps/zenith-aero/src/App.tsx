@@ -34,12 +34,11 @@ function App() {
   const [session, setSession] = useState<any>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
 
-  const isPro = useMemo(() => {
-    if (!session?.user) return false;
-    const email = session.user.email?.toLowerCase();
-    if (email === 'filip.monbaillieu.24@gmail.com') return true;
-    return session.user.user_metadata?.is_pro === true;
-  }, [session]);
+  // Pro status is read from profiles.is_pro (server-side source of truth,
+  // set only via the activate_pro_trial() RPC), not from user_metadata —
+  // any signed-in client could set arbitrary user_metadata on themselves.
+  const [isProFromDb, setIsProFromDb] = useState(false);
+  const isPro = isProFromDb;
 
   const [proModal, setProModal] = useState<{ isOpen: boolean; featureName?: string; desc?: string }>({ isOpen: false });
 
@@ -103,6 +102,7 @@ function App() {
         };
         setFitnessProfile(loadedProfile);
         localStorage.setItem('cyclo_fitness_profile', JSON.stringify(loadedProfile));
+        setIsProFromDb(data.is_pro === true);
       } else {
         const fallback = {
           ...withaProfile,
@@ -112,6 +112,7 @@ function App() {
         };
         setFitnessProfile(fallback);
         localStorage.setItem('cyclo_fitness_profile', JSON.stringify(fallback));
+        setIsProFromDb(false);
       }
     } catch (e) {
       console.error("Error loading Aero profile:", e);

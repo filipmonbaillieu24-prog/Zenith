@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, CheckCircle2, ArrowRight, User, Target, ShieldCheck, Ruler, Scale } from 'lucide-react';
 import { supabase } from '../utils/supabaseClient';
+import { activateProTrial } from '@zenith/shared';
 import { PayPalModal } from './PayPalModal';
 
 interface OnboardingModalProps {
@@ -14,7 +15,6 @@ interface OnboardingModalProps {
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   isOpen,
   userId,
-  userEmail,
   initialName = '',
   onCompleted,
 }) => {
@@ -102,10 +102,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           name: name.trim(),
           unit_system: unitSystem,
           weight_unit: weightUnit,
-          onboarding_completed: true,
-          is_pro: isProChosen
+          onboarding_completed: true
         }
       });
+
+      // Pro entitlement is granted server-side via the activate_pro_trial()
+      // RPC, not through user_metadata (which any signed-in client could set
+      // on themselves).
+      if (isProChosen) {
+        await activateProTrial(supabase);
+      }
 
       await onCompleted(profilePayload, isProChosen);
     } catch (err: any) {
@@ -117,11 +123,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   };
 
   const handleFinish = async () => {
-    const isFounder = userEmail.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
-    if (selectedPlan === 'pro' && !isFounder) {
+    if (selectedPlan === 'pro') {
       setShowPayPalModal(true);
     } else {
-      await executeSaveOnboarding(isFounder || selectedPlan === 'pro');
+      await executeSaveOnboarding(false);
     }
   };
 

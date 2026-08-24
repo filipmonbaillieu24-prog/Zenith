@@ -15,7 +15,7 @@ const FeatureRequestsPage = lazy(() => import('./pages/community/FeatureRequests
 import { loggerService } from './utils/loggerService';
 import { Sidebar, TabKey } from './components/Sidebar';
 import { computePMC } from './utils/pmc';
-import { recoveryModel, syncPhoneDataToEcosystem, isTrustedZenithOrigin } from '@zenith/shared';
+import { recoveryModel, syncPhoneDataToEcosystem, isTrustedZenithOrigin, activateProTrial } from '@zenith/shared';
 import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
@@ -74,12 +74,6 @@ function App() {
     }
   }, []);
 
-  const isPro = useMemo(() => {
-    if (!session?.user) return false;
-    const email = session.user.email?.toLowerCase();
-    if (email === 'filip.monbaillieu.24@gmail.com') return true;
-    return session.user.user_metadata?.is_pro === true;
-  }, [session]);
   const [activeTab, setActiveTab] = useState<TabKey>('hub');
   // Extension iframes used to all get a real `src` on Hub's very first render,
   // regardless of activeTab — meaning Aero/Vigor/Kratos/Fuel/Stride each fired their
@@ -102,6 +96,10 @@ function App() {
   });
   const [rides, setRides] = useState<{ date: number; tss: number }[]>([]);
   const [fitnessProfile, setFitnessProfile] = useState<any>({ name: 'Athlete' });
+  // Pro status is read from profiles.is_pro (server-side source of truth,
+  // set only via the activate_pro_trial() RPC), not from user_metadata —
+  // any signed-in client could set arbitrary user_metadata on themselves.
+  const isPro = fitnessProfile?.isPro === true;
   const [mlModelsLoaded, setMlModelsLoaded] = useState(false);
   const [pendingRideId, setPendingRideId] = useState<string | null>(null);
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
@@ -467,7 +465,8 @@ function App() {
           weight: data.weight_kg,
           ftp: data.ftp_watts || 220,
           lthr: data.lthr_bpm || 165,
-          trainingGoal: data.training_goal || 'general'
+          trainingGoal: data.training_goal || 'general',
+          isPro: data.is_pro === true
         });
       } else {
         const initialName = userMetadata?.name || 'Athlete';
@@ -483,7 +482,8 @@ function App() {
           name: defaultProfile.name,
           trainingGoal: 'general',
           ftp: 220,
-          lthr: 165
+          lthr: 165,
+          isPro: false
         });
       }
     } catch (e) {
@@ -983,8 +983,8 @@ ${logsMarkdown}
             <PricingPage
               isPro={isPro}
               onActivatePro={async () => {
-                await supabase.auth.updateUser({ data: { is_pro: true } });
-                loadFitnessProfile(session.user.id, { ...session.user.user_metadata, is_pro: true });
+                await activateProTrial(supabase);
+                loadFitnessProfile(session.user.id, session.user.user_metadata);
               }}
             />
           )}
@@ -1256,7 +1256,7 @@ ${logsMarkdown}
         userId={session?.user?.id || ''}
         userEmail={session?.user?.email || ''}
         initialName={fitnessProfile?.name}
-        onCompleted={async (_profilePayload, isProChosen) => {
+        onCompleted={async (_profilePayload, _isProChosen) => {
           setShowOnboarding(false);
           // Refresh the user session in local state to ensure metadata updates propagate
           const { data: { session: refreshedSession } } = await supabase.auth.getSession();
@@ -1264,7 +1264,7 @@ ${logsMarkdown}
             setSession(refreshedSession);
             await loadFitnessProfile(refreshedSession.user.id, refreshedSession.user.user_metadata);
           } else if (session?.user?.id) {
-            await loadFitnessProfile(session.user.id, { ...session.user.user_metadata, onboarding_completed: true, is_pro: isProChosen });
+            await loadFitnessProfile(session.user.id, { ...session.user.user_metadata, onboarding_completed: true });
           }
         }}
       />
