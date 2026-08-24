@@ -755,8 +755,14 @@ fun TrackerScreen(
                                                             val minSafeW = Math.max(w * (1.0 - shrinkPct), epleyW * 0.92)
                                                             val maxSafeW = Math.min(w * (1.0 + growthPct), epleyW * 1.08)
 
-                                                            val predictedW = if (KratosAutoregModel.isLoaded()) {
-                                                                val rawML = KratosAutoregModel.predictWeight(
+                                                            // Always clamp, regardless of which estimate produced the raw
+                                                            // number: previously the safety band was only applied to the
+                                                            // ML model's output, so whenever the on-device model wasn't
+                                                            // loaded yet (cold start, weights never fetched), the raw,
+                                                            // unbounded Epley estimate was used as-is and could jump far
+                                                            // beyond what rirDelta actually justified.
+                                                            val rawPredictedW = if (KratosAutoregModel.isLoaded()) {
+                                                                KratosAutoregModel.predictWeight(
                                                                     setIndex = setIndex,
                                                                     prevWeight = w,
                                                                     prevReps = r,
@@ -765,10 +771,10 @@ fun TrackerScreen(
                                                                     targetReps = nextTargetReps,
                                                                     targetRir = nextTargetRir
                                                                 )
-                                                                rawML.coerceIn(minSafeW, maxSafeW)
                                                             } else {
                                                                 epleyW
                                                             }
+                                                            val predictedW = rawPredictedW.coerceIn(minSafeW, maxSafeW)
 
                                                             // Snap relative to the last actually-lifted weight (w), not to an
                                                             // absolute zero-based grid: w itself proves that grid offset is
