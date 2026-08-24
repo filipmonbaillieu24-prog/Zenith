@@ -25,7 +25,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('gear');
 
   const navItems = [
-    { key: 'gear',        icon: <Bike size={13} />, label: 'Mijn Gear' },
+    { key: 'gear',        icon: <Bike size={13} />, label: 'My Gear' },
     { key: 'zones',       icon: <UserCog size={13} />, label: 'Profile & Zones' },
   ] as const;
 
@@ -44,7 +44,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 11, fontWeight: 700,
               background: activeSubTab === item.key ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
               color: activeSubTab === item.key ? '#cbd5e1' : '#94a3b8',
-              transition: 'all 0.15s', fontFamily: 'inheride'
+              transition: 'all 0.15s', fontFamily: 'inherit'
             }}
           >
             {item.icon}
@@ -58,7 +58,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         {activeSubTab === 'gear' && (
           <div className="wd-main-single">
             <div className="wd-coach-header" style={{ marginBottom: 16 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>Gear & Materiaal</h2>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>Gear & Equipment</h2>
               <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Manage your bikes, components and track component wear accurately.</p>
             </div>
             <GearPage profile={profile} />
@@ -69,7 +69,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <div className="wd-main-single">
             <div className="wd-coach-header" style={{ marginBottom: 16 }}>
               <h2 style={{ fontSize: 15, fontWeight: 700, color: '#f8fafc', margin: '0 0 4px' }}>Profile & Zones</h2>
-              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Beheer je fysiologische grenzen, trainingszones en persoonsgegevens.</p>
+              <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Manage your physiological limits, training zones and personal data.</p>
             </div>
             <ProfilePanel
               profile={profile}

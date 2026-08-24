@@ -141,43 +141,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Footer */}
       <div className="zenith-sidebar-footer">
-        <div className="zenith-sidebar-user">
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`zenith-sidebar-user-profile-btn ${activeTab === 'profile' ? 'active' : ''}`}
-            title={isCollapsed ? `Profile of ${userName}` : undefined}
-          >
-            <div className="zenith-user-avatar">
-              <User size={16} />
-            </div>
-            {!isCollapsed && (
-              <div className="zenith-user-info animate-fade-in">
-                <span className="zenith-user-name">{userName}</span>
-                <span className="zenith-user-role" style={{ color: isPro ? '#c084fc' : '#94a3b8', fontWeight: isPro ? 900 : 700, fontSize: 10 }}>
-                  {isPro ? 'ZENITH PRO' : 'ZENITH FREE'}
-                </span>
+        <div className="zenith-sidebar-group zenith-sidebar-account-card">
+          <div className="zenith-sidebar-user">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`zenith-sidebar-user-profile-btn ${activeTab === 'profile' ? 'active' : ''}`}
+              title={isCollapsed ? `Profile of ${userName}` : undefined}
+            >
+              <div className="zenith-user-avatar">
+                <User size={16} />
               </div>
-            )}
+              {!isCollapsed && (
+                <div className="zenith-user-info animate-fade-in">
+                  <span className="zenith-user-name">{userName}</span>
+                  <span className="zenith-user-role" style={{ color: isPro ? '#c084fc' : '#94a3b8', fontWeight: isPro ? 900 : 700, fontSize: 10 }}>
+                    {isPro ? 'ZENITH PRO' : 'ZENITH FREE'}
+                  </span>
+                </div>
+              )}
+            </button>
+          </div>
+
+          <button
+            onClick={onOpenBugReport}
+            className="zenith-sidebar-bug-btn"
+            title={isCollapsed ? "Report an Issue" : undefined}
+          >
+            <Bug size={16} />
+            {!isCollapsed && <span className="animate-fade-in">Report an Issue</span>}
+          </button>
+
+          <button
+            onClick={onLogout}
+            className="zenith-sidebar-logout-btn"
+            title="Log Out"
+          >
+            <LogOut size={16} />
+            {!isCollapsed && <span className="animate-fade-in">Log Out</span>}
           </button>
         </div>
-        
-        <button 
-          onClick={onOpenBugReport} 
-          className="zenith-sidebar-bug-btn"
-          title={isCollapsed ? "Report an Issue" : undefined}
-        >
-          <Bug size={16} />
-          {!isCollapsed && <span className="animate-fade-in">Report an Issue</span>}
-        </button>
-
-        <button 
-          onClick={onLogout} 
-          className="zenith-sidebar-logout-btn"
-          title="Log Out"
-        >
-          <LogOut size={16} />
-          {!isCollapsed && <span className="animate-fade-in">Log Out</span>}
-        </button>
       </div>
     </aside>
   );

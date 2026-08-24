@@ -20,11 +20,29 @@ export const ClimbsSection: React.FC<ClimbsSectionProps> = ({ points, ftp, weigh
     if (!ftp || !weight || climbs.length === 0) return;
     climbs.forEach(climb => {
       const actualTimeSec = (points[climb.endIndex].time - points[climb.startIndex].time) / 1000;
-      if (actualTimeSec > 10) {
+      // Real per-rider calibration: compares this climb's physics-based prediction to what
+      // actually happened and nudges the rider's personal drag/rolling-resistance correction
+      // factor (see trainClimbModel in localNeuralNet.ts) so future predictions for this
+      // rider get more accurate over time.
+      if (actualTimeSec > 30) {
         trainClimbModel(climb.lengthMeters, climb.avgGrade, ftp, weight, actualTimeSec);
       }
     });
   }, [climbs, points, ftp, weight]);
+
+  // Rider's own overall cadence (whole ride, not just climbing segments) used as a
+  // personal baseline for classifyClimbingStyle, instead of one hardcoded global rpm.
+  const overallAvgCadence = useMemo(() => {
+    let sum = 0;
+    let count = 0;
+    for (const pt of points) {
+      if (pt.cadence && pt.cadence > 0) {
+        sum += pt.cadence;
+        count++;
+      }
+    }
+    return count > 0 ? sum / count : undefined;
+  }, [points]);
 
   const climbingStyle = useMemo(() => {
     if (climbs.length === 0) return null;
@@ -43,9 +61,9 @@ export const ClimbsSection: React.FC<ClimbsSectionProps> = ({ points, ftp, weigh
     const avgCadence = sum / count;
     return {
       avgCadence: Math.round(avgCadence),
-      ...classifyClimbingStyle(avgCadence)
+      ...classifyClimbingStyle(avgCadence, overallAvgCadence)
     };
-  }, [climbs, points]);
+  }, [climbs, points, overallAvgCadence]);
 
   if (climbs.length === 0) return null;
 
@@ -60,7 +78,7 @@ export const ClimbsSection: React.FC<ClimbsSectionProps> = ({ points, ftp, weigh
       <div className="wd-chart-card__head" style={{ marginBottom: 10 }}>
         <h3 style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Mountain size={16} color="#cbd5e1" />
-          Gedetecteerde beklimmingen ({climbs.length})
+          Detected Climbs ({climbs.length})
         </h3>
       </div>
 
@@ -77,7 +95,7 @@ export const ClimbsSection: React.FC<ClimbsSectionProps> = ({ points, ftp, weigh
         }}>
           <Brain size={16} color="#cbd5e1" style={{ flexShrink: 0, marginTop: 1 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: '#f8fafc' }}>AI Klimstijl: {climbingStyle.style} (gem. {climbingStyle.avgCadence} rpm)</span>
+            <span style={{ fontSize: 10, fontWeight: 800, color: '#f8fafc' }}>Climbing Style: {climbingStyle.style} (avg {climbingStyle.avgCadence} rpm)</span>
             <p style={{ fontSize: 10, color: '#cbd5e1', margin: 0, lineHeight: 1.4 }}>{climbingStyle.desc}</p>
           </div>
         </div>
@@ -100,15 +118,15 @@ export const ClimbsSection: React.FC<ClimbsSectionProps> = ({ points, ftp, weigh
             <div key={idx} className="rp-climb-card" style={{ borderLeftColor: color }}>
               <div style={{ flex: 1 }}>
                 <strong className="rp-climb-title">
-                  Klim {idx + 1}
+                  Climb {idx + 1}
                 </strong>
                 <span className="rp-climb-stats" style={{ display: 'block', marginTop: 2 }}>
                   {climb.lengthMeters >= 1000 ? `${(climb.lengthMeters / 1000).toFixed(1)} km` : `${climb.lengthMeters} m`} ·
-                  {' '}{climb.elevGain} hm ·
-                  {' '}Gem. {climb.avgGrade}%
+                  {' '}+{climb.elevGain}m ·
+                  {' '}Avg {climb.avgGrade}%
                 </span>
                 <span className="rp-climb-stats" style={{ display: 'block', color: 'var(--text-muted, #94a3b8)', marginTop: 2, fontSize: 10 }}>
-                  ⏱️ Tijd: <strong>{fmtTime(actualTimeSec)}</strong> (AI voorspelling: <strong style={{ color: '#cbd5e1' }}>{fmtTime(predictedSec)}</strong>)
+                  ⏱️ Time: <strong>{fmtTime(actualTimeSec)}</strong> (adaptive prediction: <strong style={{ color: '#cbd5e1' }}>{fmtTime(predictedSec)}</strong>)
                 </span>
               </div>
               <span className="rp-climb-badge" style={{ color: color, background: color + '15' }}>

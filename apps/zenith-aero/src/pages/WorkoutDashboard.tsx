@@ -4,9 +4,10 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
 } from 'recharts';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { deleteRide, getAllGear } from '../utils/db';
 import {
-  Ride, FitnessProfile, POWER_ZONES, Gear,
+  Ride, FitnessProfile, POWER_ZONES, Gear, RIDE_LABELS,
 } from '../types/workout';
 import HeatmapView from './HeatmapView';
 import { Bike } from 'lucide-react';
@@ -51,7 +52,7 @@ type SortKey    = 'date' | 'distance' | 'duration' | 'tss' | 'eftp' | 'elevGain'
 type LabelFilter = any;
 
 function TrendBadge({ value }: { value: number }) {
-  if (Math.abs(value) < 0.5) return <span className="wd-trend wd-trend--flat">→ Stabiel</span>;
+  if (Math.abs(value) < 0.5) return <span className="wd-trend wd-trend--flat">→ Stable</span>;
   return value > 0
     ? <span className="wd-trend wd-trend--up">↑ {value.toFixed(1)}%</span>
     : <span className="wd-trend wd-trend--down">↓ {Math.abs(value).toFixed(1)}%</span>;
@@ -214,7 +215,7 @@ const WorkoutDashboard: React.FC<Props> = ({
   const seasonData = useMemo(() => {
     const thisYear = new Date().getFullYear();
     const lastYear = thisYear - 1;
-    const months   = ['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
+    const months   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return months.map((m, idx) => {
       const thisKm = rides.filter(r => {
         const d = new Date(r.date);
@@ -242,7 +243,7 @@ const WorkoutDashboard: React.FC<Props> = ({
         <div className="wd-empty-icon"><Bike size={52} color="#cbd5e1" strokeWidth={1.5} /></div>
         <h2>No rides</h2>
         <p style={{ marginBottom: 16, color: '#94a3b8', fontSize: 13 }}>
-          Import a FIT, GPX or TCX file via the button <strong style={{ color: '#fff' }}>Import Ride</strong> in the header bar above to view your activitytiviteitengeschiedenis te laden.
+          Import a FIT, GPX or TCX file via the button <strong style={{ color: '#fff' }}>Import Ride</strong> in the header bar above to view your activity history.
         </p>
       </div>
     );
@@ -251,9 +252,10 @@ const WorkoutDashboard: React.FC<Props> = ({
       case 'dashboard': {
         const latestRide = rides[0];
         const getLatestRideAISummary = (r: RideSummaryWithBests) => {
-          const isZwaar = (r.tss ?? r.hrTSS ?? 0) > 150;
-          const labelStr = r.label ? `een ${r.label.toLowerCase()}` : 'een fietstraining';
-          return `Your last ride was ${labelStr} of ${r.distance.toFixed(0)} km with ${r.elevGain}m elevation meters. ${isZwaar ? 'This was a heavy workload for your body - make sure to get adequate recovery!' : 'This was an excellent active workout.'}`;
+          const isHeavy = (r.tss ?? r.hrTSS ?? 0) > 150;
+          const labelLower = RIDE_LABELS.find(rl => rl.key === r.label)?.label.toLowerCase();
+          const labelStr = labelLower ? `a ${labelLower}${labelLower.includes('ride') ? '' : ' ride'}` : 'a cycling workout';
+          return `Your last ride was ${labelStr} of ${r.distance.toFixed(0)} km with ${r.elevGain}m elevation meters. ${isHeavy ? 'This was a heavy workload for your body - make sure to get adequate recovery!' : 'This was an excellent active workout.'}`;
         };
         return (
           <div className="wd-main-grid animate-slide-up">
@@ -272,7 +274,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                 <span className="wd-dashboard-card__value">{totalDist.toFixed(0)} km</span>
               </div>
               <div className="wd-dashboard-card">
-                <span className="wd-dashboard-card__label">Tijd</span>
+                <span className="wd-dashboard-card__label">Time</span>
                 <span className="wd-dashboard-card__value">{Math.round(totalDur / 3600)} hours</span>
               </div>
               <div className="wd-dashboard-card">
@@ -281,7 +283,7 @@ const WorkoutDashboard: React.FC<Props> = ({
               </div>
               <div className="wd-dashboard-card">
                 <span className="wd-dashboard-card__label">Calories</span>
-                <span className="wd-dashboard-card__value">{totalCal > 0 ? `${totalCal.toLocaleString()} kcal` : '--'}</span>
+                <span className="wd-dashboard-card__value">{totalCal > 0 ? `${totalCal.toLocaleString('en-US')} kcal` : '--'}</span>
               </div>
             </div>
 
@@ -307,7 +309,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                         <div style={{ fontSize: 13, fontWeight: 800, color: '#cbd5e1' }}>{latestRide.distance.toFixed(1)} km</div>
                       </div>
                       <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
-                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Gem. Power</div>
+                        <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Avg. Power</div>
                         <div style={{ fontSize: 13, fontWeight: 800, color: '#fdcb6e' }}>{latestRide.hasPower ? `${latestRide.avgPower} W` : '--'}</div>
                       </div>
                       <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
@@ -321,7 +323,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  {/* Route & Kaart Preview */}
+                  {/* Route & Map Preview */}
                   {latestRideFull && (
                     <div style={{ flex: '1 1 250px', minHeight: 160, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.04)', position: 'relative' }}>
                       <MiniRoutePreview points={latestRideFull.points} />
@@ -331,11 +333,11 @@ const WorkoutDashboard: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* 3. Wekelijkse TSS, Intensiteitverdeling en Trend Analysis */}
+            {/* 3. Weekly TSS, Intensity Distribution and Trend Analysis */}
             <div className="wd-dashboard-row" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '16px' }}>
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">📈 Wekelijkse TSS Load</span>
+                  <span className="wd-section-card__title">📈 Weekly TSS Load</span>
                 </div>
                 {tssData.length === 0 ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, fontSize: 11, color: '#555' }}>Not enough data</div>
@@ -348,20 +350,20 @@ const WorkoutDashboard: React.FC<Props> = ({
                           <stop offset="95%" stopColor="#ff7675" stopOpacity={0.0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                      <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#64748b' }} />
-                      <YAxis tick={{ fontSize: 9, fill: '#64748b' }} />
-                      <Tooltip contentStyle={{ background: '#111318', border: 'none', borderRadius: 8, fontSize: 11 }} />
+                      <CartesianGrid {...ZENITH_CHART_GRID} />
+                      <XAxis dataKey="date" tick={ZENITH_CHART_AXIS_TICK} />
+                      <YAxis tick={ZENITH_CHART_AXIS_TICK} />
+                      <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
                       <Area type="monotone" dataKey="tss" stroke="#ff7675" strokeWidth={2} fillOpacity={1} fill="url(#colorTss)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
               </div>
 
-              {/* Intensiteit verdeling */}
+              {/* Intensity distribution */}
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">⚡ Trainingszones (Power)</span>
+                  <span className="wd-section-card__title">⚡ Training Zones (Power)</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', height: '100%', paddingBottom: 10 }}>
                   {globalZonePower.length === 0 ? (
@@ -390,7 +392,7 @@ const WorkoutDashboard: React.FC<Props> = ({
               {/* EF / Cardiac Efficiency Trend Analysis */}
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">🫀 Aerobe Efficiëntietrend (EF)</span>
+                  <span className="wd-section-card__title">🫀 Aerobic Efficiency Trend (EF)</span>
                   {efTrend && <TrendBadge value={efTrend.trend} />}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -409,10 +411,10 @@ const WorkoutDashboard: React.FC<Props> = ({
                             <stop offset="95%" stopColor="#cbd5e1" stopOpacity={0.0}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                        <XAxis dataKey="date" tick={{ fontSize: 8, fill: '#64748b' }} />
-                        <YAxis tick={{ fontSize: 8, fill: '#64748b' }} domain={['auto', 'auto']} />
-                        <Tooltip contentStyle={{ background: '#111318', border: 'none', borderRadius: 8, fontSize: 10 }} />
+                        <CartesianGrid {...ZENITH_CHART_GRID} />
+                        <XAxis dataKey="date" tick={ZENITH_CHART_AXIS_TICK} />
+                        <YAxis tick={ZENITH_CHART_AXIS_TICK} domain={['auto', 'auto']} />
+                        <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
                         <Area type="monotone" dataKey="ef" stroke="#cbd5e1" strokeWidth={2} fillOpacity={1} fill="url(#colorEf)" />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -421,24 +423,25 @@ const WorkoutDashboard: React.FC<Props> = ({
               </div>
             </div>
 
-            {/* 4. Monthelijkse Statistics, Cadence Analysis en Seizoensvergelijking */}
+            {/* 4. Monthly Statistics, Cadence Analysis and Season Comparison */}
             <div className="wd-dashboard-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.3fr', gap: '16px' }}>
-              
-              {/* Monthelijkse stats */}
+
+              {/* Monthly stats */}
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">📅 Monthelijkse Statistics</span>
+                  <span className="wd-section-card__title">📅 Monthly Statistics</span>
                 </div>
                 {monthData.length === 0 ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, fontSize: 11, color: '#555' }}>No data</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={160}>
                     <BarChart data={monthData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                      <XAxis dataKey="month" tick={{ fontSize: 8, fill: '#64748b' }} />
-                      <YAxis tick={{ fontSize: 8, fill: '#64748b' }} />
+                      <CartesianGrid {...ZENITH_CHART_GRID} />
+                      <XAxis dataKey="month" tick={ZENITH_CHART_AXIS_TICK} />
+                      <YAxis tick={ZENITH_CHART_AXIS_TICK} />
                       <Tooltip
-                        contentStyle={{ background: '#111318', border: 'none', borderRadius: 8, fontSize: 10 }}
+                        contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                        labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                         formatter={(v: any) => [`${Math.round(v)} km`, 'Distance']}
                       />
                       <Bar dataKey="distance" fill="rgba(203, 213, 225, 0.4)">
@@ -451,14 +454,14 @@ const WorkoutDashboard: React.FC<Props> = ({
                 )}
               </div>
 
-              {/* Cadence analyse */}
+              {/* Cadence analysis */}
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">🔄 Cadence Stabiliteit</span>
+                  <span className="wd-section-card__title">🔄 Cadence Stability</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <p style={{ fontSize: 10, color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>
-                    Grafiek toont je gemiddelde trapfrequentie per ride. Optimale cadans ligt tussen 85–95 RPM.
+                    Chart shows your average pedaling cadence per ride. Optimal cadence lies between 85–95 RPM.
                   </p>
                   {cadData.length < 3 ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 110, fontSize: 11, color: '#555' }}>Not enough cadence data</div>
@@ -471,10 +474,10 @@ const WorkoutDashboard: React.FC<Props> = ({
                             <stop offset="95%" stopColor="#39ff14" stopOpacity={0.0}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                        <XAxis dataKey="date" tick={{ fontSize: 8, fill: '#64748b' }} />
-                        <YAxis tick={{ fontSize: 8, fill: '#64748b' }} domain={[60, 110]} />
-                        <Tooltip contentStyle={{ background: '#111318', border: 'none', borderRadius: 8, fontSize: 10 }} />
+                        <CartesianGrid {...ZENITH_CHART_GRID} />
+                        <XAxis dataKey="date" tick={ZENITH_CHART_AXIS_TICK} />
+                        <YAxis tick={ZENITH_CHART_AXIS_TICK} domain={[60, 110]} />
+                        <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
                         <Area type="monotone" dataKey="rpm" stroke="#39ff14" strokeWidth={2} fillOpacity={1} fill="url(#colorCad)" />
                       </AreaChart>
                     </ResponsiveContainer>
@@ -482,21 +485,22 @@ const WorkoutDashboard: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Seizoensvergelijking */}
+              {/* Season comparison */}
               <div className="wd-section-card">
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">📅 Vergelijking t.o.v. Vorig Year (Distance)</span>
+                  <span className="wd-section-card__title">📅 Comparison vs. Last Year (Distance)</span>
                 </div>
                 {seasonData.length === 0 ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, fontSize: 11, color: '#555' }}>No data</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={160}>
                     <BarChart data={seasonData} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                      <XAxis dataKey="month" tick={{ fontSize: 8, fill: '#64748b' }} />
-                      <YAxis tick={{ fontSize: 8, fill: '#64748b' }} />
+                      <CartesianGrid {...ZENITH_CHART_GRID} />
+                      <XAxis dataKey="month" tick={ZENITH_CHART_AXIS_TICK} />
+                      <YAxis tick={ZENITH_CHART_AXIS_TICK} />
                       <Tooltip
-                        contentStyle={{ background: '#111318', border: 'none', borderRadius: 8, fontSize: 10 }}
+                        contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                        labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                         formatter={(v: any, name: any) => [`${v} km`, name === 'thisYear' ? String(new Date().getFullYear()) : String(new Date().getFullYear() - 1)]}
                       />
                       <Bar dataKey="lastYear"  fill="rgba(255,255,255,0.12)" radius={[2,2,0,0]} />
@@ -616,8 +620,8 @@ const WorkoutDashboard: React.FC<Props> = ({
             borderRadius: '50%',
             animation: 'spin 1s linear infinite'
           }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>AI Modellen Kalibreren...</span>
-          <span style={{ fontSize: 10, color: '#64748b' }}>Historische rides analyseren & zones bijwerken</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>AI Models Calibrating...</span>
+          <span style={{ fontSize: 10, color: '#64748b' }}>Analyzing historical rides & updating zones</span>
         </div>
       )}
     </div>

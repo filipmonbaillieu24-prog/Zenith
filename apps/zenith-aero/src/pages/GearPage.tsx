@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Bike, Plus, Trash2, ShieldAlert, Wrench, Calendar, Check
+  Bike, Plus, Trash2, ShieldAlert, Wrench, Calendar, Check, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import { FitnessProfile, Gear, GearComponent } from '../types/workout';
 import { getAllGear, saveGear, deleteGear } from '../utils/db';
@@ -72,7 +72,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
     loadData();
   }, []);
 
-  // Fiets opslaan
+  // Save bike
   const handleAddGear = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!gearName.trim()) return;
@@ -115,7 +115,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
 
   // Delete Bike
   const handleDeleteGear = async (id: string) => {
-    if (confirm('Are you sure you want to deze fiets wilt delete?')) {
+    if (confirm('Are you sure you want to delete this bike?')) {
       await deleteGear(id);
       loadData();
     }
@@ -162,21 +162,21 @@ export const GearPage: React.FC<GearPageProps> = () => {
     loadData();
   };
 
-  // Component kilometerstand resetten (vervangen)
+  // Reset component mileage (replace)
   const handleResetComponent = async (gearId: string, compId: string) => {
     const gear = gears.find(g => g.id === gearId);
     if (!gear) return;
     const comp = gear.components.find(c => c.id === compId);
     if (!comp) return;
 
-    if (confirm(`Are you sure you want to reset the mileage of ${comp.name} wilt reset? (This archives the current distance in history)`)) {
+    if (confirm(`Are you sure you want to reset the mileage of ${comp.name}? (This archives the current distance in history)`)) {
       const updatedComponents = gear.components.map(c => {
         if (c.id === compId) {
           const history = c.history ?? [];
           return {
             ...c,
             distance: 0,
-            installedAt: Date.now(),  // Na reset telt vanaf nu
+            installedAt: Date.now(),  // After reset counts from now
             history: [...history, { date: Date.now(), distance: c.distance }]
           };
         }
@@ -202,7 +202,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
     return (
       <div className="gp-main-content gp-loading">
         <div className="wd-spinner" />
-        <p>Materiaaltracker laden…</p>
+        <p>Equipment tracker loading…</p>
       </div>
     );
   }
@@ -224,39 +224,39 @@ export const GearPage: React.FC<GearPageProps> = () => {
             <h3>Add New Bike</h3>
             <div className="gp-form-grid">
               <div className="gp-form-group">
-                <label>Naam *</label>
-                <input type="text" placeholder="bijv. Specialized Tarmac" value={gearName} onChange={e => setGearName(e.target.value)} required />
+                <label>Name *</label>
+                <input type="text" placeholder="e.g. Specialized Tarmac" value={gearName} onChange={e => setGearName(e.target.value)} required />
               </div>
               <div className="gp-form-group">
                 <label>Ride Type</label>
                 <select value={gearType} onChange={e => setGearType(e.target.value as any)}>
-                  <option value="road">Racefiets / Weg</option>
+                  <option value="road">Road bike / Road</option>
                   <option value="gravel">Gravelbike</option>
                   <option value="mtb">MTB / Offroad</option>
-                  <option value="other">Overig</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
               <div className="gp-form-group">
-                <label>Merk</label>
-                <input type="text" placeholder="bijv. Specialized" value={gearBrand} onChange={e => setGearBrand(e.target.value)} />
+                <label>Brand</label>
+                <input type="text" placeholder="e.g. Specialized" value={gearBrand} onChange={e => setGearBrand(e.target.value)} />
               </div>
               <div className="gp-form-group">
                 <label>Model</label>
-                <input type="text" placeholder="bijv. SL8 Pro" value={gearModel} onChange={e => setGearModel(e.target.value)} />
+                <input type="text" placeholder="e.g. SL8 Pro" value={gearModel} onChange={e => setGearModel(e.target.value)} />
               </div>
               <div className="gp-form-group">
                 <label>Weight (kg)</label>
-                <input type="number" step="0.1" placeholder="bijv. 7.2" value={gearWeight} onChange={e => setGearWeight(e.target.value)} />
+                <input type="number" step="0.1" placeholder="e.g. 7.2" value={gearWeight} onChange={e => setGearWeight(e.target.value)} />
               </div>
             </div>
             <div className="gp-form-actions">
               <button type="button" className="gp-cancel-btn" onClick={() => setShowAddGear(false)}>Cancel</button>
-              <button type="submit" className="gp-submit-btn">Fiets Save</button>
+              <button type="submit" className="gp-submit-btn">Save Bike</button>
             </div>
           </form>
         )}
 
-        {/* Fietsen lijst */}
+        {/* Bikes list */}
         <div className="gp-grid">
           {gears.map(g => (
             <div key={g.id} className="gp-card animate-slide-up">
@@ -277,11 +277,11 @@ export const GearPage: React.FC<GearPageProps> = () => {
                   {g.components.some(c => c.installedAt > 0) && (
                     <button
                       className="gp-comp-reset-btn"
-                      style={{ background: 'rgba(203, 213, 225,0.07)', borderColor: 'rgba(203, 213, 225,0.25)', color: '#cbd5e1', fontSize: 10 }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(203, 213, 225,0.07)', borderColor: 'rgba(203, 213, 225,0.25)', color: '#cbd5e1', fontSize: 10 }}
                       onClick={() => handleSyncAllComponents(g.id)}
                       title="Synchronize all components with all rides of this bike"
                     >
-                      🔄 Sync all km
+                      <RefreshCw size={11} strokeWidth={1.8} /> Sync all km
                     </button>
                   )}
                   <button className="gp-delete-btn" onClick={() => handleDeleteGear(g.id)} title="Delete Bike">
@@ -290,10 +290,10 @@ export const GearPage: React.FC<GearPageProps> = () => {
                 </div>
               </div>
 
-              {/* Onderdelen lijst */}
+              {/* Components list */}
               <div className="gp-components-box">
                 <div className="gp-comp-header">
-                  <h4>Componenten & Slijtage</h4>
+                  <h4>Components & Wear</h4>
                   <button className="gp-add-comp-toggle-btn" onClick={() => setActiveGearForAddComp(activeGearForAddComp === g.id ? null : g.id)}>
                     <Plus size={12} style={{ marginRight: 4 }} /> Add Component
                   </button>
@@ -306,7 +306,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                     background: 'rgba(253,203,110,0.06)', border: '1px solid rgba(253,203,110,0.2)',
                     borderRadius: 7, padding: '7px 10px', marginBottom: 8, fontSize: 10,
                   }}>
-                    <span style={{ flexShrink: 0 }}>⚠️</span>
+                    <AlertTriangle size={13} style={{ flexShrink: 0, color: '#fdcb6e', marginTop: 1 }} />
                     <span style={{ color: '#fdcb6e', lineHeight: 1.4 }}>
                       <strong>Component mileage differs from total bike distance.</strong> This occurs when component installation date is
                       later than the first ride. Click <em>Sync all km</em> to include all rides.
@@ -317,7 +317,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                 {/* Inline add component form */}
                 {activeGearForAddComp === g.id && (
                   <div className="gp-add-comp-form animate-slide-up">
-                    <input type="text" placeholder="Onderdeel (bijv. Cassette, Chain)" value={compName} onChange={e => setCompName(e.target.value)} required />
+                    <input type="text" placeholder="Component (e.g. Cassette, Chain)" value={compName} onChange={e => setCompName(e.target.value)} required />
                     <input type="number" placeholder="Threshold (km)" value={compMaxDist} onChange={e => setCompMaxDist(e.target.value)} required />
                     <button type="button" onClick={() => handleAddComponent(g.id)}><Check size={14} /></button>
                   </div>
@@ -337,20 +337,21 @@ export const GearPage: React.FC<GearPageProps> = () => {
                                 <button
                                   type="button"
                                   className="gp-comp-reset-btn"
-                                  style={{ background: 'rgba(203, 213, 225,0.06)', borderColor: 'rgba(203, 213, 225,0.2)', color: '#cbd5e1' }}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(203, 213, 225,0.06)', borderColor: 'rgba(203, 213, 225,0.2)', color: '#cbd5e1' }}
                                   onClick={() => handleSyncComponentToAllRides(g.id, c.id)}
                                   title="Synchronize with all rides (reset installation date to start)"
                                 >
-                                  🔄 Sync all km
+                                  <RefreshCw size={11} strokeWidth={1.8} /> Sync all km
                                 </button>
                               )}
                               <button
                                 type="button"
                                 className="gp-comp-reset-btn"
                                 onClick={() => handleResetComponent(g.id, c.id)}
-                                title="Onderdeel vervangen (kilometerstand resetten)"
+                                title="Replace component (reset mileage)"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
                               >
-                                🔧 Vervang
+                                <Wrench size={11} strokeWidth={1.8} /> Replace
                               </button>
                             </div>
                           </div>
@@ -359,13 +360,13 @@ export const GearPage: React.FC<GearPageProps> = () => {
                             {c.distance.toFixed(0)} / {c.maxDistance} km ({pct}%)
                             {c.installedAt > 0 && (
                               <span style={{ fontSize: 9, color: '#475569', marginLeft: 6 }}>
-                                · sinds {new Date(c.installedAt).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: '2-digit' })}
+                                · since {new Date(c.installedAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' })}
                               </span>
                             )}
                           </span>
                         </div>
 
-                        {/* Slijtage progressbar */}
+                        {/* Wear progress bar */}
                         <div className="gp-progress-bg">
                           <div
                             className="gp-progress-fill"
@@ -376,14 +377,14 @@ export const GearPage: React.FC<GearPageProps> = () => {
                           />
                         </div>
 
-                        {/* Onderhoudshistorie logboek */}
+                        {/* Maintenance history log */}
                         {c.history && c.history.length > 0 && (
                           <div className="gp-comp-history">
                             <Calendar size={10} style={{ color: '#475569', marginRight: 4 }} />
-                            <span style={{ color: '#475569' }}>Historie:</span>
+                            <span style={{ color: '#475569' }}>History:</span>
                             {c.history.map((h, hidx) => (
                               <span key={hidx} className="gp-history-tag">
-                                {new Date(h.date).toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' })} ({h.distance.toFixed(0)} km)
+                                {new Date(h.date).toLocaleDateString('en-US', { day: '2-digit', month: '2-digit' })} ({h.distance.toFixed(0)} km)
                               </span>
                             ))}
                           </div>

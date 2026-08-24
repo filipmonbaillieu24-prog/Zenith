@@ -95,20 +95,21 @@ export function computeSimulatedPMC(
   plannedWorkouts: PlannedWorkoutItem[],
   futureDaysCount: number = 30
 ): SimulatedPMCPoint[] {
-  const tssPerDay = new Map<string, { historical: number; planned: number }>();
+  const tssPerDay = new Map<string, { historical: number; planned: number; hasPlanned: boolean }>();
 
   // Add historical rides
   for (const r of rideTSSList) {
     const key = toDateKey(r.date);
-    const existing = tssPerDay.get(key) ?? { historical: 0, planned: 0 };
+    const existing = tssPerDay.get(key) ?? { historical: 0, planned: 0, hasPlanned: false };
     existing.historical += r.tss;
     tssPerDay.set(key, existing);
   }
 
   // Add planned workouts
   for (const p of plannedWorkouts) {
-    const existing = tssPerDay.get(p.date) ?? { historical: 0, planned: 0 };
+    const existing = tssPerDay.get(p.date) ?? { historical: 0, planned: 0, hasPlanned: false };
     existing.planned += p.plannedTSS;
+    existing.hasPlanned = true;
     tssPerDay.set(p.date, existing);
   }
 
@@ -126,6 +127,33 @@ export function computeSimulatedPMC(
 
   const todayStr = toDateKey(Date.now());
 
+  // Recent-average fallback for unplanned future days.
+  //
+  // Without this, any future day with no explicit planned_workouts row gets TSS=0,
+  // so the "+N day forecast" always decays toward zero the moment there's nothing
+  // planned — which is the common case for most athletes. That reads as "if you
+  // stop training entirely" rather than a useful forecast. Instead, default an
+  // unplanned future day's projected TSS to the athlete's own recent average daily
+  // load (last RECENT_AVG_LOOKBACK_DAYS calendar days of *actual* historical TSS,
+  // including rest days as 0 in the average), so the forecast reflects "if you keep
+  // training like you have been." Days with an explicit planned_workouts entry
+  // (even one planned at 0 TSS, e.g. a scheduled rest day) still take priority and
+  // are used as-is.
+  const RECENT_AVG_LOOKBACK_DAYS = 14;
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  let recentTssSum = 0;
+  let recentDayCount = 0;
+  for (let i = 0; i < RECENT_AVG_LOOKBACK_DAYS; i++) {
+    const d = new Date(todayDate);
+    d.setDate(d.getDate() - i);
+    if (d < firstDate) break; // don't look back further than we have any data for
+    const key = toDateKey(d.getTime());
+    recentTssSum += tssPerDay.get(key)?.historical ?? 0;
+    recentDayCount++;
+  }
+  const recentAvgTss = recentDayCount > 0 ? recentTssSum / recentDayCount : 0;
+
   const points: SimulatedPMCPoint[] = [];
   let ctl = 0;
   let atl = 0;
@@ -134,12 +162,13 @@ export function computeSimulatedPMC(
   while (cur <= maxFutureDate) {
     const key = toDateKey(cur.getTime());
     const dayData = tssPerDay.get(key);
-    
+
     // For past/today: use historical TSS if available, else fallback to planned
-    // For future: use planned TSS
+    // For future: use planned TSS if a workout is explicitly planned for that day,
+    // otherwise default to the recent-average load rather than 0 (see above).
     const isFuture = key > todayStr;
-    const tss = isFuture 
-      ? (dayData?.planned ?? 0)
+    const tss = isFuture
+      ? (dayData?.hasPlanned ? dayData.planned : recentAvgTss)
       : (dayData?.historical && dayData.historical > 0 ? dayData.historical : (dayData?.planned ?? 0));
 
     ctl = ctl + K_CTL * (tss - ctl);

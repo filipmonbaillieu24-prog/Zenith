@@ -1,9 +1,9 @@
 // ─── Core data types for workout tracking ────────────────────────────────────
 
 export interface NeuralAnalysis {
-  fatigue: number;  // 0 t/m 1 (spiervermoeidheid / stijfheid)
-  recovery: number; // 0 t/m 1 (fitheid / frisheid)
-  illness: number;  // 0 t/m 1 (ziekte / acute pijn)
+  fatigue: number;  // 0 to 1 (muscle fatigue / stiffness)
+  recovery: number; // 0 to 1 (fitness / freshness)
+  illness: number;  // 0 to 1 (illness / acute pain)
 }
 
 /**
@@ -63,7 +63,7 @@ export interface RideSummary {
   tss?:             number;   // Training Stress Score (power-based)
   intensityFactor?: number;   // IF = NP / FTP
   eFTP?:            number;   // W — eFTP at time of ride
-  isEstimatedPower?: boolean; // of het vermogen is geschat
+  isEstimatedPower?: boolean; // whether the power value is estimated
 
   // Heart rate (optional — only if HR sensor present)
   avgHR?:           number;   // bpm
@@ -85,7 +85,7 @@ export interface RideSummary {
   // Calories (kcal)
   calories?:        number;
 
-  // Rate of Perceived Exertion (Inspanning 1-10)
+  // Rate of Perceived Exertion (Effort 1-10)
   rpe?:             number;
 
   // Pacing & fatigue
@@ -100,17 +100,17 @@ export interface RideSummary {
   // Heart rate recovery
   hrRecovery60?:    number;    // bpm drop in 60s after peak HR — higher = fitter
 
-  // Geavanceerde progressie metrics (Fase 2)
-  phenotype?:             string;    // Fysiologische classificatie: Sprinter, Puncheur, Tijdridespecialist, Climber
-  kjTotal?:               number;    // Totale energieverbruik in kJ
-  fresh5minPower?:        number;    // Beste 5 min vermogen (fris, <1000 kJ)
-  fatigued5minPower?:     number;    // Beste 5 min vermogen (vermoeid, >=1000 kJ)
-  fresh20minPower?:       number;    // Beste 20 min vermogen (fris, <1000 kJ)
-  fatigued20minPower?:    number;    // Beste 20 min vermogen (vermoeid, >=1000 kJ)
-  cardiacCost?:           number;    // Cardiale kosten per meter (beats/meter)
-  climbingAvgHR?:         number;    // Averagee hartslag tijdens beklimmingen
-  activeHRDecayRate?:     number;    // Speed van hartslagherstel tijdens actieve rust (bpm/min)
-  cadenceEfficiencySweetspot?: number; // Optimale cadans with laagste hartslag/vermogen ratio
+  // Advanced progression metrics (Phase 2)
+  phenotype?:             string;    // Physiological classification: Sprinter, Puncheur, Time Trial Specialist, Climber
+  kjTotal?:               number;    // Total energy expenditure in kJ
+  fresh5minPower?:        number;    // Best 5 min power (fresh, <1000 kJ)
+  fatigued5minPower?:     number;    // Best 5 min power (fatigued, >=1000 kJ)
+  fresh20minPower?:       number;    // Best 20 min power (fresh, <1000 kJ)
+  fatigued20minPower?:    number;    // Best 20 min power (fatigued, >=1000 kJ)
+  cardiacCost?:           number;    // Cardiac cost per meter (beats/meter)
+  climbingAvgHR?:         number;    // Average heart rate during climbs
+  activeHRDecayRate?:     number;    // Speed of heart rate recovery during active rest (bpm/min)
+  cadenceEfficiencySweetspot?: number; // Optimal cadence with lowest heart rate/power ratio
 
   // User-added metadata
   notes?:   string;   // free-text notes per ride
@@ -129,7 +129,7 @@ export interface RideSummary {
   hasPower: boolean;
   hasHR:    boolean;
   hasGPS:   boolean;
-  gearId?:  string; // gekoppelde gear
+  gearId?:  string; // linked gear
   aiAnalysis?: NeuralAnalysis;
   discipline?: 'road' | 'gravel' | 'mtb';
 }
@@ -171,7 +171,7 @@ export interface FitnessProfile {
   birthDate?: string;   // ISO date (YYYY-MM-DD) — age is derived from this
   height?:    number;   // cm — used for BMI
   weight?:    number;   // kg — used for W/kg and BMI
-  weightHistory?: WeightEntry[]; // gewichtshistorie over tijd
+  weightHistory?: WeightEntry[]; // weight history over time
 
   // Training thresholds (manual or auto-estimated)
   ftp?:       number;   // W — Functional Threshold Power
@@ -216,7 +216,7 @@ export const POWER_ZONES: PowerZone[] = [
   { zone: 1, name: 'Active Recovery',      color: '#74b9ff', minPct:   0, maxPct:  55 },
   { zone: 2, name: 'Endurance', color: '#00b894', minPct:  56, maxPct:  75 },
   { zone: 3, name: 'Tempo',               color: '#fdcb6e', minPct:  76, maxPct:  90 },
-  { zone: 4, name: 'Lactaatdrempel',      color: '#e17055', minPct:  91, maxPct: 105 },
+  { zone: 4, name: 'Threshold',           color: '#e17055', minPct:  91, maxPct: 105 },
   { zone: 5, name: 'VO2max',              color: '#d63031', minPct: 106, maxPct: 120 },
   { zone: 6, name: 'Anaerobic',            color: '#6c5ce7', minPct: 121, maxPct: 999 },
 ];
@@ -225,7 +225,7 @@ export const HR_ZONES: HRZone[] = [
   { zone: 1, name: 'Active Recovery',      color: '#74b9ff', minPct:   0, maxPct:  68 },
   { zone: 2, name: 'Endurance', color: '#00b894', minPct:  69, maxPct:  83 },
   { zone: 3, name: 'Tempo',               color: '#fdcb6e', minPct:  84, maxPct:  94 },
-  { zone: 4, name: 'Lactaatdrempel',      color: '#e17055', minPct:  95, maxPct: 105 },
+  { zone: 4, name: 'Threshold',           color: '#e17055', minPct:  95, maxPct: 105 },
   { zone: 5, name: 'VO2max',              color: '#d63031', minPct: 106, maxPct: 999 },
 ];
 
@@ -255,21 +255,21 @@ export type RideSummaryWithBests = Omit<Ride, 'points'>;
 
 export interface Gear {
   id:          string;
-  name:        string; // bijv. "Specialized Tarmac"
+  name:        string; // e.g. "Specialized Tarmac"
   type:        'road' | 'gravel' | 'mtb' | 'other';
   brand?:      string;
   model?:      string;
   weight?:     number; // kg
-  distance:    number; // cumulatieve km
+  distance:    number; // cumulative km
   active:      boolean;
   components:  GearComponent[];
 }
 
 export interface GearComponent {
   id:          string;
-  name:        string; // bijv. "Chain", "Achterband"
-  distance:    number; // km sinds installatie
-  maxDistance: number; // onderhoudsinterval in km
+  name:        string; // e.g. "Chain", "Rear tire"
+  distance:    number; // km since installation
+  maxDistance: number; // maintenance interval in km
   installedAt: number; // timestamp ms
   notes?:      string;
   history?:    GearMaintenanceRecord[];
@@ -277,5 +277,5 @@ export interface GearComponent {
 
 export interface GearMaintenanceRecord {
   date:     number;
-  distance: number; // km stand op moment van vervanging
+  distance: number; // km reading at time of replacement
 }

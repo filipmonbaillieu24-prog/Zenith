@@ -162,10 +162,10 @@ export function RoutePage({
               style={{
                 width: '100%', background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)',
                 border: 'none', borderRadius: 8, color: '#09090b', fontSize: 11, fontWeight: 800,
-                padding: '8px 0', cursor: 'pointer', fontFamily: 'inheride'
+                padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit'
               }}
             >
-              Save & Plan in kalender
+              Save & Plan in calendar
             </button>
           </div>
         )}
@@ -184,7 +184,7 @@ export function RoutePage({
             boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
           }}>
             <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 800, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Workout & Route Bevestigen
+              Confirm Workout & Route
             </h3>
             
             {/* Route Stats */}
@@ -198,7 +198,7 @@ export function RoutePage({
                 <div style={{ fontSize: 15, fontWeight: 800, color: '#cbd5e1' }}>{activeRoute.stats.elevationGain} m</div>
               </div>
               <div style={{ gridColumn: 'span 2' }}>
-                <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Geschatte Duur</div>
+                <div style={{ fontSize: 9, color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Estimated Duration</div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#cbd5e1' }}>
                   {Math.round(activeRoute.stats.duration / 60)} min
                 </div>
@@ -207,14 +207,14 @@ export function RoutePage({
 
             {/* Date Selector */}
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 10, color: '#94a3b8', marginBottom: 6, fontWeight: 700 }}>PLAN DATUM</label>
+              <label style={{ display: 'block', fontSize: 10, color: '#94a3b8', marginBottom: 6, fontWeight: 700 }}>PLAN DATE</label>
               <input 
                 type="date" 
                 value={selectedDate}
                 onChange={e => setSelectedDate(e.target.value)}
                 style={{
                   width: '100%', background: '#09090b', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8, padding: '8px 12px', color: '#f8fafc', fontSize: 12, fontFamily: 'inheride',
+                  borderRadius: 8, padding: '8px 12px', color: '#f8fafc', fontSize: 12, fontFamily: 'inherit',
                   boxSizing: 'border-box'
                 }}
               />
@@ -228,7 +228,7 @@ export function RoutePage({
                 style={{
                   flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 8, padding: '10px 0', color: '#94a3b8', cursor: 'pointer',
-                  fontSize: 11, fontWeight: 700, fontFamily: 'inheride'
+                  fontSize: 11, fontWeight: 700, fontFamily: 'inherit'
                 }}
               >
                 Cancel
@@ -253,10 +253,10 @@ export function RoutePage({
                 style={{
                   flex: 1, background: 'linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%)',
                   border: 'none', borderRadius: 8, padding: '10px 0', color: '#09090b',
-                  cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'inheride'
+                  cursor: 'pointer', fontSize: 11, fontWeight: 800, fontFamily: 'inherit'
                 }}
               >
-                {isSaving ? 'Save...' : saveSuccess ? '✓ Opgeslagen' : 'Bevestig & Plan'}
+                {isSaving ? 'Save...' : saveSuccess ? '✓ Saved' : 'Confirm & Plan'}
               </button>
             </div>
           </div>
@@ -269,7 +269,7 @@ export function RoutePage({
         <div className="error-toast animate-slide-up">
           <AlertTriangle className="error-toast-icon" />
           <div className="error-toast-body">
-            <h4>Foutmelding</h4>
+            <h4>Error message</h4>
             <p>{error}</p>
           </div>
           <button className="error-toast-close" onClick={onCloseError}><X size={16} /></button>

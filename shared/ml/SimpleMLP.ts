@@ -8,6 +8,52 @@
  * - Async cloud sync for cross-device persistence
  */
 
+/**
+ * Deterministic, small per-neuron perturbation used to break weight symmetry when
+ * hand-initializing a hidden layer with a shared "prior" weight per input feature.
+ *
+ * Without this, every hidden neuron would receive the exact same incoming weights
+ * and bias, so with ReLU activations every neuron computes the same value and the
+ * same gradient forever (backprop cannot break this symmetry on its own). Applying
+ * a distinct-but-deterministic offset per neuron index `j` fixes that while keeping
+ * default weights fully reproducible across app loads (no Math.random()).
+ *
+ * Returns a small multiplier offset in roughly [-0.1, 0.1].
+ */
+export function neuronSymmetryBreak(j: number): number {
+  // Fixed pseudo-random-looking sequence, intentionally not monotonic/periodic-looking
+  // over small j so neighboring neurons don't end up with near-identical offsets.
+  const seq = [0.02, -0.08, 0.05, 0.09, -0.03, -0.06, 0.07, -0.01, 0.04, -0.09, 0.01, 0.06, -0.05, 0.08, -0.02];
+  return seq[j % seq.length];
+}
+
+/**
+ * Builds a default W1/B1 pair for a hidden layer given a per-input "prior" weight
+ * (the hand-picked heuristic magnitude for each input feature) and a base bias.
+ * Each hidden neuron gets the same intended prior in expectation, but with a small
+ * deterministic per-neuron perturbation so the hidden units are not identical
+ * (symmetry breaking) and can actually differentiate during training.
+ */
+export function buildSymmetryBrokenHiddenLayer(
+  priorWeightsByInput: number[],
+  hiddenSize: number,
+  baseBias: number = 0.05
+): { W1: number[][]; B1: number[] } {
+  const inputSize = priorWeightsByInput.length;
+  const W1: number[][] = Array.from({ length: inputSize }, () => new Array(hiddenSize).fill(0));
+  const B1: number[] = new Array(hiddenSize).fill(0);
+
+  for (let j = 0; j < hiddenSize; j++) {
+    const offset = neuronSymmetryBreak(j);
+    for (let i = 0; i < inputSize; i++) {
+      W1[i][j] = priorWeightsByInput[i] * (1 + offset);
+    }
+    B1[j] = baseBias + offset * 0.5;
+  }
+
+  return { W1, B1 };
+}
+
 export class SimpleMLP {
   W1: number[][];
   B1: number[];
@@ -74,6 +120,33 @@ export class SimpleMLP {
     }
 
     // 3. Keep default weights (from constructor)
+  }
+
+  /**
+   * Apply an already-fetched ml_weights row instead of querying Supabase directly —
+   * for callers that bulk-fetch several models' rows in a single query (one table
+   * scan instead of N concurrent per-model queries) and then hand each model its own
+   * row. Falls back to localStorage/defaults exactly like loadOrInit's non-Supabase
+   * path when no valid row is passed in, but never makes its own network request.
+   */
+  async loadFromPreloaded(supabase: any, userId: string, weights: any | null | undefined): Promise<void> {
+    if (weights && weights.W1 && weights.B1 && weights.W2 && weights.B2 &&
+        weights.W1.length === this.W1.length && weights.B1.length === this.B1.length) {
+      this.W1 = weights.W1;
+      this.B1 = weights.B1;
+      this.W2 = weights.W2;
+      this.B2 = weights.B2;
+      this._loaded = true;
+      this._cacheToLocalStorage();
+      return;
+    }
+
+    if (this._loadFromLocalStorage()) {
+      this._loaded = true;
+      this.saveToSupabase(supabase, userId).catch(() => {});
+      return;
+    }
+    // Keep default weights (from constructor).
   }
 
   /** Load weights from Supabase public.ml_weights table */

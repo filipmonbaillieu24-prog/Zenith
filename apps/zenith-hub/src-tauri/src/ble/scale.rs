@@ -10,7 +10,7 @@ pub async fn start_scale_ble_listener(app_handle: tauri::AppHandle) -> Result<()
     let manager = Manager::new().await?;
     let adapters = manager.adapters().await?;
     if adapters.is_empty() {
-        return Err("Geen Bluetooth-adapter gevonden".into());
+        return Err("No Bluetooth adapter found".into());
     }
     let adapter = &adapters[0];
 
@@ -22,7 +22,7 @@ pub async fn start_scale_ble_listener(app_handle: tauri::AppHandle) -> Result<()
     adapter.start_scan(ScanFilter::default()).await?;
     let mut events = adapter.events().await?;
 
-    log_ble("[System] Tauri Native Master BLE Listener gestart!");
+    log_ble("[System] Tauri Native Master BLE Listener started!");
 
     let cooldowns: Arc<Mutex<HashMap<btleplug::platform::PeripheralId, std::time::Instant>>> =
         Arc::new(Mutex::new(HashMap::new()));
@@ -57,7 +57,7 @@ pub async fn start_scale_ble_listener(app_handle: tauri::AppHandle) -> Result<()
 
                             if is_ring {
                                 log_ble(&format!(
-                                    "[Background Listener] Colmi Ring gedetecteerd! Naam='{}', Adres='{}'",
+                                    "[Background Listener] Colmi Ring detected! Name='{}' Address='{}'",
                                     name, address
                                 ));
                                 let mut cache_guard = crate::ble::LAST_DISCOVERED_RING.lock().await;
@@ -425,7 +425,7 @@ async fn handle_scale_connection(
 
             if is_stabilized && (rounded - last_emitted_weight).abs() > 0.01 {
                 last_emitted_weight = rounded;
-                log_ble(&format!("[EMIT-FINAL-WEIGHT] Stabiel gewicht vastgesteld: {:.2} kg", rounded));
+                log_ble(&format!("[EMIT-FINAL-WEIGHT] Stable weight determined: {:.2} kg", rounded));
 
                 #[derive(Clone, serde::Serialize)]
                 struct WeightPayload {
@@ -473,12 +473,12 @@ async fn handle_scale_connection(
         // End session after stable weight + impedance, or after stable weight + a few extra seconds
         if measurement_done {
             if decoded_impedance.is_some() || opcode == 0x23 {
-                log_ble(&format!("[Scale] t+{}ms Meting volledig. Verbinding verbreken...", elapsed_ms));
+                log_ble(&format!("[Scale] t+{}ms Measurement complete. Disconnecting...", elapsed_ms));
                 break;
             }
             // Give the scale 5 more seconds to send impedance data before disconnecting
             if start_time.elapsed() > std::time::Duration::from_secs(50) {
-                log_ble("[Scale] Timeout na stabiel gewicht. Verbinding verbreken...");
+                log_ble("[Scale] Timeout after stable weight. Disconnecting...");
                 break;
             }
         }

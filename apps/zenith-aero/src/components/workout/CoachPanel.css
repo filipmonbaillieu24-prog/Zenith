@@ -284,11 +284,11 @@
   flex-shrink: 0;
 }
 
-.wd-coach-cat-waarschuwing { background: rgba(255,118,117,0.12); color: #ff7675; border: 1px solid rgba(255,118,117,0.2); }
-.wd-coach-cat-training     { background: rgba(162,155,254,0.12); color: #a29bfe; border: 1px solid rgba(162,155,254,0.2); }
-.wd-coach-cat-progressie   { background: rgba(57,255,20,0.1);   color: #39ff14; border: 1px solid rgba(57,255,20,0.15); }
-.wd-coach-cat-herstel      { background: rgba(253,203,110,0.12); color: #fdcb6e; border: 1px solid rgba(253,203,110,0.2); }
-.wd-coach-cat-doel         { background: rgba(203, 213, 225,0.1);   color: #cbd5e1; border: 1px solid rgba(203, 213, 225,0.15); }
+.wd-coach-cat--warning     { background: rgba(255,118,117,0.12); color: #ff7675; border: 1px solid rgba(255,118,117,0.2); }
+.wd-coach-cat--training    { background: rgba(162,155,254,0.12); color: #a29bfe; border: 1px solid rgba(162,155,254,0.2); }
+.wd-coach-cat--progression { background: rgba(57,255,20,0.1);   color: #39ff14; border: 1px solid rgba(57,255,20,0.15); }
+.wd-coach-cat--recovery    { background: rgba(253,203,110,0.12); color: #fdcb6e; border: 1px solid rgba(253,203,110,0.2); }
+.wd-coach-cat--goal        { background: rgba(203, 213, 225,0.1);   color: #cbd5e1; border: 1px solid rgba(203, 213, 225,0.15); }
 
 .wd-coach-card__body {
   font-size: 12px;

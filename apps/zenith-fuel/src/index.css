@@ -12,7 +12,7 @@
   
   --color-carb: #ff9f43;     /* Orange */
   --color-protein: #a29bfe;  /* Lavender/Purple */
-  --color-fat: #fdcb6e;      /* Gold */
+  --color-fat: #f472b6;      /* Rose/Pink - kept distinct from the carb orange */
   
   --text-main: #f8fafc;
   --text-muted: #94a3b8;
@@ -85,7 +85,7 @@ body {
   position: relative;
   width: 100%;
   min-height: 100vh;
-  padding: 24px 32px;
+  padding: 0;
   box-sizing: border-box;
   z-index: 1;
 }

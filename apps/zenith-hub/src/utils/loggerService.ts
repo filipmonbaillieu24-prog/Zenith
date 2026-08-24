@@ -1,3 +1,5 @@
+import { isTrustedZenithOrigin } from '@zenith/shared';
+
 export interface LogEntry {
   id: string;
   timestamp: string;
@@ -44,17 +46,18 @@ class LoggerService {
 
   private initWindowPostMessageListener() {
     window.addEventListener('message', (event) => {
+      if (!isTrustedZenithOrigin(event.origin)) return;
       if (event.data && typeof event.data === 'object') {
         const { type } = event.data;
         if (type === 'native-weight-received') {
-          this.addLog('ble', 'Scale', `[Weegschaal] Weight received: ${event.data.weight} kg (Stable: ${event.data.is_stable ? 'Yes' : 'No'})`, event.data);
+          this.addLog('ble', 'Scale', `[Scale] Weight received: ${event.data.weight} kg (Stable: ${event.data.is_stable ? 'Yes' : 'No'})`, event.data);
         } else if (type === 'native-metrics-received') {
-          this.addLog('ble', 'Scale', `[Weegschaal] Lichaamsanalyse metrics ontvangen`, event.data);
+          this.addLog('ble', 'Scale', `[Scale] Body composition metrics received`, event.data);
         } else if (type === 'colmi-sync-status-update') {
           this.addLog('sync', 'Colmi', `[Colmi] Status Update: ${event.data.status || ''}`, event.data);
         } else if (type === 'colmi-sync-result') {
           if (event.data.success) {
-            this.addLog('sync', 'Colmi', `[Colmi] Synchronisatie succesvol afgerond`, event.data);
+            this.addLog('sync', 'Colmi', `[Colmi] Synchronization successfully completed`, event.data);
           } else {
             this.addLog('error', 'Colmi', `[Colmi] Synchronization error: ${event.data.error || 'Unknown'}`, event.data);
           }
@@ -74,7 +77,7 @@ class LoggerService {
           let category: LogEntry['category'] = 'BLE';
           if (text.includes('Colmi') || text.includes('Ring') || text.includes('0x43') || text.includes('0x44') || text.includes('0x27') || text.includes('0xBC')) {
             category = 'Colmi';
-          } else if (text.includes('Scale') || text.includes('weight') || text.includes('Weegschaal') || text.includes('Neo') || text.includes('Onyx') || text.includes('Yolanda')) {
+          } else if (text.includes('Scale') || text.includes('weight') || text.includes('Neo') || text.includes('Onyx') || text.includes('Yolanda')) {
             category = 'Scale';
           }
 
@@ -90,7 +93,7 @@ class LoggerService {
         listen<any>('native-weight-received', (event) => {
           const payload = event.payload;
           if (payload && payload.weight) {
-            this.addLog('ble', 'Scale', `[Weegschaal] Native BLE Gewichtsmeasurement: ${payload.weight} kg (Stabiel: ${payload.is_stable ? 'JA' : 'Nee'})`, payload);
+            this.addLog('ble', 'Scale', `[Scale] Native BLE Weight measurement: ${payload.weight} kg (Stable: ${payload.is_stable ? 'Yes' : 'No'})`, payload);
           }
         });
 
@@ -98,7 +101,7 @@ class LoggerService {
         listen<any>('native-metrics-received', (event) => {
           const payload = event.payload;
           if (payload) {
-            this.addLog('ble', 'Scale', `[Weegschaal] Lichaamssamenstelling metrics ontvangen`, payload);
+            this.addLog('ble', 'Scale', `[Scale] Body composition metrics received`, payload);
           }
         });
       }).catch((err) => {
@@ -113,7 +116,7 @@ class LoggerService {
       .join(' ');
 
     // Avoid duplicate logging if message comes from LoggerService itself
-    if (textMessage.includes('[Colmi]') || textMessage.includes('[Weegschaal]') || textMessage.includes('[BLE]')) {
+    if (textMessage.includes('[Colmi]') || textMessage.includes('[Scale]') || textMessage.includes('[BLE]')) {
       // Handled via explicit addLog
       return;
     }
@@ -121,7 +124,7 @@ class LoggerService {
     let category: LogEntry['category'] = 'System';
     let logMsg = textMessage;
 
-    if (textMessage.includes('BLE') || textMessage.includes('scale') || textMessage.includes('weegschaal') || textMessage.includes('Neo') || textMessage.includes('Onyx')) {
+    if (textMessage.includes('BLE') || textMessage.includes('scale') || textMessage.includes('Neo') || textMessage.includes('Onyx')) {
       category = 'Scale';
     } else if (textMessage.includes('Colmi') || textMessage.includes('ring') || textMessage.includes('Q-Ring')) {
       category = 'Colmi';

@@ -17,7 +17,7 @@ interface RideRowProps {
 }
 
 function fmtDateShort(ms: number) {
-  return new Date(ms).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' });
+  return new Date(ms).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 }
 
 function ridePrimaryMetric(r: RideSummaryWithBests): { label: string; value: string; cls: string } {
@@ -33,13 +33,13 @@ function cleanRideName(name: string, dateMs: number): string {
   
   if (/^GEOID_/i.test(clean) || /^\d{4}-\d{2}-\d{2}/.test(clean) || clean.length > 30) {
     const hour = new Date(dateMs).getHours();
-    let timeOfDay = "Rit";
-    if (hour >= 5 && hour < 12) timeOfDay = "Ochtendride";
-    else if (hour >= 12 && hour < 17) timeOfDay = "Middagride";
-    else if (hour >= 17 && hour < 22) timeOfDay = "Avondride";
-    else timeOfDay = "Nachtride";
+    let timeOfDay = "Ride";
+    if (hour >= 5 && hour < 12) timeOfDay = "Morning";
+    else if (hour >= 12 && hour < 17) timeOfDay = "Afternoon";
+    else if (hour >= 17 && hour < 22) timeOfDay = "Evening";
+    else timeOfDay = "Night ride";
 
-    const localDate = new Date(dateMs).toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' });
+    const localDate = new Date(dateMs).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
     return `${timeOfDay} (${localDate})`;
   }
 
@@ -88,7 +88,7 @@ export const RideRow: React.FC<RideRowProps> = ({ ride, selected, comparing, onO
         <button
           className={`wd-ride-row__icon-btn ${comparing ? 'wd-ride-row__icon-btn--active' : ''}`}
           onClick={e => { e.stopPropagation(); onCompare(); }}
-          title={comparing ? 'Vergelijking uitschakelen' : 'Vergelijk deze ride'}
+          title={comparing ? 'Disable comparison' : 'Compare this ride'}
         >
           ⇄
         </button>

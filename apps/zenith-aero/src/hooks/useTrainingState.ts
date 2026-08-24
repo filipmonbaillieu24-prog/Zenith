@@ -178,7 +178,7 @@ export function useTrainingState(
     return phaseConfig[phaseInfo.phase];
   }, [goalType, activeFocus, phaseInfo.phase]);
 
-  // ── Rides per dag map ──
+  // ── Rides per day map ──
   const ridesByDay = useMemo(() => {
     const map = new Map<string, { tss: number; distance: number; name: string }>();
     for (const r of rides) {
@@ -216,7 +216,7 @@ export function useTrainingState(
 
   const latestTSB = pmcStatus.tsb;
 
-  // ── Sporadisch trainer detectie ──
+  // ── Sporadic trainer detection ──
   const trainingProfile = useMemo(() => {
     const fourWeeksAgo = Date.now() - 28 * 86400000;
     const recentRides  = rides.filter(r => r.date >= fourWeeksAgo);
@@ -239,7 +239,7 @@ export function useTrainingState(
     return { avgPerWeek, daysSinceLast, activeWeeks: activeWeeks.size, isFlexible, lastRideTs };
   }, [rides]);
 
-  // ── Aanbeveling voor flexibele trainers ──
+  // ── Recommendation for flexible trainers ──
   const flexibleRecommendation = useMemo((): {
     type: WorkoutType; emoji: string; title: string; reason: string;
   } => {
@@ -333,7 +333,7 @@ export function useTrainingState(
     return null;
   }, [workoutLog, rides]);
 
-  // ── Lokale AI Analysis van Ritnotities ──
+  // ── Local AI Analysis of Ride Notes ──
   const localAiAdvice = useMemo(() => {
     const nowMs = Date.now();
     const fortyEightHoursAgo = nowMs - 48 * 3600 * 1000;
@@ -344,7 +344,7 @@ export function useTrainingState(
         return { type: 'rest' as const, reason: `Illness or acute pain detected in your ride notes. Take complete rest today.`, score: analysis.illness };
       }
       if (analysis.fatigue >= 0.65) {
-        return { type: 'recovery' as const, reason: `Increased muscle fatigue detected in ride notes. Workout adjusted to recoveryride.`, score: analysis.fatigue };
+        return { type: 'recovery' as const, reason: `Increased muscle fatigue detected in ride notes. Workout adjusted to recovery ride.`, score: analysis.fatigue };
       }
     }
     return null;
@@ -393,7 +393,7 @@ export function useTrainingState(
 
   const tsbStatus = useMemo(() => interpretTSB(latestTSB), [latestTSB]);
 
-  // ── Weekplan ──
+  // ── Week Plan ──
   const weekPlan = useMemo(() => {
     const tsb = latestTSB;
     type RW = WorkoutType | 'rest';
@@ -541,7 +541,7 @@ export function useTrainingState(
   }, [rides, profile.ftp]);
 
   const typeCountWarning = (weekTypeCount[effectiveType] ?? 0) >= 2
-    ? `You completed al ${weekTypeCount[effectiveType]}x ${effectiveType} gereden deze week`
+    ? `You have already done ${weekTypeCount[effectiveType]}x ${effectiveType} workouts this week`
     : null;
 
   return {

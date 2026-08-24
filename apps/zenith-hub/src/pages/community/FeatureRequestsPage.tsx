@@ -1,12 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ThumbsUp, 
-  Plus, 
-  Sparkles, 
+import {
+  ThumbsUp,
+  Plus,
+  Sparkles,
   X,
   User,
   Lock,
-  Users
+  Users,
+  Bike,
+  Scale,
+  Dumbbell,
+  ChefHat,
+  Footprints,
+  Globe,
+  Zap,
+  CheckCircle2,
+  Pin
 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 
@@ -186,11 +195,11 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
   const getStatusBadge = (status: FeatureRequestItem['status']) => {
     switch (status) {
       case 'completed':
-        return <span style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid #38bdf8', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>✓ COMPLETED</span>;
+        return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid #38bdf8', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}><CheckCircle2 size={11} /> COMPLETED</span>;
       case 'in_progress':
-        return <span style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: '1px solid #a855f7', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>⚡ IN DEVELOPMENT</span>;
+        return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: '1px solid #a855f7', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}><Zap size={11} /> IN DEVELOPMENT</span>;
       case 'planned':
-        return <span style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid #34d399', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>📌 PLANNED</span>;
+        return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(52, 211, 153, 0.15)', color: '#34d399', border: '1px solid #34d399', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}><Pin size={11} /> PLANNED</span>;
       default:
         return <span style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.1)', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10 }}>UNDER REVIEW</span>;
     }
@@ -302,31 +311,40 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
         {/* Filter Tabs */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 28, overflowX: 'auto', paddingBottom: 4 }}>
           {[
-            { id: 'all', label: 'All Ideas' },
-            { id: 'aero', label: '🚴 Aero' },
-            { id: 'vigor', label: '⚖️ Vigor' },
-            { id: 'kratos', label: '🔥 Kratos' },
-            { id: 'general', label: '🌐 General' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setFilterCategory(tab.id)}
-              style={{
-                background: filterCategory === tab.id ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                border: filterCategory === tab.id ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
-                color: filterCategory === tab.id ? '#38bdf8' : '#94a3b8',
-                fontWeight: 800,
-                fontSize: 12,
-                padding: '8px 16px',
-                borderRadius: 10,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                fontFamily: 'inherit'
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+            { id: 'all', label: 'All Ideas', icon: null },
+            { id: 'aero', label: 'Aero', icon: Bike },
+            { id: 'vigor', label: 'Vigor', icon: Scale },
+            { id: 'kratos', label: 'Kratos', icon: Dumbbell },
+            { id: 'fuel', label: 'Fuel', icon: ChefHat },
+            { id: 'stride', label: 'Stride', icon: Footprints },
+            { id: 'general', label: 'General', icon: Globe },
+          ].map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setFilterCategory(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 7,
+                  background: filterCategory === tab.id ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                  border: filterCategory === tab.id ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.08)',
+                  color: filterCategory === tab.id ? '#38bdf8' : '#94a3b8',
+                  fontWeight: 800,
+                  fontSize: 12,
+                  padding: '8px 16px',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  fontFamily: 'inherit'
+                }}
+              >
+                {Icon && <Icon size={13} />}
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Request List */}
@@ -487,10 +505,12 @@ export const FeatureRequestsPage: React.FC<FeatureRequestsPageProps> = ({
                   onChange={(e: any) => setCategoryInput(e.target.value)}
                   style={{ width: '100%', background: 'rgba(9, 9, 11, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 12, fontFamily: 'inherit' }}
                 >
-                  <option value="aero">🚴 Zenith Aero (Cycling & Routing)</option>
-                  <option value="vigor">⚖️ Zenith Vigor (Health & Circumferences)</option>
-                  <option value="kratos">🔥 Zenith Kratos (Strength Training)</option>
-                  <option value="general">🌐 General Zenith Ecosystem</option>
+                  <option value="aero">Zenith Aero (Cycling & Routing)</option>
+                  <option value="vigor">Zenith Vigor (Health & Circumferences)</option>
+                  <option value="kratos">Zenith Kratos (Strength Training)</option>
+                  <option value="fuel">Zenith Fuel (Nutrition & Macros)</option>
+                  <option value="stride">Zenith Stride (Running & Steps)</option>
+                  <option value="general">General Zenith Ecosystem</option>
                 </select>
               </div>
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import './PowerHistogram.css';
 import { BarChart, Bar, Cell, CartesianGrid, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { RidePoint, POWER_ZONES } from '../../types/workout';
 
 interface PowerHistogramProps {
@@ -31,16 +32,17 @@ export const PowerHistogram: React.FC<PowerHistogramProps> = ({ points, ftp }) =
 
   return (
     <div className="rp-chart-card">
-      <h3>📊 Powersverdeling</h3>
+      <h3>📊 Power Distribution</h3>
       <p style={{ fontSize: 11, color: '#555', margin: '0 0 10px' }}>Time (%) at each power level</p>
       <ResponsiveContainer width="100%" height={160}>
         <BarChart data={data} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-          <XAxis dataKey="w" tick={{ fontSize: 9, fill: '#555' }} unit="W" interval={3} />
-          <YAxis tick={{ fontSize: 9, fill: '#555' }} unit="%" width={30} />
+          <CartesianGrid {...ZENITH_CHART_GRID} vertical={false} />
+          <XAxis dataKey="w" tick={ZENITH_CHART_AXIS_TICK} unit="W" interval={3} />
+          <YAxis tick={ZENITH_CHART_AXIS_TICK} unit="%" width={30} />
           <Tooltip
-            contentStyle={{ background: '#12121e', border: 'none', borderRadius: 8, fontSize: 11 }}
-            formatter={(v: any) => [`${v}%`, 'Tijd']}
+            contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+            labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
+            formatter={(v: any) => [`${v}%`, 'Time']}
             labelFormatter={(w: any) => `${w}–${w + bucket}W`}
           />
           {ftp && <ReferenceLine x={ftp} stroke="#e17055" strokeDasharray="3 3" />}

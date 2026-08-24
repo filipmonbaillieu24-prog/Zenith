@@ -43,6 +43,8 @@ export interface PhoneHealthData {
   active_calories?: any[];
   total_calories?: any[];
   resting_heart_rate?: any[];
+  latest_heart_rate_bpm?: number;
+  latest_hrv_rmssd?: number;
 }
 
 const DEFAULT_PHONE_IP = '192.168.129.113';
@@ -179,16 +181,21 @@ export function transformExerciseForStride(exerciseList: HealthConnectExercisePa
     const isTreadmill = typeStr === '57' || isPolar;
     const isRunning = isTreadmill || typeStr === '56' || typeStr.toLowerCase().includes('run');
 
-    const durSec = ex.duration_seconds || 1231;
+    // Health Connect's /latest exercise payload doesn't currently carry per-session HR,
+    // calories, or shoe data — those used to be filled in with specific-looking hardcoded
+    // values (147/159bpm, 239kcal, "Hoka Clifton 9"/"Nike ZoomX Vaporfly") that looked real
+    // but weren't. Leave them unset instead so the UI's own "no data" handling applies,
+    // rather than fabricating precise-looking numbers for every imported workout.
+    const durSec = ex.duration_seconds || 0;
     const distKm = ex.distance_withers ? parseFloat((ex.distance_withers / 1000).toFixed(2)) : 0.0;
-    const paceMinKm = distKm > 0 ? parseFloat(((durSec / 60) / distKm).toFixed(2)) : 0.0;
+    const paceMinKm = distKm > 0 && durSec > 0 ? parseFloat(((durSec / 60) / distKm).toFixed(2)) : 0.0;
     const dateStr = ex.start_time ? ex.start_time.slice(0, 10) : new Date().toISOString().slice(0, 10);
     const timeOfDayStr = ex.start_time ? new Date(ex.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '14:26';
 
-    const title = isPolar 
-      ? 'Polar Treadmill Run' 
-      : isTreadmill 
-        ? 'Health Connect Treadmill Workout' 
+    const title = isPolar
+      ? 'Polar Treadmill Run'
+      : isTreadmill
+        ? 'Health Connect Treadmill Workout'
         : 'Health Connect Run Workout';
 
     return {
@@ -203,13 +210,13 @@ export function transformExerciseForStride(exerciseList: HealthConnectExercisePa
       durationSec: durSec,
       avgPaceMinKm: paceMinKm,
       elevationGainM: 0,
-      avgHeartRate: 147,
-      maxHeartRate: 159,
-      avgCadenceSpm: ex.avg_cadence_spm ? Math.round(ex.avg_cadence_spm) : 170,
-      calories: 239,
-      shoeName: isTreadmill ? 'Hoka Clifton 9' : 'Nike ZoomX Vaporfly',
+      avgHeartRate: undefined as number | undefined,
+      maxHeartRate: undefined as number | undefined,
+      avgCadenceSpm: ex.avg_cadence_spm ? Math.round(ex.avg_cadence_spm) : undefined,
+      calories: 0,
+      shoeName: undefined as string | undefined,
       source: isPolar ? 'polar' : 'health_connect',
-      notes: `Imported via ${isPolar ? 'Polar Flow / ' : ''}Health Connect (${formatDuration(durSec)}, 147 bpm, 239 kcal)`
+      notes: `Imported via ${isPolar ? 'Polar Flow / ' : ''}Health Connect (${formatDuration(durSec)})`
     };
   });
 }
@@ -278,10 +285,24 @@ export async function syncPhoneDataToEcosystem(userId?: string): Promise<{ succe
   }
 
   // 3. Persist Vigor sleep sessions to vigor_sleep table in Supabase (matches exact Smart Ring total duration)
+  // Real HRV (rMSSD) rides along with sleep sync since Health Connect's /latest only exposes
+  // one "most recent" HRV reading per sync, not one per historical sleep session.
+  const realHrvMs = typeof data.latest_hrv_rmssd === 'number' && data.latest_hrv_rmssd > 0
+    ? data.latest_hrv_rmssd
+    : null;
+  const mostRecentSleepDate = data.sleep && data.sleep.length > 0
+    ? data.sleep.reduce((latest, sl) => {
+        const d = sl.session_end_time ? sl.session_end_time.slice(0, 10) : '';
+        return d > latest ? d : latest;
+      }, '')
+    : null;
   if (data.sleep && data.sleep.length > 0 && activeUserId) {
     try {
       for (const sl of data.sleep) {
         const dateStr = sl.session_end_time ? sl.session_end_time.slice(0, 10) : new Date().toISOString().slice(0, 10);
+        // Only attach the HRV reading to the most recent session it plausibly belongs to —
+        // it's a single "latest" value from Health Connect, not one per historical night.
+        const hrvForThisEntry = realHrvMs !== null && dateStr === mostRecentSleepDate ? realHrvMs : undefined;
         const loggedAtIso = `${dateStr}T00:00:00.000Z`;
         const totalDurationMins = Math.round(sl.duration_seconds / 60);
 
@@ -347,7 +368,8 @@ export async function syncPhoneDataToEcosystem(userId?: string): Promise<{ succe
             light_minutes: lightMins,
             rem_minutes: remMins,
             awake_minutes: awakeMins,
-            quality_score: qualityScore
+            quality_score: qualityScore,
+            ...(hrvForThisEntry !== undefined ? { hrv_ms: hrvForThisEntry } : {})
           }).eq('id', existing.id);
         } else {
           await supabase.from('vigor_sleep').insert({
@@ -358,6 +380,7 @@ export async function syncPhoneDataToEcosystem(userId?: string): Promise<{ succe
             rem_minutes: remMins,
             awake_minutes: awakeMins,
             quality_score: qualityScore,
+            ...(hrvForThisEntry !== undefined ? { hrv_ms: hrvForThisEntry } : {}),
             logged_at: loggedAtIso
           });
         }

@@ -41,13 +41,13 @@ export const WorkoutBuilderTab: React.FC<WorkoutBuilderTabProps> = ({
           <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Build your custom workout block by block.</p>
         </div>
 
-        {/* Workout naam + preview grafiek */}
+        {/* Workout name + preview chart */}
         <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, overflow: 'hidden' }}>
           <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'flex', gap: 10, alignItems: 'center' }}>
             <input value={customTitle} onChange={e => setCustomTitle(e.target.value)}
               style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 7, color: '#f8fafc', padding: '7px 10px', fontSize: 13, fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}
               placeholder="Workout name..." />
-            <span style={{ fontSize: 10, color: '#475569', whiteSpace: 'nowrap' }}>{customTotalMin} min · {customBlocks.length} blokken</span>
+            <span style={{ fontSize: 10, color: '#475569', whiteSpace: 'nowrap' }}>{customTotalMin} min · {customBlocks.length} blocks</span>
           </div>
 
           {/* Live preview */}
@@ -59,30 +59,30 @@ export const WorkoutBuilderTab: React.FC<WorkoutBuilderTabProps> = ({
           </div>
         </div>
 
-        {/* Blokken lijst */}
+        {/* Blocks list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {customBlocks.map((b) => (
             <div key={b.id} style={{ display: 'grid', gridTemplateColumns: '20px 1fr 70px 80px 80px 32px', gap: 8, alignItems: 'center', padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 8 }}>
               <div style={{ cursor: 'grab', color: '#334155', display: 'flex', alignItems: 'center' }}><GripVertical size={14} /></div>
               <input value={b.name} onChange={e => updateBlock(b.id, 'name', e.target.value)}
-                style={{ background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#f8fafc', fontSize: 12, fontWeight: 600, padding: '2px 0', fontFamily: 'inheride' }} />
+                style={{ background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.08)', color: '#f8fafc', fontSize: 12, fontWeight: 600, padding: '2px 0', fontFamily: 'inherit' }} />
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <label style={{ fontSize: 8, color: '#475569', textTransform: 'uppercase' }}>Duur (min)</label>
+                <label style={{ fontSize: 8, color: '#475569', textTransform: 'uppercase' }}>Duration (min)</label>
                 <input type="number" min={1} max={180} value={b.durationMin} onChange={e => updateBlock(b.id, 'durationMin', Math.max(1, parseInt(e.target.value) || 1))}
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5, color: '#f8fafc', padding: '4px 6px', fontSize: 11, width: '100%', fontFamily: 'inheride' }} />
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5, color: '#f8fafc', padding: '4px 6px', fontSize: 11, width: '100%', fontFamily: 'inherit' }} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <label style={{ fontSize: 8, color: '#475569', textTransform: 'uppercase' }}>% FTP</label>
                 <input type="number" min={20} max={150} value={b.powerPct} onChange={e => updateBlock(b.id, 'powerPct', Math.min(150, Math.max(20, parseInt(e.target.value) || 50)))}
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5, color: zoneColors[b.zone - 1], padding: '4px 6px', fontSize: 11, width: '100%', fontFamily: 'inheride', fontWeight: 700 }} />
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5, color: zoneColors[b.zone - 1], padding: '4px 6px', fontSize: 11, width: '100%', fontFamily: 'inherit', fontWeight: 700 }} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <label style={{ fontSize: 8, color: '#475569', textTransform: 'uppercase' }}>Zone</label>
                 <select value={b.zone} onChange={e => updateBlock(b.id, 'zone', parseInt(e.target.value) as 1|2|3|4|5)}
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5, color: zoneColors[b.zone - 1], padding: '4px 6px', fontSize: 11, width: '100%', fontFamily: 'inheride' }}>
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 5, color: zoneColors[b.zone - 1], padding: '4px 6px', fontSize: 11, width: '100%', fontFamily: 'inherit' }}>
                   {[1,2,3,4,5].map(z => <option key={z} value={z} style={{ background: '#09090b', color: zoneColors[z-1] }}>Z{z}</option>)}
                 </select>
               </div>
@@ -95,9 +95,9 @@ export const WorkoutBuilderTab: React.FC<WorkoutBuilderTabProps> = ({
           ))}
         </div>
 
-        {/* Builder acties */}
+        {/* Builder actions */}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={addCustomBlock} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px dashed rgba(203, 213, 225,0.2)', background: 'rgba(203, 213, 225,0.04)', color: '#cbd5e1', cursor: 'pointer', fontFamily: 'inheride', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <button onClick={addCustomBlock} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px dashed rgba(203, 213, 225,0.2)', background: 'rgba(203, 213, 225,0.04)', color: '#cbd5e1', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Plus size={14} /> Add Block
           </button>
 
@@ -109,13 +109,13 @@ export const WorkoutBuilderTab: React.FC<WorkoutBuilderTabProps> = ({
             const todayStr = `${y}-${m}-${d}`;
             planWorkoutInCalendar(customWorkout, todayStr, customTotalMin);
             setBuildPlanned(true); setTimeout(() => setBuildPlanned(false), 3000);
-          }} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: `1px solid ${buildPlanned ? 'rgba(57,255,20,0.3)' : 'rgba(57,255,20,0.2)'}`, background: buildPlanned ? 'rgba(57,255,20,0.12)' : 'rgba(57,255,20,0.06)', color: buildPlanned ? '#39ff14' : '#39ff14', cursor: 'pointer', fontFamily: 'inheride', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          }} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: `1px solid ${buildPlanned ? 'rgba(57,255,20,0.3)' : 'rgba(57,255,20,0.2)'}`, background: buildPlanned ? 'rgba(57,255,20,0.12)' : 'rgba(57,255,20,0.06)', color: buildPlanned ? '#39ff14' : '#39ff14', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             {buildPlanned ? <CheckCircle size={14} /> : <CalendarPlus size={14} />}
-            {buildPlanned ? 'Gepland!' : 'Plan in kalender'}
+            {buildPlanned ? 'Scheduled!' : 'Plan in calendar'}
           </button>
         </div>
 
-        {/* Wattage preview tabel */}
+        {/* Wattage preview table */}
         {profile.ftp && (
           <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden' }}>
             <div style={{ padding: '8px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase' }}>

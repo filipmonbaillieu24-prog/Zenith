@@ -17,9 +17,9 @@ export const MapBoundsUpdater: React.FC<{ positions: [number, number][] }> = ({ 
   useEffect(() => {
     if (positions.length > 2) {
       const bounds = L.latLngBounds(positions);
-      map.fitBounds(bounds, { 
-        paddingTopLeft: [350, 40],     // Houdt links 350px vrij voor stats panel
-        paddingBottomRight: [370, 160], // Houdt rechts 370px vrij voor zones panel, onder 160px voor timeline chart
+      map.fitBounds(bounds, {
+        paddingTopLeft: [350, 40],     // Keeps 350px clear on the left for stats panel
+        paddingBottomRight: [370, 160], // Keeps 370px clear on the right for zones panel, 160px at the bottom for timeline chart
         maxZoom: 15 
       });
     }
@@ -76,10 +76,10 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
 
   function segColor(val: number): string {
     const t = Math.max(0, Math.min(1, (val - minV) / range));
-    if (t < 0.25) return '#74b9ff'; // Zone 1/Recup (Blauw)
-    if (t < 0.50) return '#00b894'; // Zone 2 (Groen)
-    if (t < 0.75) return '#fdcb6e'; // Zone 3/4 (Geel)
-    return '#d63031';              // Zone 5+ (Rood)
+    if (t < 0.25) return '#74b9ff'; // Zone 1/Recovery (Blue)
+    if (t < 0.50) return '#00b894'; // Zone 2 (Green)
+    if (t < 0.75) return '#fdcb6e'; // Zone 3/4 (Yellow)
+    return '#d63031';              // Zone 5+ (Red)
   }
 
   // Build segments of ~10 points each
@@ -102,13 +102,13 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
     gpsPts[Math.floor(gpsPts.length / 2)].lng!,
   ];
 
-  // Start- en eindcoördinaten voor markers
+  // Start and end coordinates for markers
   const startPt: [number, number] = [gpsPts[0].lat!, gpsPts[0].lng!];
   const endPt: [number, number] = [gpsPts[gpsPts.length - 1].lat!, gpsPts[gpsPts.length - 1].lng!];
 
-  // ── Points of Interest (POI) zoeken op de route ────────────────────────────
-  
-  // 1. Zoek max vermogen index (alleen gps-punten with power)
+  // ── Points of Interest (POI) search along the route ────────────────────────────
+
+  // 1. Find max power index (only gps points with power)
   let maxPwrPt: RidePoint | null = null;
   if (ride.hasPower) {
     const validPwrPts = gpsPts.filter(p => p.power != null);
@@ -117,7 +117,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
     }
   }
 
-  // 2. Zoek max hartslag index (als er none power is, of als extra POI)
+  // 2. Find max heart rate index (if there is no power, or as an extra POI)
   let maxHRPt: RidePoint | null = null;
   if (ride.hasHR) {
     const validHRPts = gpsPts.filter(p => p.hr != null);
@@ -126,7 +126,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
     }
   }
 
-  // 3. Klimmen ophalen
+  // 3. Retrieve climbs
   const climbs = useMemo(() => detectClimbs(ride.points), [ride.points]);
 
   return (
@@ -148,7 +148,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
         pointerEvents: 'auto'
       }}>
         <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-          <span style={{ fontSize:10, fontWeight:700, color:'#aaa', textTransform:'uppercase', marginBottom:2 }}>Kaartkleuring</span>
+          <span style={{ fontSize:10, fontWeight:700, color:'#aaa', textTransform:'uppercase', marginBottom:2 }}>Map coloring</span>
           <div style={{ display:'flex', gap:4 }}>
             {ride.hasPower && weight && (
               <button className={`wd-sort-btn ${metric === 'wkg' ? 'wd-sort-btn--active' : ''}`} style={{ fontSize:10, padding:'4px 8px' }} onClick={() => setMetric('wkg')}>W/kg</button>
@@ -164,7 +164,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
         </div>
         
         <div style={{ display:'flex', gap:8, borderTop:'1px solid rgba(255, 255, 255, 0.06)', paddingTop:6, justifyContent:'space-between' }}>
-          {['Laag','Matig','Hoog','Piek'].map((l, i) => (
+          {['Low','Moderate','High','Peak'].map((l, i) => (
             <span key={i} style={{ display:'flex', alignItems:'center', gap:3, fontSize:10, color:'#888' }}>
               <span style={{ width:8, height:8, borderRadius:2, background:['#74b9ff','#00b894','#fdcb6e','#d63031'][i], display:'inline-block' }} />
               {l}
@@ -220,7 +220,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
             iconAnchor: [11, 11]
           })}>
             <LeafletTooltip direction="top" offset={[0, -11]} opacity={0.9}>
-              <span>⚡ Piekvermogen: <strong>{maxPwrPt.power}W</strong></span>
+              <span>⚡ Peak power: <strong>{maxPwrPt.power}W</strong></span>
             </LeafletTooltip>
           </Marker>
         )}
@@ -251,7 +251,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
               iconAnchor: [11, 11]
             })}>
               <LeafletTooltip direction="top" offset={[0, -11]} opacity={0.9}>
-                <span>⛰️ Klim {i + 1}: <strong>{climb.category}</strong> ({climb.lengthMeters >= 1000 ? `${(climb.lengthMeters / 1000).toFixed(1)}km` : `${climb.lengthMeters}m`} @ {climb.avgGrade}%)</span>
+                <span>⛰️ Climb {i + 1}: <strong>{climb.category}</strong> ({climb.lengthMeters >= 1000 ? `${(climb.lengthMeters / 1000).toFixed(1)}km` : `${climb.lengthMeters}m`} @ {climb.avgGrade}%)</span>
               </LeafletTooltip>
             </Marker>
           );

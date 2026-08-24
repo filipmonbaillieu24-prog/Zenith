@@ -4,8 +4,9 @@ import {
   ChevronRight, 
   Calendar, 
   Plus, 
-  Trash2, 
-  Dumbbell 
+  Trash2,
+  Dumbbell,
+  Bike
 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 import { PlannedWorkoutItem } from '../../utils/pmc';
@@ -499,9 +500,10 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                               handleOpenEditModal(item.raw);
                             }}
                             title={`Planned: ${item.raw.title}\nDuration: ${item.raw.durationMinutes} min\nTSS: ${item.raw.plannedTSS}\nDrag to move, click to edit.`}
-                            style={{ borderLeft: `3px solid ${getWorkoutColor(item.raw.type)}` }}
+                            style={{ borderLeft: `3px solid ${getWorkoutColor(item.raw.type)}`, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                           >
-                            📅 {item.raw.title} ({item.raw.durationMinutes}m)
+                            <Calendar size={10} style={{ flexShrink: 0 }} />
+                            <span>{item.raw.title} ({item.raw.durationMinutes}m)</span>
                           </div>
                         );
                       } else if (item.category === 'ride') {
@@ -517,8 +519,10 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                                 setSelectedItem(item);
                               }
                             }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                           >
-                            🚴 {item.raw.name} ({item.raw.distance.toFixed(0)}km)
+                            <Bike size={10} style={{ flexShrink: 0 }} />
+                            <span>{item.raw.name} ({item.raw.distance.toFixed(0)}km)</span>
                           </div>
                         );
                       } else {
@@ -530,7 +534,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                             style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                           >
                             <Dumbbell size={10} style={{ flexShrink: 0 }} />
-                            <span>{item.raw.name} ({item.raw.volume.toLocaleString()} kg)</span>
+                            <span>{item.raw.name} ({item.raw.volume.toLocaleString('en-US')} kg)</span>
                           </div>
                         );
                       }
@@ -548,8 +552,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         <div className="wd-modal-backdrop animate-fade-in" onClick={() => setSelectedItem(null)}>
           <div className="wd-modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
             <div className="wd-modal-header">
-              <h3>
-                {selectedItem.category === 'ride' ? '🚴 Completed Cycling Ride' : '🏋️ Completed Kratos Workout'}
+              <h3 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                {selectedItem.category === 'ride' ? <Bike size={16} /> : <Dumbbell size={16} />}
+                {selectedItem.category === 'ride' ? 'Completed Cycling Ride' : 'Completed Kratos Workout'}
               </h3>
               <button className="wd-modal-close" onClick={() => setSelectedItem(null)}>✕</button>
             </div>
@@ -625,7 +630,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                       {selectedItem.raw.name}
                     </h4>
                     <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                      Total Volume: <strong style={{ color: '#34d399' }}>{selectedItem.raw.volume.toLocaleString()} kg</strong>
+                      Total Volume: <strong style={{ color: '#34d399' }}>{selectedItem.raw.volume.toLocaleString('en-US')} kg</strong>
                     </div>
                   </div>
 

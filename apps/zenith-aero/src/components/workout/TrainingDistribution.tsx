@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
+import { ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { RideSummaryWithBests } from '../../types/workout';
 import { BarChart2 } from 'lucide-react';
 
@@ -49,43 +50,43 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
     const pctMID = Math.round((totalMID / totalSec) * 100);
     const pctHID = Math.round((totalHID / totalSec) * 100);
 
-    // Classificeer model
-    let model = "Ongebalanceerd";
+    // Classify model
+    let model = "Unbalanced";
     let desc = "Your training distribution does not yet fit a classic pattern. Normal when just starting to ride.";
     let tip = "Try keeping endurance rides consciously in Zone 2 and make hard days count.";
     let color = "#ffeaa7";
 
     if (pctLID >= 75 && pctMID <= 12 && pctHID >= 5) {
-      model = "Gepolariseerd (Polarized)";
+      model = "Polarized";
       color = "#34d399";
       desc = "Classic 80/20 distribution! You do most work in easy endurance zones (Zone 1-2) to save energy for intensive days.";
       tip = "Most efficient method to elevate your aerobic threshold without fatigue.";
     } else if (pctLID >= 60 && pctMID >= 15 && pctMID <= 30 && pctHID < pctMID) {
-      model = "Piramide (Pyramidal)";
+      model = "Pyramidal";
       color = "#cbd5e1";
-      desc = "Solid pyramid model. Base consists of endurance rides with tempo work.lein aandeel echte sprints/intervallen.";
+      desc = "Solid pyramid model. Base consists of endurance rides with tempo work, with only a small share of real sprints/intervals.";
       tip = "Ideal for building all-round base fitness.";
     } else if (pctMID >= 35) {
       model = "Threshold / Sweet Spot Focus";
       color = "#fbbf24";
-      desc = "High volume in Sweet Spot/Threshold. Effective but can lead to plateau.dat je constant licht vermoeid bent.";
+      desc = "High volume in Sweet Spot/Threshold. Effective but can lead to a plateau — the risk is that you stay constantly, mildly fatigued.";
       tip = "Try to ride more rides easy (Zone 2) to build your aerobic base so you are fresher for targeted intervals.";
     } else if (pctLID >= 85 && pctHID < 3) {
-      model = "Basis & Recovery";
+      model = "Base & Recovery";
       color = "#a29bfe";
-      desc = "Focus is currently on endurance & recovery. Great for base building.ok.";
+      desc = "Focus is currently on endurance & recovery. Great for base building.";
       tip = "Add occasional high-intensity interval sessions to stimulate VO2max.";
     } else if (pctHID >= 25) {
-      model = "Hoge Intensiteit (HIIT)";
+      model = "High Intensity (HIIT)";
       color = "#f87171";
       desc = "Extremely intensive training! More than 25% spent in Zone 5+, which significantly increases overtraining risk.";
       tip = "Schedule a deload week and replace half of intensive sessions with Zone 2 rides.";
     }
 
     const data = [
-      { name: 'LID (Laag)', value: pctLID, label: 'LID (Zone 1-2)', color: '#00b894' },
-      { name: 'MID (Midden)', value: pctMID, label: 'MID (Zone 3-4)', color: '#fdcb6e' },
-      { name: 'HID (Hoog)', value: pctHID, label: 'HID (Zone 5+)', color: '#ff7675' }
+      { name: 'LID (Low)', value: pctLID, label: 'LID (Zone 1-2)', color: '#00b894' },
+      { name: 'MID (Mid)', value: pctMID, label: 'MID (Zone 3-4)', color: '#fdcb6e' },
+      { name: 'HID (High)', value: pctHID, label: 'HID (Zone 5+)', color: '#ff7675' }
     ].filter(d => d.value > 0);
 
     const isPowerBased = hasPowerCount > (rides.length / 2);
@@ -106,7 +107,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
         <div className="wd-section-card__head">
           <span className="wd-section-card__title">
             <BarChart2 size={13} style={{ display: 'inline', marginRight: 5, color: '#cbd5e1' }} />
-            Trainingsdistributie & Zones
+            Training Distribution & Zones
           </span>
         </div>
         <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
@@ -121,7 +122,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
       <div className="wd-section-card__head">
         <span className="wd-section-card__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <BarChart2 size={13} style={{ color: '#cbd5e1' }} />
-          Trainingsdistributie ({analysis.isPowerBased ? 'Power' : 'Heart Rate'})
+          Training Distribution ({analysis.isPowerBased ? 'Power' : 'Heart Rate'})
         </span>
       </div>
 
@@ -143,12 +144,16 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
+              <Tooltip
+                contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
+                formatter={(value) => [`${value}%`, 'Percentage']}
+              />
             </PieChart>
           </ResponsiveContainer>
           {/* Legend in center */}
           <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-            <span style={{ fontSize: 10, color: '#64748b', display: 'block', lineHeight: 1 }}>Verdeling</span>
+            <span style={{ fontSize: 10, color: '#64748b', display: 'block', lineHeight: 1 }}>Distribution</span>
           </div>
         </div>
 
@@ -172,7 +177,7 @@ export const TrainingDistribution: React.FC<TrainingDistributionProps> = ({ ride
           <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: `${analysis.color}15`, color: analysis.color, border: `1px solid ${analysis.color}25` }}>
             {analysis.model}
           </span>
-          <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Trainingsmodel</span>
+          <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>Training Model</span>
         </div>
         <p style={{ fontSize: 11, color: '#cbd5e1', margin: '6px 0 0', lineHeight: 1.4 }}>
           {analysis.desc}

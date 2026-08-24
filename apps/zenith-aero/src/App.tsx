@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { FitnessProfile } from './types/workout';
 import { useSavedLocations } from './hooks/useSavedLocations';
 import { useRoutePlanner } from './hooks/useRoutePlanner';
-import { Activity, Brain, Compass, Settings, LayoutDashboard, Bike, Map as MapIcon, Trophy, Upload, Loader2 } from 'lucide-react';
+import { Activity, Brain, Compass, Settings, LayoutDashboard, Bike, Map as MapIcon, Trophy, Upload, Loader2, Wrench } from 'lucide-react';
 import { AppTitlebar } from './components/layout/AppTitlebar';
 import { RoutePage } from './components/route/RoutePage';
 
@@ -19,12 +19,12 @@ import { lazy, Suspense } from 'react';
 const WorkoutDashboard = lazy(() => import('./pages/WorkoutDashboard'));
 const RidePage = lazy(() => import('./pages/RidePage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
-const CalendarPage = lazy(() => import('./pages/CalendarPage').then(m => ({ default: m.CalendarPage })));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { ProPaywallModal } from './components/common/ProPaywallModal';
 import { calibrateSummaryModels, calibrateFullModels, analyzeCardiacDrift, initializeModels } from './utils/localNeuralNet';
 import { supabase } from './utils/supabaseClient';
+import { isTrustedZenithOrigin, ExtensionSessionGate, ZenithPageHeader, ZenithHeaderTab } from '@zenith/shared';
 import { planWorkoutInCalendar } from './utils/trainingHelpers';
 import './index.css';
 
@@ -88,7 +88,7 @@ function App() {
 
       if (data) {
         const loadedProfile = {
-          name: data.name || withaProfile.name || 'Atleet',
+          name: data.name || withaProfile.name || 'Athlete',
           gender: data.gender || withaProfile.gender,
           birthDate: data.birth_date || withaProfile.birthDate,
           height: data.height_cm || withaProfile.height,
@@ -187,7 +187,7 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Tab navigation ──────────────────────────────────────────────────────────
-  type AppTab = 'hub' | 'cyclopilot' | 'dashboard' | 'rides' | 'calendar' | 'prs' | 'heatmap' | 'route' | 'training' | 'settings';
+  type AppTab = 'hub' | 'cyclopilot' | 'dashboard' | 'rides' | 'prs' | 'heatmap' | 'route' | 'settings';
   const [activeTab,      setActiveTab]      = useState<AppTab>('dashboard');
   
   // ── Fitness profile (persisted in localStorage) ─────────────────────────────
@@ -354,7 +354,9 @@ function App() {
     const durationMin = activeWorkout.blocks.reduce((acc: number, b: any) => acc + b.duration, 0) / 60;
     await planWorkoutInCalendar(activeWorkout, date, durationMin, fitnessProfile, route);
     setActiveWorkout(null);
-    setActiveTab('training');
+    // Aero's own Calendar view is redundant now that the Hub has a unified
+    // Calendar, so land back on Dashboard instead.
+    setActiveTab('dashboard');
   }, [activeWorkout, fitnessProfile]);
 
   // Rides & fysiologische recalculate state
@@ -370,6 +372,7 @@ function App() {
   // ── Listen to message events from parent Zenith Hub to open a specific ride ──
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
+      if (!isTrustedZenithOrigin(e.origin)) return;
       if (e.data && e.data.type === 'OPEN_RIDE') {
         setSelectedRide(e.data.rideId);
         setActiveTab('dashboard');
@@ -629,18 +632,6 @@ function App() {
 
   const isDashboardTab = activeTab === 'dashboard' || activeTab === 'rides' || activeTab === 'prs' || activeTab === 'heatmap';
 
-  const navigateBackToHub = () => {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: 'close-app' }, '*');
-    } else {
-      const isDev = import.meta.env.DEV;
-      const hubUrl = isDev
-        ? 'http://localhost:1420'
-        : `${window.location.origin}/index.html`;
-      window.location.href = hubUrl;
-    }
-  };
-
   if (sessionLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#09090b' }}>
@@ -650,21 +641,10 @@ function App() {
   }
 
   if (!session) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#09090b', color: '#fff', fontFamily: 'Outfit, sans-serif' }}>
-        <h2 style={{ fontSize: 20, marginBottom: 10 }}>No Active Zenith Session</h2>
-        <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 20 }}>Open the Zenith Hub application to log in and access this extension.</p>
-        <button 
-          onClick={navigateBackToHub}
-          style={{ background: '#cbd5e1', color: '#09090b', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, cursor: 'pointer' }}
-        >
-          Open Zenith Hub
-        </button>
-      </div>
-    );
+    return <ExtensionSessionGate appName="Aero" icon={<Bike size={28} />} />;
   }
 
-  const userName = session?.user?.user_metadata?.name || fitnessProfile?.name || 'Atleet';
+  const userName = session?.user?.user_metadata?.name || fitnessProfile?.name || 'Athlete';
   const isTauri = typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window || !!(window as any).__TAURI_METADATA__);
 
   return (
@@ -867,7 +847,7 @@ function App() {
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                   boxShadow: '0 0 12px rgba(203, 213, 225, 0.15)',
-                  fontFamily: 'inheride'
+                  fontFamily: 'inherit'
                 }}
               >
                 Accepteren & zones updaten
@@ -883,7 +863,7 @@ function App() {
                   fontSize: 11,
                   padding: '12px 18px',
                   cursor: 'pointer',
-                  fontFamily: 'inheride'
+                  fontFamily: 'inherit'
                 }}
               >
                 Negeren
@@ -897,57 +877,24 @@ function App() {
       <div className="wd-app" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100vw', paddingTop: (isIframe || !isTauri) ? '0px' : '32px' }}>
         {/* Horizontal Topbar Header */}
         {activeTab !== 'hub' && activeTab !== 'cyclopilot' && (
-          <>
-            <header className="wd-topbar" style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              borderBottom: '1px solid rgba(255, 255, 255, 0.06)', 
-              padding: '16px 24px', 
-              background: 'transparent',
-              height: '70px',
-              boxSizing: 'border-box',
-              flexShrink: 0,
-              marginBottom: '24px',
-              webkitAppRegion: 'no-drag'
-            } as any}>
-              <div>
-                <h1 className="zh-hub-title" style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '0.5px', lineHeight: '1.2' }}>
-                  ZENITH <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '16px' }}>AERO</span>
-                </h1>
-                <p className="zh-hub-subtitle" style={{ fontSize: '9px', color: 'var(--text-muted)', margin: '4px 0 0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                  Desktop & Analytics for {userName}
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                {/* Sleek Header Upload Button */}
-                <div 
+          <ZenithPageHeader
+            appName="AERO"
+            subtitle={`Desktop & Analytics for ${userName}`}
+            tabs={navItems as unknown as ZenithHeaderTab[]}
+            activeTab={activeTab}
+            onTabChange={(key) => setActiveTab(key as any)}
+            actions={
+              <>
+                <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="wd-topbar-upload-btn"
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 8, 
-                    background: 'rgba(255, 255, 255, 0.03)', 
-                    border: '1px solid rgba(255, 255, 255, 0.08)', 
-                    borderRadius: 10, 
-                    padding: '6px 14px', 
-                    cursor: 'pointer', 
-                    fontSize: 11, 
-                    fontWeight: 700, 
-                    color: '#f8fafc',
-                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                  }}
+                  className="zenith-header-btn"
                 >
                   {uploading ? (
-                    <Loader2 className="animate-spin" size={13} style={{ color: '#cbd5e1' }} />
+                    <Loader2 className="animate-spin" size={14} />
                   ) : (
-                    <Upload size={13} style={{ color: '#cbd5e1' }} />
+                    <Upload size={14} />
                   )}
                   <span>{uploading ? 'Uploading...' : 'Import Ride'}</span>
-                  
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -956,45 +903,20 @@ function App() {
                     hidden
                     onChange={(e) => e.target.files && handleFiles(e.target.files)}
                   />
-                </div>
+                </button>
 
                 {gearWarnings.length > 0 && (
-                  <div
+                  <button
                     onClick={() => setActiveTab('settings')}
-                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(253,203,110,0.1)', border: '1px solid rgba(253,203,110,0.25)', borderRadius: 7, padding: '3px 10px', cursor: 'pointer', fontSize: 10, fontWeight: 700, color: '#fdcb6e' }}
+                    className="zenith-header-btn zenith-header-btn--warn"
                   >
-                    <span>🔧</span>
+                    <Wrench size={14} />
                     <span>Maintenance Required!</span>
-                  </div>
+                  </button>
                 )}
-              </div>
-            </header>
-
-            {/* Navigation tabs bar in Vigor-style */}
-            <nav className="kratos-nav" style={{ 
-              display: 'flex', 
-              gap: 8, 
-              background: 'rgba(255,255,255,0.02)', 
-              border: '1px solid rgba(255,255,255,0.05)', 
-              padding: '6px', 
-              borderRadius: '14px', 
-              margin: '16px 24px 24px',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)'
-            }}>
-              {navItems.map(item => (
-                <button
-                  key={item.key}
-                  className={`kratos-nav-btn ${activeTab === item.key ? 'active' : ''}`}
-                  onClick={() => setActiveTab(item.key)}
-                  style={{ flex: 1, justifyContent: 'center' }}
-                >
-                  {item.icon}
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-          </>
+              </>
+            }
+          />
         )}
 
         {/* Viewport content */}
@@ -1002,7 +924,7 @@ function App() {
 
           {/* Dynamic Content Switching */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: (activeTab === 'route' || selectedRide) ? 'hidden' : 'auto' }}>
-            <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+            <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
             {/* ── Zenith Ecosystem Hub View & Pilot View are handled in Zenith Hub ── */}
 
             {/* ── Analytics & History Views ── */}
@@ -1074,33 +996,6 @@ function App() {
                 )}
               </div>
             )}
-
-            {/* ── Calendar View ── */}
-            {activeTab === 'calendar' && (
-              <div className="workout-tab-content" style={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, height: selectedRide ? '100%' : 'auto', width: '100%', overflowY: selectedRide ? 'hidden' : 'visible' }}>
-                {!selectedRide ? (
-                  <CalendarPage
-                    rides={rides}
-                    kratosWorkouts={kratosWorkouts}
-                    profile={fitnessProfile}
-                    onSelectRide={(id) => setSelectedRide(id)}
-                  />
-                ) : (
-                  <div className="wd-detail-panel wd-detail-panel--full" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%', width: '100%' }}>
-                    <ErrorBoundary>
-                      <RidePage
-                        rideId={selectedRide}
-                        onBack={() => setSelectedRide(null)}
-                        profile={fitnessProfile}
-                        onChange={reloadRides}
-                      />
-                    </ErrorBoundary>
-                  </div>
-                )}
-              </div>
-            )}
-
-
 
             {/* ── Settings View ── */}
             {activeTab === 'settings' && (

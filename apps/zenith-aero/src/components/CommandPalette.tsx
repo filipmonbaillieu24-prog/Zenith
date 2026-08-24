@@ -112,7 +112,7 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, commands }) =
               outline: 'none',
               color: '#f8fafc',
               fontSize: 14,
-              fontFamily: 'inheride',
+              fontFamily: 'inherit',
             }}
           />
           <kbd style={{
@@ -122,7 +122,7 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, commands }) =
             padding: '2px 6px',
             fontSize: 10,
             color: '#64748b',
-            fontFamily: 'inheride',
+            fontFamily: 'inherit',
             flexShrink: 0,
           }}>
             ESC
@@ -215,7 +215,7 @@ export const CommandPalette: React.FC<Props> = ({ isOpen, onClose, commands }) =
                             padding: '2px 6px',
                             fontSize: 10,
                             color: '#64748b',
-                            fontFamily: 'inheride',
+                            fontFamily: 'inherit',
                             flexShrink: 0,
                           }}>
                             {cmd.shortcut}

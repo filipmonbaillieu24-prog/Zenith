@@ -22,12 +22,22 @@ export function parseGpxFile(content: string, filename?: string): Partial<RunAct
   const cads = points.map(p => p.cadence).filter((c): c is number => c != null && c > 0);
   const avgCadenceSpm = cads.length > 0 ? Math.round(cads.reduce((a, b) => a + b, 0) / cads.length) : 170;
 
+  let elevationGainM = 0;
+  for (let i = 1; i < points.length; i++) {
+    const prevEle = points[i - 1].ele;
+    const ele = points[i].ele;
+    if (prevEle != null && ele != null && ele > prevEle) {
+      elevationGainM += ele - prevEle;
+    }
+  }
+
   return {
-    title: filename ? filename.replace(/\.(gpx|xml|tcx)$/i, '') : 'Geïmporteerde Loop',
+    title: filename ? filename.replace(/\.(gpx|xml|tcx)$/i, '') : 'Imported Route',
     date: new Date(startMs).toISOString().slice(0, 10),
     distanceKm,
     durationSec,
     avgPaceMinKm,
+    elevationGainM: Math.round(elevationGainM),
     avgHeartRate,
     maxHeartRate,
     avgCadenceSpm,

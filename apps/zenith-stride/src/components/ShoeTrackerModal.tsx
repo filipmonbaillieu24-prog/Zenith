@@ -49,7 +49,7 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
       <div className="stride-modal-container" onClick={e => e.stopPropagation()}>
         <div className="stride-modal-header">
           <div>
-            <h3>Running Shoes & Slijtage Tracker</h3>
+            <h3>Running Shoes & Wear Tracker</h3>
             <p className="subtitle">Track distance logged per pair of shoes</p>
           </div>
           <button className="stride-close-btn" onClick={onClose}>
@@ -59,7 +59,7 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
 
         <div className="stride-modal-body">
           <div className="shoes-header-bar">
-            <span>Mijn hardloopschoenen</span>
+            <span>My Running Shoes</span>
             <button className="btn-add-shoe" onClick={() => setShowAddForm(!showAddForm)}>
               <Plus size={14} />
               <span>Add New Pair</span>
@@ -70,10 +70,10 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
             <form onSubmit={handleCreateShoe} className="add-shoe-form animate-fade-in">
               <div className="form-row">
                 <div className="form-group flex-1">
-                  <label>Merk</label>
+                  <label>Brand</label>
                   <input 
                     type="text" 
-                    placeholder="Atv. Nike, Hoka, Saucony" 
+                    placeholder="e.g. Nike, Hoka, Saucony" 
                     value={brand} 
                     onChange={e => setBrand(e.target.value)} 
                     required 
@@ -83,14 +83,14 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
                   <label>Model</label>
                   <input 
                     type="text" 
-                    placeholder="Atv. Clifton 9, Endorphin Speed 3" 
+                    placeholder="e.g. Clifton 9, Endorphin Speed 3" 
                     value={model} 
                     onChange={e => setModel(e.target.value)} 
                     required 
                   />
                 </div>
                 <div className="form-group flex-1">
-                  <label>Max. Kilometers</label>
+                  <label>Max Distance (km)</label>
                   <input 
                     type="number" 
                     value={maxDistanceKm} 
@@ -103,6 +103,14 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
                 <Check size={14} style={{ marginRight: 4 }} /> Save
               </button>
             </form>
+          )}
+
+          {shoes.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-muted, #94a3b8)' }}>
+              <Footprints size={22} style={{ opacity: 0.5, marginBottom: 8 }} />
+              <p style={{ margin: 0, fontSize: 13 }}>No shoes added yet.</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, opacity: 0.8 }}>Add a pair to start tracking wear as you log runs.</p>
+            </div>
           )}
 
           <div className="shoes-list">
@@ -137,9 +145,9 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
                   <button 
                     className="btn-retire" 
                     onClick={() => onToggleRetire(shoe.id)}
-                    title={shoe.retired ? 'Wederom in gebruik nemen' : 'Pensioneer schoen'}
+                    title={shoe.retired ? 'Bring back into use' : 'Retire shoe'}
                   >
-                    {shoe.retired ? 'Herstellen' : 'Pensioneren'}
+                    {shoe.retired ? 'Restore' : 'Retire'}
                   </button>
                 </div>
               );
@@ -148,7 +156,7 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
         </div>
 
         <div className="stride-modal-footer">
-          <button className="btn-cancel" onClick={onClose}>Sluiten</button>
+          <button className="btn-cancel" onClick={onClose}>Close</button>
         </div>
       </div>
     </div>

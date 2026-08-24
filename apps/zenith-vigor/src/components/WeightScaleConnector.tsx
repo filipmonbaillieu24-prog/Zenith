@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bluetooth, Scale, X, HelpCircle } from 'lucide-react';
+import { isTrustedZenithOrigin } from '@zenith/shared';
 
 interface WeightScaleConnectorProps {
   onClose: () => void;
@@ -223,6 +224,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
     }
 
     const handleMessage = (event: MessageEvent) => {
+      if (!isTrustedZenithOrigin(event.origin)) return;
       if (event.data?.type === 'native-weight-received') {
         const weight = event.data.weight;
         const raw_bytes = event.data.raw_bytes;
@@ -441,7 +443,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
             const w1516 = (bytes[15] << 8 | bytes[16]) / 100;
             if (w1516 >= 40 && w1516 <= 150) {
               foundWeight = w1516;
-              methodUsed = "Yolanda Standaard (bytes 15-16, big-endian / 100)";
+              methodUsed = "Yolanda Standard (bytes 15-16, big-endian / 100)";
             }
           }
 
@@ -487,15 +489,15 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
               
               if (valBE100 >= 45 && valBE100 <= 130) {
                 foundWeight = valBE100;
-                methodUsed = `Dynamische Auto-Scan (bytes ${i}-${i+1}, big-endian / 100)`;
+                methodUsed = `Dynamic Auto-Scan (bytes ${i}-${i+1}, big-endian / 100)`;
                 break;
               } else if (valLE100 >= 45 && valLE100 <= 130) {
                 foundWeight = valLE100;
-                methodUsed = `Dynamische Auto-Scan (bytes ${i}-${i+1}, little-endian / 100)`;
+                methodUsed = `Dynamic Auto-Scan (bytes ${i}-${i+1}, little-endian / 100)`;
                 break;
               } else if (valBE10 >= 45 && valBE10 <= 130) {
                 foundWeight = valBE10;
-                methodUsed = `Dynamische Auto-Scan (bytes ${i}-${i+1}, big-endian / 10)`;
+                methodUsed = `Dynamic Auto-Scan (bytes ${i}-${i+1}, big-endian / 10)`;
                 break;
               }
             }

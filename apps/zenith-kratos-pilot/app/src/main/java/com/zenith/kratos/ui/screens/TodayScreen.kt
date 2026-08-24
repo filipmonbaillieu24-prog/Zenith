@@ -90,6 +90,14 @@ fun TodayScreen(
 
                 Button(
                     onClick = {
+                        if (unsyncedCount > 0) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "You have $unsyncedCount unsynced workout(s). Sync before logging out or they will be lost.",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                            return@Button
+                        }
                         scope.launch {
                             try {
                                 db.exerciseDao().deleteAll()
@@ -153,7 +161,7 @@ fun TodayScreen(
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                             enabled = !isSyncing
                         ) {
-                            Text("SYNC NU", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("SYNC NOW", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -212,7 +220,7 @@ fun TodayScreen(
                                 enabled = !isSyncing,
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text(if (isSyncing) "Synchroniseren..." else "Sync Nu", color = Color(0xFF09090B), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(if (isSyncing) "Syncing..." else "Sync Now", color = Color(0xFF09090B), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
                     }
@@ -271,10 +279,15 @@ fun TodayScreen(
                                             if (log != null && log.sets.isNotEmpty()) {
                                                 val workingSetsInLog = log.sets.filter { it.type == "working" }
                                                 val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }
-                                                val allSuccess = workingSetsInLog.isNotEmpty() && workingSetsInLog.all { s ->
-                                                    val maxReps = tempEx?.sets?.filter { it.type == "working" }?.firstOrNull()?.maxReps ?: 10
-                                                    val targetRir = tempEx?.sets?.filter { it.type == "working" }?.firstOrNull()?.targetRir ?: 2
-                                                    
+                                                val workingTargets = tempEx?.sets?.filter { it.type == "working" } ?: emptyList()
+                                                val allSuccess = workingSetsInLog.isNotEmpty() && workingSetsInLog.withIndex().all { (idx, s) ->
+                                                    // Compare each logged set against its own positional target spec,
+                                                    // not always the first set's - templates can have per-set targets
+                                                    // (e.g. a pyramid scheme).
+                                                    val target = workingTargets.getOrNull(idx) ?: workingTargets.lastOrNull()
+                                                    val maxReps = target?.maxReps ?: 10
+                                                    val targetRir = target?.targetRir ?: 2
+
                                                     s.reps >= maxReps && s.rir <= targetRir
                                                 }
 
@@ -378,7 +391,7 @@ fun TodayScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "OEFENINGEN IN DEZE ROUTINE",
+                        text = "EXERCISES IN THIS ROUTINE",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         color = ZenithSecondary,
@@ -408,7 +421,7 @@ fun TodayScreen(
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
-                                    val weightLabel = if (ex.incrementPerSide) "per kant" else "totaal"
+                                    val weightLabel = if (ex.incrementPerSide) "per side" else "total"
                                     Text(
                                         text = "${ex.category} • ($weightLabel)",
                                         color = ZenithSecondary,

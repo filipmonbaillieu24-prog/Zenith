@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart } from 'lucide-react';
+import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, recoveryModel, calculateZenithSleepScore } from '@zenith/shared';
-import { computeSimulatedPMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
+import { predictRecoveryScore, recoveryModel, calculateZenithSleepScore, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -16,6 +16,25 @@ import {
 } from 'recharts';
 import { AnatomicalMuscleHeatmap } from '../../components/AnatomicalMuscleHeatmap';
 import './ZenithHub.css';
+
+/** One-line context for the PMC hero card — mirrors the tone used in Aero/Kratos's
+ * own hero-metric dashboards, which show this exact same TSB-derived status. */
+function tsbContext(label: string, tsb: number): string {
+  switch (label) {
+    case 'Fresh / too little stimulus':
+      return "You're well recovered but training load has been light — there's room to push harder.";
+    case 'Peak condition':
+      return 'Fitness and freshness are both high right now — a good window for your hardest efforts.';
+    case 'Optimal training period':
+      return 'A healthy, sustainable balance of fitness and fatigue across your linked extensions.';
+    case 'Build phase / fatigued':
+      return "You're carrying more fatigue than fitness right now — expected mid-build, not a warning sign.";
+    default:
+      return tsb < -25
+        ? 'Fatigue has been outpacing recovery for a while — consider prioritizing rest this week.'
+        : 'Keep an eye on recovery markers over the next few sessions.';
+  }
+}
 
 interface ZenithHubPageProps {
   fitnessProfile: any;
@@ -43,37 +62,93 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   const [latestSleep, setLatestSleep] = useState<any | null>(null);
   const [allSleeps, setAllSleeps] = useState<any[]>([]);
   const [todaySteps, setTodaySteps] = useState<number>(0);
+  const [caloriesConsumedToday, setCaloriesConsumedToday] = useState<number | null>(null);
   const [weeklyRidesCount, setWeeklyRidesCount] = useState<number>(0);
   const [weeklyRidesDistance, setWeeklyRidesDistance] = useState<number>(0);
   const [weeklyStrideCount, setWeeklyStrideCount] = useState<number>(0);
   const [weeklyStrideDistance, setWeeklyStrideDistance] = useState<number>(0);
   const [weeklyKratosCount, setWeeklyKratosCount] = useState<number>(0);
   const [weeklyGymVolume, setWeeklyGymVolume] = useState<number>(0);
-  const [loadingDashboard, setLoadingDashboard] = useState(false);
+  // Starts true (not false) so the dashboard never flashes zero-state PMC/Recovery
+  // numbers on first paint before fetchDashboardData's effect has had a chance to run.
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
 
   const fetchDashboardData = async () => {
     setLoadingDashboard(true);
     try {
-      // 1. Fetch latest weight log
-      const { data: wData } = await supabase
-        .from('vigor_weight')
-        .select('*')
-        .eq('user_id', userId)
-        .order('logged_at', { ascending: false })
-        .limit(1);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      // Start of current week (Monday)
+      const now = new Date();
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const startOfWeek = new Date(now.setDate(diff));
+      startOfWeek.setHours(0, 0, 0, 0);
+      const startOfWeekMs = startOfWeek.getTime();
+
+      // All of these reads are independent of each other (none filters on a prior
+      // query's result — only on userId and locally-computed date boundaries). The
+      // three "weekly" queries this used to run separately (rides/stride/kratos
+      // filtered to this week) were also pure duplicates of the full-history queries
+      // a few lines below them — those are now derived client-side instead of
+      // hitting Supabase twice per table, cutting 11 queries down to 9.
+      //
+      // Firing all 9 at once (via a single Promise.all) sounds strictly faster, but
+      // this project runs on a small Supabase instance shared by all 6 Zenith apps —
+      // Hub's dashboard, Aero, Vigor, Kratos, Fuel and Stride all mount at roughly
+      // the same moment (Hub embeds the other five as iframes), so a 9-wide burst
+      // from Hub alone lands on top of each of those apps' own mount-time queries.
+      // That combined spike was blowing past the instance's burst capacity and
+      // causing Postgres to cancel queries with "statement timeout" — on tables with
+      // single-digit row counts, so it was never about query cost, only concurrency.
+      // Batching into groups of 3 keeps most of the parallelization win (~3 round
+      // trips instead of 11) while capping Hub's own peak concurrent connections.
+      const chunk = <T,>(arr: T[], size: number): T[][] =>
+        Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
+
+      const queries = [
+        () => supabase.from('vigor_weight').select('*').eq('user_id', userId).order('logged_at', { ascending: false }).limit(1),
+        () => supabase.from('vigor_sleep').select('*').eq('user_id', userId).order('logged_at', { ascending: false }).limit(14),
+        () => supabase.from('vigor_steps').select('*').eq('user_id', userId).gte('logged_at', todayStart.toISOString()).lte('logged_at', todayEnd.toISOString()).order('logged_at', { ascending: false }),
+        () => supabase.from('fuel_logs').select('calories').eq('user_id', userId).gte('logged_at', todayStart.toISOString()).lte('logged_at', todayEnd.toISOString()),
+        () => supabase.from('planned_workouts').select('*').eq('user_id', userId),
+        () => supabase.from('rides').select('date, distance, metadata').eq('user_id', userId),
+        () => supabase.from('stride_activities').select('*').eq('user_id', userId),
+        () => supabase.from('kratos_workouts').select('id, name, completed_at, sets, volume').eq('user_id', userId),
+        () => supabase.from('kratos_exercises').select('id, name, category, primary_muscle, secondary_muscles').eq('user_id', userId),
+      ];
+
+      // Safety net: a hung network request (as opposed to a clean server-side error,
+      // which rejects quickly on its own) has no built-in timeout here otherwise, and
+      // would leave loadingDashboard — and its full-screen overlay — stuck forever.
+      const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+        Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Dashboard fetch timed out')), ms))]);
+
+      const results: any[] = [];
+      for (const batch of chunk(queries, 3)) {
+        results.push(...await withTimeout(Promise.all(batch.map(q => q())), 15000));
+      }
+      const [
+        { data: wData },
+        { data: sData },
+        { data: stData },
+        { data: fuelLogsToday },
+        { data: plannedData },
+        { data: ridesData },
+        { data: strideData },
+        { data: allKData },
+        { data: exCatalog },
+      ] = results;
+
       if (wData && wData.length > 0) {
         setLatestWeight(wData[0]);
       } else {
         setLatestWeight(null);
       }
 
-      // 2. Fetch latest 14 sleep logs for ML baseline & debt analysis
-      const { data: sData } = await supabase
-        .from('vigor_sleep')
-        .select('*')
-        .eq('user_id', userId)
-        .order('logged_at', { ascending: false })
-        .limit(14);
       if (sData && sData.length > 0) {
         setLatestSleep(sData[0]);
         setAllSleeps(sData);
@@ -82,88 +157,18 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         setAllSleeps([]);
       }
 
-      // 3. Fetch today's steps log
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
-      const { data: stData } = await supabase
-        .from('vigor_steps')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('logged_at', todayStart.toISOString())
-        .lte('logged_at', todayEnd.toISOString())
-        .order('logged_at', { ascending: false });
       if (stData && stData.length > 0) {
         setTodaySteps(Number(stData[0].step_count) || 0);
       } else {
         setTodaySteps(0);
       }
 
-      // 4. Calculate start of current week (Monday)
-      const now = new Date();
-      const day = now.getDay();
-      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-      const startOfWeek = new Date(now.setDate(diff));
-      startOfWeek.setHours(0, 0, 0, 0);
-
-      // 5. Fetch weekly rides count & distance
-      const { data: rData } = await supabase
-        .from('rides')
-        .select('distance')
-        .eq('user_id', userId)
-        .gte('date', startOfWeek.getTime());
-
-      if (rData) {
-        setWeeklyRidesCount(rData.length);
-        const totalDist = rData.reduce((sum, r) => sum + Number(r.distance || 0), 0);
-        setWeeklyRidesDistance(totalDist);
+      if (fuelLogsToday && fuelLogsToday.length > 0) {
+        setCaloriesConsumedToday(fuelLogsToday.reduce((sum: number, f: any) => sum + Number(f.calories || 0), 0));
       } else {
-        setWeeklyRidesCount(0);
-        setWeeklyRidesDistance(0);
+        setCaloriesConsumedToday(null);
       }
 
-      // 5b. Fetch weekly Stride runs count & distance
-      const { data: stRunData } = await supabase
-        .from('stride_activities')
-        .select('distance_km, date, created_at')
-        .eq('user_id', userId);
-      
-      if (stRunData) {
-        const startOfWeekMs = startOfWeek.getTime();
-        const thisWeekRuns = stRunData.filter(s => {
-          const t = s.date ? new Date(s.date).getTime() : new Date(s.created_at).getTime();
-          return t >= startOfWeekMs;
-        });
-        setWeeklyStrideCount(thisWeekRuns.length);
-        const totalDist = thisWeekRuns.reduce((sum, r) => sum + Number(r.distance_km || 0), 0);
-        setWeeklyStrideDistance(totalDist);
-      } else {
-        setWeeklyStrideCount(0);
-        setWeeklyStrideDistance(0);
-      }
-
-      // 6. Fetch weekly Kratos workouts count and volume
-      const { data: kData } = await supabase
-        .from('kratos_workouts')
-        .select('id, volume')
-        .eq('user_id', userId)
-        .gte('completed_at', startOfWeek.toISOString());
-      
-      if (kData) {
-        setWeeklyKratosCount(kData.length);
-        const totalVolume = kData.reduce((sum, w) => sum + Number(w.volume || 0), 0);
-        setWeeklyGymVolume(totalVolume);
-      } else {
-        setWeeklyKratosCount(0);
-        setWeeklyGymVolume(0);
-      }
-
-      // 7. Fetch planned workouts for PMC simulation
-      const { data: plannedData } = await supabase
-        .from('planned_workouts')
-        .select('*')
-        .eq('user_id', userId);
       if (plannedData) {
         setPlannedWorkouts(plannedData.map((p: any) => ({
           id: p.id,
@@ -178,11 +183,6 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         })));
       }
 
-      // 8. Fetch completed rides for PMC simulation & Muscle Heatmap
-      const { data: ridesData } = await supabase
-        .from('rides')
-        .select('date, distance, metadata')
-        .eq('user_id', userId);
       if (ridesData) {
         setAllRides(ridesData.map((r: any) => {
           const witha = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata || {};
@@ -192,31 +192,40 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
             tss: witha?.tss ?? witha?.hrTSS ?? 0
           };
         }));
+
+        const thisWeekRides = ridesData.filter((r: any) => Number(r.date) >= startOfWeekMs);
+        setWeeklyRidesCount(thisWeekRides.length);
+        setWeeklyRidesDistance(thisWeekRides.reduce((sum: number, r: any) => sum + Number(r.distance || 0), 0));
+      } else {
+        setWeeklyRidesCount(0);
+        setWeeklyRidesDistance(0);
       }
 
-      // 9. Fetch Stride running activities for PMC simulation & Cardio Volume
-      const { data: strideData } = await supabase
-        .from('stride_activities')
-        .select('*')
-        .eq('user_id', userId);
       if (strideData) {
         setAllStride(strideData);
+
+        const thisWeekRuns = strideData.filter((s: any) => {
+          const t = s.date ? new Date(s.date).getTime() : new Date(s.created_at).getTime();
+          return t >= startOfWeekMs;
+        });
+        setWeeklyStrideCount(thisWeekRuns.length);
+        setWeeklyStrideDistance(thisWeekRuns.reduce((sum: number, r: any) => sum + Number(r.distance_km || 0), 0));
+      } else {
+        setWeeklyStrideCount(0);
+        setWeeklyStrideDistance(0);
       }
 
-      // 10. Fetch Kratos workouts for PMC simulation & Muscle Heatmap
-      const { data: allKData } = await supabase
-        .from('kratos_workouts')
-        .select('id, name, completed_at, sets, volume')
-        .eq('user_id', userId);
       if (allKData) {
         setAllKratos(allKData);
+
+        const thisWeekWorkouts = allKData.filter((w: any) => w.completed_at && new Date(w.completed_at).getTime() >= startOfWeekMs);
+        setWeeklyKratosCount(thisWeekWorkouts.length);
+        setWeeklyGymVolume(thisWeekWorkouts.reduce((sum: number, w: any) => sum + Number(w.volume || 0), 0));
+      } else {
+        setWeeklyKratosCount(0);
+        setWeeklyGymVolume(0);
       }
 
-      // 11. Fetch Kratos exercises catalog to map exercise IDs -> Categories, Primary & Secondary Muscles
-      const { data: exCatalog } = await supabase
-        .from('kratos_exercises')
-        .select('id, name, category, primary_muscle, secondary_muscles')
-        .eq('user_id', userId);
       if (exCatalog) {
         setKratosExercises(exCatalog);
       }
@@ -231,26 +240,55 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   useEffect(() => {
     if (userId) {
       fetchDashboardData();
+    } else {
+      // loadingDashboard defaults to true so the dashboard never flashes zero-state
+      // values before this effect gets a chance to run. But if userId is ever falsy
+      // here, fetchDashboardData never fires, and nothing else would ever flip
+      // loadingDashboard back to false — leaving the loading overlay stuck forever
+      // instead of just showing empty state like it did before that default changed.
+      setLoadingDashboard(false);
     }
   }, [userId]);
 
+  // ── Cross-app load pool calibration ──
+  // Aero supplies real, device-measured tss/hrTSS. Kratos and Stride do not have an
+  // equivalent measured "TSS" at all, so the two scalars below are rough heuristic
+  // conversions into a TSS-like unit — NOT a statistically calibrated equivalence
+  // between running/lifting stress and cycling TSS. Treat any Kratos/Stride figure
+  // in this pool as an ESTIMATE. A proper fix would calibrate these per-athlete
+  // against real physiological cost (HR, power, RPE-based session load, etc.) — out
+  // of scope for this pass; for now we at least name and document the constants so
+  // future work can find and replace them.
+  const STRIDE_RSS_HR_REFERENCE_BPM = 150; // "threshold-ish" reference HR used to scale a session's average HR into an intensity ratio
+  const STRIDE_RSS_SCALAR = 1.1; // duration(min) * intensity-ratio -> "RSS" (estimated running TSS-equivalent), rough heuristic
+  const KRATOS_STSS_VOLUME_SCALAR = 0.012; // kg lifted (sets*reps*weight) -> "strength TSS", rough heuristic
+  const KRATOS_STSS_MIN = 15; // floor so any completed session registers some load
+  const KRATOS_STSS_MAX = 80; // ceiling so one huge-volume day doesn't dominate the shared pool
+
   // ── PMC Simulation Logic ──
   const simPMC = useMemo(() => {
-    const tssList: { date: number; tss: number }[] = [];
+    const tssList: { date: number; tss: number; source: 'aero' | 'kratos' | 'stride'; isEstimated: boolean }[] = [];
 
     allRides.forEach(r => {
       if (r.tss > 0) {
-        tssList.push({ date: r.date, tss: r.tss });
+        tssList.push({ date: r.date, tss: r.tss, source: 'aero', isEstimated: false });
       }
     });
 
     allStride.forEach(s => {
+      // Do NOT fabricate a default HR/duration for incomplete records (previously
+      // defaulted to HR 147 / 20min, inventing a plausible-looking data point out of
+      // thin air). If a session is missing the real HR or duration it needs for the
+      // RSS estimate, exclude it from the shared load pool rather than guessing.
+      if (!s.duration_sec || !s.avg_heart_rate) {
+        return;
+      }
       const dateMs = new Date(s.date).getTime();
-      const durMins = (s.duration_sec || 1200) / 60;
-      const hrRatio = (s.avg_heart_rate || 147) / 150;
-      const rss = Math.round(durMins * hrRatio * 1.1);
+      const durMins = s.duration_sec / 60;
+      const hrRatio = s.avg_heart_rate / STRIDE_RSS_HR_REFERENCE_BPM;
+      const rss = Math.round(durMins * hrRatio * STRIDE_RSS_SCALAR);
       if (rss > 0) {
-        tssList.push({ date: dateMs, tss: rss });
+        tssList.push({ date: dateMs, tss: rss, source: 'stride', isEstimated: true });
       }
     });
 
@@ -258,13 +296,60 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       if (k.completed_at && k.volume) {
         const ts = new Date(k.completed_at).getTime();
         const volume = Number(k.volume);
-        const sTSS = Math.min(80, Math.max(15, Math.round(volume * 0.012)));
-        tssList.push({ date: ts, tss: sTSS });
+        const sTSS = Math.min(KRATOS_STSS_MAX, Math.max(KRATOS_STSS_MIN, Math.round(volume * KRATOS_STSS_VOLUME_SCALAR)));
+        tssList.push({ date: ts, tss: sTSS, source: 'kratos', isEstimated: true });
       }
     });
 
     return computeSimulatedPMC(tssList, plannedWorkouts, 35);
-  }, [allRides, allKratos, plannedWorkouts]);
+  }, [allRides, allKratos, allStride, plannedWorkouts]);
+
+  // ── Cardio-only load pool (Aero + Stride), used ONLY to feed the Recovery Score
+  // model's cardioTSB/cardioATL inputs ──
+  // The model (shared/ml/RecoveryScore.ts) also independently receives weeklyGymVolume
+  // as its own "gymVolume7d" input. If we fed it the blended atl/tsb above (which now
+  // includes Kratos's estimated sTSS via bug-1's shared pool) AND weeklyGymVolume, the
+  // same Kratos training would be counted twice toward the same recovery estimate. So
+  // for the recovery model specifically we compute a cardio-only ATL/TSB (Aero real TSS
+  // + Stride estimated RSS) that deliberately excludes Kratos — Kratos's contribution
+  // is represented exactly once, via weeklyGymVolume. The blended (Aero+Kratos+Stride)
+  // simPMC above is still used for the dashboard's PMC/Periodization chart, where an
+  // "overall training stress" view is what's intended.
+  const cardioOnlyPMC = useMemo(() => {
+    const cardioTssList: { date: number; tss: number }[] = [];
+
+    allRides.forEach(r => {
+      if (r.tss > 0) {
+        cardioTssList.push({ date: r.date, tss: r.tss });
+      }
+    });
+
+    allStride.forEach(s => {
+      if (!s.duration_sec || !s.avg_heart_rate) {
+        return;
+      }
+      const dateMs = new Date(s.date).getTime();
+      const durMins = s.duration_sec / 60;
+      const hrRatio = s.avg_heart_rate / STRIDE_RSS_HR_REFERENCE_BPM;
+      const rss = Math.round(durMins * hrRatio * STRIDE_RSS_SCALAR);
+      if (rss > 0) {
+        cardioTssList.push({ date: dateMs, tss: rss });
+      }
+    });
+
+    return computePMC(cardioTssList);
+  }, [allRides, allStride]);
+
+  const cardioToday = useMemo(() => {
+    if (cardioOnlyPMC.length === 0) return { atl: 0, tsb: 0 };
+    const todayKey = new Date().setHours(0, 0, 0, 0);
+    const pt = cardioOnlyPMC.find(p => {
+      const d = new Date(p.date);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime() === todayKey;
+    });
+    return pt ? { atl: pt.atl, tsb: pt.tsb } : { atl: 0, tsb: 0 };
+  }, [cardioOnlyPMC]);
 
   // Find today's point in the simulation to show unified metrics (Aero + Kratos)
   const todayPoint = useMemo(() => {
@@ -284,7 +369,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
 
   const chartData = useMemo(() => {
     return simPMC.map(pt => ({
-      dateStr: new Date(pt.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }),
+      dateStr: new Date(pt.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
       rawDate: pt.date,
       ctl: pt.ctl,
       atl: pt.atl,
@@ -589,6 +674,22 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     return calculateZenithSleepScore(latestSleep, allSleeps, 8.0);
   }, [latestSleep, allSleeps]);
 
+  // Rough BMR heuristic (~1 kcal per kg body weight per day, a widely-cited resting
+  // metabolic rate rule of thumb) used only to turn today's logged food intake into a
+  // directional calorie-balance signal. Hub does not have access to Fuel's full
+  // calibrated TDEE model (apps/zenith-fuel/src/utils/zane.ts, which factors in
+  // weight-trend regression, sleep, caffeine, etc.) — replicating that here is out of
+  // scope for this pass. When there's no logged food data for today we return a
+  // neutral 0 rather than fabricating a number, same as before, but the value is now
+  // wired to real data whenever it exists instead of being permanently hardcoded.
+  const CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY = 24;
+  const calorieBalance = useMemo(() => {
+    if (caloriesConsumedToday === null) return 0;
+    const weightVal = latestWeight?.weight ?? fitnessProfile.weight ?? 75;
+    const roughTdee = weightVal * CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY;
+    return Math.round(caloriesConsumedToday - roughTdee);
+  }, [caloriesConsumedToday, latestWeight, fitnessProfile.weight]);
+
   // Calculate recovery score (CR11 ML Model)
   const recoveryScore = useMemo(() => {
     if (!recoveryModel.loaded) {
@@ -597,18 +698,24 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     const sQual = sleepAnalysis.score;
     const sDur = sleepAnalysis.metrics.totalHours;
     const weightVal = latestWeight?.weight ?? fitnessProfile.weight ?? 75;
-    
+
+    // Feed the model cardio-only TSB/ATL (Aero + Stride) rather than the blended
+    // Aero+Kratos+Stride tsb/atl used for the dashboard's PMC chart above. Kratos's
+    // contribution is supplied via weeklyGymVolume immediately below; passing the
+    // blended atl (which now includes Kratos's estimated load, per the shared pool
+    // built above) AND weeklyGymVolume together would double-count the same Kratos
+    // sessions toward the same recovery estimate. See cardioOnlyPMC/cardioToday above.
     return predictRecoveryScore(
-      tsb,
+      cardioToday.tsb,
       sQual,
       sDur,
       weeklyGymVolume,
       todaySteps,
-      0, // calorieBalance default
+      calorieBalance,
       weightVal,
-      atl
+      cardioToday.atl
     );
-  }, [tsb, sleepAnalysis, latestWeight, fitnessProfile.weight, weeklyGymVolume, todaySteps, atl, mlModelsLoaded]);
+  }, [cardioToday, sleepAnalysis, latestWeight, fitnessProfile.weight, weeklyGymVolume, todaySteps, calorieBalance, mlModelsLoaded]);
 
   const recoveryCardStyle = useMemo(() => {
     if (recoveryScore === null) {
@@ -654,21 +761,21 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     };
   }, [recoveryScore, tsb]);
 
-  const recoveryNote = useMemo(() => {
+  const recoveryNote = useMemo((): { Icon: typeof AlertTriangle; text: string } => {
     if (recoveryScore === null) {
-      return 'Calculating recovery...';
+      return { Icon: Activity, text: 'Calculating recovery...' };
     }
-    
+
     if (tsb < -25) {
-      return `⚠️ Overtraining risk flagged by PMC (Form: ${tsb}). Adjust workload despite recovery score.`;
+      return { Icon: AlertTriangle, text: `Overtraining risk flagged by PMC (Form: ${tsb}). Adjust workload despite recovery score.` };
     }
-    
+
     if (recoveryScore >= 80) {
-      return '🏆 Excellent recovery. Ready for high-intensity training!';
+      return { Icon: Trophy, text: 'Excellent recovery. Ready for high-intensity training!' };
     } else if (recoveryScore >= 50) {
-      return '💪 Well recovered. Normal training workload is optimal.';
+      return { Icon: ThumbsUp, text: 'Well recovered. Normal training workload is optimal.' };
     } else {
-      return '⚠️ Fatigue detected. Focus on active recovery or rest.';
+      return { Icon: AlertTriangle, text: 'Fatigue detected. Focus on active recovery or rest.' };
     }
   }, [recoveryScore, tsb]);
 
@@ -682,7 +789,33 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       <div className="zh-hub-glow" />
 
       {/* DASHBOARD VIEW */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} className="animate-fade-in">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, position: 'relative' }} className="animate-fade-in">
+          {/* One loading state for the whole dashboard instead of each card popping in
+              on its own — the real cards underneath still mount immediately (so layout
+              doesn't jump once this clears), this just covers their zero-state values
+              until fetchDashboardData resolves. */}
+          {loadingDashboard && (
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              minHeight: 420,
+              background: 'rgba(9, 9, 11, 0.78)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              borderRadius: 16,
+            }}>
+              <Loader2 size={28} className="zh-spin" style={{ color: '#cbd5e1' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.3px' }}>
+                Loading your dashboard...
+              </span>
+            </div>
+          )}
           {/* PMC & Recovery Stats row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 20 }}>
             {/* PMC Card */}
@@ -694,39 +827,44 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
               </div>
               <p style={{ margin: '0 0 16px', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
                 Calculated from your logged training workload across linked Aero, Kratos & Stride extensions.
+                Aero figures come from measured ride TSS; Kratos & Stride figures are estimated from workout volume and duration/HR.
               </p>
-              <div className="zh-stats-grid">
-                <div className="zh-stat-item">
-                  <span className="zh-stat-label">Fitness (CTL)</span>
-                  <strong className="zh-stat-value" style={{ color: '#cbd5e1' }}>{ctl}</strong>
+              <ZenithHeroStat
+                eyebrow="Form · TSB"
+                value={tsb >= 0 ? `+${tsb}` : tsb}
+                sub={tsbContext(currentFormStatus.label, tsb)}
+                pill={
+                  <span className="zenith-pill" style={{ background: `${currentFormStatus.color}1f`, color: currentFormStatus.color }}>
+                    {currentFormStatus.emoji} {currentFormStatus.label}
+                  </span>
+                }
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '14px 16px' }}>
+                  <div className="zenith-label">Fitness · CTL</div>
+                  <div className="zenith-stat-value" style={{ marginTop: 4 }}>{ctl}</div>
                 </div>
-                <div className="zh-stat-item">
-                  <span className="zh-stat-label">Fatigue (ATL)</span>
-                  <strong className="zh-stat-value" style={{ color: '#ff7675' }}>{atl}</strong>
-                </div>
-                <div className="zh-stat-item">
-                  <span className="zh-stat-label">Form (TSB)</span>
-                  <strong className="zh-stat-value" style={{ color: tsb >= 0 ? '#cbd5e1' : '#eccc68' }}>{tsb >= 0 ? `+${tsb}` : tsb}</strong>
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '14px 16px' }}>
+                  <div className="zenith-label">Fatigue · ATL</div>
+                  <div className="zenith-stat-value" style={{ marginTop: 4, color: '#f5a623' }}>{atl}</div>
                 </div>
               </div>
               
               {/* Recharts PMC Prediction Chart */}
               <div className="wd-calendar-chart-wrapper" style={{ marginTop: 20, borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: 16 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ marginBottom: 8 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Periodization & Forecast (+35 days)
-                  </span>
-                  <span style={{ fontSize: 10, color: currentFormStatus.color, fontWeight: 700 }}>
-                    Status: {currentFormStatus.label} {currentFormStatus.emoji}
                   </span>
                 </div>
                 <ResponsiveContainer width="100%" height={160}>
                   <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                    <XAxis dataKey="dateStr" tick={{ fill: '#64748b', fontSize: 10 }} stroke="rgba(255,255,255,0.05)" />
-                    <YAxis tick={{ fill: '#64748b', fontSize: 10 }} stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid {...ZENITH_CHART_GRID} />
+                    <XAxis dataKey="dateStr" tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.05)" />
+                    <YAxis tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.05)" />
                     <Tooltip
-                      contentStyle={{ background: '#09090b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11, color: '#fff' }}
+                      contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                      labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                     />
                     <ReferenceLine x={new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} stroke="#cbd5e1" strokeDasharray="3 3" label={{ value: 'Today', fill: '#cbd5e1', fontSize: 10 }} />
                     <Bar dataKey="tss" fill="rgba(255,255,255,0.08)" radius={[2, 2, 0, 0]} name="Daily TSS" />
@@ -759,8 +897,9 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                 <div style={{ height: 6, background: 'rgba(255, 255, 255, 0.05)', borderRadius: 3 }}>
                   <div style={{ height: '100%', width: `${recoveryScore ?? 0}%`, background: recoveryCardStyle.bar, borderRadius: 3, transition: 'width 0.5s ease-out' }} />
                 </div>
-                <span style={{ fontSize: 10, color: '#cbd5e1', fontWeight: 700 }}>
-                  {recoveryNote}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#cbd5e1', fontWeight: 700 }}>
+                  <recoveryNote.Icon size={12} />
+                  {recoveryNote.text}
                 </span>
               </div>
             </div>
@@ -828,7 +967,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                         <span style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 800 }}>Today's Step Count</span>
                       </div>
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1' }}>
-                        {(todaySteps || 0).toLocaleString()} / {(stepsGoal || 10000).toLocaleString()}
+                        {(todaySteps || 0).toLocaleString('en-US')} / {(stepsGoal || 10000).toLocaleString('en-US')}
                       </span>
                     </div>
                     <div style={{ height: 5, background: 'rgba(255,255,255,0.05)', borderRadius: 2 }}>
@@ -906,7 +1045,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
 
         {/* Anatomical Human Muscle Heatmap */}
         <div style={{ marginTop: '24px' }}>
-          <AnatomicalMuscleHeatmap customFatigueData={calculatedMuscleDataMap} />
+          <AnatomicalMuscleHeatmap customFatigueData={calculatedMuscleDataMap} isLoading={loadingDashboard} />
         </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React from 'react';
 import './CompareOverlay.css';
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { Ride, RidePoint } from '../../types/workout';
 
 interface CompareOverlayProps {
@@ -62,13 +63,13 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
     return Array.from(map.values()).sort((a, b) => a.pct - b.pct);
   }
 
-  const dateA = new Date(rideA.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: '2-digit' });
-  const dateB = new Date(rideB.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: '2-digit' });
+  const dateA = new Date(rideA.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' });
+  const dateB = new Date(rideB.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: '2-digit' });
 
   return (
     <div className="cmp-panel">
       <div className="cmp-panel__head">
-        <span className="cmp-panel__title">⇄ Vergelijking</span>
+        <span className="cmp-panel__title">⇄ Comparison</span>
         <div className="cmp-legend">
           <span className="cmp-legend__dot" style={{background:'#cbd5e1'}} /> {dateA}
           <span className="cmp-legend__dot" style={{background:'#ffffff'}} /> {dateB}
@@ -78,10 +79,10 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
       {/* Delta summary */}
       <div className="cmp-deltas">
         <div className="cmp-delta-card"><span className="cmp-delta-label">Distance</span>{fmtDelta(deltaKm,'km')}</div>
-        <div className="cmp-delta-card"><span className="cmp-delta-label">Tijd</span>{fmtDurDelta(deltaDur)}</div>
-        <div className="cmp-delta-card"><span className="cmp-delta-label">Hoogte</span>{fmtDelta(deltaElev,'m')}</div>
+        <div className="cmp-delta-card"><span className="cmp-delta-label">Time</span>{fmtDurDelta(deltaDur)}</div>
+        <div className="cmp-delta-card"><span className="cmp-delta-label">Elevation</span>{fmtDelta(deltaElev,'m')}</div>
         {deltaNP !== null && <div className="cmp-delta-card"><span className="cmp-delta-label">NP</span>{fmtDelta(deltaNP,'W')}</div>}
-        {deltaHR !== null && <div className="cmp-delta-card"><span className="cmp-delta-label">Gem. HR</span>{fmtDelta(deltaHR,'bpm')}</div>}
+        {deltaHR !== null && <div className="cmp-delta-card"><span className="cmp-delta-label">Avg HR</span>{fmtDelta(deltaHR,'bpm')}</div>}
       </div>
 
       {/* Power overlay */}
@@ -90,10 +91,10 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
           <div className="cmp-chart-label">⚡ Power (W)</div>
           <ResponsiveContainer width="100%" height={130}>
             <ComposedChart data={mergeNorm(powerA, powerB, 'rideA', 'rideB')} margin={{top:4,right:8,left:0,bottom:0}}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="pct" tick={{fontSize:9,fill:'#94a3b8'}} unit="%" />
-              <YAxis tick={{fontSize:9,fill:'#94a3b8'}} unit="W" width={40} />
-              <Tooltip contentStyle={{background:'#0d0d1a',border:'none',borderRadius:8,fontSize:11}}
+              <CartesianGrid {...ZENITH_CHART_GRID} />
+              <XAxis dataKey="pct" tick={ZENITH_CHART_AXIS_TICK} unit="%" />
+              <YAxis tick={ZENITH_CHART_AXIS_TICK} unit="W" width={40} />
+              <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                 formatter={(v: any, name: any) => [`${v}W`, name === 'rideA' ? dateA : dateB]} />
               <Line type="monotone" dataKey="rideA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
               <Line type="monotone" dataKey="rideB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
@@ -108,10 +109,10 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
           <div className="cmp-chart-label">❤️ Heart Rate (bpm)</div>
           <ResponsiveContainer width="100%" height={110}>
             <ComposedChart data={mergeNorm(hrA, hrB, 'rideA', 'rideB')} margin={{top:4,right:8,left:0,bottom:0}}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="pct" tick={{fontSize:9,fill:'#94a3b8'}} unit="%" />
-              <YAxis tick={{fontSize:9,fill:'#94a3b8'}} unit="bpm" width={42} />
-              <Tooltip contentStyle={{background:'#0d0d1a',border:'none',borderRadius:8,fontSize:11}}
+              <CartesianGrid {...ZENITH_CHART_GRID} />
+              <XAxis dataKey="pct" tick={ZENITH_CHART_AXIS_TICK} unit="%" />
+              <YAxis tick={ZENITH_CHART_AXIS_TICK} unit="bpm" width={42} />
+              <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                 formatter={(v: any, name: any) => [`${v} bpm`, name === 'rideA' ? dateA : dateB]} />
               <Line type="monotone" dataKey="rideA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
               <Line type="monotone" dataKey="rideB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
@@ -126,10 +127,10 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
           <div className="cmp-chart-label">🚴 Speed (km/h)</div>
           <ResponsiveContainer width="100%" height={110}>
             <ComposedChart data={mergeNorm(spdA, spdB, 'rideA', 'rideB')} margin={{top:4,right:8,left:0,bottom:0}}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="pct" tick={{fontSize:9,fill:'#94a3b8'}} unit="%" />
-              <YAxis tick={{fontSize:9,fill:'#94a3b8'}} unit="km/h" width={42} />
-              <Tooltip contentStyle={{background:'#0d0d1a',border:'none',borderRadius:8,fontSize:11}}
+              <CartesianGrid {...ZENITH_CHART_GRID} />
+              <XAxis dataKey="pct" tick={ZENITH_CHART_AXIS_TICK} unit="%" />
+              <YAxis tick={ZENITH_CHART_AXIS_TICK} unit="km/h" width={42} />
+              <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                 formatter={(v: any, name: any) => [`${v} km/h`, name === 'rideA' ? dateA : dateB]} />
               <Line type="monotone" dataKey="rideA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
               <Line type="monotone" dataKey="rideB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />

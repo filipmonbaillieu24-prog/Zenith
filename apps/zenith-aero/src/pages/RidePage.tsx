@@ -31,7 +31,7 @@ interface Props {
 }
 
 function fmtDate(ms: number) {
-  return new Date(ms).toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(ms).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 function formatRideDuration(s: number): string {
@@ -56,7 +56,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
   const [hoveredPoint, setHoveredPoint] = useState<RidePoint | null>(null);
   const [gears,       setGears]       = useState<Gear[]>([]);
   const [selectedGearId, setSelectedGearId] = useState<string | undefined>(undefined);
-  const [activeDetailTab, setActiveDetailTab] = useState<'samenvatting' | 'zones' | 'grafieken'>('samenvatting');
+  const [activeDetailTab, setActiveDetailTab] = useState<'summary' | 'zones' | 'charts'>('summary');
 
   const [aiScores, setAiScores] = useState<NeuralAnalysis | null>(null);
   const [isCorrecting, setIsCorrecting] = useState(false);
@@ -191,7 +191,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
 
 
 
-  // ── Polar-stijl Trainingseffect & Coach ridesamenvatting ────────────────────
+  // ── Polar-style Training Effect & Coach ride summary ────────────────────
   const trainingBenefit = React.useMemo(() => {
     try {
       if (!ride) return null;
@@ -200,7 +200,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
       const hasPower = ride.hasPower;
       const hasHR = ride.hasHR;
       
-      // Bepaal intensiteitsfactor of geschatte zwaarte
+      // Determine intensity factor or estimated severity
       const intensity = ride.intensityFactor ?? (ride.avgHR && maxHR ? (ride.avgHR / maxHR) : 0.65);
       const activeCategory = label ?? aiPredictedLabel;
       const activeRpe = rpe ?? aiPredictedRpe;
@@ -208,9 +208,9 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
       let title = "Endurance Training";
       let desc = "A relaxed ride that helps strengthen your aerobic base system and stimulate fat oxidation.";
       let category = "Aerobic Fitness";
-      let color = "#38bdf8"; // Cyaan
+      let color = "#38bdf8"; // Cyan
 
-      // Priorideize activeCategory (user selected or AI predicted)
+      // Prioritize activeCategory (user selected or AI predicted)
       if (activeCategory === 'herstel' || (activeRpe != null && activeRpe <= 3 && activeCategory !== 'interval' && activeCategory !== 'wedstrijd')) {
         title = "Active Recovery";
         desc = "Light recovery ride. Perfect to clear waste products from your muscles and promote active recovery without building extra fatigue.";
@@ -220,7 +220,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
         title = "Climbing Workout";
         desc = "Targeted training on hills. Perfect for improving climbing strength and endurance.";
         category = "Climbing Power";
-        color = "#fd79a8"; // Roze
+        color = "#fd79a8"; // Pink
       } else if (activeCategory === 'interval') {
         title = "Interval Training";
         desc = "Intense intervals with variable paces. Ideal for increasing max oxygen uptake (VO2max) and anaerobic capacity.";
@@ -230,17 +230,17 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
         title = "Race / Intensive";
         desc = "Very intensive ride or race simulation at or above threshold. Causes deep fatigue and trains maximal effort.";
         category = "Race";
-        color = "#ff7675"; // Rood
+        color = "#ff7675"; // Red
       } else if (activeCategory === 'groepsride') {
         title = "Group Ride";
         desc = "Riding in a peloton or group. Great for training drafting, bike handling, and changing paces.";
         category = "Endurance";
-        color = "#00b894"; // Groen
+        color = "#00b894"; // Green
       } else if (activeCategory === 'pendel') {
         title = "Commute Ride / Commuting";
         desc = "Commuting ride. Useful for building weekly training volume and baseline fitness.";
         category = "Base Fitness";
-        color = "#ffeaa7"; // Geel
+        color = "#ffeaa7"; // Yellow
       } else {
         // Fallback to intensity & duration (classical zones)
         if (durationMins < 45) {
@@ -367,23 +367,23 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
 
       {/* Floating HUD Dashboard Overlays Body */}
       <div className="rp-body rp-body--floating">
-        {/* Kolom 1: Statistics & Info */}
+        {/* Column 1: Statistics & Info */}
         <div className="rp-panel-left">
           <div className="rp-stats-grid">
             <StatCard label="Distance"      value={ride.distance}         unit="km"   typeClass="rp-stat-card--gps" />
-            <StatCard label="Tijd"         value={formatRideDuration(ride.duration)}         typeClass="rp-stat-card--gps" />
+            <StatCard label="Time"         value={formatRideDuration(ride.duration)}         typeClass="rp-stat-card--gps" />
             <StatCard label="Elevation Gain" value={ride.elevGain}         unit="m"    typeClass="rp-stat-card--gps" />
             <StatCard label="Avg. Speed" value={ride.avgSpeed}        unit="km/h" typeClass="rp-stat-card--gps" />
             {ride.calories    && <StatCard label="Calories"     value={ride.calories}    unit="kcal" color="#fdcb6e"
-              sub={ride.hasPower ? (ride.isEstimatedPower ? 'HR-schatting (Keytel)' : 'Powersmeasurement') : ride.hasHR ? 'HR-schatting (Keytel)' : 'MET-schatting'} />}
+              sub={ride.hasPower ? (ride.isEstimatedPower ? 'HR estimate (Keytel)' : 'Power measurement') : ride.hasHR ? 'HR estimate (Keytel)' : 'MET estimate'} />}
             {ride.avgPower    && <StatCard label="Avg. Power" value={ride.avgPower}    unit="W"    color="#a29bfe" typeClass="rp-stat-card--power"
-              sub={ride.isEstimatedPower ? 'Berekend (Natuurkundig/HR)' : undefined} />}
+              sub={ride.isEstimatedPower ? 'Calculated (Physics/HR)' : undefined} />}
             {ride.normPower   && <StatCard label="NP"            value={ride.normPower}   unit="W"    color="var(--color-primary,#cbd5e1)" typeClass="rp-stat-card--power"
-              sub={ride.isEstimatedPower ? 'Berekend NP' : (ftp ? `IF ${ride.intensityFactor?.toFixed(2)}` : undefined)} />}
+              sub={ride.isEstimatedPower ? 'Calculated NP' : (ftp ? `IF ${ride.intensityFactor?.toFixed(2)}` : undefined)} />}
             {ride.tss         && <StatCard label="TSS"           value={ride.tss}                     color="#ff7675" typeClass="rp-stat-card--power"
-              sub={ride.isEstimatedPower ? 'Berekend TSS' : recover?.tip} />}
+              sub={ride.isEstimatedPower ? 'Calculated TSS' : recover?.tip} />}
             {ride.eFTP        && <StatCard label="eFTP"          value={ride.eFTP}        unit="W"    color="var(--color-primary,#cbd5e1)" typeClass="rp-stat-card--power"
-              sub={ride.isEstimatedPower ? 'Berekende eFTP' : (profile.weight ? `${(ride.eFTP / profile.weight).toFixed(1)} W/kg` : undefined)} />}
+              sub={ride.isEstimatedPower ? 'Calculated eFTP' : (profile.weight ? `${(ride.eFTP / profile.weight).toFixed(1)} W/kg` : undefined)} />}
             {ride.avgHR       && <StatCard label="Avg. Heart Rate" value={ride.avgHR}       unit="bpm"  color="#ff7675" typeClass="rp-stat-card--hr" />}
             {ride.maxHR       && <StatCard label="Max Heart Rate"  value={ride.maxHR}       unit="bpm"  typeClass="rp-stat-card--hr"
               sub={maxHR ? `${Math.round((ride.maxHR / maxHR) * 100)}% max HR` : undefined} />}
@@ -396,8 +396,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 color={Math.abs(ride.decoupling) < 5 ? '#00b894' : '#fdcb6e'} typeClass="rp-stat-card--hr"
                 sub={Math.abs(ride.decoupling) < 5 ? 'Good aerobic base' : 'Light fatigue'} />
             )}
-            {ride.vam              && <StatCard label="VAM"             value={ride.vam}              unit="m/h" sub="Klimsnelheid" typeClass="rp-stat-card--gps" />}
-            {ride.avgCadence       && <StatCard label="Gem. cadans"     value={ride.avgCadence}       unit="rpm" typeClass="rp-stat-card--power" sub={ride.avgPower ? `AI advies: ${predictOptimalCadence(ride.avgPower)} rpm 🤖` : undefined} />}
+            {ride.vam              && <StatCard label="VAM"             value={ride.vam}              unit="m/h" sub="Climb speed" typeClass="rp-stat-card--gps" />}
+            {ride.avgCadence       && <StatCard label="Avg. Cadence"     value={ride.avgCadence}       unit="rpm" typeClass="rp-stat-card--power" sub={ride.avgPower ? `AI advice: ${predictOptimalCadence(ride.avgPower)} rpm 🤖` : undefined} />}
             {(ride as any).variabilityIndex && <StatCard
               label="Variability Index"
               value={(ride as any).variabilityIndex}
@@ -409,7 +409,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               label="HR Recovery (60s)"
               value={`-${(ride as any).hrRecovery60} bpm`}
               color={(ride as any).hrRecovery60 >= 30 ? '#55efc4' : (ride as any).hrRecovery60 >= 20 ? '#00b894' : '#fdcb6e'}
-              sub={(ride as any).hrRecovery60 >= 30 ? 'Uitstekend' : (ride as any).hrRecovery60 >= 20 ? 'Goed' : 'Matig'}
+              sub={(ride as any).hrRecovery60 >= 30 ? 'Excellent' : (ride as any).hrRecovery60 >= 20 ? 'Good' : 'Fair'}
               typeClass="rp-stat-card--hr"
             />}
             {weather && <>
@@ -427,7 +427,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               />
               {weather.precipitation > 0 && (
                 <StatCard
-                  label="🌧️ Neerslag"
+                  label="🌧️ Precipitation"
                   value={`${weather.precipitation} mm`}
                   color="#74b9ff"
                 />
@@ -438,7 +438,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
           {/* Label + Notes */}
           <div className="rp-witha-card">
             <div className="rp-witha-card__row">
-              <span className="rp-witha-card__label">Categorie</span>
+              <span className="rp-witha-card__label">Category</span>
               <div className="rp-label-picker">
                 {RIDE_LABELS.map(l => {
                   const isPredicted = label === undefined && aiPredictedLabel === l.key;
@@ -464,18 +464,18 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             </div>
             <div className="rp-witha-card__row" style={{ marginTop: 10 }}>
               <span className="rp-witha-card__label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Inspanning (RPE)</span>
+                <span>Effort (RPE)</span>
                 {rpe != null ? (
                   <span style={{ fontSize: 10, fontWeight: 800, color: rpe <= 3 ? '#00b894' : rpe <= 6 ? '#fdcb6e' : rpe <= 8 ? '#ff7675' : '#d63031' }}>
                     {rpe}/10 ({
-                      rpe <= 3 ? 'Heel licht' :
-                      rpe <= 6 ? 'Matig / Vlot' :
-                      rpe <= 8 ? 'Zwaar' : 'Maximum'
+                      rpe <= 3 ? 'Very light' :
+                      rpe <= 6 ? 'Moderate / Brisk' :
+                      rpe <= 8 ? 'Heavy' : 'Maximum'
                     })
                   </span>
                 ) : aiPredictedRpe != null ? (
                   <span style={{ fontSize: 10, fontWeight: 800, color: '#cbd5e1' }}>
-                    Schatting: {aiPredictedRpe}/10 🤖
+                    Estimate: {aiPredictedRpe}/10 🤖
                   </span>
                 ) : null}
               </span>
@@ -492,7 +492,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                         border: isPredicted ? '1px dashed #cbd5e1' : 'none',
                         boxShadow: isPredicted ? '0 0 6px rgba(203, 213, 225, 0.15)' : 'none',
                         cursor: 'pointer',
-                        fontFamily: 'inheride',
+                        fontFamily: 'inherit',
                         background: rpe === n
                           ? n <= 3 ? '#00b894' : n <= 6 ? '#fdcb6e' : n <= 8 ? '#ff7675' : '#d63031'
                           : 'rgba(255,255,255,0.03)',
@@ -532,7 +532,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               )}
             </div>
             <div className="rp-witha-card__row" style={{ marginTop: 10 }}>
-              <span className="rp-witha-card__label">Fiets / Gear</span>
+              <span className="rp-witha-card__label">Bike / Gear</span>
               <select
                 className="select-input"
                 style={{ width: '100%', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', color: '#f8fafc', borderRadius: 8, outline: 'none' }}
@@ -548,7 +548,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               </select>
             </div>
             <div className="rp-witha-card__row" style={{ marginTop: 10 }}>
-              <span className="rp-witha-card__label">Notities</span>
+              <span className="rp-witha-card__label">Notes</span>
               <textarea
                 className="rp-notes"
                 placeholder="Add a note... (e.g. 'Legs felt heavy', 'Tested new route')"
@@ -569,7 +569,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: '#cbd5e1', fontWeight: 800, textTransform: 'uppercase', fontSize: 10, letterSpacing: '0.6px' }}>
                     <Brain size={14} />
-                    <span>Offline AI Notitie Analysis</span>
+                    <span>Offline AI Note Analysis</span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -587,7 +587,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                     {/* Recovery */}
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, color: '#94a3b8' }}>
-                        <span>Recovery / Frisheid</span>
+                        <span>Recovery / Freshness</span>
                         <span style={{ color: aiScores.recovery > 0.6 ? '#00b894' : '#cbd5e1', fontWeight: 700 }}>{Math.round(aiScores.recovery * 100)}%</span>
                       </div>
                       <div style={{ height: 5, background: 'rgba(255,255,255,0.03)', borderRadius: 2.5, overflow: 'hidden' }}>
@@ -598,7 +598,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                     {/* Illness / Pain */}
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2, color: '#94a3b8' }}>
-                        <span>Ziekte / Pijn</span>
+                        <span>Illness / Pain</span>
                         <span style={{ color: aiScores.illness > 0.3 ? '#d63031' : '#cbd5e1', fontWeight: 700 }}>{Math.round(aiScores.illness * 100)}%</span>
                       </div>
                       <div style={{ height: 5, background: 'rgba(255,255,255,0.03)', borderRadius: 2.5, overflow: 'hidden' }}>
@@ -610,7 +610,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                   {/* Feedback Controls */}
                   {!isCorrecting ? (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-                      <span style={{ color: '#64748b', fontSize: 10 }}>Klopt de analyse?</span>
+                      <span style={{ color: '#64748b', fontSize: 10 }}>Is this analysis correct?</span>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
                           onClick={() => {
@@ -631,7 +631,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                             fontWeight: 700
                           }}
                         >
-                          ✓ Ja
+                          ✓ Yes
                         </button>
                         <button
                           onClick={() => {
@@ -651,13 +651,13 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                             fontWeight: 700
                           }}
                         >
-                          ✎ Pas aan
+                          ✎ Adjust
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(203, 213, 225, 0.15)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <span style={{ color: '#cbd5e1', fontWeight: 700, fontSize: 10 }}>Stel correcte scores in:</span>
+                      <span style={{ color: '#cbd5e1', fontWeight: 700, fontSize: 10 }}>Set correct scores:</span>
                       
                       {/* Fatigue */}
                       <div>
@@ -679,7 +679,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                       {/* Recovery */}
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>
-                          <span>Recovery / Frisheid:</span>
+                          <span>Recovery / Freshness:</span>
                           <span>{Math.round(customRecovery * 100)}%</span>
                         </div>
                         <input
@@ -696,7 +696,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                       {/* Illness */}
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>
-                          <span>Ziekte / Pijn:</span>
+                          <span>Illness / Pain:</span>
                           <span>{Math.round(customIllness * 100)}%</span>
                         </div>
                         <input
@@ -752,7 +752,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                             fontWeight: 700
                           }}
                         >
-                          AI Trainen & Save
+                          AI Train & Save
                         </button>
                       </div>
                     </div>
@@ -760,7 +760,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
 
                   {showSuccessMsg && (
                     <div style={{ marginTop: 8, textAlign: 'center', color: '#00b894', fontSize: 10, fontWeight: 700 }}>
-                      ✓ Lokale AI succesvol getraind!
+                      ✓ Local AI successfully trained!
                     </div>
                   )}
                 </div>
@@ -774,10 +774,10 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
           )}
         </div>
 
-        {/* Kolom 2: Open Kaartgebied (Spacer) */}
+        {/* Column 2: Open Map Area (Spacer) */}
         <div className="rp-panel-center-spacer" />
 
-        {/* Kolom 3: Trainingseffect, Zones & Klims */}
+        {/* Column 3: Training Effect, Zones & Climbs */}
         <div className="rp-panel-right">
           {/* Sub-Tab Navigation inside Right Panel */}
           <div style={{
@@ -785,15 +785,15 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             border: '1px solid rgba(255,255,255,0.04)', marginBottom: 12, width: '100%'
           }}>
             <button
-              onClick={() => setActiveDetailTab('samenvatting')}
+              onClick={() => setActiveDetailTab('summary')}
               style={{
                 flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700,
-                background: activeDetailTab === 'samenvatting' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
-                color: activeDetailTab === 'samenvatting' ? '#cbd5e1' : '#94a3b8',
-                transition: 'all 0.15s', fontFamily: 'inheride'
+                background: activeDetailTab === 'summary' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
+                color: activeDetailTab === 'summary' ? '#cbd5e1' : '#94a3b8',
+                transition: 'all 0.15s', fontFamily: 'inherit'
               }}
             >
-              Coach & Klims
+              Coach & Climbs
             </button>
             <button
               onClick={() => setActiveDetailTab('zones')}
@@ -801,32 +801,32 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700,
                 background: activeDetailTab === 'zones' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
                 color: activeDetailTab === 'zones' ? '#cbd5e1' : '#94a3b8',
-                transition: 'all 0.15s', fontFamily: 'inheride'
+                transition: 'all 0.15s', fontFamily: 'inherit'
               }}
             >
               Zones & Splits
             </button>
             <button
-              onClick={() => setActiveDetailTab('grafieken')}
+              onClick={() => setActiveDetailTab('charts')}
               style={{
                 flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700,
-                background: activeDetailTab === 'grafieken' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
-                color: activeDetailTab === 'grafieken' ? '#cbd5e1' : '#94a3b8',
-                transition: 'all 0.15s', fontFamily: 'inheride'
+                background: activeDetailTab === 'charts' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
+                color: activeDetailTab === 'charts' ? '#cbd5e1' : '#94a3b8',
+                transition: 'all 0.15s', fontFamily: 'inherit'
               }}
             >
-              Grafieken
+              Charts
             </button>
           </div>
 
-          {/* TAB 1: SAMENVATTING & COACH */}
-          {activeDetailTab === 'samenvatting' && (
+          {/* TAB 1: SUMMARY & COACH */}
+          {activeDetailTab === 'summary' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Polar-style Training Benefit Card */}
               {trainingBenefit && (
                 <div className="rp-chart-card rp-benefit-card animate-slide-up" style={{ borderLeft: `4px solid ${trainingBenefit.color}`, margin: 0 }}>
                   <div className="rp-benefit-card__head">
-                    <span className="rp-benefit-card__title">🎓 Ritsamenvatting: {trainingBenefit.title}</span>
+                    <span className="rp-benefit-card__title">🎓 Ride Summary: {trainingBenefit.title}</span>
                     <span className="rp-benefit-card__category" style={{ background: `${trainingBenefit.color}15`, color: trainingBenefit.color, border: `1px solid ${trainingBenefit.color}35` }}>
                       {trainingBenefit.category}
                     </span>
@@ -851,7 +851,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               {/* Climbs (Automatic Climb Detection) */}
               <ClimbsSection points={ride.points} ftp={ftp} weight={profile.weight} bodyFatPct={profile.bodyFat} />
 
-              {/* Brandstof- & Voedingsrapport */}
+              {/* Fuel & Nutrition Report */}
               {(() => {
                 const ifVal = ride.intensityFactor ?? (ride.avgHR && maxHR ? (ride.avgHR / maxHR) : 0.65);
                 let zone = 2;
@@ -873,40 +873,40 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 return (
                   <div className="rp-chart-card animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: 0 }}>
                     <h3 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Coffee size={15} strokeWidth={1.6} style={{ color: '#cbd5e1' }} /> Brandstof- & Voedingsrapport
+                      <Coffee size={15} strokeWidth={1.6} style={{ color: '#cbd5e1' }} /> Fuel & Nutrition Report
                     </h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 11, color: '#cbd5e1' }}>
                       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 8, padding: 8 }}>
-                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Verbrande Energie</span>
+                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Energy Burned</span>
                         <strong style={{ color: '#f8fafc', fontSize: 12 }}>{ride.calories ?? fuelPlan.totalCalories} kcal</strong>
                       </div>
                       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 8, padding: 8 }}>
-                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Carbs Verbruikt</span>
-                        <strong style={{ color: '#39ff14', fontSize: 12 }}>{fuelPlan.totalCarbs}g ({fuelPlan.carbsPerHour}g/u)</strong>
+                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Carbs Used</span>
+                        <strong style={{ color: '#39ff14', fontSize: 12 }}>{fuelPlan.totalCarbs}g ({fuelPlan.carbsPerHour}g/h)</strong>
                       </div>
                       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 8, padding: 8 }}>
-                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Vochtopname Advies</span>
-                        <strong style={{ color: '#cbd5e1', fontSize: 12 }}>{(fuelPlan.totalFluid / 1000).toFixed(1)} L ({fuelPlan.fluidPerHour}ml/u)</strong>
+                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Fluid Intake Advice</span>
+                        <strong style={{ color: '#cbd5e1', fontSize: 12 }}>{(fuelPlan.totalFluid / 1000).toFixed(1)} L ({fuelPlan.fluidPerHour}ml/h)</strong>
                       </div>
                       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 8, padding: 8 }}>
-                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Natrium Aanvulling</span>
+                        <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Sodium Supplementation</span>
                         <strong style={{ color: '#ff9f43', fontSize: 12 }}>{fuelPlan.totalSodium} mg</strong>
                       </div>
                     </div>
 
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: 10, marginTop: 4 }}>
-                      <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#f8fafc', marginBottom: 6 }}>Ideaal Innameplan:</span>
+                      <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#f8fafc', marginBottom: 6 }}>Ideal Intake Plan:</span>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, color: '#cbd5e1' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>🍼 Bidons Sportdrank (500ml):</span>
+                          <span>🍼 Sports Drink Bottles (500ml):</span>
                           <strong>{fuelPlan.bottles}x</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>🍫 Energierepen:</span>
+                          <span>🍫 Energy Bars:</span>
                           <strong>{fuelPlan.bars}x</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>⚡ Energiegels:</span>
+                          <span>⚡ Energy Gels:</span>
                           <strong>{fuelPlan.gels}x</strong>
                         </div>
                       </div>
@@ -923,7 +923,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
               {/* Zone Breakdown */}
               {(ride.powerZoneTime || ride.hrZoneTime) && (
                 <div className="rp-chart-card" style={{ margin: 0 }}>
-                  <h3>{ride.hasPower ? '⚡ Powerszones' : '❤️ Heart Ratezones'}</h3>
+                  <h3>{ride.hasPower ? '⚡ Power Zones' : '❤️ Heart Rate Zones'}</h3>
                   <ZoneBreakdown
                     times={ride.hasPower ? (ride.powerZoneTime ?? []) : (ride.hrZoneTime ?? [])}
                     zones={ride.hasPower ? POWER_ZONES : HR_ZONES}
@@ -933,7 +933,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
 
               {/* Best efforts */}
               <div className="rp-chart-card" style={{ margin: 0 }}>
-                <h3>🏅 Beste inspanningen</h3>
+                <h3>🏅 Best Efforts</h3>
                 <div className="rp-efforts-grid">
                   {ride.hasPower && EFFORT_DURATIONS.map(({ key, label }) => {
                     const val  = (ride.bestEfforts as any)[key];
@@ -964,8 +964,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
             </div>
           )}
 
-          {/* TAB 3: GRAFIEKEN */}
-          {activeDetailTab === 'grafieken' && (
+          {/* TAB 3: CHARTS */}
+          {activeDetailTab === 'charts' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {/* Power curve and histogram */}
               {ride.hasPower && <PowerCurve ride={ride} ftp={ftp} />}
@@ -979,7 +979,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
           )}
         </div>
 
-        {/* Onderbalk: Tijdlijn grafiek */}
+        {/* Bottom bar: Timeline chart */}
         <div className="rp-panel-bottom">
           <TimelineChart ride={ride} ftp={ftp} lthr={lthr} onHoverPoint={setHoveredPoint} />
         </div>

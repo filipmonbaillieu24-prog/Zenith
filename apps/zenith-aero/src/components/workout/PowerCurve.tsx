@@ -1,6 +1,7 @@
 import React from 'react';
 import './PowerCurve.css';
 import { ComposedChart, CartesianGrid, XAxis, YAxis, Tooltip, ReferenceLine, Area, ResponsiveContainer } from 'recharts';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { Ride, EFFORT_DURATIONS } from '../../types/workout';
 
 interface PowerCurveProps {
@@ -18,10 +19,10 @@ export const PowerCurve: React.FC<PowerCurveProps> = ({ ride, ftp }) => {
       <h3>⚡ Power Duration Curve</h3>
       <ResponsiveContainer width="100%" height={200}>
         <ComposedChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-          <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#aaa' }} />
-          <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#aaa' }} unit="W" />
-          <Tooltip contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8 }}
+          <CartesianGrid {...ZENITH_CHART_GRID} />
+          <XAxis dataKey="label" tick={ZENITH_CHART_AXIS_TICK} />
+          <YAxis yAxisId="left" tick={ZENITH_CHART_AXIS_TICK} unit="W" />
+          <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
             formatter={(v: any) => [`${v}W`, 'Power']} />
           {ftp && <ReferenceLine yAxisId="left" y={ftp} stroke="#e17055" strokeDasharray="4 4"
             label={{ value: `FTP ${ftp}W`, fill: '#e17055', fontSize: 11 }} />}

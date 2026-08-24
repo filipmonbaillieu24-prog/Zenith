@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { RideSummaryWithBests } from '../../types/workout';
 import { Calendar } from 'lucide-react';
 
@@ -26,8 +27,8 @@ export const WeeklyConsistencyTracker: React.FC<WeeklyConsistencyTrackerProps> =
       const totalSeconds = weekRides.reduce((s, r) => s + (r.duration ?? 0), 0);
       const hours = parseFloat((totalSeconds / 3600).toFixed(1));
 
-      const startDateStr = new Date(start).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' });
-      const endDateStr = new Date(end).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' });
+      const startDateStr = new Date(start).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+      const endDateStr = new Date(end).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 
       data.push({
         label: `${startDateStr} - ${endDateStr}`,
@@ -40,7 +41,7 @@ export const WeeklyConsistencyTracker: React.FC<WeeklyConsistencyTrackerProps> =
     return data;
   }, [rides]);
 
-  // Bereken totalen
+  // Compute totals
   const totals = useMemo(() => {
     const totalTss = weeklyData.reduce((s, w) => s + w.tss, 0);
     const totalHours = weeklyData.reduce((s, w) => s + w.hours, 0);
@@ -60,30 +61,31 @@ export const WeeklyConsistencyTracker: React.FC<WeeklyConsistencyTrackerProps> =
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
         <div>
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#f8fafc' }}>{totals.avgHours} u</span>
-          <span style={{ fontSize: 10, color: '#64748b', marginLeft: 6 }}>Gem. Volume / wk</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: '#f8fafc' }}>{totals.avgHours} h</span>
+          <span style={{ fontSize: 10, color: '#64748b', marginLeft: 6 }}>Avg Volume / wk</span>
         </div>
         <div>
           <span style={{ fontSize: 18, fontWeight: 700, color: '#f8fafc' }}>{totals.avgTss}</span>
-          <span style={{ fontSize: 10, color: '#64748b', marginLeft: 6 }}>Gem. TSS / wk</span>
+          <span style={{ fontSize: 10, color: '#64748b', marginLeft: 6 }}>Avg TSS / wk</span>
         </div>
       </div>
 
       <div style={{ height: 160 }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={weeklyData} margin={{ top: 5, right: -10, left: -25, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-            <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 7 }} interval={1} />
-            
+            <CartesianGrid {...ZENITH_CHART_GRID} />
+            <XAxis dataKey="label" tick={ZENITH_CHART_AXIS_TICK} interval={1} />
+
             {/* Left Y-axis for TSS */}
-            <YAxis yAxisId="left" tick={{ fill: '#64748b', fontSize: 8 }} width={25} />
-            
+            <YAxis yAxisId="left" tick={ZENITH_CHART_AXIS_TICK} width={25} />
+
             {/* Right Y-axis for Hours */}
-            <YAxis yAxisId="right" orientation="right" tick={{ fill: '#64748b', fontSize: 8 }} width={20} />
-            
-            <Tooltip 
-              contentStyle={{ background: '#0d0d1a', border: 'none', borderRadius: 8, fontSize: 10 }}
-              formatter={(v: any, name: any) => [v, name === 'tss' ? 'Wekelijkse TSS' : 'Trainingsuren']}
+            <YAxis yAxisId="right" orientation="right" tick={ZENITH_CHART_AXIS_TICK} width={20} />
+
+            <Tooltip
+              contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+              labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
+              formatter={(v: any, name: any) => [v, name === 'tss' ? 'Weekly TSS' : 'Training Hours']}
             />
             
             <Bar yAxisId="left" dataKey="tss" fill="#6c5ce7" fillOpacity={0.7} radius={[3, 3, 0, 0]} />

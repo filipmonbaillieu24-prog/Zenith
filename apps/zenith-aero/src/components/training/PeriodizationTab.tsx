@@ -27,11 +27,11 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
   ridesByDay,
   pmcData,
 }) => {
-  // Bereken maandag van deze week voor de weergave
+  // Calculate Monday of this week for display
   const now2 = new Date(); now2.setHours(0,0,0,0);
   const dow  = now2.getDay();
   const mon  = new Date(now2); mon.setDate(now2.getDate() - ((dow + 6) % 7));
-  const days2 = ['Ma','Di','Wo','Do','Vr','Za','Zo'];
+  const days2 = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   const weekTSSactual = days2.reduce((sum, _, i) => {
     const dd = new Date(mon); dd.setDate(mon.getDate() + i);
@@ -39,7 +39,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
     return sum + (rr?.tss ?? 0);
   }, 0);
 
-  const weekTSSgoal = Math.round(pmcData.ctl * 7 * 0.9); // ~90% CTL/dag × 7
+  const weekTSSgoal = Math.round(pmcData.ctl * 7 * 0.9); // ~90% CTL/day × 7
 
   return (
     <div className="wd-main-single" style={{ display: 'block', overflowY: 'auto' }}>
@@ -49,22 +49,22 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
           <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>Set a target date and the app will automatically compute your training phases.</p>
         </div>
 
-        {/* Event invoer */}
+        {/* Event input */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px' }}>
           <div>
-            <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Event naam</label>
+            <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Event name</label>
             <input value={eventName} onChange={e => setEventName(e.target.value)}
               style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: '#f8fafc', padding: '8px 10px', fontSize: 13, fontFamily: 'Outfit, sans-serif', fontWeight: 700, boxSizing: 'border-box' }}
-              placeholder="bijv. Gran Fondo, Sportive..." />
+              placeholder="e.g. Gran Fondo, Sportive..." />
           </div>
           <div>
-            <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Event datum</label>
+            <label style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>Event date</label>
             <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)}
-              style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: '#f8fafc', padding: '8px 10px', fontSize: 13, fontFamily: 'inheride', boxSizing: 'border-box' }} />
+              style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 7, color: '#f8fafc', padding: '8px 10px', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box' }} />
           </div>
         </div>
 
-        {/* Fase banner */}
+        {/* Phase banner */}
         <div style={{ background: `linear-gradient(135deg, ${phase.color}15, ${phase.color}08)`, border: `1px solid ${phase.color}30`, borderRadius: 14, padding: '20px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div>
@@ -90,7 +90,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
           </div>
         </div>
 
-        {/* Fase uitleg + tijdlijn */}
+        {/* Phase explanation + timeline */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
           {(['base','build','peak','race'] as TrainingPhase[]).map(ph => {
             const pc = phaseConfig[ph];
@@ -130,7 +130,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
               const rideInfo2 = ridesByDay.get(key2);
               const isToday2 = key2 === now2.toISOString().slice(0, 10);
               const focus = phase.weekFocus[i];
-              const isRest = focus === 'Rust' || focus === 'RACE';
+              const isRest = focus === 'Rest' || focus === 'RACE';
 
               return (
                 <div key={day} style={{ padding: '10px 4px', textAlign: 'center', borderRight: i < 6 ? '1px solid rgba(255,255,255,0.04)' : 'none', background: rideInfo2 ? 'rgba(203,213,225,0.06)' : isToday2 ? `${phase.color}08` : 'transparent' }}>
@@ -156,7 +156,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
         {/* Phase-specific guidance based on real rides */}
         <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <AlertCircle size={11} /> Gepersonaliseerd advies — {rides.length} rides geanalyseerd
+            <AlertCircle size={11} /> Personalized advice — {rides.length} rides analyzed
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -164,7 +164,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
               const weeksLeft = Math.max(1, Math.ceil(phaseInfo.daysToEvent / 7));
               const ctlTarget = Math.round(pmcData.ctl + (weeksLeft * 0.8));
               return [
-                { icon: '📈', text: `Build volume by max 5–10% per week. Your CTL target by end of base period: ~${ctlTarget} (nu: ${Math.round(pmcData.ctl)}).` },
+                { icon: '📈', text: `Build volume by max 5–10% per week. Your CTL target by end of base period: ~${ctlTarget} (now: ${Math.round(pmcData.ctl)}).` },
                 { icon: '🚴', text: 'At least 80% of your rides in Zone 2 (conversational pace).' },
                 { icon: '⚡', text: `Current weekly TSS: ~${Math.round(pmcData.atl * 7)}. Target ${Math.round(pmcData.ctl * 7 * 0.9)} TSS/week.` },
               ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>);
@@ -183,13 +183,13 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
             {phaseInfo.phase === 'peak' && [
               { icon: '⬇️', text: `Reduce volume by 40-50% (from ~${Math.round(pmcData.atl * 7)} to ~${Math.round(pmcData.atl * 7 * 0.5)} TSS/week).` },
               { icon: '⚡', text: 'Maintain 2–3 short sharp intervals per week to keep your system primed.' },
-              { icon: '😴', text: `TSB nu: ${Math.round(pmcData.tsb)}. Target TSB of +10 to +20 on race day.` },
+              { icon: '😴', text: `TSB now: ${Math.round(pmcData.tsb)}. Target TSB of +10 to +20 on race day.` },
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}
 
             {phaseInfo.phase === 'race' && [
               { icon: '🏁', text: 'No new training stimulus. Recovery is your only task.' },
               { icon: '🚴', text: 'Maximum 1 short opener ride (30–45 min) with 2–3 short surges.' },
-              { icon: '🍝', text: 'Carbo-load 2–3 days prior to event (7–10g/kg/dag).' },
+              { icon: '🍝', text: 'Carbo-load 2–3 days prior to event (7–10g/kg/day).' },
             ].map((a, i) => <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, color: '#94a3b8' }}><span>{a.icon}</span><span>{a.text}</span></div>)}
 
             {phaseInfo.phase === 'recovery' && [

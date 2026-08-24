@@ -268,7 +268,7 @@ export const MapView: React.FC<MapViewProps> = ({
       {/* Map Guidelines Overlay */}
       {routes.length === 0 && (
         <div className="map-instructions-card">
-          <h3>Route Ontwerpen</h3>
+          <h3>Designing Route</h3>
           <p>
             {startPoint 
               ? (endPoint ? 'Calculating...' : 'Click on the map to set destination, or generate a loop.') 

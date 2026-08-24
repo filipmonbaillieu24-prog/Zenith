@@ -377,3 +377,11 @@
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes zhSpin {
+  to { transform: rotate(360deg); }
+}
+
+.zh-spin {
+  animation: zhSpin 0.9s linear infinite;
+}

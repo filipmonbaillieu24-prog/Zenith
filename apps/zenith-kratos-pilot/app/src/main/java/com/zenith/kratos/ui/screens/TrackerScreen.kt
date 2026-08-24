@@ -129,8 +129,8 @@ fun TrackerScreen(
     
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (context.checkSelfPermission(android.Maleifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                permissionLauncher.launch(android.Maleifest.permission.POST_NOTIFICATIONS)
+            if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
@@ -199,7 +199,7 @@ fun TrackerScreen(
                             loggedList.forEach { loggedEx ->
                                 loggedEx.sets.forEach { set ->
                                     if (set.type == "working" && set.reps > 0) {
-                                        val est1RM = set.weight * (1 + set.reps / 30.0)
+                                        val est1RM = set.weight * (1 + (set.reps + set.rir) / 30.0)
                                         val rounded = Math.round(est1RM * 2) / 2.0
                                         val currentMax = mapPR[loggedEx.exerciseId] ?: 0.0
                                         if (rounded > currentMax) {
@@ -336,7 +336,7 @@ fun TrackerScreen(
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold
                                         )
-                                        val weightLabel = if (exState.incrementPerSide) "per kant" else "totaalgewicht"
+                                        val weightLabel = if (exState.incrementPerSide) "per side" else "total weight"
                                         Text(
                                             text = "${exState.category} • ${exState.weightUnit.uppercase()} ($weightLabel)",
                                             color = ZenithSecondary,
@@ -389,7 +389,7 @@ fun TrackerScreen(
                                             }
                                         )
                                         DropdownMenuItem(
-                                            text = { Text("Verwijder oefening", color = ZenithError, fontSize = 12.sp) },
+                                            text = { Text("Delete exercise", color = ZenithError, fontSize = 12.sp) },
                                             onClick = {
                                                 exerciseDropdownExpanded[exIndex] = false
                                                 mutableExercises.removeAt(exIndex)
@@ -702,7 +702,7 @@ fun TrackerScreen(
 
                                                     // PR Celebration Logic (Trigger only if a prior PR exists)
                                                     if (setVal.type == "working" && r > 0) {
-                                                        val est1RM = w * (1 + r / 30.0)
+                                                        val est1RM = w * (1 + (r + rir) / 30.0)
                                                         val rounded1RM = Math.round(est1RM * 2) / 2.0
                                                         val prevPR = historical1RMs[exState.exerciseId] ?: 0.0
 
@@ -892,7 +892,10 @@ fun TrackerScreen(
                             if (s.isCompleted && s.type == "working") {
                                 val w = s.weightInput.toDoubleOrNull() ?: s.targetWeight
                                 val r = s.repsInput.toIntOrNull() ?: s.targetReps
-                                val effectiveW = if (ex.isBodyweight) (bodyWeight + w) else w
+                                // bodyWeight always comes from vigor_weight in kg; convert to the
+                                // exercise's own unit before combining with its per-set weight input.
+                                val bodyWeightInExerciseUnit = if (ex.weightUnit == "lb") bodyWeight * 2.2046226218 else bodyWeight
+                                val effectiveW = if (ex.isBodyweight) (bodyWeightInExerciseUnit + w) else w
                                 totalVolume += (effectiveW * r)
                             }
                         }
@@ -1117,7 +1120,7 @@ fun TrackerScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = if (activeFocusField == "weight") "VOLGENDE" else "KLAAR",
+                                        text = if (activeFocusField == "weight") "NEXT" else "DONE",
                                         color = Color(0xFF09090B),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold
@@ -1167,7 +1170,7 @@ fun TrackerScreen(
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
-                            Text(text = "RUSTTIMER", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(text = "REST TIMER", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             if (cardioStressFactor > 1.0) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
@@ -1178,7 +1181,7 @@ fun TrackerScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "+${Math.round((cardioStressFactor - 1) * 100)}% rust (cardio stress)",
+                                        text = "+${Math.round((cardioStressFactor - 1) * 100)}% rest (cardio stress)",
                                         fontSize = 9.sp,
                                         color = ZenithSecondary
                                     )
@@ -1279,7 +1282,7 @@ fun TrackerScreen(
                             triggerSave()
                         }
                     ) {
-                        Text("Opslaan", color = ZenithPrimary, fontWeight = FontWeight.Bold)
+                        Text("Save", color = ZenithPrimary, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {

@@ -121,6 +121,40 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       .eq('user_id', userId)
       .order('started_at', { ascending: false });
 
+    // Real daily step counts (Vigor) and logged food calories (Fuel), used below to
+    // replace the previously-hardcoded dailySteps=8000 / calorieBalance=0 constants
+    // in the training loops with actual per-day values where they exist.
+    const { data: stepLogs } = await supabase
+      .from('vigor_steps')
+      .select('logged_at, step_count')
+      .eq('user_id', userId)
+      .order('logged_at', { ascending: false });
+
+    const { data: foodLogs } = await supabase
+      .from('fuel_logs')
+      .select('logged_at, calories')
+      .eq('user_id', userId)
+      .order('logged_at', { ascending: false });
+
+    const getStepsForDate = (dStr: string): number => {
+      const rec = stepLogs?.find((s: any) => new Date(s.logged_at).toISOString().slice(0, 10) === dStr);
+      // No steps logged for that day -> genuinely 0, not a fabricated "average day" guess.
+      return rec ? Number(rec.step_count) || 0 : 0;
+    };
+
+    // Rough BMR heuristic (~1 kcal/kg body weight/day) — see the matching comment in
+    // ZenithHubPage.tsx. Hub doesn't have Fuel's full calibrated TDEE model available,
+    // so this only aims to give the training loop a real, non-fabricated directional
+    // signal instead of a permanent hardcoded 0.
+    const CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY = 24;
+    const getCalorieBalanceForDate = (dStr: string, bodyWeightKg: number): number => {
+      const dayLogs = foodLogs?.filter((f: any) => new Date(f.logged_at).toISOString().slice(0, 10) === dStr) || [];
+      if (dayLogs.length === 0) return 0; // no logged nutrition for that day -> neutral, not fabricated
+      const consumed = dayLogs.reduce((sum: number, f: any) => sum + Number(f.calories || 0), 0);
+      const roughTdee = bodyWeightKg * CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY;
+      return Math.round(consumed - roughTdee);
+    };
+
     // Load weights
     await Promise.all([
       kratosOverloadModel.loadFromSupabase(supabase, userId),
@@ -156,6 +190,11 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     };
 
     // 3. Train Kratos Progressive Overload Model
+    // Each iteration only updates weights in memory (trainLocal) — the network upsert
+    // happens once after the whole loop, not once per iteration. With 8 models each
+    // persisting up to 31 times per run, unbatched saves were the single largest
+    // contributor to Supabase API usage (thousands of upserts/day from realtime-
+    // triggered re-runs alone).
     if (workouts && workouts.length > 1) {
       // Find successive workouts of the same routine/exercises and train the overload MLP
       for (let i = 0; i < workouts.length - 1; i++) {
@@ -184,8 +223,9 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         ];
 
         const target = Math.max(0, Math.min(1, increment / 10));
-        await kratosOverloadModel.train(supabase, userId, x, [target], 0.15);
+        kratosOverloadModel.trainLocal(x, [target], 0.15);
       }
+      await kratosOverloadModel.saveToSupabase(supabase, userId);
     }
 
     // 4. Train Smart Coach Model
@@ -227,7 +267,8 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       const targets = new Array(6).fill(0.05);
       targets[targetIdx] = 0.95;
 
-      await coachModel.train(supabase, userId, x, targets, 0.2);
+      coachModel.trainLocal(x, targets, 0.2);
+      await coachModel.saveToSupabase(supabase, userId);
     }
 
     if (rides && rides.length > 0) {
@@ -248,7 +289,8 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         ];
 
         const target = Math.max(0, Math.min(1, (actualVO2max - 20) / 70));
-        await vo2maxModel.train(supabase, userId, x, [target], 0.15);
+        vo2maxModel.trainLocal(x, [target], 0.15);
+        await vo2maxModel.saveToSupabase(supabase, userId);
       }
     }
 
@@ -287,7 +329,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         return sum + Number(witha?.calories ?? 0);
       }, 0);
 
-      const dailySteps = 8000; // standard baseline
+      const dailySteps = getStepsForDate(dStr); // real logged steps for this day, 0 if unlogged (no fabricated baseline)
 
       const x = [
         Math.max(0, Math.min(1, (cTSB + 50) / 100)),
@@ -299,8 +341,9 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       ];
 
       const fatigueTarget = Math.max(0, Math.min(1.0, (cATL / 80 + (100 - sleepQuality) / 100 + gymVolume7d / 15000) / 3));
-      await dualSportFatigueModel.train(supabase, userId, x, [fatigueTarget], 0.15);
+      dualSportFatigueModel.trainLocal(x, [fatigueTarget], 0.15);
     }
+    await dualSportFatigueModel.saveToSupabase(supabase, userId);
 
     // 6. Train Unified Recovery Score Model (CR11)
     for (let dayOffset = 30; dayOffset >= 0; dayOffset--) {
@@ -330,8 +373,8 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       const sleepQuality = daySleep?.quality_score || daySleep?.quality || 75;
       const sleepDuration = (daySleep?.duration_minutes || 480) / 60;
 
-      const dailySteps = 8000;
-      const calorieBalance = 0; // neutral baseline
+      const dailySteps = getStepsForDate(dStr); // real logged steps for this day, 0 if unlogged (no fabricated baseline)
+      const calorieBalance = getCalorieBalanceForDate(dStr, weight); // real logged intake vs rough TDEE, 0 if no food logged that day
 
       const x = [
         Math.max(0, Math.min(1, (cTSB + 50) / 100)),
@@ -348,8 +391,9 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       const gymScaled = Math.max(0, Math.min(1, gymVolume7d / 15000));
       const recoveryTarget = Math.max(0.05, Math.min(0.95, (sleepQuality / 100 * 0.5 + tsbScaled * 0.3 + (1 - gymScaled) * 0.2)));
 
-      await recoveryModel.train(supabase, userId, x, [recoveryTarget], 0.15);
+      recoveryModel.trainLocal(x, [recoveryTarget], 0.15);
     }
+    await recoveryModel.saveToSupabase(supabase, userId);
 
     console.log(`Background training successfully completed for all models of user: ${userId}`);
     return true;

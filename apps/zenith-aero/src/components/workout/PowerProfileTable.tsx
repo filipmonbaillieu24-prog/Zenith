@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Zap } from 'lucide-react';
 import { RideSummaryWithBests } from '../../types/workout';
 
 interface Props {
@@ -14,8 +15,8 @@ const COGGAN_TABLE = [
   { category: 'Cat 2',           color: '#00b894', m1: 8.0,  m5: 6.1,  m20: 4.8,  m60: 4.6  },
   { category: 'Cat 3',           color: '#cbd5e1', m1: 7.0,  m5: 5.2,  m20: 4.0,  m60: 3.9  },
   { category: 'Cat 4',           color: '#fdcb6e', m1: 6.0,  m5: 4.4,  m20: 3.2,  m60: 3.1  },
-  { category: 'Cat 5 / Recreant',color: '#ff7675', m1: 5.0,  m5: 3.6,  m20: 2.5,  m60: 2.4  },
-  { category: 'Ongetraind',      color: '#475569', m1: 3.5,  m5: 2.5,  m20: 1.75, m60: 1.65 },
+  { category: 'Cat 5 / Recreational',color: '#ff7675', m1: 5.0,  m5: 3.6,  m20: 2.5,  m60: 2.4  },
+  { category: 'Untrained',      color: '#475569', m1: 3.5,  m5: 2.5,  m20: 1.75, m60: 1.65 },
 ];
 
 type DurKey = 'm1' | 'm5' | 'm20' | 'm60';
@@ -69,15 +70,15 @@ export const PowerProfileTable: React.FC<Props> = ({ rides, weight }) => {
         alignItems: 'center',
         gap: 8,
       }}>
-        <span style={{ fontSize: 16 }}>⚡</span>
+        <Zap size={16} color="#cbd5e1" strokeWidth={1.8} />
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-            Powersprofiel (W/kg)
+            Power Profile (W/kg)
           </div>
           <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>
             {!weight
               ? 'Set your weight in Settings → Profile to see your category'
-              : 'Jouw beste W/kg vs Coggan-categorieën (▲ = jouw beste prestatie)'
+              : 'Your best W/kg vs Coggan categories (▲ = your best performance)'
             }
           </div>
         </div>
@@ -92,7 +93,7 @@ export const PowerProfileTable: React.FC<Props> = ({ rides, weight }) => {
                 padding: '7px 14px', textAlign: 'left', color: '#64748b',
                 fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.04)',
               }}>
-                Categorie
+                Category
               </th>
               {DURATIONS.map(d => (
                 <th key={d.key} style={{

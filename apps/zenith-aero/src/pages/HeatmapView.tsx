@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
+import { Map as MapIcon, Lock } from 'lucide-react';
+import { ZenithEmptyState } from '@zenith/shared';
 import { getAllRidesFull } from '../utils/db';
 import type { LatLngBoundsLiteral } from 'leaflet';
 import './HeatmapView.css';
@@ -29,7 +31,7 @@ const FitBounds: React.FC<{ tracks: Track[] }> = ({ tracks }) => {
 };
 
 function fmtDate(ms: number) {
-  return new Date(ms).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(ms).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 // Colour based on ride index (recent = bright cyan, older = dim)
@@ -73,17 +75,18 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ isPro = false, onRequestProMo
     return (
       <div className="wd-section-card" style={{ textAlign: 'center', padding: 48, color: '#3a3a4a' }}>
         <div className="wd-spinner" style={{ margin: '0 auto 12px' }} />
-        Laden…
+        Loading…
       </div>
     );
   }
 
   if (tracks.length === 0) {
     return (
-      <div className="wd-section-card" style={{ textAlign: 'center', padding: 48, color: '#3a3a4a' }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
-        <p>Upload rides with GPS data to view heatmap.</p>
-      </div>
+      <ZenithEmptyState
+        icon={<MapIcon size={20} strokeWidth={1.8} />}
+        title="No routes to show"
+        message="Upload rides with GPS data to see them plotted on the heatmap."
+      />
     );
   }
 
@@ -93,20 +96,21 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ isPro = false, onRequestProMo
   return (
     <div className="wd-section-card wd-heatmap-card">
       <div className="wd-heatmap-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span className="wd-section-card__title">
-          🗺️ {isPro ? `All routes (${tracks.length})` : `Routes last 30d (${tracks.length})`}
+        <span className="wd-section-card__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <MapIcon size={13} /> {isPro ? `All routes (${tracks.length})` : `Routes last 30d (${tracks.length})`}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {!isPro && (
             <button
               onClick={() => onRequestProModal && onRequestProModal('All-Time Heatmap', 'Upgrade to Zenith Pro to merge all your ridden roads into 1 glowing map.')}
               style={{
+                display: 'flex', alignItems: 'center', gap: 5,
                 background: 'linear-gradient(135deg, #cbd5e1 0%, #64748b 100%)',
                 border: 'none', borderRadius: 6, color: '#09090b', fontSize: 10, fontWeight: 900,
                 padding: '3px 8px', cursor: 'pointer'
               }}
             >
-              🔒 Unlock All-Time Heatmap (PRO)
+              <Lock size={11} /> Unlock All-Time Heatmap (PRO)
             </button>
           )}
           <span style={{ fontSize: 11, color: '#94a3b8' }}>

@@ -13,7 +13,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  planName = 'Zenith Pro Maandabonnement',
+  planName = 'Zenith Pro Monthly Subscription',
   priceDisplay = '€9.99 / month'
 }) => {
   const [processing, setProcessing] = useState(false);
@@ -149,7 +149,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
                 <h3 style={{ fontSize: 16, fontWeight: 900, margin: 0, color: '#fff' }}>
                   Zenith Pro Checkout
                 </h3>
-                <span style={{ fontSize: 11, color: '#94a3b8' }}>Beveiligde SSL Transactie</span>
+                <span style={{ fontSize: 11, color: '#94a3b8' }}>Secured SSL Transaction</span>
               </div>
             </div>
 
@@ -166,9 +166,9 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
                 <span style={{ fontSize: 14, fontWeight: 900, color: '#a855f7' }}>{priceDisplay}</span>
               </div>
               <ul style={{ paddingLeft: 18, margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.6 }}>
-                <li>Onbeperkte Aero Routegenerator (GPX / TCX export)</li>
-                <li>Vigor Voortgangsfoto's, Omtrekken & Vet% breakdown</li>
-                <li>Geavanceerde Slaapfases & Kratos Muscle Sync</li>
+                <li>Unlimited Aero Route Generator (GPX / TCX export)</li>
+                <li>Vigor Progress Photos, Circumferences & Fat% breakdown</li>
+                <li>Advanced Sleep Phases & Kratos Muscle Sync</li>
                 <li>Cancel monthly anytime via your profile or PayPal</li>
               </ul>
             </div>
@@ -217,7 +217,7 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 10, color: '#64748b' }}>
                 <Lock size={12} />
-                <span>256-bit encryptie via PayPal Checkout</span>
+                <span>256-bit encryption via PayPal Checkout</span>
               </div>
             </div>
           </div>

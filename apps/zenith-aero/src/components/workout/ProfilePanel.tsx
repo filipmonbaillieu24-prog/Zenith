@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './ProfilePanel.css';
-import { Zap, Lightbulb, RefreshCw, RotateCcw } from 'lucide-react';
+import { Zap, Lightbulb, RefreshCw, RotateCcw, Heart, Folder } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { FitnessProfile } from '../../types/workout';
 import { estimatedMaxHR, estimateVO2max, cyclingCategory } from '../../utils/rideMetrics';
@@ -83,21 +83,21 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
   const activeLTHR = profile.lthr ?? (estMaxHR ? Math.round(estMaxHR * 0.9) : 160);
 
   const zonesPower = [
-    { label: 'Z1 - Recovery', range: `< ${Math.round(activeFTP * 0.55)} W`, desc: 'Recoveryridejes', color: '#74b9ff' },
-    { label: 'Z2 - Endurance', range: `${Math.round(activeFTP * 0.55)} - ${Math.round(activeFTP * 0.75)} W`, desc: 'Vetverbranding', color: '#00b894' },
-    { label: 'Z3 - Tempo', range: `${Math.round(activeFTP * 0.76)} - ${Math.round(activeFTP * 0.90)} W`, desc: 'Aerobe basis', color: '#fdcb6e' },
-    { label: 'Z4 - Threshold', range: `${Math.round(activeFTP * 0.91)} - ${Math.round(activeFTP * 1.05)} W`, desc: 'Lactaatdrempel', color: '#e17055' },
-    { label: 'Z5 - VO2max', range: `${Math.round(activeFTP * 1.06)} - ${Math.round(activeFTP * 1.20)} W`, desc: 'Zuurstofopname', color: '#d63031' },
-    { label: 'Z6 - Anaerobe cap.', range: `${Math.round(activeFTP * 1.21)} - ${Math.round(activeFTP * 1.50)} W`, desc: 'Korte inspanning', color: '#a29bfe' },
-    { label: 'Z7 - Neuromuscular', range: `> ${Math.round(activeFTP * 1.50)} W`, desc: 'Sprint & explosie', color: '#e84393' }
+    { label: 'Z1 - Recovery', range: `< ${Math.round(activeFTP * 0.55)} W`, desc: 'Easy recovery spins', color: '#74b9ff' },
+    { label: 'Z2 - Endurance', range: `${Math.round(activeFTP * 0.55)} - ${Math.round(activeFTP * 0.75)} W`, desc: 'Fat burning', color: '#00b894' },
+    { label: 'Z3 - Tempo', range: `${Math.round(activeFTP * 0.76)} - ${Math.round(activeFTP * 0.90)} W`, desc: 'Aerobic base', color: '#fdcb6e' },
+    { label: 'Z4 - Threshold', range: `${Math.round(activeFTP * 0.91)} - ${Math.round(activeFTP * 1.05)} W`, desc: 'Lactate threshold', color: '#e17055' },
+    { label: 'Z5 - VO2max', range: `${Math.round(activeFTP * 1.06)} - ${Math.round(activeFTP * 1.20)} W`, desc: 'Oxygen uptake', color: '#d63031' },
+    { label: 'Z6 - Anaerobe cap.', range: `${Math.round(activeFTP * 1.21)} - ${Math.round(activeFTP * 1.50)} W`, desc: 'Short effort', color: '#a29bfe' },
+    { label: 'Z7 - Neuromuscular', range: `> ${Math.round(activeFTP * 1.50)} W`, desc: 'Sprint & explosiveness', color: '#e84393' }
   ];
 
   const zonesHR = [
-    { label: 'Z1 - Recovery', range: `< ${Math.round(activeLTHR * 0.81)} bpm`, desc: 'Lichte inspanning', color: '#74b9ff' },
+    { label: 'Z1 - Recovery', range: `< ${Math.round(activeLTHR * 0.81)} bpm`, desc: 'Light effort', color: '#74b9ff' },
     { label: 'Z2 - Endurance', range: `${Math.round(activeLTHR * 0.81)} - ${Math.round(activeLTHR * 0.89)} bpm`, desc: 'Aerobic Base', color: '#00b894' },
-    { label: 'Z3 - Tempo', range: `${Math.round(activeLTHR * 0.90)} - ${Math.round(activeLTHR * 0.93)} bpm`, desc: 'Stevig tempo', color: '#fdcb6e' },
-    { label: 'Z4 - Threshold', range: `${Math.round(activeLTHR * 0.94)} - ${Math.round(activeLTHR * 0.99)} bpm`, desc: 'Zware ademhaling', color: '#e17055' },
-    { label: 'Z5 - VO2max', range: `>= ${Math.round(activeLTHR * 1.00)} bpm`, desc: 'Maximale inspanning', color: '#d63031' }
+    { label: 'Z3 - Tempo', range: `${Math.round(activeLTHR * 0.90)} - ${Math.round(activeLTHR * 0.93)} bpm`, desc: 'Firm tempo', color: '#fdcb6e' },
+    { label: 'Z4 - Threshold', range: `${Math.round(activeLTHR * 0.94)} - ${Math.round(activeLTHR * 0.99)} bpm`, desc: 'Heavy breathing', color: '#e17055' },
+    { label: 'Z5 - VO2max', range: `>= ${Math.round(activeLTHR * 1.00)} bpm`, desc: 'Maximal effort', color: '#d63031' }
   ];
 
   return (
@@ -106,7 +106,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
         <>
         <div className="wd-profile-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px 48px' }}>
           <div className="wd-profile-section wd-profile-section--wide">
-            <div className="wd-profile-section__title">Trainingszones <span>(leeg = auto)</span></div>
+            <div className="wd-profile-section__title">Training Zones <span>(blank = auto)</span></div>
           <div className="wd-profile-row"><label>FTP <span>W</span></label>
             <input type="number" min={50} max={600} placeholder="Auto"
               value={profile.ftp ?? ''}
@@ -121,29 +121,29 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
               onChange={e => set('lthr', e.target.value ? +e.target.value : undefined)} /></div>
           {(bmi || estMaxHR || vo2max || cat5min) && (
             <div className="wd-profile-derived">
-              <div className="wd-profile-derived__title">Geschatte waarden</div>
+              <div className="wd-profile-derived__title">Estimated values</div>
               {estMaxHR && <div className="wd-profile-derived__row"><span>Max HR (Tanaka)</span><strong>{estMaxHR} bpm</strong></div>}
               {bmi && <div className="wd-profile-derived__row"><span>BMI</span>
                 <strong style={{ color: +bmi < 18.5 ? '#74b9ff' : +bmi < 25 ? '#55efc4' : +bmi < 30 ? '#fdcb6e' : '#ff7675' }}>{bmi}</strong></div>}
               {vo2max && <div className="wd-profile-derived__row"><span>VO₂max</span>
                 <strong style={{ color: vo2cat?.color ?? '#a29bfe' }}>{vo2max} {vo2cat && `· ${vo2cat.emoji} ${vo2cat.category}`}</strong></div>}
-              {cat5min && <div className="wd-profile-derived__row"><span>Rijderscategorie</span>
+              {cat5min && <div className="wd-profile-derived__row"><span>Rider category</span>
                 <strong style={{ color: cat5min.color }}>{cat5min.label}</strong></div>}
             </div>
           )}
         </div>
       </div>
 
-      {/* Trainingszones Calculator */}
+      {/* Training Zones Calculator */}
       <div className="wd-profile-section wd-profile-section--wide" style={{ marginTop: 14 }}>
         <div className="wd-profile-section__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Zap size={13} style={{ color: '#cbd5e1' }} />
-          Jouw Gepersonaliseerde Trainingszones
+          Your Personalized Training Zones
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginTop: 10 }}>
           <div>
-            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#a29bfe', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-              ⚡ Powerszones (Coggan)
+            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#a29bfe', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Zap size={13} strokeWidth={1.8} /> Power Zones (Coggan)
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {zonesPower.map(z => (
@@ -157,8 +157,8 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
             </div>
           </div>
           <div>
-            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#ff7675', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-              ❤️ Heart Ratezones (LTHR)
+            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#ff7675', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Heart size={13} strokeWidth={1.8} /> Heart Rate Zones (LTHR)
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {zonesHR.map(z => (
@@ -184,20 +184,20 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
               strokeWidth="2" style={{ display:'inline', flexShrink:0 }}>
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
-            Google Drive synchronisatie
+            Google Drive synchronization
           </div>
 
           <p style={{ fontSize:11, color:'#94a3b8', marginBottom:8, lineHeight:1.5 }}>
-            Stel de root-map in. Zenith maakt automatisch twee submappen aan.
+            Set the root folder. Zenith automatically creates two subfolders.
           </p>
 
-          {/* Root pad */}
+          {/* Root path */}
           <div className="wd-profile-row wd-profile-row--wide" style={{ marginBottom:6 }}>
-            <label>Root-map</label>
+            <label>Root folder</label>
             <div style={{ display:'flex', gap:6, flex:1 }}>
               <input
                 type="text"
-                placeholder={`bv. C:\\Users\\${profile.name ?? 'jij'}\\Google Drive\\My Drive\\Zenith`}
+                placeholder={`e.g. C:\\Users\\${profile.name ?? 'you'}\\Google Drive\\My Drive\\Zenith`}
                 value={gdrivePath}
                 onChange={e => handleGdrivePath(e.target.value)}
                 style={{ flex:1 }}
@@ -208,13 +208,13 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
             </div>
           </div>
 
-          {/* Mapstructuur preview */}
+          {/* Folder structure preview */}
           {gdrivePath.trim() && (
             <div style={{ fontSize:11, marginBottom:10, lineHeight:2, background:'rgba(203, 213, 225,0.04)',
               border:'1px solid rgba(203, 213, 225,0.1)', borderRadius:8, padding:'8px 12px' }}>
-              <div style={{ color:'#666' }}>&#128193; {gdrivePath.replace(/[/\\]+$/, '')}</div>
-              <div style={{ paddingLeft:16, color:'#cbd5e1' }}>&#128193; {GDRIVE_ROUTES_FOLDER}</div>
-              <div style={{ paddingLeft:16, color:'#cbd5e1' }}>&#128193; {GDRIVE_RIDES_FOLDER}</div>
+              <div style={{ color:'#666', display: 'flex', alignItems: 'center', gap: 6 }}><Folder size={12} strokeWidth={1.8} /> {gdrivePath.replace(/[/\\]+$/, '')}</div>
+              <div style={{ paddingLeft:16, color:'#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}><Folder size={12} strokeWidth={1.8} /> {GDRIVE_ROUTES_FOLDER}</div>
+              <div style={{ paddingLeft:16, color:'#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}><Folder size={12} strokeWidth={1.8} /> {GDRIVE_RIDES_FOLDER}</div>
             </div>
           )}
 
@@ -254,7 +254,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
           </p>
           <button className="wd-recalc-btn" onClick={onRecalculate} disabled={recalculating}>
             {recalculating
-              ? <><RefreshCw size={13} className="spin" /> Berekenen…</>
+              ? <><RefreshCw size={13} className="spin" /> Calculating…</>
               : <><RotateCcw size={13} /> Recalculate all rides</>
             }
           </button>

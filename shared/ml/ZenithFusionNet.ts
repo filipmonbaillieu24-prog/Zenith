@@ -1,4 +1,4 @@
-import { SimpleMLP } from './SimpleMLP';
+import { SimpleMLP, buildSymmetryBrokenHiddenLayer } from './SimpleMLP';
 import { MinMaxScaler } from './MinMaxScaler';
 
 export interface FusionPrediction {
@@ -44,23 +44,27 @@ export class ZenithFusionNet {
     const hiddenSize = 12;
     const outputSize = 3;
 
-    const W1: number[][] = Array.from({ length: inputSize }, () => new Array(hiddenSize).fill(0));
-    const B1: number[] = new Array(hiddenSize).fill(0.05);
+    // Prior weight per input feature (hand-picked physiological priorities). Inputs
+    // 6, 8, 10, 11 (REM ratio, DeltaRHR, Creatine, TrendWeight) intentionally have no
+    // prior (0) — same as before.
+    const priorWeightsByInput = new Array(inputSize).fill(0);
+    priorWeightsByInput[0] = 0.3;  // Caloric Intake
+    priorWeightsByInput[1] = 0.6;  // Gym Volume
+    priorWeightsByInput[2] = 0.8;  // Cardio TSS
+    priorWeightsByInput[3] = 0.5;  // Sleep Quality
+    priorWeightsByInput[4] = 0.4;  // Sleep Duration
+    priorWeightsByInput[5] = 0.3;  // Deep Sleep Ratio
+    priorWeightsByInput[7] = 0.7;  // HRV rMSSD
+    priorWeightsByInput[9] = 0.4;  // Caffeine
+
+    // Small deterministic per-neuron perturbation breaks weight symmetry so hidden
+    // ReLU units don't stay identical (and identically-gradiented) forever.
+    const { W1, B1 } = buildSymmetryBrokenHiddenLayer(priorWeightsByInput, hiddenSize, 0.05);
     const W2: number[][] = Array.from({ length: hiddenSize }, () => new Array(outputSize).fill(0));
     const B2: number[] = [0.45, 0.70, 0.75]; // baseline offsets for [TDEE, Recovery, Capacity]
 
-    // Populate input -> hidden weights with physiological priorities
+    // Populate hidden -> output weights
     for (let h = 0; h < hiddenSize; h++) {
-      W1[0][h] = 0.3;  // Caloric Intake
-      W1[1][h] = 0.6;  // Gym Volume
-      W1[2][h] = 0.8;  // Cardio TSS
-      W1[3][h] = 0.5;  // Sleep Quality
-      W1[4][h] = 0.4;  // Sleep Duration
-      W1[5][h] = 0.3;  // Deep Sleep Ratio
-      W1[7][h] = 0.7;  // HRV rMSSD
-      W1[9][h] = 0.4;  // Caffeine
-
-      // Hidden -> Outputs
       W2[h][0] = 0.5;  // TDEE output node
       W2[h][1] = 0.6;  // Recovery output node
       W2[h][2] = 0.55; // Capacity output node

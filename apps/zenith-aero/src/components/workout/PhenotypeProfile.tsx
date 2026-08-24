@@ -1,4 +1,6 @@
 import React, { useMemo } from 'react';
+import { Bike, Zap, Mountain, MountainSnow, Timer, Dumbbell, Target, Dna } from 'lucide-react';
+import { ZenithEmptyState } from '@zenith/shared';
 import './PhenotypeProfile.css';
 import { RideSummaryWithBests } from '../../types/workout';
 
@@ -39,11 +41,11 @@ const cogganRanges = {
 };
 
 function getCategoryLabel(wkg: number, steps: number[]): { label: string; color: string } {
-  if (wkg < steps[0]) return { label: 'Recreatief', color: '#94a3b8' };
-  if (wkg < steps[1]) return { label: 'Moderaat', color: '#38bdf8' };
-  if (wkg < steps[2]) return { label: 'Goed', color: '#34d399' };
-  if (wkg < steps[3]) return { label: 'Uitstekend', color: '#fbbf24' };
-  return { label: 'Wereldklasse', color: '#f87171' };
+  if (wkg < steps[0]) return { label: 'Recreational', color: '#94a3b8' };
+  if (wkg < steps[1]) return { label: 'Moderate', color: '#38bdf8' };
+  if (wkg < steps[2]) return { label: 'Good', color: '#34d399' };
+  if (wkg < steps[3]) return { label: 'Excellent', color: '#fbbf24' };
+  return { label: 'World Class', color: '#f87171' };
 }
 
 export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weight = 75, gender = 'male' }) => {
@@ -82,7 +84,7 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
     const ftpIdx = getPercent(wkg.m20, ranges.m20.min, ranges.m20.max);
 
     let type = "All-rounder";
-    let icon = "🚴";
+    let icon: React.ReactNode = <Bike size={22} strokeWidth={1.8} />;
     let desc = "You have a balanced profile. You are highly versatile and perform well on flat roads as well as short hills.";
     let strength = "Versatility and adaptability.";
     let weaknessTip = "Focus on threshold training (FTP) to increase your aerobic engine, or sprint work to develop a real weapon.";
@@ -91,25 +93,25 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
 
     if (maxIdx === sprintIdx && sprintIdx > ftpIdx + 15) {
       type = "Sprinter";
-      icon = "⚡";
+      icon = <Zap size={22} strokeWidth={1.8} />;
       desc = "Your physiology is built on pure speed and explosiveness. You have excellent muscle mass with fast-twitch muscle fibers.";
       strength = "Explosive final sprint and short accelerations.";
       weaknessTip = "Ride longer rides at a relaxed pace to grow your aerobic engine, so you start the final sprint fresh.";
     } else if (maxIdx === anaerobicIdx && anaerobicIdx > ftpIdx + 10) {
       type = "Puncheur";
-      icon = "⛰️";
+      icon = <Mountain size={22} strokeWidth={1.8} />;
       desc = "Short, steep hills are your absolute favorite. You can go extremely deep into the anaerobic zone (1 to 2 minutes all-out).";
       strength = "Accelerations on hills and short, intensive efforts.";
       weaknessTip = "Train your fat oxidation with relaxed endurance rides to speed up your recovery between consecutive hills.";
     } else if (maxIdx === vo2maxIdx && vo2maxIdx > sprintIdx + 10) {
       type = "Climber";
-      icon = "🧗";
+      icon = <MountainSnow size={22} strokeWidth={1.8} />;
       desc = "You have an excellent ratio between VO2max and weight. You excel as soon as the road goes uphill for longer periods.";
       strength = "Longer climbs and successive tempo accelerations.";
       weaknessTip = "Do strength training on the bike (low cadence, high power) to develop more muscular force for flatter sections.";
     } else if (maxIdx === ftpIdx && ftpIdx > sprintIdx + 10) {
       type = "Time Trialist";
-      icon = "⏱️";
+      icon = <Timer size={22} strokeWidth={1.8} />;
       desc = "You are a diesel engine. You can maintain high power for hours and are perfectly capable of pacing a steady tempo.";
       strength = "Long solo rides, riding fast on the flats, and tempo resilience.";
       weaknessTip = "Add short, explosive sprints to your workouts to teach your muscles to respond to abrupt tempo changes.";
@@ -138,7 +140,11 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
   if (!profile) {
     return (
       <div className="pp-pheno-card">
-        <p style={{ color: '#64748b', fontSize: 12, textAlign: 'center' }}>Upload rides with power data to calculate your phenotype.</p>
+        <ZenithEmptyState
+          icon={<Dna size={20} strokeWidth={1.8} />}
+          title="Not enough data yet"
+          message="Upload rides with power data to calculate your physiological phenotype."
+        />
       </div>
     );
   }
@@ -146,12 +152,14 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
   return (
     <div className="pp-pheno-card">
       <div className="pp-pheno-header">
-        <h3 className="pp-pheno-title">🧬 Physiological Profiling (Phenotype)</h3>
+        <h3 className="pp-pheno-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Dna size={13} strokeWidth={1.8} /> Physiological Profiling (Phenotype)
+        </h3>
         <span className="pp-pheno-subtitle">Classification based on your all-time power profile ({gender === 'female' ? 'Female' : 'Male'})</span>
       </div>
 
       <div className="pp-pheno-badge-row">
-        <div className="pp-pheno-badge-icon">{profile.icon}</div>
+        <div className="pp-pheno-badge-icon" style={{ color: '#cbd5e1' }}>{profile.icon}</div>
         <div>
           <div className="pp-pheno-type">{profile.type}</div>
           <p className="pp-pheno-desc">{profile.desc}</p>
@@ -206,11 +214,15 @@ export const PhenotypeProfile: React.FC<PhenotypeProfileProps> = ({ rides, weigh
 
       <div className="pp-pheno-insights">
         <div className="pp-insight-block">
-          <span className="pp-insight-lbl">💪 Greatest strength:</span>
+          <span className="pp-insight-lbl" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Dumbbell size={12} strokeWidth={1.8} /> Greatest strength:
+          </span>
           <p className="pp-insight-val">{profile.strength}</p>
         </div>
         <div className="pp-insight-block" style={{ marginTop: 8 }}>
-          <span className="pp-insight-lbl" style={{ color: '#fdcb6e' }}>🎯 Coach Tip for Weaknesses:</span>
+          <span className="pp-insight-lbl" style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#fdcb6e' }}>
+            <Target size={12} strokeWidth={1.8} /> Coach Tip for Weaknesses:
+          </span>
           <p className="pp-insight-val">{profile.weaknessTip}</p>
         </div>
       </div>

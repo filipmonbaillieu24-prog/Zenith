@@ -117,7 +117,7 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ points, onHoverP
                   return (
                     <div className="custom-chart-tooltip">
                       <p className="tooltip-distance">Distance: <span>{data.distanceKm} km</span></p>
-                      <p className="tooltip-elevation">Hoogte: <span>{data.elevation} m</span></p>
+                      <p className="tooltip-elevation">Elevation: <span>{data.elevation} m</span></p>
                     </div>
                   );
                 }

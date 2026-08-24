@@ -14,13 +14,12 @@ export const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
+    // Clean up a password that may have been stored in plaintext by an older build.
+    localStorage.removeItem('zenith_remember_password');
+
     const savedEmail = localStorage.getItem('zenith_remember_email');
-    const savedPassword = localStorage.getItem('zenith_remember_password');
     if (savedEmail) {
       setEmail(savedEmail);
-      if (savedPassword) {
-        setPassword(savedPassword);
-      }
       setRememberMe(true);
     }
   }, []);
@@ -39,7 +38,7 @@ export const LoginPage: React.FC = () => {
           password,
           options: {
             data: {
-              name: fullName || 'Atleet'
+              name: fullName || 'Athlete'
             }
           }
         });
@@ -58,13 +57,12 @@ export const LoginPage: React.FC = () => {
         });
         if (error) throw error;
 
-        // Remember credentials if login was successful
+        // Remember the email (for form pre-fill only) if login was successful.
+        // The session itself is already persisted by the Supabase client.
         if (rememberMe) {
           localStorage.setItem('zenith_remember_email', email);
-          localStorage.setItem('zenith_remember_password', password);
         } else {
           localStorage.removeItem('zenith_remember_email');
-          localStorage.removeItem('zenith_remember_password');
         }
       }
     } catch (err: any) {

@@ -42,7 +42,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
     if (!parsedRun) return;
     const finalRun: RunActivity = {
       id: `gpx-${Date.now()}`,
-      title: parsedRun.title || 'Geïmporteerde GPX Loop',
+      title: parsedRun.title || 'Imported GPX Route',
       date: parsedRun.date || new Date().toISOString().slice(0, 10),
       type: parsedRun.type || 'easy',
       isTreadmill: false,
@@ -67,7 +67,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
       <div className="stride-modal-container" onClick={e => e.stopPropagation()}>
         <div className="stride-modal-header">
           <div>
-            <h3>GPX / FIT / TCX Bestand Importeren</h3>
+            <h3>Import GPX / FIT / TCX File</h3>
             <p className="subtitle">Upload a GPS file from your sports watch or app</p>
           </div>
           <button className="stride-close-btn" onClick={onClose}>
@@ -88,7 +88,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
               }}
             >
               <UploadCloud size={48} style={{ color: '#38bdf8', marginBottom: 12 }} />
-              <h4>Sleep je GPX bestand hier naartoe</h4>
+              <h4>Drag your GPX file here</h4>
               <p>or click to select a file (.gpx, .xml, .tcx)</p>
               <input 
                 type="file" 
@@ -98,7 +98,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
                 id="gpx-file-input"
               />
               <label htmlFor="gpx-file-input" className="btn-browse">
-                Bestand Kiezen
+                Choose File
               </label>
 
               {errorMsg && <p className="error-text">{errorMsg}</p>}
@@ -116,13 +116,13 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
                   <span className="metric-val">{parsedRun.distanceKm} km</span>
                 </div>
                 <div className="gpx-metric-card">
-                  <span className="metric-label">Tijdsduur</span>
+                  <span className="metric-label">Duration</span>
                   <span className="metric-val">
                     {Math.floor((parsedRun.durationSec || 0) / 60)}m {(parsedRun.durationSec || 0) % 60}s
                   </span>
                 </div>
                 <div className="gpx-metric-card">
-                  <span className="metric-label">Gem. Tempo</span>
+                  <span className="metric-label">Avg Pace</span>
                   <span className="metric-val">{parsedRun.avgPaceMinKm} /km</span>
                 </div>
                 <div className="gpx-metric-card">
@@ -134,7 +134,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
               {/* Route Polyline Preview */}
               {parsedRun.routeCoordinates && parsedRun.routeCoordinates.length > 0 && (
                 <div className="gpx-route-preview">
-                  <span className="preview-label">GPS Route Preview ({parsedRun.routeCoordinates.length} punten)</span>
+                  <span className="preview-label">GPS Route Preview ({parsedRun.routeCoordinates.length} points)</span>
                   <svg viewBox="0 0 400 120" className="route-svg">
                     {(() => {
                       const coords = parsedRun.routeCoordinates!;
@@ -174,7 +174,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
           {parsedRun && (
             <button className="btn-save" onClick={handleConfirmImport}>
               <Check size={16} style={{ marginRight: 6 }} />
-              GPX Importeren in Zenith Stride
+              Import GPX into Zenith Stride
             </button>
           )}
         </div>

@@ -21,7 +21,7 @@ function fmtHours(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   if (h === 0) return `${m}m`;
-  return m > 0 ? `${h}u ${m}m` : `${h}u`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
 function DeltaBadge({ current, previous, higherIsBetter = true }: {
@@ -30,12 +30,12 @@ function DeltaBadge({ current, previous, higherIsBetter = true }: {
   higherIsBetter?: boolean;
 }) {
   if (previous === 0 && current === 0) return <span style={{ color: '#64748b', fontSize: 10 }}>–</span>;
-  if (previous === 0) return <span style={{ color: '#ffffff', fontSize: 10, fontWeight: 700 }}>Nieuw!</span>;
+  if (previous === 0) return <span style={{ color: '#ffffff', fontSize: 10, fontWeight: 700 }}>New!</span>;
   const delta = current - previous;
   const pct = (delta / previous) * 100;
   const isPositive = higherIsBetter ? delta > 0 : delta < 0;
   const isFlat = Math.abs(pct) < 2;
-  if (isFlat) return <span style={{ color: '#64748b', fontSize: 10 }}>→ stabiel</span>;
+  if (isFlat) return <span style={{ color: '#64748b', fontSize: 10 }}>→ stable</span>;
   return (
     <span style={{ color: isPositive ? '#ffffff' : '#ff7675', fontSize: 10, fontWeight: 700 }}>
       {delta > 0 ? '↑' : '↓'} {Math.abs(pct).toFixed(0)}%
@@ -75,7 +75,7 @@ export const WeekOverview: React.FC<Props> = ({ rides }) => {
 
   // Day bars — TSS heatmap of this week
   const dayBars = useMemo(() => {
-    const days = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const maxTSS = Math.max(1, ...thisWeekRides.map(r => r.tss ?? r.hrTSS ?? 0));
     return days.map((day, idx) => {
       const dayStart = thisWeek.start + idx * 86400000;
@@ -100,9 +100,9 @@ export const WeekOverview: React.FC<Props> = ({ rides }) => {
   const METRICS = [
     { label: 'Rides',  this: stats.this.count,   last: stats.last.count,   fmt: (v: number) => String(v),                  unit: ''   },
     { label: 'Distance', this: stats.this.km,       last: stats.last.km,       fmt: (v: number) => v.toFixed(0),               unit: 'km' },
-    { label: 'Tijd',    this: stats.this.seconds,  last: stats.last.seconds,  fmt: fmtHours,                                  unit: ''   },
+    { label: 'Time',    this: stats.this.seconds,  last: stats.last.seconds,  fmt: fmtHours,                                  unit: ''   },
     { label: 'TSS',     this: stats.this.tss,      last: stats.last.tss,      fmt: (v: number) => Math.round(v).toString(),   unit: ''   },
-    { label: 'Hoogte',  this: stats.this.elev,     last: stats.last.elev,     fmt: (v: number) => v.toFixed(0),               unit: 'm'  },
+    { label: 'Elevation',  this: stats.this.elev,     last: stats.last.elev,     fmt: (v: number) => v.toFixed(0),               unit: 'm'  },
   ];
 
   return (
@@ -119,12 +119,12 @@ export const WeekOverview: React.FC<Props> = ({ rides }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 10, fontWeight: 800, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-            📅 Deze Week
+            📅 This Week
           </div>
-          <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>vs vorige week</div>
+          <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>vs last week</div>
         </div>
         <span style={{ fontSize: 11, color: '#64748b' }}>
-          {stats.this.count} ride{stats.this.count !== 1 ? 'ten' : ''}
+          {stats.this.count} ride{stats.this.count !== 1 ? 's' : ''}
         </span>
       </div>
 

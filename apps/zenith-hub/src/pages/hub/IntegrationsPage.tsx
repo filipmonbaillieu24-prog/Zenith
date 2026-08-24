@@ -16,11 +16,13 @@ import {
   Wifi,
   Smartphone
 } from 'lucide-react';
-import { 
-  checkPhoneServerStatus, 
-  syncPhoneDataToEcosystem, 
-  savePhoneServerConfig, 
-  PhoneServerStatus 
+import {
+  checkPhoneServerStatus,
+  syncPhoneDataToEcosystem,
+  savePhoneServerConfig,
+  PhoneServerStatus,
+  supabaseUrl,
+  supabaseAnonKey
 } from '@zenith/shared';
 import './IntegrationsPage.css';
 
@@ -42,7 +44,7 @@ interface IntegrationService {
 }
 
 export const IntegrationsPage: React.FC = () => {
-  const defaultWebhookUrl = 'https://usvddplwtrelmqsecprp.supabase.co/rest/v1/rpc/health_connect_ingest?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmRkcGx3dHJlbG1xc2VjcHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1NzAyMjksImV4cCI6MjEwMTE4NjIyOX0.WGLIaVq-7bzOQGtSpypApOBt1UyBeATnREmPgz8BacM';
+  const defaultWebhookUrl = `${supabaseUrl}/rest/v1/rpc/health_connect_ingest?apikey=${supabaseAnonKey}`;
 
   const [services, setServices] = useState<IntegrationService[]>(() => {
     const saved = localStorage.getItem('zenith_integrations_config');

@@ -1,7 +1,7 @@
 import { RideSummaryWithBests } from '../types/workout';
 
 export function fmtShortDate(ms: number) {
-  return new Date(ms).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' });
+  return new Date(ms).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 }
 
 export function computeEFTrend(rides: RideSummaryWithBests[]) {

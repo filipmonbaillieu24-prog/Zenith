@@ -419,7 +419,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                 /* SIMPLE TOTAL SLEEP DURATION MODE */
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <div className="form-group">
-                    <label className="form-label">Totale Duur (Hours)</label>
+                    <label className="form-label">Total Duration (Hours)</label>
                     <input
                       type="number"
                       className="form-input"
@@ -431,7 +431,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Totale Duur (Minutes)</label>
+                    <label className="form-label">Total Duration (Minutes)</label>
                     <input
                       type="number"
                       className="form-input"

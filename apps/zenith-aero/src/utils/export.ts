@@ -1,16 +1,16 @@
 import { RoutePoint } from '../types/route';
 import { invoke } from '@tauri-apps/api/core';
 
-// ── Google Drive instellingen (localStorage keys) ─────────────────────────────
+// ── Google Drive settings (localStorage keys) ─────────────────────────────
 export const GDRIVE_PATH_KEY        = 'cyclo_gdrive_path';
 export const GDRIVE_ROUTES_AUTO_KEY = 'cyclo_gdrive_routes_auto';
 export const GDRIVE_RIDES_AUTO_KEY  = 'cyclo_gdrive_rides_auto';
 
-/** Submapnamen in de Google Drive root */
-export const GDRIVE_ROUTES_FOLDER = 'Gegenereerde routes';
-export const GDRIVE_RIDES_FOLDER  = 'Afgelegde rides';
+/** Subfolder names in the Google Drive root */
+export const GDRIVE_ROUTES_FOLDER = 'Generated routes';
+export const GDRIVE_RIDES_FOLDER  = 'Completed rides';
 
-/** Bouw pad naar een subfolder (werkt zowel with / als \ als separator). */
+/** Build path to a subfolder (works with both / and \ as separator). */
 export function gdriveSubPath(root: string, sub: string): string {
   const sep = root.includes('/') ? '/' : '\\';
   return `${root.replace(/[/\\]+$/, '')}${sep}${sub}`;
@@ -22,7 +22,7 @@ function formatXMLTime(date: Date): string {
 }
 
 /**
- * Downloads een bestand via de browser (fallback).
+ * Downloads a file via the browser (fallback).
  */
 export function downloadFile(content: string, filename: string, mimeType: string): void {
   const blob = new Blob([content], { type: mimeType });
@@ -37,10 +37,10 @@ export function downloadFile(content: string, filename: string, mimeType: string
 }
 
 /**
- * Sla een route-export op:
- *  - Google Drive map ingesteld → opslaan in subfolder 'Gegenereerde routes'
- *  - Anders → browser-download
- * Geeft { ok, path?, error? } terug.
+ * Save a route export:
+ *  - Google Drive folder configured → save in subfolder 'Generated routes'
+ *  - Otherwise → browser download
+ * Returns { ok, path?, error? }.
  */
 export async function saveExportFile(
   content: string,
@@ -71,10 +71,10 @@ export async function saveExportFile(
             accept: { [mimeType]: ['.gpx'] }
           }]
         });
-        const wrideable = await handle.createWrideable();
+        const writable = await handle.createWritable();
         const blob = new Blob([content], { type: mimeType });
-        await wrideable.wridee(blob);
-        await wrideable.close();
+        await writable.write(blob);
+        await writable.close();
         return { ok: true, path: filename };
       } catch (err: any) {
         if (err && err.name === 'AbortError') {
@@ -101,8 +101,8 @@ export async function saveExportFile(
 }
 
 /**
- * Auto-sla een ride-GPX op in 'Afgelegde rides' (als auto aan staat).
- * Faalt stil — mag de import niet onderbreken.
+ * Auto-save a ride GPX to 'Completed rides' (if auto is enabled).
+ * Fails silently — must not interrupt the import.
  */
 export async function autoSaveRideToGDrive(
   ridePoints: { lat?: number; lng?: number; ele?: number; time: number }[],
@@ -136,7 +136,7 @@ export async function autoSaveRideToGDrive(
     await invoke('ensure_dir', { path: folder });
     await invoke('save_file',  { path: fullPath, content: xml });
   } catch {
-    // stil falen
+    // fail silently
   }
 }
 

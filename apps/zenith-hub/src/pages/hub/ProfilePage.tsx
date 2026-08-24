@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { User, AlertCircle, Check, Sparkles, CreditCard, ShieldCheck, CheckCircle2, XCircle, Zap, Target } from 'lucide-react';
+import { User, AlertCircle, Check, Sparkles, CreditCard, ShieldCheck, CheckCircle2, XCircle, Zap, Target, Bike, Camera, Ruler, Scale, Moon, Dumbbell, Footprints } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 import { PayPalModal } from '../../components/PayPalModal';
 import './ProfilePage.css';
@@ -110,7 +110,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
 
         if (data && data.length > 0) {
           setLatestWeight(data[0].weight);
-          const dateStr = new Date(data[0].logged_at).toLocaleDateString('nl-NL', {
+          const dateStr = new Date(data[0].logged_at).toLocaleDateString('en-US', {
             day: '2-digit',
             month: 'long',
             year: 'numeric',
@@ -636,37 +636,37 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               </thead>
               <tbody>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}>🚴 Aero Route Generator (GPX / TCX export)</td>
+                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Bike size={15} style={{ flexShrink: 0, color: '#94a3b8' }} /> Aero Route Generator (GPX / TCX export)</span></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#ef4444' }}><XCircle size={16} style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#34d399' }}><CheckCircle2 size={16} style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}>📸 Vigor Progress Photos & Comparator</td>
+                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Camera size={15} style={{ flexShrink: 0, color: '#94a3b8' }} /> Vigor Progress Photos & Comparator</span></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#ef4444' }}><XCircle size={16} style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#34d399' }}><CheckCircle2 size={16} style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}>📏 Vigor Body Circumferences (8 Zones)</td>
+                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Ruler size={15} style={{ flexShrink: 0, color: '#94a3b8' }} /> Vigor Body Circumferences (8 Zones)</span></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#ef4444' }}><XCircle size={16} style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#34d399' }}><CheckCircle2 size={16} style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}>⚖️ Vigor Body Fat & Muscle Mass Breakdown</td>
+                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Scale size={15} style={{ flexShrink: 0, color: '#94a3b8' }} /> Vigor Body Fat & Muscle Mass Breakdown</span></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#ef4444' }}><XCircle size={16} style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#34d399' }}><CheckCircle2 size={16} style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}>🌙 Colmi Smart Ring Deep & REM Sleep Stages</td>
+                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Moon size={15} style={{ flexShrink: 0, color: '#94a3b8' }} /> Colmi Smart Ring Deep & REM Sleep Stages</span></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#ef4444' }}><XCircle size={16} style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#34d399' }}><CheckCircle2 size={16} style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}>🔥 Kratos Muscle Heatmap Sync & Workouts</td>
+                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Dumbbell size={15} style={{ flexShrink: 0, color: '#94a3b8' }} /> Kratos Muscle Heatmap Sync & Workouts</span></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#34d399' }}><CheckCircle2 size={16} style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#34d399' }}><CheckCircle2 size={16} style={{ margin: '0 auto' }} /></td>
                 </tr>
                 <tr>
-                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}>⚖️ Weight (kg) & Steps Logging</td>
+                  <td style={{ padding: '12px', color: '#fff', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Footprints size={15} style={{ flexShrink: 0, color: '#94a3b8' }} /> Weight (kg) & Steps Logging</span></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#34d399' }}><CheckCircle2 size={16} style={{ margin: '0 auto' }} /></td>
                   <td style={{ padding: '12px', textAlign: 'center', color: '#34d399' }}><CheckCircle2 size={16} style={{ margin: '0 auto' }} /></td>
                 </tr>

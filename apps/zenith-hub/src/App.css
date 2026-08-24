@@ -114,3 +114,29 @@ button {
     background-color: #0f0f0f69;
   }
 }
+
+/* Fade+rise on tab switches - replays whenever a target with this class goes
+   from display:none back to visible, since that fully removes and re-adds it
+   to the render tree. Covers both the local Hub pages (remounted via a keyed
+   wrapper) and the extension iframes (which now stay mounted and just toggle
+   display, so this is the only visible change on switching between them). */
+.zenith-page-transition {
+  animation: zenith-tab-fade-in 200ms ease-out;
+}
+
+@keyframes zenith-tab-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zenith-page-transition {
+    animation: none;
+  }
+}

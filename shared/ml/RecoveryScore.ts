@@ -1,4 +1,4 @@
-import { SimpleMLP } from './SimpleMLP';
+import { SimpleMLP, buildSymmetryBrokenHiddenLayer } from './SimpleMLP';
 
 // ==========================================================
 // UNIFIED RECOVERY SCORE MODEL (CR11)
@@ -18,20 +18,25 @@ function generateRecoveryDefaultWeights() {
   //   cardioATL/100         → Acute cardio load
   // ]
   // Hidden: 8, Output: 1 (recovery score 0..1 → 0..100)
-  const W1: number[][] = Array.from({ length: 8 }, () => new Array(8).fill(0));
-  const B1: number[] = new Array(8).fill(0.05);
+  // Prior weight per input feature (hand-picked heuristic magnitude/sign).
+  const priorWeightsByInput = [
+    0.8,   // High TSB → better recovered
+    0.7,   // Good sleep quality → better recovered
+    0.5,   // More sleep → better recovered
+    -0.6,  // High gym volume → less recovered
+    -0.3,  // Maley steps → slight fatigue
+    0.3,   // Positive calorie balance → better recovery
+    0.1,   // Body weight (neutral)
+    -0.7   // High ATL → less recovered
+  ];
+  // Each hidden neuron gets a small deterministic per-neuron perturbation on top of
+  // the shared prior so hidden units aren't identical (symmetry breaking) — without
+  // this, ReLU units with identical weights/bias would stay identical forever.
+  const { W1, B1 } = buildSymmetryBrokenHiddenLayer(priorWeightsByInput, 8, 0.05);
   const W2: number[][] = Array.from({ length: 8 }, () => new Array(1).fill(0));
   const B2: number[] = [0.1];
 
   for (let j = 0; j < 8; j++) {
-    W1[0][j] = 0.8;   // High TSB → better recovered
-    W1[1][j] = 0.7;   // Good sleep quality → better recovered
-    W1[2][j] = 0.5;   // More sleep → better recovered
-    W1[3][j] = -0.6;  // High gym volume → less recovered
-    W1[4][j] = -0.3;  // Maley steps → slight fatigue
-    W1[5][j] = 0.3;   // Positive calorie balance → better recovery
-    W1[6][j] = 0.1;   // Body weight (neutral)
-    W1[7][j] = -0.7;  // High ATL → less recovered
     W2[j][0] = 0.4;
   }
 

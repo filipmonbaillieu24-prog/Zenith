@@ -16,31 +16,82 @@ export const ZenithModuleHeader: React.FC<ZenithModuleHeaderProps> = ({
   actions
 }) => {
   return (
-    <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl backdrop-blur-xl mb-6 shadow-lg shadow-black/20">
-      <div className="flex items-center gap-3">
+    <header style={{
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 16,
+      padding: 20,
+      background: 'rgba(24, 24, 27, 0.6)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      borderRadius: 16,
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      marginBottom: 24,
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {icon && (
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-200 to-slate-400 flex items-center justify-center text-zinc-950 font-black shadow-md shadow-slate-300/10 shrink-0">
+          <div style={{
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, #e2e8f0, #94a3b8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#09090b',
+            fontWeight: 900,
+            flexShrink: 0
+          }}>
             {icon}
           </div>
         )}
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-black text-slate-100 tracking-wider uppercase font-outfit">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <h1 style={{
+              fontFamily: 'var(--zenith-font-heading)',
+              fontSize: 20,
+              fontWeight: 900,
+              color: '#f1f5f9',
+              letterSpacing: '0.03em',
+              textTransform: 'uppercase',
+              margin: 0
+            }}>
               {moduleTitle}
             </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-300/10 text-slate-300 border border-slate-300/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '2px 10px',
+              borderRadius: 999,
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              background: 'rgba(203, 213, 225, 0.1)',
+              color: 'var(--zenith-color-primary, #cbd5e1)',
+              border: '1px solid rgba(203, 213, 225, 0.2)'
+            }}>
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: '#4ade80'
+              }} />
               {statusText}
             </span>
           </div>
-          <p className="text-xs text-zinc-400 font-medium mt-0.5">
+          <p style={{ fontSize: 12, color: '#a1a1aa', fontWeight: 500, margin: '2px 0 0' }}>
             {subtitle}
           </p>
         </div>
       </div>
 
       {actions && (
-        <div className="flex items-center gap-3 shrink-0">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
           {actions}
         </div>
       )}

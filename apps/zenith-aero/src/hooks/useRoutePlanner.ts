@@ -186,9 +186,9 @@ export function useRoutePlanner(onSwitchToRoute?: () => void) {
     const name = `Aero_${route.stats.distance}km`;
     const speed = (route.stats.distance / route.stats.duration) * 3600;
     const result = await saveExportFile(buildGPX(route.points, name, speed), `${name}.gpx`, 'application/gpx+xml');
-    if (result.path) showExportMsg(`✓ Opgeslagen: ${result.path}`, true);
+    if (result.path) showExportMsg(`✓ Saved: ${result.path}`, true);
     else if (!result.ok && result.error !== 'CANCELLED') showExportMsg(`✗ ${result.error}`, false);
-    else if (result.ok) showExportMsg('✓ GPX gedownload', true);
+    else if (result.ok) showExportMsg('✓ GPX downloaded', true);
   }, [activeRouteIndex, routes, showExportMsg]);
 
   const handleDownloadTCX = useCallback(async () => {
@@ -197,9 +197,9 @@ export function useRoutePlanner(onSwitchToRoute?: () => void) {
     const name = `Aero_${route.stats.distance}km`;
     const speed = (route.stats.distance / route.stats.duration) * 3600;
     const result = await saveExportFile(buildTCX(route.points, name, speed), `${name}.tcx`, 'application/vnd.garmin.tcx+xml');
-    if (result.path) showExportMsg(`✓ Opgeslagen: ${result.path}`, true);
+    if (result.path) showExportMsg(`✓ Saved: ${result.path}`, true);
     else if (!result.ok && result.error !== 'CANCELLED') showExportMsg(`✗ ${result.error}`, false);
-    else if (result.ok) showExportMsg('✓ TCX gedownload', true);
+    else if (result.ok) showExportMsg('✓ TCX downloaded', true);
   }, [activeRouteIndex, routes, showExportMsg]);
 
   const activeRoute = routes[activeRouteIndex];

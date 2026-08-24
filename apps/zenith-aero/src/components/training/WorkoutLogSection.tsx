@@ -43,7 +43,7 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Award size={16} color="#cbd5e1" />
-          <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>Handmatig Logboek & RPE Tracker</h4>
+          <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#f8fafc' }}>Manual Log & RPE Tracker</h4>
         </div>
         <button
           onClick={() => setShowAdd((v) => !v)}
@@ -59,10 +59,10 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
             display: 'flex',
             alignItems: 'center',
             gap: 4,
-            fontFamily: 'inheride',
+            fontFamily: 'inherit',
           }}
         >
-          <Plus size={13} /> {showAdd ? 'Cancel' : 'Log Add'}
+          <Plus size={13} /> {showAdd ? 'Cancel' : 'Add Log'}
         </button>
       </div>
 
@@ -70,7 +70,7 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
         <form onSubmit={handleSubmit} style={{ background: 'rgba(0,0,0,0.2)', padding: 14, borderRadius: 8, marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Datum</label>
+              <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Date</label>
               <input
                 type="date"
                 value={date}
@@ -94,7 +94,7 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Duur (min)</label>
+              <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Duration (min)</label>
               <input
                 type="number"
                 value={durationMinutes}
@@ -105,12 +105,12 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
           </div>
 
           <div>
-            <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>RPE Inspanning: {rpe}/10</label>
+            <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>RPE Effort: {rpe}/10</label>
             <input type="range" min={1} max={10} value={rpe} onChange={(e) => setRpe(Number(e.target.value))} style={{ width: '100%' }} />
           </div>
 
           <div>
-            <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Notities</label>
+            <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>Notes</label>
             <input
               type="text"
               placeholder="How did the workout feel?"
@@ -140,7 +140,7 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
       )}
 
       {logs.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 11, color: '#64748b', textAlign: 'center', padding: '10px 0' }}>No handmatige workout-logs toegevoegd.</p>
+        <p style={{ margin: 0, fontSize: 11, color: '#64748b', textAlign: 'center', padding: '10px 0' }}>No manual workout logs added.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {logs.map((item) => (

@@ -165,7 +165,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
         <div className="bug-modal-header">
           <div className="bug-header-title">
             <Bug className="bug-icon-accent" size={20} />
-            <h2>Bug Rapporteren</h2>
+            <h2>Report Bug</h2>
           </div>
           <button className="bug-close-btn" onClick={onClose}>
             <X size={18} />
@@ -177,7 +177,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
           {submitResult && submitResult.success ? (
             <div className="bug-success-state animate-fade-in">
               <CheckCircle className="bug-success-icon" size={64} />
-              <h3>Bug Succesvol Gerapporteerd!</h3>
+              <h3>Bug Successfully Reported!</h3>
               <p>The issue has been registered and a GitHub issue was created.</p>
               {submitResult.githubUrl && (
                 <a 
@@ -190,7 +190,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                 </a>
               )}
               <button className="bug-action-btn primary" onClick={onClose} style={{ marginTop: '20px' }}>
-                Sluiten
+                Close
               </button>
             </div>
           ) : (
@@ -205,18 +205,18 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
               {/* Form Row: Category & Problem Type */}
               <div className="bug-form-row">
                 <div className="bug-form-group">
-                  <label htmlFor="category">Categorie/Component *</label>
-                  <select 
-                    id="category" 
-                    value={category} 
+                  <label htmlFor="category">Category/Component *</label>
+                  <select
+                    id="category"
+                    value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     required
                   >
-                    <option value="hub">Zenith Hub (Algemeen)</option>
-                    <option value="aero">Zenith Aero (Extensie)</option>
-                    <option value="vigor">Zenith Vigor (Extensie)</option>
-                    <option value="kratos">Zenith Kratos (Extensie)</option>
-                    <option value="fuel">Zenith Fuel (Extensie)</option>
+                    <option value="hub">Zenith Hub (General)</option>
+                    <option value="aero">Zenith Aero (Extension)</option>
+                    <option value="vigor">Zenith Vigor (Extension)</option>
+                    <option value="kratos">Zenith Kratos (Extension)</option>
+                    <option value="fuel">Zenith Fuel (Extension)</option>
                     <option value="mobiel">Zenith Mobile (APK)</option>
                     <option value="other">Other</option>
                   </select>
@@ -235,7 +235,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                     <option value="performance">Performance / Sluggishness</option>
                     <option value="sync">Data-synchronization</option>
                     <option value="bluetooth">Bluetooth / BLE Coupling</option>
-                    <option value="feature">Suggestie / Feature Request</option>
+                    <option value="feature">Suggestion / Feature Request</option>
                     <option value="other">Other</option>
                   </select>
                 </div>

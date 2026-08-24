@@ -41,7 +41,7 @@ export async function sendAIChat(
 
   const systemMessage: AIChatMessage = {
     role: 'system',
-    content: `${systemContext}\nJe bent een professionele wielercoach genaamd Zenith AI Coach. Geef korte, duidelijke en wetenschappelijk onderbouwde antwoorden in het Nederlands. Gebruik none emojis in je antwoord.`,
+    content: `${systemContext}\nYou are a professional cycling coach named Zenith AI Coach. Give short, clear, scientifically grounded answers in English. Do not use emojis in your answer.`,
   };
 
   const fullMessages = [systemMessage, ...messages];
@@ -69,7 +69,7 @@ export async function sendAIChat(
   } else {
     // OpenAI provider
     if (!settings.openaiKey) {
-      throw new Error('OpenAI API-sleutel ontbreekt.');
+      throw new Error('OpenAI API key is missing.');
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

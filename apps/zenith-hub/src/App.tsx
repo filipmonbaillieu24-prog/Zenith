@@ -15,12 +15,14 @@ const FeatureRequestsPage = lazy(() => import('./pages/community/FeatureRequests
 import { loggerService } from './utils/loggerService';
 import { Sidebar, TabKey } from './components/Sidebar';
 import { computePMC } from './utils/pmc';
-import { recoveryModel, syncPhoneDataToEcosystem } from '@zenith/shared';
+import { recoveryModel, syncPhoneDataToEcosystem, isTrustedZenithOrigin } from '@zenith/shared';
 import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
 import { OnboardingModal } from './components/OnboardingModal';
 import { AccountConfirmedModal } from './components/AccountConfirmedModal';
+
+const EXTENSION_TABS = new Set<TabKey>(['aero', 'vigor', 'kratos', 'fuel', 'stride']);
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -79,12 +81,27 @@ function App() {
     return session.user.user_metadata?.is_pro === true;
   }, [session]);
   const [activeTab, setActiveTab] = useState<TabKey>('hub');
+  // Extension iframes used to all get a real `src` on Hub's very first render,
+  // regardless of activeTab — meaning Aero/Vigor/Kratos/Fuel/Stride each fired their
+  // own mount-time Supabase queries in the same instant Hub fired its own dashboard
+  // queries. On this project's compute tier that synchronized 6-app burst was enough
+  // to exhaust the burst-CPU allocation and cause otherwise-trivial queries to time
+  // out. Only mounting an iframe the first time its tab is actually visited spreads
+  // that load out naturally (nobody switches tabs within the same millisecond), while
+  // still satisfying the "stays mounted permanently once loaded" requirement below —
+  // it just defers *when* "once loaded" starts.
+  const [visitedExtensionTabs, setVisitedExtensionTabs] = useState<Set<TabKey>>(() => new Set());
+  useEffect(() => {
+    if (EXTENSION_TABS.has(activeTab) && !visitedExtensionTabs.has(activeTab)) {
+      setVisitedExtensionTabs(prev => new Set(prev).add(activeTab));
+    }
+  }, [activeTab, visitedExtensionTabs]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     const saved = localStorage.getItem('zenith_sidebar_collapsed');
     return saved ? JSON.parse(saved) : false;
   });
   const [rides, setRides] = useState<{ date: number; tss: number }[]>([]);
-  const [fitnessProfile, setFitnessProfile] = useState<any>({ name: 'Atleet' });
+  const [fitnessProfile, setFitnessProfile] = useState<any>({ name: 'Athlete' });
   const [mlModelsLoaded, setMlModelsLoaded] = useState(false);
   const [pendingRideId, setPendingRideId] = useState<string | null>(null);
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
@@ -362,6 +379,7 @@ function App() {
     setupTauriListener();
 
     const handleMessage = (event: MessageEvent) => {
+      if (!isTrustedZenithOrigin(event.origin)) return;
       if (event.data?.type === 'close-app') {
         setActiveTab('hub');
       } else if (event.data?.type === 'NAVIGATE_TAB') {
@@ -442,7 +460,7 @@ function App() {
       
       if (data) {
         setFitnessProfile({
-          name: data.name || 'Atleet',
+          name: data.name || 'Athlete',
           gender: data.gender,
           birthDate: data.birth_date,
           height: data.height_cm,
@@ -452,7 +470,7 @@ function App() {
           trainingGoal: data.training_goal || 'general'
         });
       } else {
-        const initialName = userMetadata?.name || 'Atleet';
+        const initialName = userMetadata?.name || 'Athlete';
         const defaultProfile = {
           id: userId,
           name: initialName,
@@ -471,7 +489,7 @@ function App() {
     } catch (e) {
       console.error("Error loading profile from profiles table:", e);
       const profile = userMetadata?.fitness_profile || {};
-      const name = userMetadata?.name || profile.name || 'Atleet';
+      const name = userMetadata?.name || profile.name || 'Athlete';
       setFitnessProfile({ ...profile, name });
     }
   }, []);
@@ -501,7 +519,7 @@ function App() {
         }
       } else {
         setRides([]);
-        setFitnessProfile({ name: 'Atleet' });
+        setFitnessProfile({ name: 'Athlete' });
       }
     });
 
@@ -540,50 +558,81 @@ function App() {
     }
   }, [fetchRides, session]);
 
-  // Supabase Realtime channel to orchestrate background MLP training cycles
+  // Supabase Realtime channel to orchestrate background MLP training cycles.
+  //
+  // Debounced + serialized: a single phone sync can insert dozens of historical
+  // rows (steps/sleep/weight backfill) in quick succession, each firing its own
+  // INSERT event. Without debouncing, every one of those re-ran the full training
+  // cycle (5 models, one of which loops 31 days) — thousands of redundant Supabase
+  // upserts per sync. Now a burst of events collapses into one run fired after the
+  // events go quiet, and a run already in flight queues at most one follow-up
+  // instead of overlapping.
   useEffect(() => {
     if (!session?.user) return;
     const userId = session.user.id;
 
-    const triggerTraining = async () => {
-      // 1. Initialise models in memory for UI immediately
-      await recoveryModel.loadOrInit(supabase, userId);
-      setMlModelsLoaded(true);
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let isTraining = false;
+    let rerunQueued = false;
 
-      // 2. Run background training
-      const { runBackgroundTraining } = await import('./utils/backgroundTrainer');
-      await runBackgroundTraining(supabase, userId);
+    const runTrainingCycle = async () => {
+      if (isTraining) { rerunQueued = true; return; }
+      isTraining = true;
+      try {
+        // 1. Initialise models in memory for UI immediately
+        await recoveryModel.loadOrInit(supabase, userId);
+        setMlModelsLoaded(true);
 
-      // 3. Re-load the freshly trained weights into memory and trigger UI updates
-      await recoveryModel.loadOrInit(supabase, userId);
-      setMlModelsLoaded(prev => !prev);
+        // 2. Run background training
+        const { runBackgroundTraining } = await import('./utils/backgroundTrainer');
+        await runBackgroundTraining(supabase, userId);
+
+        // 3. Re-load the freshly trained weights into memory and trigger UI updates
+        await recoveryModel.loadOrInit(supabase, userId);
+        setMlModelsLoaded(prev => !prev);
+      } finally {
+        isTraining = false;
+        if (rerunQueued) {
+          rerunQueued = false;
+          runTrainingCycle();
+        }
+      }
     };
 
-    // Trigger initial train run on load
-    triggerTraining();
+    const scheduleTraining = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        runTrainingCycle();
+      }, 4000);
+    };
+
+    // Initial run on load doesn't need debouncing — nothing to coalesce with yet.
+    runTrainingCycle();
 
     const channel = supabase
       .channel('hub-db-ml-trigger')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'rides', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
         fetchRides();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'vigor_weight', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'vigor_sleep', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'vigor_steps', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kratos_workouts', filter: `user_id=eq.${userId}` }, () => {
-        triggerTraining();
+        scheduleTraining();
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
+      if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [session, fetchRides]);
 
@@ -673,10 +722,7 @@ function App() {
 
     // 3. Resolve GitHub credentials
     const repo = data.developerRepo || import.meta.env.VITE_GITHUB_REPO || 'filipmonbaillieu24-prog/Zenith';
-    const tPart1 = 'github_pat_';
-    const tPart2 = '11CAEFYAQ023KOt2twwlMa_7QlL36qILPsdb6oJG';
-    const tPart3 = 'nXd9PxzlMsIFz0V45u41fvhErNOP7ZR6VAZ5uuwSVf';
-    const token = data.developerToken || import.meta.env.VITE_GITHUB_TOKEN || (tPart1 + tPart2 + tPart3);
+    const token = data.developerToken || import.meta.env.VITE_GITHUB_TOKEN;
 
     if (!token) {
       throw new Error(
@@ -695,26 +741,26 @@ function App() {
       logsMarkdown = `### 📋 System & Console Logs (${capturedLogs.length} lines)\n<details>\n<summary>Click to view automatically captured console logs</summary>\n\n\`\`\`log\n${logsFormatted}\n\`\`\`\n</details>\n`;
     }
 
-    const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';
+    const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Athlete';
     
     let imagesMarkdown = '';
     if (imageUrls.length > 0) {
-      imagesMarkdown = '### Schermafbeeldingen\n\n' + imageUrls.map((url, idx) => `![Screenshot ${idx + 1}](${url})`).join('\n\n');
+      imagesMarkdown = '### Screenshots\n\n' + imageUrls.map((url, idx) => `![Screenshot ${idx + 1}](${url})`).join('\n\n');
     }
 
-    const bodyContent = `### Omschrijving / Reproductie
+    const bodyContent = `### Description / Reproduction
 ${data.description}
 
 ### Details
-- **Categorie:** ${data.category}
-- **Type probleem:** ${data.problemType}
-- **Urgentie:** ${data.severity.toUpperCase()}
+- **Category:** ${data.category}
+- **Problem type:** ${data.problemType}
+- **Urgency:** ${data.severity.toUpperCase()}
 - **User:** ${userName} <${session.user.email}> (ID: ${session.user.id})
 
-### Omgevingsfactoren
-- **Besturingssysteem:** ${envOs}
+### Environmental Factors
+- **Operating system:** ${envOs}
 - **Browser:** ${envBrowser}
-- **Schermresolutie:** ${envScreen}
+- **Screen resolution:** ${envScreen}
 - **Application Version:** 0.1.0 (Tauri)
 
 ${imagesMarkdown}
@@ -809,7 +855,7 @@ ${logsMarkdown}
     return (
       <div className="zh-hub-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>
-          Zenith laden...
+          Loading Zenith...
         </div>
       </div>
     );
@@ -838,7 +884,7 @@ ${logsMarkdown}
           >
             ← Back to Website
           </button>
-          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
             <LoginPage />
           </Suspense>
         </div>
@@ -846,15 +892,15 @@ ${logsMarkdown}
     }
     if (publicView === 'prijzen') {
       return (
-        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
           <PricingPage onBack={() => setPublicView('landing')} isPro={false} />
         </Suspense>
       );
     }
     if (publicView === 'roadmap') {
       return (
-        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
-          <FeatureRequestsPage 
+        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
+          <FeatureRequestsPage
             onBack={() => setPublicView('landing')} 
             onRequireLogin={() => setPublicView('auth')}
           />
@@ -862,7 +908,7 @@ ${logsMarkdown}
       );
     }
     return (
-      <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+      <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
         <ZenithLandingPage
           onLogin={() => setPublicView('auth')}
           onRegister={() => setPublicView('auth')}
@@ -872,7 +918,7 @@ ${logsMarkdown}
     );
   }
 
-  const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';
+  const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Athlete';
   const isFounder = session?.user?.email?.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
   const isTauri = typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window || !!(window as any).__TAURI_METADATA__);
 
@@ -901,8 +947,8 @@ ${logsMarkdown}
           }}
         />
         <div style={{ flex: 1, height: isTauri ? 'calc(100vh - 32px)' : '100vh', marginTop: 0, overflowY: 'auto', position: 'relative' }}>
-          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
-          <div key={activeTab} className="zenith-page-transition" style={{ width: '100%', height: '100%' }}>
+          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
+          <div key={activeTab} className="zenith-page-transition" style={{ width: '100%', height: '100%', display: EXTENSION_TABS.has(activeTab) ? 'none' : 'block' }}>
           {activeTab === 'hub' && (
             <ZenithHubPage
               fitnessProfile={fitnessProfile}
@@ -964,8 +1010,16 @@ ${logsMarkdown}
           {activeTab === 'integrations' && (
             <IntegrationsPage />
           )}
-          {activeTab === 'aero' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
+          </div>
+          </Suspense>
+
+          {/* Extensions stay mounted permanently once loaded and are shown/hidden with
+              display, instead of being destroyed and recreated on every tab switch.
+              Switching away from an extension used to unmount its iframe entirely, so
+              switching back forced a full reload (re-auth, re-fetch, re-render) every
+              single time - this is what made app-to-app navigation feel clunky. */}
+          {visitedExtensionTabs.has('aero') && (
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'aero' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="aero-iframe"
                 src={getAeroUrl()}
@@ -975,8 +1029,8 @@ ${logsMarkdown}
               />
             </div>
           )}
-          {activeTab === 'vigor' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
+          {visitedExtensionTabs.has('vigor') && (
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'vigor' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="vigor-iframe"
                 src={vigorUrl}
@@ -986,8 +1040,8 @@ ${logsMarkdown}
               />
             </div>
           )}
-          {activeTab === 'kratos' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
+          {visitedExtensionTabs.has('kratos') && (
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'kratos' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="kratos-iframe"
                 src={kratosUrl}
@@ -996,8 +1050,8 @@ ${logsMarkdown}
               />
             </div>
           )}
-          {activeTab === 'fuel' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
+          {visitedExtensionTabs.has('fuel') && (
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'fuel' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="fuel-iframe"
                 src={fuelUrl}
@@ -1006,8 +1060,8 @@ ${logsMarkdown}
               />
             </div>
           )}
-          {activeTab === 'stride' && (
-            <div style={{ width: '100%', height: '100%', background: '#09090b', position: 'relative' }}>
+          {visitedExtensionTabs.has('stride') && (
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'stride' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="stride-iframe"
                 src={strideUrl}
@@ -1016,8 +1070,6 @@ ${logsMarkdown}
               />
             </div>
           )}
-          </div>
-          </Suspense>
         </div>
       </div>
 
