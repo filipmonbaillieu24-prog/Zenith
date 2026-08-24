@@ -252,6 +252,8 @@ fun TodayScreen(
                                             weightUnit = ex.weightUnit,
                                             incrementWeight = ex.incrementWeight,
                                             incrementPerSide = ex.incrementPerSide,
+                                            minWeight = ex.minWeight,
+                                            maxWeight = ex.maxWeight,
                                             notes = ex.notes,
                                             isBodyweight = ex.isBodyweight,
                                             sets = androidx.compose.runtime.mutableStateListOf<ActiveSetState>().apply {

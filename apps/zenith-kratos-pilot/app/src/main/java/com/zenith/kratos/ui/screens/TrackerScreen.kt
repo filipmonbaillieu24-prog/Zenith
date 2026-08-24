@@ -752,8 +752,18 @@ fun TrackerScreen(
                                                             val rirDelta = rir - nextTargetRir
                                                             val growthPct = Math.min(0.15, 0.02 + 0.025 * Math.max(0, rirDelta))
                                                             val shrinkPct = Math.min(0.15, 0.02 + 0.025 * Math.max(0, -rirDelta))
-                                                            val minSafeW = Math.max(w * (1.0 - shrinkPct), epleyW * 0.92)
-                                                            val maxSafeW = Math.min(w * (1.0 + growthPct), epleyW * 1.08)
+                                                            // Hard equipment limits (e.g. a machine's actual stack range)
+                                                            // always win over the rirDelta-scaled band above - no amount
+                                                            // of overperformance should suggest a weight the equipment
+                                                            // physically can't provide.
+                                                            var minSafeW = Math.max(w * (1.0 - shrinkPct), epleyW * 0.92)
+                                                            var maxSafeW = Math.min(w * (1.0 + growthPct), epleyW * 1.08)
+                                                            exState.minWeight?.let { minSafeW = Math.max(minSafeW, it) }
+                                                            exState.maxWeight?.let { maxSafeW = Math.min(maxSafeW, it) }
+                                                            // A hard limit can push minSafeW above maxSafeW (e.g. max_weight
+                                                            // set below the rirDelta band's floor) - coerceIn() below throws
+                                                            // if min > max, so let the hard ceiling win rather than crash.
+                                                            if (minSafeW > maxSafeW) minSafeW = maxSafeW
 
                                                             // Always clamp, regardless of which estimate produced the raw
                                                             // number: previously the safety band was only applied to the

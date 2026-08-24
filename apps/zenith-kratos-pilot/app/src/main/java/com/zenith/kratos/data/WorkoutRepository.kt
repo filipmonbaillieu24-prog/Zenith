@@ -35,6 +35,8 @@ class WorkoutRepository(
                     notes = it.notes,
                     incrementWeight = it.incrementWeight,
                     incrementPerSide = it.incrementPerSide,
+                    minWeight = it.minWeight,
+                    maxWeight = it.maxWeight,
                     defaultRir = it.defaultRir,
                     weightUnit = it.weightUnit,
                     isBodyweight = it.isBodyweight
@@ -251,6 +253,8 @@ class WorkoutRepository(
                     weightUnit = pe.weightUnit,
                     incrementWeight = pe.incrementWeight,
                     incrementPerSide = pe.incrementPerSide,
+                    minWeight = pe.minWeight,
+                    maxWeight = pe.maxWeight,
                     notes = pe.notes,
                     isBodyweight = pe.isBodyweight,
                     sets = androidx.compose.runtime.mutableStateListOf<ActiveSetState>().apply {
@@ -299,6 +303,8 @@ class WorkoutRepository(
                     weightUnit = ae.weightUnit,
                     incrementWeight = ae.incrementWeight,
                     incrementPerSide = ae.incrementPerSide,
+                    minWeight = ae.minWeight,
+                    maxWeight = ae.maxWeight,
                     notes = ae.notes,
                     isBodyweight = ae.isBodyweight,
                     sets = ae.sets.map { as_ ->

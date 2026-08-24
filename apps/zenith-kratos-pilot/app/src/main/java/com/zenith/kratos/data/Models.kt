@@ -16,6 +16,8 @@ data class Exercise(
     val notes: String? = null,
     @SerialName("increment_weight") val incrementWeight: Double = 2.5,
     @SerialName("increment_per_side") val incrementPerSide: Boolean = false,
+    @SerialName("min_weight") val minWeight: Double? = null,
+    @SerialName("max_weight") val maxWeight: Double? = null,
     @SerialName("is_bodyweight") val isBodyweight: Boolean = false,
     @SerialName("default_rir") val defaultRir: Int = 2,
     @SerialName("weight_unit") val weightUnit: String = "kg",
@@ -103,6 +105,8 @@ data class ActiveExerciseState(
     val weightUnit: String,
     val incrementWeight: Double,
     val incrementPerSide: Boolean,
+    val minWeight: Double? = null,
+    val maxWeight: Double? = null,
     val notes: String?,
     val isBodyweight: Boolean,
     val sets: SnapshotStateList<ActiveSetState>
@@ -129,6 +133,8 @@ data class PersistedActiveExercise(
     val weightUnit: String,
     val incrementWeight: Double,
     val incrementPerSide: Boolean,
+    val minWeight: Double? = null,
+    val maxWeight: Double? = null,
     val notes: String?,
     val isBodyweight: Boolean = false,
     val sets: List<PersistedActiveSet>
