@@ -74,26 +74,54 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   const fetchDashboardData = async () => {
     setLoadingDashboard(true);
     try {
-      // 1. Fetch latest weight log
-      const { data: wData } = await supabase
-        .from('vigor_weight')
-        .select('*')
-        .eq('user_id', userId)
-        .order('logged_at', { ascending: false })
-        .limit(1);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      // Start of current week (Monday)
+      const now = new Date();
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const startOfWeek = new Date(now.setDate(diff));
+      startOfWeek.setHours(0, 0, 0, 0);
+      const startOfWeekMs = startOfWeek.getTime();
+
+      // All of these reads are independent of each other (none filters on a prior
+      // query's result — only on userId and locally-computed date boundaries), so
+      // firing them together cuts the ~11 sequential round-trips this used to take
+      // down to the latency of a single one. The three "weekly" queries this used
+      // to run separately (rides/stride/kratos filtered to this week) were also
+      // pure duplicates of the full-history queries a few lines below them — those
+      // are now derived client-side instead of hitting Supabase twice per table.
+      const [
+        { data: wData },
+        { data: sData },
+        { data: stData },
+        { data: fuelLogsToday },
+        { data: plannedData },
+        { data: ridesData },
+        { data: strideData },
+        { data: allKData },
+        { data: exCatalog },
+      ] = await Promise.all([
+        supabase.from('vigor_weight').select('*').eq('user_id', userId).order('logged_at', { ascending: false }).limit(1),
+        supabase.from('vigor_sleep').select('*').eq('user_id', userId).order('logged_at', { ascending: false }).limit(14),
+        supabase.from('vigor_steps').select('*').eq('user_id', userId).gte('logged_at', todayStart.toISOString()).lte('logged_at', todayEnd.toISOString()).order('logged_at', { ascending: false }),
+        supabase.from('fuel_logs').select('calories').eq('user_id', userId).gte('logged_at', todayStart.toISOString()).lte('logged_at', todayEnd.toISOString()),
+        supabase.from('planned_workouts').select('*').eq('user_id', userId),
+        supabase.from('rides').select('date, distance, metadata').eq('user_id', userId),
+        supabase.from('stride_activities').select('*').eq('user_id', userId),
+        supabase.from('kratos_workouts').select('id, name, completed_at, sets, volume').eq('user_id', userId),
+        supabase.from('kratos_exercises').select('id, name, category, primary_muscle, secondary_muscles').eq('user_id', userId),
+      ]);
+
       if (wData && wData.length > 0) {
         setLatestWeight(wData[0]);
       } else {
         setLatestWeight(null);
       }
 
-      // 2. Fetch latest 14 sleep logs for ML baseline & debt analysis
-      const { data: sData } = await supabase
-        .from('vigor_sleep')
-        .select('*')
-        .eq('user_id', userId)
-        .order('logged_at', { ascending: false })
-        .limit(14);
       if (sData && sData.length > 0) {
         setLatestSleep(sData[0]);
         setAllSleeps(sData);
@@ -102,103 +130,18 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         setAllSleeps([]);
       }
 
-      // 3. Fetch today's steps log
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
-      const { data: stData } = await supabase
-        .from('vigor_steps')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('logged_at', todayStart.toISOString())
-        .lte('logged_at', todayEnd.toISOString())
-        .order('logged_at', { ascending: false });
       if (stData && stData.length > 0) {
         setTodaySteps(Number(stData[0].step_count) || 0);
       } else {
         setTodaySteps(0);
       }
 
-      // 3b. Fetch today's logged food calories (Zenith Fuel) for the recovery
-      // model's calorieBalance input. Real cross-app data, same pattern as the
-      // other Aero/Kratos/Stride/Vigor reads in this function.
-      const { data: fuelLogsToday } = await supabase
-        .from('fuel_logs')
-        .select('calories')
-        .eq('user_id', userId)
-        .gte('logged_at', todayStart.toISOString())
-        .lte('logged_at', todayEnd.toISOString());
       if (fuelLogsToday && fuelLogsToday.length > 0) {
         setCaloriesConsumedToday(fuelLogsToday.reduce((sum: number, f: any) => sum + Number(f.calories || 0), 0));
       } else {
         setCaloriesConsumedToday(null);
       }
 
-      // 4. Calculate start of current week (Monday)
-      const now = new Date();
-      const day = now.getDay();
-      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-      const startOfWeek = new Date(now.setDate(diff));
-      startOfWeek.setHours(0, 0, 0, 0);
-
-      // 5. Fetch weekly rides count & distance
-      const { data: rData } = await supabase
-        .from('rides')
-        .select('distance')
-        .eq('user_id', userId)
-        .gte('date', startOfWeek.getTime());
-
-      if (rData) {
-        setWeeklyRidesCount(rData.length);
-        const totalDist = rData.reduce((sum, r) => sum + Number(r.distance || 0), 0);
-        setWeeklyRidesDistance(totalDist);
-      } else {
-        setWeeklyRidesCount(0);
-        setWeeklyRidesDistance(0);
-      }
-
-      // 5b. Fetch weekly Stride runs count & distance
-      const { data: stRunData } = await supabase
-        .from('stride_activities')
-        .select('distance_km, date, created_at')
-        .eq('user_id', userId);
-      
-      if (stRunData) {
-        const startOfWeekMs = startOfWeek.getTime();
-        const thisWeekRuns = stRunData.filter(s => {
-          const t = s.date ? new Date(s.date).getTime() : new Date(s.created_at).getTime();
-          return t >= startOfWeekMs;
-        });
-        setWeeklyStrideCount(thisWeekRuns.length);
-        const totalDist = thisWeekRuns.reduce((sum, r) => sum + Number(r.distance_km || 0), 0);
-        setWeeklyStrideDistance(totalDist);
-      } else {
-        setWeeklyStrideCount(0);
-        setWeeklyStrideDistance(0);
-      }
-
-      // 6. Fetch weekly Kratos workouts count and volume
-      const { data: kData } = await supabase
-        .from('kratos_workouts')
-        .select('id, volume')
-        .eq('user_id', userId)
-        .gte('completed_at', startOfWeek.toISOString());
-      
-      if (kData) {
-        setWeeklyKratosCount(kData.length);
-        const totalVolume = kData.reduce((sum, w) => sum + Number(w.volume || 0), 0);
-        setWeeklyGymVolume(totalVolume);
-      } else {
-        setWeeklyKratosCount(0);
-        setWeeklyGymVolume(0);
-      }
-
-      // 7. Fetch planned workouts for PMC simulation
-      const { data: plannedData } = await supabase
-        .from('planned_workouts')
-        .select('*')
-        .eq('user_id', userId);
       if (plannedData) {
         setPlannedWorkouts(plannedData.map((p: any) => ({
           id: p.id,
@@ -213,11 +156,6 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
         })));
       }
 
-      // 8. Fetch completed rides for PMC simulation & Muscle Heatmap
-      const { data: ridesData } = await supabase
-        .from('rides')
-        .select('date, distance, metadata')
-        .eq('user_id', userId);
       if (ridesData) {
         setAllRides(ridesData.map((r: any) => {
           const witha = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : r.metadata || {};
@@ -227,31 +165,40 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
             tss: witha?.tss ?? witha?.hrTSS ?? 0
           };
         }));
+
+        const thisWeekRides = ridesData.filter((r: any) => Number(r.date) >= startOfWeekMs);
+        setWeeklyRidesCount(thisWeekRides.length);
+        setWeeklyRidesDistance(thisWeekRides.reduce((sum: number, r: any) => sum + Number(r.distance || 0), 0));
+      } else {
+        setWeeklyRidesCount(0);
+        setWeeklyRidesDistance(0);
       }
 
-      // 9. Fetch Stride running activities for PMC simulation & Cardio Volume
-      const { data: strideData } = await supabase
-        .from('stride_activities')
-        .select('*')
-        .eq('user_id', userId);
       if (strideData) {
         setAllStride(strideData);
+
+        const thisWeekRuns = strideData.filter((s: any) => {
+          const t = s.date ? new Date(s.date).getTime() : new Date(s.created_at).getTime();
+          return t >= startOfWeekMs;
+        });
+        setWeeklyStrideCount(thisWeekRuns.length);
+        setWeeklyStrideDistance(thisWeekRuns.reduce((sum: number, r: any) => sum + Number(r.distance_km || 0), 0));
+      } else {
+        setWeeklyStrideCount(0);
+        setWeeklyStrideDistance(0);
       }
 
-      // 10. Fetch Kratos workouts for PMC simulation & Muscle Heatmap
-      const { data: allKData } = await supabase
-        .from('kratos_workouts')
-        .select('id, name, completed_at, sets, volume')
-        .eq('user_id', userId);
       if (allKData) {
         setAllKratos(allKData);
+
+        const thisWeekWorkouts = allKData.filter((w: any) => w.completed_at && new Date(w.completed_at).getTime() >= startOfWeekMs);
+        setWeeklyKratosCount(thisWeekWorkouts.length);
+        setWeeklyGymVolume(thisWeekWorkouts.reduce((sum: number, w: any) => sum + Number(w.volume || 0), 0));
+      } else {
+        setWeeklyKratosCount(0);
+        setWeeklyGymVolume(0);
       }
 
-      // 11. Fetch Kratos exercises catalog to map exercise IDs -> Categories, Primary & Secondary Muscles
-      const { data: exCatalog } = await supabase
-        .from('kratos_exercises')
-        .select('id, name, category, primary_muscle, secondary_muscles')
-        .eq('user_id', userId);
       if (exCatalog) {
         setKratosExercises(exCatalog);
       }
