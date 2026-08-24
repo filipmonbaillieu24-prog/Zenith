@@ -31,6 +31,10 @@ data class HealthDataPayload(
     val leanBodyMassKg: Double = 0.0,
     val latestSpO2: Double = 0.0,
     val respiratoryRate: Double = 0.0,
+    val sleepDeepMinutes: Long = 0,
+    val sleepLightMinutes: Long = 0,
+    val sleepRemMinutes: Long = 0,
+    val sleepAwakeMinutes: Long = 0,
     val systolicBp: Double = 0.0,
     val diastolicBp: Double = 0.0,
     val bodyTempCelsius: Double = 0.0,
@@ -109,6 +113,10 @@ class HealthConnectManager(private val context: Context) {
         var restingHr = 0
         var latestHrv = 0.0
         var sleepMinutes: Long = 0
+        var sleepDeepMin: Long = 0
+        var sleepLightMin: Long = 0
+        var sleepRemMin: Long = 0
+        var sleepAwakeMin: Long = 0
         var latestWeight = 0.0
         var heightValueCm = 0.0
         var bodyFatPct = 0.0
@@ -379,6 +387,22 @@ class HealthConnectManager(private val context: Context) {
                         "duration_seconds" to stDur
                     )
                 }
+
+                // Sum per-stage minutes for the sync payload (sleep_deep_minutes etc.) so
+                // Vigor can show real deep/light/REM/awake breakdown instead of a synthetic
+                // 25/55/18% split. Health Connect's stage-type codes: 1/3 = awake variants,
+                // 2/4 = light-ish, 5 = deep, 6 = REM.
+                for (st in latestSession.stages) {
+                    val stMin = ChronoUnit.SECONDS.between(st.startTime, st.endTime) / 60
+                    when (st.stage) {
+                        SleepSessionRecord.STAGE_TYPE_DEEP -> sleepDeepMin += stMin
+                        SleepSessionRecord.STAGE_TYPE_REM -> sleepRemMin += stMin
+                        SleepSessionRecord.STAGE_TYPE_LIGHT, SleepSessionRecord.STAGE_TYPE_SLEEPING -> sleepLightMin += stMin
+                        SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> sleepAwakeMin += stMin
+                        else -> {}
+                    }
+                }
+
                 sleepMaps.add(
                     mapOf(
                         "session_start_time" to latestSession.startTime.toString(),
@@ -584,6 +608,10 @@ class HealthConnectManager(private val context: Context) {
             leanBodyMassKg = leanMassKg,
             latestSpO2 = latestSpO2Val,
             respiratoryRate = respRate,
+            sleepDeepMinutes = sleepDeepMin,
+            sleepLightMinutes = sleepLightMin,
+            sleepRemMinutes = sleepRemMin,
+            sleepAwakeMinutes = sleepAwakeMin,
             systolicBp = sysBp,
             diastolicBp = diaBp,
             bodyTempCelsius = tempCelsius,

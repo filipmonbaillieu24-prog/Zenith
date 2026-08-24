@@ -4,8 +4,10 @@
 
 export * from './types';
 export { supabase, supabaseUrl, supabaseAnonKey } from './supabaseClient';
+export * from './pro';
 export * from './services/healthConnectSync';
 export * from './services/zenithSleepEngine';
+export * from './services/trainingLoad';
 export * from './ml/SimpleMLP';
 export * from './ml/MinMaxScaler';
 export * from './ml/AnomalyFilter';

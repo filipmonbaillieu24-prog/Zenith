@@ -16,7 +16,8 @@ import {
   Ruler,
   Zap,
   Droplet,
-  HeartPulse
+  HeartPulse,
+  Wind
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -38,7 +39,7 @@ import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
 import { DeviceManagerModal } from '../components/DeviceManagerModal';
 import { ProPaywallModal } from '../components/ProPaywallModal';
-import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore } from '@zenith/shared';
 
 interface VigorDashboardProps {
   session: any;
@@ -73,19 +74,18 @@ const getLocalDateKey = (dateInput: string | Date | null | undefined): string =>
 export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   const user = session?.user;
 
-  const isPro = useMemo(() => {
-    if (!user) return false;
-    const email = user.email?.toLowerCase();
-    if (email === 'filip.monbaillieu.24@gmail.com') return true;
-    return user.user_metadata?.is_pro === true;
-  }, [user]);
+  const [dbProfile, setDbProfile] = useState<any>(null);
+
+  // Pro status is read from profiles.is_pro (server-side source of truth,
+  // set only via the activate_pro_trial() RPC), not from user_metadata —
+  // any signed-in client could set arbitrary user_metadata on themselves.
+  const isPro = useMemo(() => dbProfile?.isPro === true, [dbProfile]);
 
   const [proModal, setProModal] = useState<{ isOpen: boolean; featureName?: string; desc?: string }>({ isOpen: false });
 
   const handleRequestProModal = (featureName: string, desc: string) => {
     setProModal({ isOpen: true, featureName, desc });
   };
-  const [dbProfile, setDbProfile] = useState<any>(null);
   const userName = dbProfile?.name || user.user_metadata?.name || user.user_metadata?.fitness_profile?.name || 'Athlete';
 
   // Navigation tab state
@@ -203,7 +203,8 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           height: profData.height_cm,
           gender: profData.gender,
           birthDate: profData.birth_date,
-          name: profData.name
+          name: profData.name,
+          isPro: profData.is_pro === true
         });
       }
 
@@ -313,12 +314,36 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     }
   }, [user.id]);
 
+  // Real cross-app training load (steps + Kratos strength sessions + Aero
+  // rides) for the ACWR workload forecaster — not just a steps proxy.
+  const [trainingLoads, setTrainingLoads] = useState<DailyTrainingLoad[]>([]);
+  const fetchTrainingLoads = useCallback(async () => {
+    try {
+      const loads = await fetchRecentDailyTrainingLoads(supabase, user.id, 28);
+      setTrainingLoads(loads);
+    } catch (err) {
+      console.error('Error fetching training loads:', err);
+    }
+  }, [user.id]);
+
   // Load profile and logs on start
   useEffect(() => {
     fetchProfile();
     fetchPairedDevices();
     fetchLogs();
-  }, [fetchProfile, fetchPairedDevices, fetchLogs]);
+    fetchTrainingLoads();
+  }, [fetchProfile, fetchPairedDevices, fetchLogs, fetchTrainingLoads]);
+
+  // Load the shared cross-app Recovery Score model (trained by Zenith Hub's
+  // background trainer — Vigor only reads its weights here, it never trains).
+  const [mlModelLoaded, setMlModelLoaded] = useState(recoveryModel.loaded);
+  useEffect(() => {
+    let cancelled = false;
+    recoveryModel.loadOrInit(supabase, user.id).then(() => {
+      if (!cancelled) setMlModelLoaded(true);
+    });
+    return () => { cancelled = true; };
+  }, [user.id]);
 
   // Background Web BLE scanner for Yolanda/Qingniu scales
   useEffect(() => {
@@ -940,10 +965,38 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       ? HrvAnsTracker.calculateAnsState(hrvHistory, todayHrv)
       : null;
 
-    const dailyLoads = steps.slice(-28).map(st => {
-      return Math.round((st.step_count || 5000) / 100);
-    });
+    // Real cross-app training load — steps + Kratos strength sessions +
+    // Aero rides (see shared/services/trainingLoad.ts) — instead of a
+    // steps-only proxy.
+    const dailyLoads = trainingLoads.slice(-28).map(d => d.load);
     const workloadInsight = AcwrForecaster.calculateWorkloadInsight(dailyLoads);
+
+    // Real cross-app Recovery Score (the shared CR11 model Zenith Hub
+    // trains from actual next-day performance feedback). Fed with cardio-only
+    // TSB/ATL from Aero rides (not the blended ACWR load above, which also
+    // includes Kratos — feeding both would double-count Kratos sessions) plus
+    // 7-day raw Kratos volume, sleep, steps, and bodyweight. Calorie balance
+    // isn't available to Vigor (that lives in Fuel's ZANE model), so it's
+    // passed as a neutral 0 rather than fabricated.
+    const cardioSeries = trainingLoads
+      .filter(d => d.cardioTss > 0)
+      .map(d => ({ date: new Date(d.date).getTime(), tss: d.cardioTss }));
+    const cardioPMC = computePMC(cardioSeries);
+    const cardioToday = cardioPMC.length > 0 ? cardioPMC[cardioPMC.length - 1] : { tsb: 0, atl: 0 };
+    const gymVolume7d = trainingLoads.slice(-7).reduce((sum, d) => sum + d.kratosVolume, 0);
+    const homeSleepAnalysis = calculateZenithSleepScore(latestSleep, sleeps, profile.target_sleep_hours || 8.0);
+    const recoveryScore = mlModelLoaded
+      ? predictRecoveryScore(
+          cardioToday.tsb,
+          homeSleepAnalysis.score,
+          homeSleepAnalysis.metrics.totalHours,
+          gymVolume7d,
+          currentDailySteps,
+          0,
+          latestWeight ? latestWeight.weight : (profile.target_weight || 75),
+          cardioToday.atl
+        )
+      : null;
 
     // Weight Fluctuation Telemetry Explainer Analysis
     const recentWeights = weights.slice(0, 3);
@@ -1065,6 +1118,45 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Recovery Score: the shared cross-app CR11 model (trained by Zenith
+            Hub from real next-day performance feedback), fed here with
+            Vigor's own real sleep/steps/weight plus cardio & gym load from
+            Aero/Kratos. See the recoveryScore calc above for what's real vs.
+            neutral-defaulted. */}
+        <div className="zenith-grid-12">
+          <div className="zenith-span-12" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(56, 189, 248, 0.15)', borderRadius: 12, padding: '16px 18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: recoveryScore !== null ? 10 : 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Sparkles size={16} style={{ color: '#38bdf8' }} />
+                <div className="zenith-label">Recovery Score</div>
+              </div>
+              {recoveryScore !== null && (
+                <span
+                  className="zenith-pill"
+                  style={{
+                    background: recoveryScore >= 70 ? 'rgba(85, 239, 196, 0.15)' : recoveryScore >= 40 ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255, 118, 117, 0.15)',
+                    color: recoveryScore >= 70 ? '#55efc4' : recoveryScore >= 40 ? '#fbbf24' : '#ff7675',
+                  }}
+                >
+                  {recoveryScore >= 70 ? 'Ready to train' : recoveryScore >= 40 ? 'Train with caution' : 'Prioritize recovery'}
+                </span>
+              )}
+            </div>
+            {recoveryScore !== null ? (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span className="zenith-stat-value">{recoveryScore}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }}>/ 100</span>
+              </div>
+            ) : (
+              <ZenithEmptyState
+                icon={<Sparkles size={20} />}
+                title="Recovery model loading…"
+                message="Combining sleep, steps, weight, and training load from across the Zenith ecosystem."
+              />
+            )}
           </div>
         </div>
 
@@ -2205,6 +2297,29 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{awakePct}% (Micro-awakenings)</div>
                   </div>
                 </div>
+
+                {/* Overnight vitals from Health Connect (via Zenith Pulse), when available.
+                    Not fabricated — simply omitted when the reading doesn't exist. */}
+                {(latestSleep.spo2_percent || latestSleep.respiratory_rate) && (
+                  <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                    {latestSleep.spo2_percent && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(56, 189, 248, 0.06)', border: '1px solid rgba(56, 189, 248, 0.15)', padding: '8px 14px', borderRadius: 10 }}>
+                        <Droplet size={14} style={{ color: '#38bdf8' }} />
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          Blood Oxygen: <strong style={{ color: '#38bdf8' }}>{Math.round(latestSleep.spo2_percent * 10) / 10}%</strong>
+                        </span>
+                      </div>
+                    )}
+                    {latestSleep.respiratory_rate && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(56, 189, 248, 0.06)', border: '1px solid rgba(56, 189, 248, 0.15)', padding: '8px 14px', borderRadius: 10 }}>
+                        <Wind size={14} style={{ color: '#38bdf8' }} />
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                          Respiratory Rate: <strong style={{ color: '#38bdf8' }}>{Math.round(latestSleep.respiratory_rate * 10) / 10} br/min</strong>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>

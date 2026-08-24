@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { User, AlertCircle, Check, Sparkles, CreditCard, ShieldCheck, CheckCircle2, XCircle, Zap, Target, Bike, Camera, Ruler, Scale, Moon, Dumbbell, Footprints } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
+import { activateProTrial } from '@zenith/shared';
 import { PayPalModal } from '../../components/PayPalModal';
 import './ProfilePage.css';
 import './ZenithHub.css';
@@ -203,9 +204,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const handleActivateProAfterPayment = async () => {
     try {
       setSaving(true);
-      await supabase.auth.updateUser({
-        data: { is_pro: true }
-      });
+      await activateProTrial(supabase);
       setIsProUser(true);
       setSuccessMsg('Gefeliciteerd! Je betaling via PayPal is verwerkt. Zenith Pro is geactiveerd.');
       setTimeout(() => setSuccessMsg(null), 4000);
