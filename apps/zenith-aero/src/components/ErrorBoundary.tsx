@@ -39,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
             style={{ padding: '8px 16px', background: '#e2e8f0', color: '#1a202c', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}
             onClick={() => window.location.reload()}
           >
-            App Herladen
+            Reload App
           </button>
         </div>
       );

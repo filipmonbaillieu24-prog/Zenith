@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from 'recharts';
-import { Brain, Activity, TrendingUp, Mountain } from 'lucide-react';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { Brain, Activity, TrendingUp, Mountain, Trophy, Zap } from 'lucide-react';
+import { ZenithEmptyState } from '@zenith/shared';
 import PowerDurationCurve from '../PowerDurationCurve';
 import { FitnessProfile, SPEED_EFFORT_DURATIONS, RideSummaryWithBests } from '../../types/workout';
-import { predictFutureFTP, predictVO2max } from '../../utils/localNeuralNet';
+import { predictFutureFTP, estimateVO2max } from '../../utils/localNeuralNet';
 import { CriticalPowerCurve } from '../workout/CriticalPowerCurve';
 import { PhenotypeProfile } from '../workout/PhenotypeProfile';
 import { PowerProfileTable } from '../workout/PowerProfileTable';
@@ -127,10 +129,10 @@ export const PRSection: React.FC<PRSectionProps> = ({
                 <div className="wd-section-card__head">
                   <span className="wd-section-card__title">
                     <Brain size={13} style={{ display:'inline', verticalAlign:'middle', marginRight:5, color:'#cbd5e1' }} />
-                    Offline AI eFTP Forecast (Next 8 weeks)
+                    eFTP Forecast (Next 8 weeks)
                   </span>
                   <span style={{ fontSize: 10, color: 'var(--text-muted, #94a3b8)' }}>
-                    Zelflerend MLP Neuraal Netwerk
+                    Self-learning model &middot; linear trend to target
                   </span>
                 </div>
                 
@@ -165,10 +167,15 @@ export const PRSection: React.FC<PRSectionProps> = ({
                     voorspelling: null as number | null,
                   }));
                   
+                  // The model only produces a single 8-week-out target number (targetFTP) —
+                  // it has no opinion on the shape of the path to get there. A sine ease
+                  // made the intermediate weeks look like an organic, independently-derived
+                  // trajectory when they weren't. Use a plain linear interpolation instead:
+                  // still just an eyeballed path between two known points, but it no longer
+                  // pretends to be more than that.
                   for (let w = 1; w <= 8; w++) {
                     const progressRatio = w / 8;
-                    const curveFactor = Math.sin(progressRatio * Math.PI / 2);
-                    const predicted = Math.round(currentFtpVal + ftpDiff * curveFactor);
+                    const predicted = Math.round(currentFtpVal + ftpDiff * progressRatio);
                     forecastData.push({
                       label: `Week +${w}`,
                       eFTP: null,
@@ -194,14 +201,15 @@ export const PRSection: React.FC<PRSectionProps> = ({
                       </p>
                       <ResponsiveContainer width="100%" height={160}>
                         <LineChart data={forecastData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                          <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#94a3b8' }} />
-                          <YAxis domain={['auto', 'auto']} tick={{ fontSize: 9, fill: '#94a3b8' }} unit="W" />
+                          <CartesianGrid {...ZENITH_CHART_GRID} />
+                          <XAxis dataKey="label" tick={ZENITH_CHART_AXIS_TICK} />
+                          <YAxis domain={['auto', 'auto']} tick={ZENITH_CHART_AXIS_TICK} unit="W" />
                           <Tooltip
-                            contentStyle={{ background: '#12121e', border: 'none', borderRadius: 8, fontSize: 11 }}
+                            contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                            labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                             formatter={(v: any, name: any) => [
                               `${v} W`,
-                              name === 'eFTP' ? 'Gerealiseerd eFTP' : 'Voorspeld eFTP'
+                              name === 'eFTP' ? 'Actual eFTP' : 'Predicted eFTP'
                             ]}
                           />
                           <Line
@@ -227,19 +235,27 @@ export const PRSection: React.FC<PRSectionProps> = ({
                 })()}
               </div>
             ) : (
-              <div className="wd-section-card" style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 11 }}>
-                Insufficient power data for eFTP forecasting. Keep riding with power data.
+              <div className="wd-section-card" style={{ padding: 8 }}>
+                <ZenithEmptyState
+                  icon={<Zap size={20} strokeWidth={1.8} />}
+                  title="Not enough power data yet"
+                  message="Log a few more rides with a power meter to unlock the eFTP forecast."
+                />
               </div>
             )}
           </div>
 
           {/* Right: AI VO2max & PRs list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            {/* AI VO2max card */}
+            {/* VO2max estimate card */}
             {(() => {
-              const ftpVal = profile.ftp ?? globaleFTP ?? 220;
               const weightVal = profile.weight ?? 75;
-              const estimatedVO2 = predictVO2max(ftpVal * 0.75, 138, 30, weightVal);
+              // Use the rider's real best 5-minute power effort (recent form preferred,
+              // falling back to all-time) rather than a hardcoded/derived HR & FTP guess.
+              const best5MinPower = last90PowerBests?.m5 || globalPowerBests?.m5 || 0;
+              const estimatedVO2 = estimateVO2max(best5MinPower, weightVal);
+
+              if (best5MinPower <= 0) return null;
 
               return (
                 <div className="wd-section-card" style={{
@@ -252,19 +268,19 @@ export const PRSection: React.FC<PRSectionProps> = ({
                   margin: 0
                 }}>
                   <div className="wd-section-card__head" style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
-                    <Brain size={14} color="#cbd5e1" />
-                    <span className="wd-section-card__title" style={{ fontSize: 11 }}>AI VO2max Schatting</span>
+                    <Activity size={14} color="#cbd5e1" />
+                    <span className="wd-section-card__title" style={{ fontSize: 11 }}>VO2max Estimate</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
                     <div style={{ fontSize: '24px', fontWeight: 300, color: '#cbd5e1', lineHeight: 1 }}>
                       {estimatedVO2} <span style={{ fontSize: '10px', color: '#64748b' }}>ml/kg/min</span>
                     </div>
                     <span style={{ fontSize: 10, color: '#cbd5e1', lineHeight: 1.4, marginTop: 4 }}>
-                      This is a submaximal estimate based on your eFTP of {ftpVal}W and weight of {weightVal}kg. 
-                      {estimatedVO2 > 50 
-                        ? " Your aerobic fitness is outstanding (elite) for endurance sports!" 
-                        : estimatedVO2 > 40 
-                          ? " Your fitness is above average. Keep training consistently." 
+                      Estimated from the ACSM formula (10.8 &times; W/kg + 7) using your best 5-minute power of {best5MinPower}W and weight of {weightVal}kg.
+                      {estimatedVO2 > 50
+                        ? " Your aerobic fitness is outstanding (elite) for endurance sports!"
+                        : estimatedVO2 > 40
+                          ? " Your fitness is above average. Keep training consistently."
                           : " Good foundation. Focus on longer endurance rides to expand aerobic capacity."}
                     </span>
                   </div>
@@ -276,7 +292,9 @@ export const PRSection: React.FC<PRSectionProps> = ({
             {globalSpeedBests && (
               <div className="wd-section-card" style={{ margin: 0 }}>
                 <div className="wd-section-card__head">
-                  <span className="wd-section-card__title">🏆 Speeds PR's</span>
+                  <span className="wd-section-card__title" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Trophy size={12} /> Speed PRs
+                  </span>
                 </div>
                 <div className="wd-bests-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   {SPEED_EFFORT_DURATIONS.map(({ key, label }) => {

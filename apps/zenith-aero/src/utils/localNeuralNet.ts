@@ -1,26 +1,26 @@
 /**
- * Lokaal Offline Neuraal Netwerk (MLP) Engine voor Zenith
- * 
- * Dit bestand bevat de complete, zelflerende machine learning engine van Zenith.
- * Het gebruikt herbruikbare Multi-Layer Perceptrons (MLPs) with backpropagation (SGD)
- * die volledig in de browser draaien en hun gewichten opslaan in LocalStorage.
- * 
- * Bevat 5 specifieke modellen:
- * 1. Ritnotitie sentiment classifier (Fatigue, Recovery, Illness)
- * 2. Smart Coach Trainingsadviseur
- * 3. RPE Voorspeller
- * 4. Automatische Rit-categorisatie (Label Classifier)
- * 5. eFTP & Progressie Voorspeller
+ * Local Offline Neural Network (MLP) Engine for Zenith
+ *
+ * This file contains Zenith's complete, self-learning machine learning engine.
+ * It uses reusable Multi-Layer Perceptrons (MLPs) with backpropagation (SGD)
+ * that run entirely in the browser and store their weights in LocalStorage.
+ *
+ * Contains 5 specific models:
+ * 1. Ride note sentiment classifier (Fatigue, Recovery, Illness)
+ * 2. Smart Coach Training Advisor
+ * 3. RPE Predictor
+ * 4. Automatic ride categorization (Label Classifier)
+ * 5. eFTP & Progression Predictor
  */
 
 import { NeuralAnalysis } from '../types/workout';
 import { detectClimbs } from './climbDetector';
 
-// ─── GENERIEKE NEURAAL NETWERK KLASSE ──────────────────────────────────────────
+// ─── GENERIC NEURAL NETWORK CLASS ──────────────────────────────────────────
 
 import { SimpleMLP } from '@zenith/shared';
 
-// ─── MODEL 1: RITNOTITIE SENTIMENT ANALYSE ──────────────────────────────────────
+// ─── MODEL 1: RIDE NOTE SENTIMENT ANALYSIS ──────────────────────────────────────
 
 interface VocabItem {
   word: string;
@@ -186,7 +186,7 @@ export function trainOnCorrection(text: string, corrected: NeuralAnalysis, learn
   };
 }
 
-// ─── MODEL 2: SMART COACH TRAININGSADVISEUR ──────────────────────────────────────
+// ─── MODEL 2: SMART COACH TRAINING ADVISOR ──────────────────────────────────────
 
 const COACH_WORKOUTS = ['recovery', 'endurance', 'tempo', 'threshold', 'sweetspot', 'vo2max'] as const;
 
@@ -289,7 +289,7 @@ export function trainCoachModel(
   coachModel.trainLocal(x, targets, 0.15);
 }
 
-// ─── MODEL 3: RPE VOORSPELLER ──────────────────────────────────────────────────
+// ─── MODEL 3: RPE PREDICTOR ──────────────────────────────────────────────────
 
 function generateRPEDefaultWeights() {
   // Input: [duration/36000, distance/200, IF, tss/500, VI-1.0, avgHR/220] (6 features)
@@ -356,7 +356,7 @@ export function trainRPEModel(
   rpeModel.trainLocal(x, [target], 0.15);
 }
 
-// ─── MODEL 4: RIT-CATEGORISATIE (LABEL CLASSIFIER) ──────────────────────────────
+// ─── MODEL 4: RIDE CATEGORIZATION (LABEL CLASSIFIER) ──────────────────────────────
 
 const RIDE_LABELS_KEYS = ['duurride', 'interval', 'wedstrijd', 'herstel', 'groepsride', 'pendel', 'berg'] as const;
 
@@ -578,14 +578,61 @@ export function trainInjuryModel(
   injuryModel.trainLocal(x, [actualInjuryOccurred ? 0.95 : 0.05], 0.15);
 }
 
-// ─── MODEL 7: CLIMB TIME PREDICTOR ─────────────────────────────────────────────
+// ─── MODEL 7: CLIMB TIME PREDICTOR (physics model + per-rider calibration) ────
+//
+// predictClimbTime itself is a deterministic Newton-Raphson power/drag/gravity solve —
+// not a neural net. What genuinely "learns from your rides" is the calibration layer
+// below: after each climb we compare the physics model's estimate to what the rider
+// actually recorded, and nudge a persistent per-rider resistance correction factor
+// (effectively CdA + Crr combined) with an exponential moving average. That correction
+// is then applied to every future prediction, so the model's real-world accuracy for
+// THIS rider improves over time instead of being static.
 
+const CLIMB_CALIBRATION_STORAGE_KEY = 'cyclo_climb_calibration_v1';
 
+interface ClimbCalibrationState {
+  /** EMA-learned multiplier applied to the default CdA & Crr assumptions for this rider.
+   * 1.0 = no correction (use textbook defaults). >1 = rider is slower than the textbook
+   * physics predicts (more drag/rolling resistance than assumed), <1 = faster. */
+  resistanceFactor: number;
+  sampleCount: number;
+}
 
-function solveClimbingSpeed(power: number, mass: number, gradeFraction: number): number {
+function loadClimbCalibration(): ClimbCalibrationState {
+  try {
+    const raw = localStorage.getItem(CLIMB_CALIBRATION_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed.resistanceFactor === 'number' && typeof parsed.sampleCount === 'number') {
+        return parsed;
+      }
+    }
+  } catch { /* localStorage unavailable */ }
+  return { resistanceFactor: 1.0, sampleCount: 0 };
+}
+
+let climbCalibration: ClimbCalibrationState = loadClimbCalibration();
+
+function saveClimbCalibration(): void {
+  try {
+    localStorage.setItem(CLIMB_CALIBRATION_STORAGE_KEY, JSON.stringify(climbCalibration));
+  } catch { /* localStorage unavailable */ }
+}
+
+/** Exposes the current per-rider calibration (e.g. for a "model confidence" UI). */
+export function getClimbCalibrationState(): ClimbCalibrationState {
+  return { ...climbCalibration };
+}
+
+export function resetClimbCalibration(): void {
+  climbCalibration = { resistanceFactor: 1.0, sampleCount: 0 };
+  saveClimbCalibration();
+}
+
+function solveClimbingSpeed(power: number, mass: number, gradeFraction: number, resistanceFactor: number = 1.0): number {
   const g = 9.81;
-  const Crr = 0.004;
-  const CdA = 0.32;
+  const Crr = 0.004 * resistanceFactor;
+  const CdA = 0.32 * resistanceFactor;
   const rho = 1.225;
   const gravityRollingCoeff = mass * g * (gradeFraction + Crr);
   const dragCoeff = 0.5 * CdA * rho; // ~0.196
@@ -619,21 +666,74 @@ export function predictClimbTime(
     : ftp;
   const mass = riderWeight + 9; // 9 kg for bike & gear
   const gradeFraction = gradePct / 100;
-  const speed = solveClimbingSpeed(effectivePower, mass, gradeFraction);
+  const speed = solveClimbingSpeed(effectivePower, mass, gradeFraction, climbCalibration.resistanceFactor);
   return Math.round(lengthMeters / speed);
 }
 
-export function trainClimbModel(
-  _lengthMeters: number,
-  _gradePct: number,
-  _ftp: number,
-  _weightKg: number,
-  _actualTimeSeconds: number
-): void {
-  // Physical model is deterministic and requires no training
+/**
+ * Finds the resistance factor (applied to CdA & Crr together) that would have made the
+ * physics model's predicted time match what the rider actually recorded for this climb.
+ * solveClimbingSpeed's resulting time is monotonically increasing in resistanceFactor
+ * (more drag/rolling resistance -> lower speed -> longer time), so a simple bisection
+ * search finds it reliably without needing a full gradient-based fit.
+ */
+function impliedResistanceFactor(
+  lengthMeters: number,
+  power: number,
+  mass: number,
+  gradeFraction: number,
+  actualTimeSeconds: number
+): number {
+  let lo = 0.4;
+  let hi = 2.5;
+  for (let i = 0; i < 25; i++) {
+    const mid = (lo + hi) / 2;
+    const time = lengthMeters / solveClimbingSpeed(power, mass, gradeFraction, mid);
+    if (time < actualTimeSeconds) {
+      lo = mid; // predicted too fast -> needs more resistance to slow down further
+    } else {
+      hi = mid;
+    }
+  }
+  return (lo + hi) / 2;
 }
 
-// ─── GEAVANCEERDE LOGICA 3: CARDIALE DRIFT (HR ZONE TUNING) ─────────────────────
+export function trainClimbModel(
+  lengthMeters: number,
+  gradePct: number,
+  ftp: number,
+  weightKg: number,
+  actualTimeSeconds: number
+): void {
+  if (!lengthMeters || lengthMeters <= 0 || !actualTimeSeconds || actualTimeSeconds <= 0 || !ftp || ftp <= 0) {
+    return;
+  }
+
+  const riderWeight = weightKg || 75;
+  const mass = riderWeight + 9;
+  const gradeFraction = gradePct / 100;
+
+  // Guard against wildly unrealistic climb segments (coasting, red lights, bad GPS split)
+  // that would otherwise corrupt the calibration with a single noisy outlier.
+  const uncalibratedTime = lengthMeters / solveClimbingSpeed(ftp, mass, gradeFraction, 1.0);
+  const ratio = actualTimeSeconds / uncalibratedTime;
+  if (ratio < 0.4 || ratio > 3.0) return;
+
+  const implied = impliedResistanceFactor(lengthMeters, ftp, mass, gradeFraction, actualTimeSeconds);
+
+  // Exponential moving average: learn faster from the first few climbs, then stabilize so
+  // a single bad ride can't swing the rider's calibration too far.
+  const alpha = climbCalibration.sampleCount < 5 ? 0.3 : 0.1;
+  const blended = climbCalibration.resistanceFactor * (1 - alpha) + implied * alpha;
+
+  climbCalibration = {
+    resistanceFactor: Math.max(0.6, Math.min(1.8, blended)),
+    sampleCount: climbCalibration.sampleCount + 1
+  };
+  saveClimbCalibration();
+}
+
+// ─── ADVANCED LOGIC 3: CARDIAC DRIFT (HR ZONE TUNING) ─────────────────────
 
 export function analyzeCardiacDrift(
   firstHalfPower: number,
@@ -680,7 +780,7 @@ export function analyzeCardiacDrift(
   };
 }
 
-// ─── GEAVANCEERDE LOGICA 4: TEMPO-ADVISEUR (PACING STRATEGY) ─────────────────────
+// ─── ADVANCED LOGIC 4: PACE ADVISOR (PACING STRATEGY) ─────────────────────
 
 export interface PacingAdvice {
   ratio: number;
@@ -721,7 +821,7 @@ export function predictPacingStrategy(
   };
 }
 
-// ─── MODEL 8: CADANS-EFFICIËNTIE TUNER ────────────────────────────────────────
+// ─── MODEL 8: CADENCE EFFICIENCY TUNER ────────────────────────────────────────
 
 function generateCadenceDefaultWeights() {
   // Input: [power / 500] (1 feature)
@@ -754,7 +854,7 @@ export function trainOptimalCadence(power: number, bestCadence: number): void {
   cadenceModel.trainLocal(x, [target], 0.15);
 }
 
-// ─── MODEL 9: GPX-ROUTE RITDUUR VOORSPELLER ─────────────────────────────────────
+// ─── MODEL 9: GPX ROUTE RIDE DURATION PREDICTOR ─────────────────────────────────────
 
 function generateRouteDurationDefaultWeights() {
   // Input: [distanceKm/200, elevGainM/3000, ftp/500, weightKg/150] (4 features)
@@ -834,73 +934,33 @@ export function trainRouteDurationModel(
   routeDurationModel.trainLocal(x, [target], 0.15);
 }
 
-// ─── MODEL 10: SUBMAXIMALE VO2MAX SCHATTER ─────────────────────────────────────
+// ─── MODEL 10: SUBMAXIMAL VO2MAX ESTIMATOR ─────────────────────────────────────
+//
+// This used to route real inputs (or worse, hardcoded fake ones) through an
+// under-trained MLP whose own training target was just this closed-form ACSM-style
+// formula. Since the net never has any signal beyond what the formula already encodes,
+// it added noise, not insight, over just computing the formula directly. We now compute
+// VO2max straight from the rider's real best 5-minute power effort and real weight.
 
-function generateVO2maxDefaultWeights() {
-  // Input: [avgPower/500, avgHR/220, hrRecovery/100, weightKg/150] (4 features)
-  // Hidden: 6, Output: 1
-  const W1: number[][] = Array.from({ length: 4 }, () => new Array(6).fill(0));
-  const B1: number[] = new Array(6).fill(0.0);
-  const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
-  const B2: number[] = [0.2];
-
-  for (let i = 0; i < 6; i++) {
-    W1[0][i] = 0.8;  // avgPower increases VO2max
-    W1[1][i] = -0.5; // lower avgHR for same power increases VO2max
-    W1[2][i] = 0.7;  // higher HR recovery increases VO2max
-    W1[3][i] = -0.4; // higher weight (mass) decreases relative VO2max
-    W2[i][0] = 0.5;
-  }
-
-  return { W1, B1, W2, B2 };
+export function estimateVO2max(best5MinPower: number, weightKg: number): number {
+  const power = best5MinPower || 0;
+  const weight = weightKg || 75;
+  if (power <= 0 || weight <= 0) return 0;
+  // ACSM-style estimate: VO2max (ml/kg/min) ≈ 10.8 * (W/kg) + 7
+  return parseFloat((10.8 * (power / weight) + 7).toFixed(1));
 }
 
-const vo2maxModel = new SimpleMLP(4, 6, 1, 'cyclo_vo2max_weights', generateVO2maxDefaultWeights);
-
-export function predictVO2max(
-  avgPower: number,
-  avgHR: number,
-  hrRecovery: number,
-  weightKg: number
-): number {
-  const x = [
-    Math.min(1.5, (avgPower || 180) / 500),
-    Math.min(1.5, (avgHR || 135) / 220),
-    Math.min(1.5, (hrRecovery || 30) / 100),
-    Math.min(1.5, (weightKg || 75) / 150)
-  ];
-
-  const y = vo2maxModel.predict(x);
-  // Scale output 0..1 to VO2max range 20..90 ml/kg/min
-  return parseFloat((20 + y[0] * 70).toFixed(1));
-}
-
-export function trainVO2maxModel(
-  avgPower: number,
-  avgHR: number,
-  hrRecovery: number,
-  weightKg: number,
-  actualVO2max: number
-): void {
-  const x = [
-    Math.min(1.5, (avgPower || 180) / 500),
-    Math.min(1.5, (avgHR || 135) / 220),
-    Math.min(1.5, (hrRecovery || 30) / 100),
-    Math.min(1.5, (weightKg || 75) / 150)
-  ];
-
-  const target = Math.max(0, Math.min(1, (actualVO2max - 20) / 70));
-  vo2maxModel.trainLocal(x, [target], 0.15);
-}
-
-// ─── GEAVANCEERDE LOGICA 5: KLIMSTIJL CLASSIFICATOR ─────────────────────────────
+// ─── ADVANCED LOGIC 5: CLIMBING STYLE CLASSIFIER ─────────────────────────────
 
 export interface ClimbingStyleAdvice {
   style: string;
   desc: string;
 }
 
-export function classifyClimbingStyle(climbCadence: number): ClimbingStyleAdvice {
+export function classifyClimbingStyle(
+  climbCadence: number,
+  riderBaselineCadence?: number
+): ClimbingStyleAdvice {
   if (!climbCadence || climbCadence <= 0) {
     return {
       style: "Unknown",
@@ -908,7 +968,17 @@ export function classifyClimbingStyle(climbCadence: number): ClimbingStyleAdvice
     };
   }
 
-  if (climbCadence > 82) {
+  // Prefer a threshold derived from this rider's own overall cadence tendency (their
+  // average cadence across the whole ride) rather than one hardcoded global constant —
+  // "high cadence" is relative to the individual, not an absolute number. Someone who
+  // naturally spins at 95rpm on the flat isn't necessarily a "cadence climber" just for
+  // holding 85rpm on a hill, and someone who normally spins at 70rpm but manages 78rpm on
+  // a climb is relatively spinning faster than their own norm.
+  const threshold = riderBaselineCadence && riderBaselineCadence > 0
+    ? riderBaselineCadence + 3
+    : 82; // fallback global default when no rider-specific baseline is available yet
+
+  if (climbCadence > threshold) {
     return {
       style: "Cadence Climber (Froome style)",
       desc: "You climb with a high cadence. This unloads your muscles and shifts emphasis to your cardiovascular system. Choose a light gear."
@@ -943,7 +1013,7 @@ export function classifyDiscipline(
 // Classifies rider archetype based on power-duration curve shape
 
 export interface RiderTypeResult {
-  type: 'Sprinter' | 'Klimmer' | 'Diesel' | 'All-Rounder';
+  type: 'Sprinter' | 'Climber' | 'Diesel' | 'All-Rounder';
   emoji: string;
   confidence: number; // 0..1
   description: string;
@@ -994,7 +1064,7 @@ export function classifyRiderType(
 
   if (vo2Index > 1.35 && wkg5m > 4.5) {
     return {
-      type: 'Klimmer',
+      type: 'Climber',
       emoji: '⛰️',
       confidence: Math.min(0.92, (vo2Index - 1.35) / 0.4 + 0.6),
       description: `Your VO2max power (5 min: ${wkg5m.toFixed(1)} W/kg) is high relative to your threshold. Perfect for long climbs and mountain rides.`,
@@ -1025,7 +1095,7 @@ export function classifyRiderType(
 }
 
 // ─── TRAINING PROFILE ANALYZER ────────────────────────────────────────────────
-// Volume-atleet vs intensiteitsatleet op basis van TSS-verdeling
+// Volume athlete vs intensity athlete based on TSS distribution
 
 export interface TrainingProfileResult {
   profile: 'Volume Athlete' | 'Intensity Athlete' | 'Mixed';
@@ -1119,11 +1189,18 @@ export function calibrateSummaryModels(
     const r1 = sortedRides[i];
     const r2 = sortedRides.slice(i + 1).find(r => r.date - r1.date >= 14 * 24 * 3600 * 1000 && r.date - r1.date <= 30 * 24 * 3600 * 1000);
     if (r2 && r1.eFTP && r2.eFTP) {
+      // Real training consistency (rides/week) in the 30 days leading up to r1, instead of
+      // a hardcoded baseline — same (recentRidesCount / 30) * 7 formula used elsewhere for
+      // this metric so the training signal matches what's actually shown to the athlete.
+      const windowStart = r1.date - 30 * 24 * 3600 * 1000;
+      const ridesInWindow = rides.filter(r => r.date >= windowStart && r.date <= r1.date).length;
+      const consistency = (ridesInWindow / 30) * 7;
+
       trainFTPModel(
         r1.eFTP,
         r1.ctl ?? 40,
         r1.atl ?? 40,
-        85, // consistency score baseline
+        consistency,
         (r1.tss ?? r1.hrTSS ?? 100) * 4, // weekly TSS load estimate
         r2.eFTP
       );
@@ -1159,19 +1236,10 @@ export function calibrateFullModels(
 
     const riderWeight = r.weight ?? weight ?? 75;
 
-    // A. Train VO2max Model (if 5-minute peak power is available)
-    if (r.bestEfforts?.m5 && r.bestEfforts.m5 > 0 && r.avgHR && r.avgPower) {
-      const actualVO2max = (10.8 * r.bestEfforts.m5 / riderWeight) + 7;
-      trainVO2maxModel(
-        r.avgPower,
-        r.avgHR,
-        30, // HR recovery baseline
-        riderWeight,
-        actualVO2max
-      );
-    }
-
-    // B. Train Climb Model (detecting hill segments inside GPS coordinates)
+    // Train Climb Model (detecting hill segments inside GPS coordinates) — this is the
+    // real per-rider calibration described above (see trainClimbModel), not a neural net.
+    // VO2max no longer has a trained model here: it's now computed directly from the
+    // closed-form formula (see estimateVO2max) at display time, so there's nothing to train.
     const climbs = detectClimbs(full.points);
     for (const climb of climbs) {
       const climbPoints = full.points.slice(climb.startIndex, climb.endIndex + 1);
@@ -1191,7 +1259,7 @@ export function calibrateFullModels(
   }
 }
 
-// Initialisatie functie die Aero aanroept bij login
+// Initialization function that Aero calls on login
 export async function initializeModels(supabase: any, userId: string): Promise<void> {
   await Promise.all([
     notesModel.loadOrInit(supabase, userId),
@@ -1202,7 +1270,6 @@ export async function initializeModels(supabase: any, userId: string): Promise<v
     injuryModel.loadOrInit(supabase, userId),
     cadenceModel.loadOrInit(supabase, userId),
     routeDurationModel.loadOrInit(supabase, userId),
-    vo2maxModel.loadOrInit(supabase, userId),
   ]);
 }
 
@@ -1215,5 +1282,5 @@ export function resetAllWeights() {
   injuryModel.reset();
   cadenceModel.reset();
   routeDurationModel.reset();
-  vo2maxModel.reset();
+  resetClimbCalibration();
 }

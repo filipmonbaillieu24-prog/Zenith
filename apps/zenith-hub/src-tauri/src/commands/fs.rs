@@ -31,29 +31,29 @@ fn reject_unsafe_path(path: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Schrijft een bestand naar een opgegeven pad op het bestandssysteem.
+/// Writes a file to a given path on the filesystem.
 #[tauri::command]
 pub async fn save_file(path: String, content: String) -> Result<(), String> {
     reject_unsafe_path(&path)?;
     std::fs::write(&path, content.as_bytes())
-        .map_err(|e| format!("Kon bestand niet opslaan op '{}': {}", path, e))
+        .map_err(|e| format!("Could not save file to '{}': {}", path, e))
 }
 
-/// Controleert of een map bestaat op het bestandssysteem.
+/// Checks whether a folder exists on the filesystem.
 #[tauri::command]
 pub fn dir_exists(path: String) -> bool {
     std::path::Path::new(&path).is_dir()
 }
 
-/// Maakt een map aan als die nog niet bestaat (inclusief alle parents).
+/// Creates a folder if it doesn't already exist (including all parents).
 #[tauri::command]
 pub fn ensure_dir(path: String) -> Result<(), String> {
     reject_unsafe_path(&path)?;
     std::fs::create_dir_all(&path)
-        .map_err(|e| format!("Kon map niet aanmaken '{}': {}", path, e))
+        .map_err(|e| format!("Could not create folder '{}': {}", path, e))
 }
 
-/// Opent een dialoogvenster om een routebestand op te slaan.
+/// Opens a dialog to save a route file.
 #[tauri::command]
 pub async fn save_file_dialog(filename: String, content: String) -> Result<Option<String>, String> {
     let file_path = rfd::FileDialog::new()
@@ -64,7 +64,7 @@ pub async fn save_file_dialog(filename: String, content: String) -> Result<Optio
         
     if let Some(path) = file_path {
         std::fs::write(&path, content.as_bytes())
-            .map_err(|e| format!("Kon bestand niet opslaan op '{:?}': {}", path, e))?;
+            .map_err(|e| format!("Could not save file to '{:?}': {}", path, e))?;
         Ok(Some(path.to_string_lossy().to_string()))
     } else {
         Ok(None)

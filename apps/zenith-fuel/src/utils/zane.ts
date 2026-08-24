@@ -608,7 +608,7 @@ function solveLinearSystem(A: number[][], B: number[]): number[] | null {
  * FIX 7: todayBmr is now received so the safety floor uses the same BMR formula
  * (Katch-McArdle or Mifflin-St Jeor) as the TDEE — no formula mismatch.
  */
-function generateTargets(
+export function generateTargets(
   tdee: number,
   todayBmr: number,
   weight: number,

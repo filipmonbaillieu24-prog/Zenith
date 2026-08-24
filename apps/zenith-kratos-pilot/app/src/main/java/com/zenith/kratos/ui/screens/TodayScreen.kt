@@ -161,7 +161,7 @@ fun TodayScreen(
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                             enabled = !isSyncing
                         ) {
-                            Text("SYNC NU", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text("SYNC NOW", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -220,7 +220,7 @@ fun TodayScreen(
                                 enabled = !isSyncing,
                                 shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text(if (isSyncing) "Synchroniseren..." else "Sync Nu", color = Color(0xFF09090B), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(if (isSyncing) "Syncing..." else "Sync Now", color = Color(0xFF09090B), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             }
                         }
                     }
@@ -391,7 +391,7 @@ fun TodayScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "OEFENINGEN IN DEZE ROUTINE",
+                        text = "EXERCISES IN THIS ROUTINE",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         color = ZenithSecondary,
@@ -421,7 +421,7 @@ fun TodayScreen(
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
-                                    val weightLabel = if (ex.incrementPerSide) "per kant" else "totaal"
+                                    val weightLabel = if (ex.incrementPerSide) "per side" else "total"
                                     Text(
                                         text = "${ex.category} • ($weightLabel)",
                                         color = ZenithSecondary,

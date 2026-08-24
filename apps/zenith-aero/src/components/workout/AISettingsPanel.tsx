@@ -33,7 +33,7 @@ export const AISettingsPanel: React.FC = () => {
       );
       setTestResult({
         success: true,
-        message: response || 'Verbinding tot stand gebracht, none tekst ontvangen.',
+        message: response || 'Connection established, no text received.',
       });
     } catch (e: any) {
       setTestResult({
@@ -61,12 +61,12 @@ export const AISettingsPanel: React.FC = () => {
             padding: '8px 12px',
             fontSize: 12,
             borderRadius: 8,
-            fontFamily: 'inheride',
+            fontFamily: 'inherit',
             outline: 'none',
           }}
         >
-          <option value="disabled" style={{ background: '#0d0d14' }}>Uitgeschakeld</option>
-          <option value="ollama" style={{ background: '#0d0d14' }}>Ollama (Lokaal offline)</option>
+          <option value="disabled" style={{ background: '#0d0d14' }}>Disabled</option>
+          <option value="ollama" style={{ background: '#0d0d14' }}>Ollama (Local offline)</option>
           <option value="openai" style={{ background: '#0d0d14' }}>OpenAI API (Cloud)</option>
         </select>
         <p style={{ margin: '2px 0 0', fontSize: 10, color: '#64748b' }}>
@@ -91,18 +91,18 @@ export const AISettingsPanel: React.FC = () => {
                 padding: '8px 12px',
                 fontSize: 12,
                 borderRadius: 8,
-                fontFamily: 'inheride',
+                fontFamily: 'inherit',
                 outline: 'none',
               }}
             />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Model Naam</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Model Name</label>
             <input
               type="text"
               value={settings.ollamaModel}
               onChange={e => handleChange('ollamaModel', e.target.value)}
-              placeholder="qwen2 of llama3"
+              placeholder="qwen2 or llama3"
               style={{
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.08)',
@@ -110,12 +110,12 @@ export const AISettingsPanel: React.FC = () => {
                 padding: '8px 12px',
                 fontSize: 12,
                 borderRadius: 8,
-                fontFamily: 'inheride',
+                fontFamily: 'inherit',
                 outline: 'none',
               }}
             />
             <p style={{ margin: '2px 0 0', fontSize: 10, color: '#64748b' }}>
-              Zorg dat je dit model eerst hebt gedownload via Ollama (bijvoorbeeld `ollama run qwen2` of `ollama run llama3`).
+              Make sure you have downloaded this model first via Ollama (for example `ollama run qwen2` or `ollama run llama3`).
             </p>
           </div>
         </div>
@@ -125,7 +125,7 @@ export const AISettingsPanel: React.FC = () => {
       {settings.provider === 'openai' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeIn 0.2s' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>OpenAI API-Sleutel</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>OpenAI API Key</label>
             <input
               type="password"
               value={settings.openaiKey}
@@ -138,7 +138,7 @@ export const AISettingsPanel: React.FC = () => {
                 padding: '8px 12px',
                 fontSize: 12,
                 borderRadius: 8,
-                fontFamily: 'inheride',
+                fontFamily: 'inherit',
                 outline: 'none',
               }}
             />
@@ -157,7 +157,7 @@ export const AISettingsPanel: React.FC = () => {
                 padding: '8px 12px',
                 fontSize: 12,
                 borderRadius: 8,
-                fontFamily: 'inheride',
+                fontFamily: 'inherit',
                 outline: 'none',
               }}
             />
@@ -180,11 +180,11 @@ export const AISettingsPanel: React.FC = () => {
               fontWeight: 800,
               borderRadius: 8,
               cursor: 'pointer',
-              fontFamily: 'inheride',
+              fontFamily: 'inherit',
               transition: 'all 0.15s',
             }}
           >
-            {testing ? 'Verbinding testen...' : 'Test Verbinding'}
+            {testing ? 'Testing connection...' : 'Test Connection'}
           </button>
 
           {testResult && (

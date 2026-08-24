@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import './TimelineChart.css';
 import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, ResponsiveContainer } from 'recharts';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { Ride, RidePoint } from '../../types/workout';
 import { detectClimbs } from '../../utils/climbDetector';
 
@@ -34,7 +35,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ ride, ftp, lthr, o
 
   return (
     <div className="rp-chart-card">
-      <h3>📉 Tijdlijn</h3>
+      <h3>📉 Timeline</h3>
       <ResponsiveContainer width="100%" height={220}>
         <ComposedChart
           data={sampled}
@@ -69,14 +70,14 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ ride, ftp, lthr, o
           }}
           onMouseLeave={() => onHoverPoint(null)}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-          <XAxis dataKey="t" tick={{ fontSize: 10, fill: '#888' }} unit=" min" />
+          <CartesianGrid {...ZENITH_CHART_GRID} />
+          <XAxis dataKey="t" tick={ZENITH_CHART_AXIS_TICK} unit=" min" />
           <YAxis
             yAxisId="main"
-            tick={{ fontSize: 10, fill: '#888' }}
+            tick={ZENITH_CHART_AXIS_TICK}
             unit={ride.hasPower && ride.hasHR ? " W/bpm" : ride.hasPower ? " W" : ride.hasHR ? " bpm" : " km/h"}
           />
-          <YAxis yAxisId="ele" orientation="right" tick={{ fontSize: 10, fill: '#888' }} unit=" m" />
+          <YAxis yAxisId="ele" orientation="right" tick={ZENITH_CHART_AXIS_TICK} unit=" m" />
           
           {/* Draw climbs as translucent overlays */}
           {climbs.map((climb, i) => {
@@ -103,7 +104,7 @@ export const TimelineChart: React.FC<TimelineChartProps> = ({ ride, ftp, lthr, o
             );
           })}
 
-          <Tooltip contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }}
+          <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
             labelFormatter={v => `${v} min`} />
           <Area yAxisId="ele" type="monotone" dataKey="ele" stroke="none" fill="rgba(255,255,255,0.05)" />
           {ride.hasPower && <>

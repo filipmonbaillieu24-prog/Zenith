@@ -65,7 +65,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             <Sparkles size={13} /> TRANSPARENT ATHLETE PRICING
           </div>
 
-          <h1 style={{ fontSize: 38, fontWeight: 900, color: '#fff', margin: '0 0 12px' }}>
+          <h1 style={{ fontSize: 38, fontWeight: 900, color: '#fff', margin: '0 0 12px', lineHeight: 1.25 }}>
             Choose the plan that fits your athletic goals
           </h1>
           <p style={{ fontSize: 15, color: '#94a3b8', maxWidth: '640px', margin: '0 auto' }}>
@@ -171,22 +171,22 @@ export const PricingPage: React.FC<PricingPageProps> = ({
 
               <ul style={{ padding: 0, listStyle: 'none', fontSize: 13, color: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 12, margin: 0 }}>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <CheckCircle2 size={16} color="#38bdf8" /> 🚴 Aero AI Route Generator & GPX/TCX Export
+                  <CheckCircle2 size={16} color="#38bdf8" /> Aero AI Route Generator & GPX/TCX Export
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <CheckCircle2 size={16} color="#38bdf8" /> 📸 Vigor Progress Photos & Side-by-Side Comparator
+                  <CheckCircle2 size={16} color="#38bdf8" /> Vigor Progress Photos & Side-by-Side Comparator
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <CheckCircle2 size={16} color="#38bdf8" /> 📏 Vigor Body Circumferences (8 Zones)
+                  <CheckCircle2 size={16} color="#38bdf8" /> Vigor Body Circumferences (8 Zones)
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <CheckCircle2 size={16} color="#38bdf8" /> ⚖️ Body Fat & Muscle Mass Breakdown
+                  <CheckCircle2 size={16} color="#38bdf8" /> Body Fat & Muscle Mass Breakdown
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <CheckCircle2 size={16} color="#38bdf8" /> 🌙 Zenith ML Sleep & Recovery Score Engine
+                  <CheckCircle2 size={16} color="#38bdf8" /> Zenith ML Sleep & Recovery Score Engine
                 </li>
                 <li style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <CheckCircle2 size={16} color="#38bdf8" /> 🔥 Kratos Muscle Heatmap & Rep Max Sync
+                  <CheckCircle2 size={16} color="#38bdf8" /> Kratos Muscle Heatmap & Rep Max Sync
                 </li>
               </ul>
             </div>

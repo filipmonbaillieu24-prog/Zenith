@@ -1,7 +1,7 @@
 import React from 'react';
 import { Moon, Sparkles, Plus } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { calculateZenithSleepScore } from '@zenith/shared';
+import { calculateZenithSleepScore, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 
 interface SleepTabProps {
   sleepLogs: any[];
@@ -23,7 +23,7 @@ export const SleepTab: React.FC<SleepTabProps> = ({
   );
 
   const chartData = sleepLogs.slice(-14).map(log => ({
-    date: log.logged_at ? new Date(log.logged_at).toLocaleDateString('nl-NL', { weekday: 'short' }) : '',
+    date: log.logged_at ? new Date(log.logged_at).toLocaleDateString('en-US', { weekday: 'short' }) : '',
     hours: parseFloat((log.duration_minutes / 60).toFixed(1)),
     quality: log.quality_score
   }));
@@ -36,8 +36,8 @@ export const SleepTab: React.FC<SleepTabProps> = ({
             <Moon className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-zinc-100">Slaap & Herstel Architectuur</h2>
-            <p className="text-xs text-zinc-400">Volg je slaapkwaliteit en Zenith ML herstelscores</p>
+            <h2 className="text-xl font-bold text-zinc-100">Sleep & Recovery Architecture</h2>
+            <p className="text-xs text-zinc-400">Track your sleep quality and Zenith ML recovery scores</p>
           </div>
         </div>
         <button
@@ -45,21 +45,21 @@ export const SleepTab: React.FC<SleepTabProps> = ({
           className="flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-400 text-zinc-950 font-semibold text-sm rounded-lg transition-all shadow-md shadow-indigo-500/10"
         >
           <Plus className="w-4 h-4" />
-          <span>Slaap Loggen</span>
+          <span>Log Sleep</span>
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-          <span className="text-xs text-zinc-400 font-medium uppercase tracking-wider block mb-1">Slaapduur (Afgelopen Nacht)</span>
+          <span className="text-xs text-zinc-400 font-medium uppercase tracking-wider block mb-1">Sleep Duration (Last Night)</span>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-zinc-100">{latestDurationHours}</span>
-            <span className="text-sm text-zinc-400">uur</span>
+            <span className="text-sm text-zinc-400">hours</span>
           </div>
         </div>
 
         <div className="p-4 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-          <span className="text-xs text-zinc-400 font-medium uppercase tracking-wider block mb-1">Kwaliteitsscore</span>
+          <span className="text-xs text-zinc-400 font-medium uppercase tracking-wider block mb-1">Quality Score</span>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold text-indigo-400">{latestQualityScore}</span>
             <span className="text-sm text-zinc-400">/ 100</span>
@@ -78,7 +78,7 @@ export const SleepTab: React.FC<SleepTabProps> = ({
       </div>
 
       <div className="p-5 bg-zinc-900/60 border border-zinc-800 rounded-xl">
-        <h3 className="text-sm font-semibold text-zinc-300 mb-4">Slaapverloop (Laatste 14 Dagen)</h3>
+        <h3 className="text-sm font-semibold text-zinc-300 mb-4">Sleep Trend (Last 14 Days)</h3>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
@@ -88,13 +88,14 @@ export const SleepTab: React.FC<SleepTabProps> = ({
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis dataKey="date" stroke="#71717a" fontSize={12} />
-              <YAxis stroke="#71717a" fontSize={12} domain={[0, 12]} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '8px', color: '#f4f4f5' }}
+              <CartesianGrid {...ZENITH_CHART_GRID} />
+              <XAxis dataKey="date" stroke="#71717a" tick={ZENITH_CHART_AXIS_TICK} />
+              <YAxis stroke="#71717a" tick={ZENITH_CHART_AXIS_TICK} domain={[0, 12]} />
+              <Tooltip
+                contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
               />
-              <Area type="monotone" dataKey="hours" stroke="#818cf8" strokeWidth={2} fillOpacity={1} fill="url(#sleepGrad)" name="Uren Slaap" />
+              <Area type="monotone" dataKey="hours" stroke="#818cf8" strokeWidth={2} fillOpacity={1} fill="url(#sleepGrad)" name="Hours of Sleep" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

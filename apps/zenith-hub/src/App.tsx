@@ -86,7 +86,7 @@ function App() {
     return saved ? JSON.parse(saved) : false;
   });
   const [rides, setRides] = useState<{ date: number; tss: number }[]>([]);
-  const [fitnessProfile, setFitnessProfile] = useState<any>({ name: 'Atleet' });
+  const [fitnessProfile, setFitnessProfile] = useState<any>({ name: 'Athlete' });
   const [mlModelsLoaded, setMlModelsLoaded] = useState(false);
   const [pendingRideId, setPendingRideId] = useState<string | null>(null);
   const [isBugReportOpen, setIsBugReportOpen] = useState(false);
@@ -445,7 +445,7 @@ function App() {
       
       if (data) {
         setFitnessProfile({
-          name: data.name || 'Atleet',
+          name: data.name || 'Athlete',
           gender: data.gender,
           birthDate: data.birth_date,
           height: data.height_cm,
@@ -455,7 +455,7 @@ function App() {
           trainingGoal: data.training_goal || 'general'
         });
       } else {
-        const initialName = userMetadata?.name || 'Atleet';
+        const initialName = userMetadata?.name || 'Athlete';
         const defaultProfile = {
           id: userId,
           name: initialName,
@@ -474,7 +474,7 @@ function App() {
     } catch (e) {
       console.error("Error loading profile from profiles table:", e);
       const profile = userMetadata?.fitness_profile || {};
-      const name = userMetadata?.name || profile.name || 'Atleet';
+      const name = userMetadata?.name || profile.name || 'Athlete';
       setFitnessProfile({ ...profile, name });
     }
   }, []);
@@ -504,7 +504,7 @@ function App() {
         }
       } else {
         setRides([]);
-        setFitnessProfile({ name: 'Atleet' });
+        setFitnessProfile({ name: 'Athlete' });
       }
     });
 
@@ -695,26 +695,26 @@ function App() {
       logsMarkdown = `### 📋 System & Console Logs (${capturedLogs.length} lines)\n<details>\n<summary>Click to view automatically captured console logs</summary>\n\n\`\`\`log\n${logsFormatted}\n\`\`\`\n</details>\n`;
     }
 
-    const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';
+    const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Athlete';
     
     let imagesMarkdown = '';
     if (imageUrls.length > 0) {
-      imagesMarkdown = '### Schermafbeeldingen\n\n' + imageUrls.map((url, idx) => `![Screenshot ${idx + 1}](${url})`).join('\n\n');
+      imagesMarkdown = '### Screenshots\n\n' + imageUrls.map((url, idx) => `![Screenshot ${idx + 1}](${url})`).join('\n\n');
     }
 
-    const bodyContent = `### Omschrijving / Reproductie
+    const bodyContent = `### Description / Reproduction
 ${data.description}
 
 ### Details
-- **Categorie:** ${data.category}
-- **Type probleem:** ${data.problemType}
-- **Urgentie:** ${data.severity.toUpperCase()}
+- **Category:** ${data.category}
+- **Problem type:** ${data.problemType}
+- **Urgency:** ${data.severity.toUpperCase()}
 - **User:** ${userName} <${session.user.email}> (ID: ${session.user.id})
 
-### Omgevingsfactoren
-- **Besturingssysteem:** ${envOs}
+### Environmental Factors
+- **Operating system:** ${envOs}
 - **Browser:** ${envBrowser}
-- **Schermresolutie:** ${envScreen}
+- **Screen resolution:** ${envScreen}
 - **Application Version:** 0.1.0 (Tauri)
 
 ${imagesMarkdown}
@@ -809,7 +809,7 @@ ${logsMarkdown}
     return (
       <div className="zh-hub-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>
-          Zenith laden...
+          Loading Zenith...
         </div>
       </div>
     );
@@ -838,7 +838,7 @@ ${logsMarkdown}
           >
             ← Back to Website
           </button>
-          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
             <LoginPage />
           </Suspense>
         </div>
@@ -846,15 +846,15 @@ ${logsMarkdown}
     }
     if (publicView === 'prijzen') {
       return (
-        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
           <PricingPage onBack={() => setPublicView('landing')} isPro={false} />
         </Suspense>
       );
     }
     if (publicView === 'roadmap') {
       return (
-        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
-          <FeatureRequestsPage 
+        <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
+          <FeatureRequestsPage
             onBack={() => setPublicView('landing')} 
             onRequireLogin={() => setPublicView('auth')}
           />
@@ -862,7 +862,7 @@ ${logsMarkdown}
       );
     }
     return (
-      <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+      <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
         <ZenithLandingPage
           onLogin={() => setPublicView('auth')}
           onRegister={() => setPublicView('auth')}
@@ -872,7 +872,7 @@ ${logsMarkdown}
     );
   }
 
-  const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Atleet';
+  const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Athlete';
   const isFounder = session?.user?.email?.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
   const isTauri = typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window || !!(window as any).__TAURI_METADATA__);
 
@@ -901,7 +901,7 @@ ${logsMarkdown}
           }}
         />
         <div style={{ flex: 1, height: isTauri ? 'calc(100vh - 32px)' : '100vh', marginTop: 0, overflowY: 'auto', position: 'relative' }}>
-          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Laden...</div>}>
+          <Suspense fallback={<div className="p-8 text-center text-zinc-400">Loading...</div>}>
           <div key={activeTab} className="zenith-page-transition" style={{ width: '100%', height: '100%', display: EXTENSION_TABS.has(activeTab) ? 'none' : 'block' }}>
           {activeTab === 'hub' && (
             <ZenithHubPage

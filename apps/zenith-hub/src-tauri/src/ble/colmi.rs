@@ -9,7 +9,7 @@ static COLMI_SYNC_RUNNING: AtomicBool = AtomicBool::new(false);
 
 /// Continuous background BLE scanner status helper for Colmi Smart Ring.
 pub async fn start_colmi_ble_listener(_app_handle: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    log_ble("[System] Colmi Smart Ring Achtergrond-Service actief & gekoppeld aan Master BLE Listener!");
+    log_ble("[System] Colmi Smart Ring Background Service active & linked to Master BLE Listener!");
     Ok(())
 }
 
@@ -341,7 +341,7 @@ fn parse_sleep_bigdata_packet(data: &[u8]) -> Option<SleepPacket> {
 #[tauri::command]
 pub async fn sync_colmi_ring(app: tauri::AppHandle, simulate: bool, target_mac: Option<String>) -> Result<String, String> {
     if COLMI_SYNC_RUNNING.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
-        return Err("Er loopt al een Colmi-synchronisatie. Wacht tot deze is afgerond.".to_string());
+        return Err("A Colmi sync is already running. Wait for it to finish.".to_string());
     }
 
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -351,17 +351,17 @@ pub async fn sync_colmi_ring(app: tauri::AppHandle, simulate: bool, target_mac: 
         let _ = tx.send(res);
     });
 
-    let result = rx.await.unwrap_or_else(|_| Err("Fout bij uitvoeren van achtergrondtaak".to_string()));
+    let result = rx.await.unwrap_or_else(|_| Err("Error running background task".to_string()));
     COLMI_SYNC_RUNNING.store(false, Ordering::SeqCst);
     result
 }
 
 async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac: Option<String>) -> Result<String, String> {
     if simulate {
-        log_ble("[Colmi Sync] Simulatie modus geactiveerd.");
-        emit_status(&app, "Simulatie data genereren...", 0.2);
+        log_ble("[Colmi Sync] Simulation mode activated.");
+        emit_status(&app, "Generating simulation data...", 0.2);
         tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
-        emit_status(&app, "Simulatie stappen & slaap ophalen...", 0.6);
+        emit_status(&app, "Fetching simulated steps & sleep...", 0.6);
         tokio::time::sleep(tokio::time::Duration::from_millis(600)).await;
 
         let today = std::time::SystemTime::now()
@@ -374,8 +374,8 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             "device_name": "Colmi R02 Ring (Simulated)",
             "mac_address": "32:34:48:31:A8:05",
             "steps": [
-                { "step_count": 8420, "timestamp": today - 86400, "date": "gisteren" },
-                { "step_count": 6130, "timestamp": today - 172800, "date": "eergisteren" }
+                { "step_count": 8420, "timestamp": today - 86400, "date": "yesterday" },
+                { "step_count": 6130, "timestamp": today - 172800, "date": "the day before yesterday" }
             ],
             "sleep": [
                 {
@@ -391,15 +391,15 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             "battery": 88,
             "sync_time": chrono::Utc::now().to_rfc3339()
         });
-        emit_status(&app, "Simulatie voltooid!", 1.0);
+        emit_status(&app, "Simulation complete!", 1.0);
         return Ok(result.to_string());
     }
 
     // ========================================================================================
     // DEVICE DISCOVERY
     // ========================================================================================
-    emit_status(&app, "Zoeken naar Colmi Smart Ring...", 0.10);
-    log_ble("[Colmi Sync] Starten van Colmi Smart Ring synchronisatie...");
+    emit_status(&app, "Searching for Colmi Smart Ring...", 0.10);
+    log_ble("[Colmi Sync] Starting Colmi Smart Ring synchronization...");
 
     // Get the global adapter reference - we use this for ALL operations
     let adapter_opt = {
@@ -409,7 +409,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     let global_adapter = match adapter_opt {
         Some(a) => a,
         None => {
-            return Err("Geen Bluetooth-adapter beschikbaar. Start de applicatie opnieuw op.".to_string());
+            return Err("No Bluetooth adapter available. Restart the application.".to_string());
         }
     };
 
@@ -430,7 +430,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 .map_or(true, |m| addr_lower == m.to_lowercase());
 
             if cache_valid && not_bad_device && matches_target {
-                log_ble(&format!("[Colmi Sync] MAC uit cache: {}", addr));
+                log_ble(&format!("[Colmi Sync] MAC from cache: {}", addr));
                 cached_mac = Some(addr.clone());
             }
         }
@@ -442,29 +442,29 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
             for p in peripherals {
                 let addr = p.address().to_string();
                 if addr.to_lowercase() == mac.to_lowercase() {
-                    log_ble(&format!("[Colmi Sync] Vers peripheral gevonden via cached MAC: {}", addr));
+                    log_ble(&format!("[Colmi Sync] Fresh peripheral found via cached MAC: {}", addr));
                     // Disconnect stale connection if any
                     if let Ok(true) = p.is_connected().await {
-                        log_ble("[Colmi Sync] Stale connectie verbreken...");
+                        log_ble("[Colmi Sync] Disconnecting stale connection...");
                         let _ = p.disconnect().await;
                         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
                     }
                     ring_peripheral = Some(p);
                     ring_address = addr;
-                    emit_status(&app, &format!("Colmi Ring gevonden (cache): {}", ring_address), 0.30);
+                    emit_status(&app, &format!("Colmi Ring found (cache): {}", ring_address), 0.30);
                     break;
                 }
             }
         }
         if ring_peripheral.is_none() {
-            log_ble("[Colmi Sync] Cached MAC niet gevonden in bekende peripherals. Doorgaan met scan...");
+            log_ble("[Colmi Sync] Cached MAC not found among known peripherals. Continuing with scan...");
         }
     }
 
     // Step 2: Check known peripherals from global adapter
     if ring_peripheral.is_none() {
         if let Ok(peripherals) = global_adapter.peripherals().await {
-            log_ble(&format!("[Colmi Sync] Inspecteren van {} bekende BT apparaten...", peripherals.len()));
+            log_ble(&format!("[Colmi Sync] Inspecting {} known BT devices...", peripherals.len()));
             for peripheral in peripherals {
                 if let Ok(Some(props)) = peripheral.properties().await {
                     let name = props.local_name.clone().unwrap_or_default();
@@ -479,10 +479,10 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     let is_target_mac = target_mac.as_ref()
                         .map_or(false, |m| addr_lower == m.to_lowercase());
                     if is_target_mac {
-                        log_ble(&format!("[Colmi Sync] Target MAC direct gevonden: {}", address));
+                        log_ble(&format!("[Colmi Sync] Target MAC found directly: {}", address));
                         ring_peripheral = Some(peripheral);
                         ring_address = address;
-                        emit_status(&app, &format!("Ring gevonden via MAC: {}", ring_address), 0.30);
+                        emit_status(&app, &format!("Ring found via MAC: {}", ring_address), 0.30);
                         break;
                     }
 
@@ -498,10 +498,10 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                         || has_colmi_service;
 
                     if is_colmi {
-                        log_ble(&format!("[Colmi Sync] Ring gevonden: Naam='{}', Adres='{}'", name, address));
+                        log_ble(&format!("[Colmi Sync] Ring found: Name='{}', Address='{}'", name, address));
                         ring_peripheral = Some(peripheral);
                         ring_address = address;
-                        emit_status(&app, &format!("Colmi Ring gevonden: {}", ring_address), 0.30);
+                        emit_status(&app, &format!("Colmi Ring found: {}", ring_address), 0.30);
                         break;
                     }
                 }
@@ -511,8 +511,8 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
 
     // Step 3: Active BLE scan fallback (8 seconds) — uses GLOBAL_ADAPTER (NOT a new Manager)
     if ring_peripheral.is_none() {
-        emit_status(&app, "Actieve BLE scan (8s) naar Colmi Ring...", 0.20);
-        log_ble("[Colmi Sync] Actieve BLE scan starten via global adapter...");
+        emit_status(&app, "Active BLE scan (8s) for Colmi Ring...", 0.20);
+        log_ble("[Colmi Sync] Starting active BLE scan via global adapter...");
 
         let _ = global_adapter.start_scan(ScanFilter::default()).await;
         tokio::time::sleep(tokio::time::Duration::from_secs(8)).await;
@@ -544,10 +544,10 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                         || has_colmi_service;
 
                     if is_colmi {
-                        log_ble(&format!("[Colmi Sync] Ring gevonden via scan: '{}'@'{}'", name, address));
+                        log_ble(&format!("[Colmi Sync] Ring found via scan: '{}'@'{}'", name, address));
                         ring_peripheral = Some(peripheral);
                         ring_address = address;
-                        emit_status(&app, &format!("Ring gevonden: {}", ring_address), 0.30);
+                        emit_status(&app, &format!("Ring found: {}", ring_address), 0.30);
                         break;
                     }
                 }
@@ -558,7 +558,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     let peripheral = match ring_peripheral {
         Some(p) => p,
         None => {
-            return Err("Geen Colmi Smart Ring gevonden. Controleer of de ring aanstaat en dichtbij is.".to_string());
+            return Err("No Colmi Smart Ring found. Check that the ring is powered on and nearby.".to_string());
         }
     };
 
@@ -572,42 +572,42 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     //   2. Try discover_services() as the primary connection method (triggers actual GATT handshake)
     //   3. Only stop scan AFTER connection is established
     // ========================================================================================
-    log_ble(&format!("[Colmi Sync] GATT verbinding starten met Ring (MAC: {})... Scan blijft actief.", ring_address));
-    emit_status(&app, "Verbinden met Colmi Ring...", 0.40);
+    log_ble(&format!("[Colmi Sync] Starting GATT connection with Ring (MAC: {})... Scan remains active.", ring_address));
+    emit_status(&app, "Connecting to Colmi Ring...", 0.40);
 
     let mut connect_success = false;
     for attempt in 1..=4 {
-        log_ble(&format!("[Colmi Sync] Verbindingspoging {}/4 naar MAC: {}", attempt, ring_address));
+        log_ble(&format!("[Colmi Sync] Connection attempt {}/4 to MAC: {}", attempt, ring_address));
 
         // Check if already connected
         if let Ok(true) = peripheral.is_connected().await {
-            log_ble("[Colmi Sync] Ring is al verbonden!");
+            log_ble("[Colmi Sync] Ring is already connected!");
             connect_success = true;
             break;
         }
 
         // Strategy A: Try connect() first (sets up WinRT device handle)
-        log_ble("[Colmi Sync] Strategie A: peripheral.connect()...");
+        log_ble("[Colmi Sync] Strategy A: peripheral.connect()...");
         match tokio::time::timeout(
             tokio::time::Duration::from_secs(6),
             peripheral.connect()
         ).await {
             Ok(Ok(_)) => {
-                log_ble("[Colmi Sync] connect() succesvol!");
+                log_ble("[Colmi Sync] connect() successful!");
                 connect_success = true;
                 break;
             }
             Ok(Err(e)) => {
-                log_ble(&format!("[Colmi Sync] connect() meldt: {:?} — probeer discover_services()...", e));
+                log_ble(&format!("[Colmi Sync] connect() reports: {:?} — trying discover_services()...", e));
             }
             Err(_) => {
-                log_ble("[Colmi Sync] connect() timeout na 6s — probeer discover_services()...");
+                log_ble("[Colmi Sync] connect() timeout after 6s — trying discover_services()...");
             }
         }
 
         // Strategy B: Try discover_services() directly
         // On Windows, this triggers the actual GATT connection even if connect() failed
-        log_ble("[Colmi Sync] Strategie B: peripheral.discover_services() (triggert GATT op Windows)...");
+        log_ble("[Colmi Sync] Strategy B: peripheral.discover_services() (triggers GATT on Windows)...");
         tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
         match tokio::time::timeout(
             tokio::time::Duration::from_secs(8),
@@ -617,81 +617,81 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 let services = peripheral.services();
                 if !services.is_empty() {
                     log_ble(&format!(
-                        "[Colmi Sync] discover_services() succesvol! {} services gevonden — Verbinding actief!",
+                        "[Colmi Sync] discover_services() successful! {} services found — Connection active!",
                         services.len()
                     ));
                     connect_success = true;
                     break;
                 } else {
-                    log_ble("[Colmi Sync] discover_services() teruggekeerd maar 0 services gevonden.");
+                    log_ble("[Colmi Sync] discover_services() returned but found 0 services.");
                 }
             }
             Ok(Err(e)) => {
-                log_ble(&format!("[Colmi Sync] discover_services() fout: {:?}", e));
+                log_ble(&format!("[Colmi Sync] discover_services() error: {:?}", e));
             }
             Err(_) => {
-                log_ble("[Colmi Sync] discover_services() timeout na 8s");
+                log_ble("[Colmi Sync] discover_services() timeout after 8s");
             }
         }
 
         // Strategy C: Check if connection came up asynchronously while we were waiting
-        log_ble("[Colmi Sync] Strategie C: wachten op asynchrone verbinding (3s)...");
+        log_ble("[Colmi Sync] Strategy C: waiting for asynchronous connection (3s)...");
         let t0 = std::time::Instant::now();
         while t0.elapsed() < std::time::Duration::from_secs(3) {
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
             if let Ok(true) = peripheral.is_connected().await {
-                log_ble("[Colmi Sync] Asynchrone verbinding bevestigd!");
+                log_ble("[Colmi Sync] Asynchronous connection confirmed!");
                 connect_success = true;
                 break;
             }
         }
         if connect_success { break; }
 
-        log_ble(&format!("[Colmi Sync] Poging {}/4 mislukt. Wachten 2s voor retry...", attempt));
+        log_ble(&format!("[Colmi Sync] Attempt {}/4 failed. Waiting 2s before retry...", attempt));
         if attempt < 4 {
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         }
     }
 
     // NOW stop the background scan (connection is established or all retries exhausted)
-    log_ble("[Colmi Sync] Achtergrond-scanner pauzeren...");
+    log_ble("[Colmi Sync] Pausing background scanner...");
     let _ = global_adapter.stop_scan().await;
     tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
 
     if !connect_success {
         // Resume background scanner on failure
         let _ = global_adapter.start_scan(ScanFilter::default()).await;
-        return Err("Verbinding met Colmi Ring mislukt na 4 pogingen. Zorg ervoor dat:\n• De ring niet gekoppeld is aan de QRing app (sluit deze volledig)\n• De ring dichtbij is en opgeladen\n• Bluetooth aan staat in Windows Instellingen".to_string());
+        return Err("Connection to Colmi Ring failed after 4 attempts. Make sure that:\n• The ring is not paired to the QRing app (close it completely)\n• The ring is nearby and charged\n• Bluetooth is turned on in Windows Settings".to_string());
     }
 
     // ========================================================================================
     // SERVICE DISCOVERY
     // ========================================================================================
-    emit_status(&app, "Services ontdekken...", 0.50);
+    emit_status(&app, "Discovering services...", 0.50);
     let mut cmd_write_char = None;
     let mut cmd_notify_char = None;
     let mut _bigdata_write_char = None;
     let mut bigdata_notify_char = None;
 
     for attempt in 1..=3 {
-        log_ble(&format!("[Colmi Sync] Service discovery poging {}/3...", attempt));
+        log_ble(&format!("[Colmi Sync] Service discovery attempt {}/3...", attempt));
         tokio::time::sleep(tokio::time::Duration::from_millis(1200)).await;
 
         if let Err(e) = peripheral.discover_services().await {
-            log_ble(&format!("[Colmi Sync] discover_services fout: {:?}", e));
+            log_ble(&format!("[Colmi Sync] discover_services error: {:?}", e));
             continue;
         }
 
         let services = peripheral.services();
         if services.is_empty() {
-            log_ble("[Colmi Sync] Geen services gevonden. Opnieuw proberen...");
+            log_ble("[Colmi Sync] No services found. Retrying...");
             continue;
         }
 
         for service in &services {
             let svc_uuid = service.uuid.to_string().to_lowercase();
             log_ble(&format!(
-                "[Colmi Sync] Service ontdekt (poging {}): {} -> Characteristics: {:?}",
+                "[Colmi Sync] Service discovered (attempt {}): {} -> Characteristics: {:?}",
                 attempt, svc_uuid,
                 service.characteristics.iter().map(|c| c.uuid.to_string()).collect::<Vec<_>>()
             ));
@@ -701,58 +701,58 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
 
                 if uuid_str.contains("6e400002") {
                     cmd_write_char = Some(charac.clone());
-                    log_ble(&format!("[Colmi Sync] Write characteristic gekozen: {}", uuid_str));
+                    log_ble(&format!("[Colmi Sync] Write characteristic selected: {}", uuid_str));
                 }
                 if uuid_str.contains("6e400003") {
                     cmd_notify_char = Some(charac.clone());
-                    log_ble(&format!("[Colmi Sync] Notify characteristic gekozen: {}", uuid_str));
+                    log_ble(&format!("[Colmi Sync] Notify characteristic selected: {}", uuid_str));
                 }
                 if uuid_str.contains("de5bf72a") {
                     _bigdata_write_char = Some(charac.clone());
-                    log_ble(&format!("[Colmi Sync] BigData Write characteristic gekozen: {}", uuid_str));
+                    log_ble(&format!("[Colmi Sync] BigData Write characteristic selected: {}", uuid_str));
                 }
                 if uuid_str.contains("de5bf729") {
                     bigdata_notify_char = Some(charac.clone());
-                    log_ble(&format!("[Colmi Sync] BigData Notify characteristic gekozen: {}", uuid_str));
+                    log_ble(&format!("[Colmi Sync] BigData Notify characteristic selected: {}", uuid_str));
                 }
             }
         }
 
         if cmd_write_char.is_some() && cmd_notify_char.is_some() {
-            log_ble("[Colmi Sync] GATT karakteristieken gevonden!");
+            log_ble("[Colmi Sync] GATT characteristics found!");
             break;
         }
     }
 
     let cmd_write = match cmd_write_char {
         Some(c) => c,
-        None => return Err("Command write karakteristiek (6e400002) niet gevonden.".to_string()),
+        None => return Err("Command write characteristic (6e400002) not found.".to_string()),
     };
     let cmd_notify = match cmd_notify_char {
         Some(c) => c,
-        None => return Err("Command notify karakteristiek (6e400003) niet gevonden.".to_string()),
+        None => return Err("Command notify characteristic (6e400003) not found.".to_string()),
     };
 
     // Subscribe to command notifications
     if let Err(e) = peripheral.subscribe(&cmd_notify).await {
-        return Err(format!("Subscribe op command notify mislukt: {:?}", e));
+        return Err(format!("Subscribe to command notify failed: {:?}", e));
     }
 
     // Subscribe to BigData notifications if available
     if let Some(ref bd_notify) = bigdata_notify_char {
         let _ = peripheral.subscribe(bd_notify).await;
-        log_ble("[Colmi Sync] Geabonneerd op BigData notify karakteristiek.");
+        log_ble("[Colmi Sync] Subscribed to BigData notify characteristic.");
     }
 
     let mut notification_stream = match peripheral.notifications().await {
         Ok(s) => s,
-        Err(e) => return Err(format!("Notificatie stream fout: {:?}", e)),
+        Err(e) => return Err(format!("Notification stream error: {:?}", e)),
     };
 
     // ========================================================================================
     // TIME SYNCHRONIZATION + LIVE ACTIVITY CAPTURE
     // ========================================================================================
-    emit_status(&app, "Tijd synchroniseren...", 0.55);
+    emit_status(&app, "Synchronizing time...", 0.55);
     let time_cmd = make_time_sync_cmd();
     log_ble(&format!("[Colmi Sync] SET_TIME (0x01): {:?}", time_cmd));
     let _ = peripheral.write(&cmd_write, &time_cmd, btleplug::api::WriteType::WithoutResponse).await;
@@ -770,7 +770,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         match tokio::time::timeout(tokio::time::Duration::from_millis(2000), notification_stream.next()).await {
             Ok(Some(n)) => {
                 let data = n.value;
-                log_ble(&format!("[Colmi Sync] Post-TimeSync notificatie[{}]: {:?} (len={})", i, data, data.len()));
+                log_ble(&format!("[Colmi Sync] Post-TimeSync notification[{}]: {:?} (len={})", i, data, data.len()));
 
                 // Parse 0x73 0x12 = CMD_NOTIFICATION / LIVE_ACTIVITY
                 if data.len() >= 12 && data[0] == 0x73 && data[1] == 0x12 {
@@ -778,7 +778,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     let distance_cm = (data[6] as u32) | ((data[7] as u32) << 8);
                     let calories = (data[10] as u32) | ((data[11] as u32) << 8);
                     log_ble(&format!(
-                        "[Colmi Sync] ★ LIVE ACTIVITY: stappen={}, afstand={}cm, calorieën={}",
+                        "[Colmi Sync] ★ LIVE ACTIVITY: steps={}, distance={}cm, calories={}",
                         steps, distance_cm, calories
                     ));
                     if steps > today_steps {
@@ -787,7 +787,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                 }
             }
             _ => {
-                log_ble(&format!("[Colmi Sync] Post-TimeSync timeout na packet {}", i));
+                log_ble(&format!("[Colmi Sync] Post-TimeSync timeout after packet {}", i));
                 break;
             }
         }
@@ -795,7 +795,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
 
     // Store today's live steps
     if today_steps > 0 {
-        log_ble(&format!("[Colmi Sync] Vandaag live stappen: {} ({})", today_steps, today_str));
+        log_ble(&format!("[Colmi Sync] Today's live steps: {} ({})", today_steps, today_str));
         steps_by_date.insert(today_str.clone(), (today_steps as i32, today_epoch));
     }
 
@@ -804,8 +804,8 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     // Protocol: Write [0xBC, day_offset, 0x01, 0..0, checksum] to CMD_WRITE (6e400002)
     // Ring replies: ACK on CMD_NOTIFY + data packets on BIGDATA_NOTIFY (de5bf729)
     // ========================================================================================
-    emit_status(&app, "Stappen opvragen...", 0.60);
-    log_ble("[Colmi Sync] === HISTORISCHE STAPPEN OPHALEN (0xBC sub=0x01) ===");
+    emit_status(&app, "Requesting steps...", 0.60);
+    log_ble("[Colmi Sync] === FETCHING HISTORICAL STEPS (0xBC sub=0x01) ===");
 
     for day_offset in 1u8..=7 {
         // Build 0xBC command for historical steps
@@ -817,9 +817,9 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         let cksum: u16 = cmd[..15].iter().map(|&b| b as u16).sum();
         cmd[15] = (cksum & 0xFF) as u8;
 
-        log_ble(&format!("[Colmi Sync] Steps request dag_offset={}: {:?}", day_offset, cmd));
+        log_ble(&format!("[Colmi Sync] Steps request day_offset={}: {:?}", day_offset, cmd));
         if let Err(e) = peripheral.write(&cmd_write, &cmd, btleplug::api::WriteType::WithoutResponse).await {
-            log_ble(&format!("[Colmi Sync] Steps write fout dag {}: {:?}", day_offset, e));
+            log_ble(&format!("[Colmi Sync] Steps write error day {}: {:?}", day_offset, e));
             continue;
         }
 
@@ -834,14 +834,14 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         let day_timeout = std::time::Instant::now();
         loop {
             if day_timeout.elapsed() > std::time::Duration::from_secs(10) {
-                log_ble(&format!("[Colmi Sync] Steps timeout dag_offset={}", day_offset));
+                log_ble(&format!("[Colmi Sync] Steps timeout day_offset={}", day_offset));
                 break;
             }
 
             match tokio::time::timeout(tokio::time::Duration::from_millis(3000), notification_stream.next()).await {
                 Ok(Some(n)) => {
                     let data = n.value;
-                    log_ble(&format!("[Colmi Sync] Steps[dag={}] notificatie: {:?} (len={})", day_offset, data, data.len()));
+                    log_ble(&format!("[Colmi Sync] Steps[day={}] notification: {:?} (len={})", day_offset, data, data.len()));
 
                     // Skip live activity notifications (0x73) that may interleave
                     if !data.is_empty() && data[0] == 0x73 {
@@ -856,17 +856,17 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     if !got_ack && !data.is_empty() && data[0] == 0xBC {
                         got_ack = true;
                         let status = if data.len() > 2 { data[2] } else { 0 };
-                        log_ble(&format!("[Colmi Sync] Steps ACK dag={}: status={} (1=data, 0/FF=geen data)", day_offset, status));
+                        log_ble(&format!("[Colmi Sync] Steps ACK day={}: status={} (1=data, 0/FF=no data)", day_offset, status));
 
                         if status != 1 {
-                            log_ble(&format!("[Colmi Sync] Geen stappen data voor dag_offset={}", day_offset));
+                            log_ble(&format!("[Colmi Sync] No steps data for day_offset={}", day_offset));
                             break;
                         }
 
                         // Extract expected packet count if available
                         if data.len() >= 6 {
                             data_packets_expected = (data[4] as u32) | ((data[5] as u32) << 8);
-                            log_ble(&format!("[Colmi Sync] Verwacht {} data pakketten", data_packets_expected));
+                            log_ble(&format!("[Colmi Sync] Expecting {} data packets", data_packets_expected));
                         }
 
                         // Calculate date for this day_offset
@@ -889,27 +889,27 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                             // Bytes may contain: [header, hour, steps_lo, steps_hi, cal_lo, cal_hi, dist_lo, dist_hi, ...]
                             let potential_steps = (data[2] as i32) | ((data[3] as i32) << 8);
                             if potential_steps > 0 && potential_steps < 50000 {
-                                log_ble(&format!("[Colmi Sync] Steps data pakket {}: potentiële stappen={}", data_packets_received, potential_steps));
+                                log_ble(&format!("[Colmi Sync] Steps data packet {}: potential steps={}", data_packets_received, potential_steps));
                                 day_total_steps += potential_steps;
                             }
                         }
 
                         // Check if we've received all expected packets
                         if data_packets_expected > 0 && data_packets_received >= data_packets_expected {
-                            log_ble(&format!("[Colmi Sync] Alle {} pakketten ontvangen voor dag {}", data_packets_expected, day_offset));
+                            log_ble(&format!("[Colmi Sync] All {} packets received for day {}", data_packets_expected, day_offset));
                             break;
                         }
                     }
                 }
                 _ => {
-                    log_ble(&format!("[Colmi Sync] Steps timeout wachten op packet dag_offset={}", day_offset));
+                    log_ble(&format!("[Colmi Sync] Steps timeout waiting for packet day_offset={}", day_offset));
                     break;
                 }
             }
         }
 
         if day_total_steps > 0 && !day_date_str.is_empty() {
-            log_ble(&format!("[Colmi Sync] ★ Stappen voor {}: {}", day_date_str, day_total_steps));
+            log_ble(&format!("[Colmi Sync] ★ Steps for {}: {}", day_date_str, day_total_steps));
             steps_by_date.entry(day_date_str).or_insert((day_total_steps, day_epoch));
         }
 
@@ -927,8 +927,8 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     // Protocol: Write [0xBC, day_offset, 0x00, 0..0, checksum] to CMD_WRITE (6e400002)
     // Ring replies: ACK on CMD_NOTIFY + sleep phase data on BIGDATA_NOTIFY (de5bf729)
     // ========================================================================================
-    emit_status(&app, "Slaapgegevens opvragen...", 0.75);
-    log_ble("[Colmi Sync] === HISTORISCHE SLAAP OPHALEN (0xBC sub=0x00) ===");
+    emit_status(&app, "Requesting sleep data...", 0.75);
+    log_ble("[Colmi Sync] === FETCHING HISTORICAL SLEEP (0xBC sub=0x00) ===");
 
     // date_str → (total_min, deep_min, light_min, rem_min, awake_min, quality, epoch)
     let mut sleep_by_date: HashMap<String, (i32, i32, i32, i32, i32, i32, u64)> = HashMap::new();
@@ -942,9 +942,9 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         let cksum: u16 = cmd[..15].iter().map(|&b| b as u16).sum();
         cmd[15] = (cksum & 0xFF) as u8;
 
-        log_ble(&format!("[Colmi Sync] Sleep request dag_offset={}: {:?}", day_offset, cmd));
+        log_ble(&format!("[Colmi Sync] Sleep request day_offset={}: {:?}", day_offset, cmd));
         if let Err(e) = peripheral.write(&cmd_write, &cmd, btleplug::api::WriteType::WithoutResponse).await {
-            log_ble(&format!("[Colmi Sync] Sleep write fout dag {}: {:?}", day_offset, e));
+            log_ble(&format!("[Colmi Sync] Sleep write error day {}: {:?}", day_offset, e));
             continue;
         }
 
@@ -963,14 +963,14 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         let day_timeout = std::time::Instant::now();
         loop {
             if day_timeout.elapsed() > std::time::Duration::from_secs(10) {
-                log_ble(&format!("[Colmi Sync] Sleep timeout dag_offset={}", day_offset));
+                log_ble(&format!("[Colmi Sync] Sleep timeout day_offset={}", day_offset));
                 break;
             }
 
             match tokio::time::timeout(tokio::time::Duration::from_millis(3000), notification_stream.next()).await {
                 Ok(Some(n)) => {
                     let data = n.value;
-                    log_ble(&format!("[Colmi Sync] Sleep[dag={}] notificatie: {:?} (len={})", day_offset, data, data.len()));
+                    log_ble(&format!("[Colmi Sync] Sleep[day={}] notification: {:?} (len={})", day_offset, data, data.len()));
 
                     // Skip live activity notifications
                     if !data.is_empty() && data[0] == 0x73 { continue; }
@@ -979,10 +979,10 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                     if !got_ack && !data.is_empty() && data[0] == 0xBC {
                         got_ack = true;
                         let status = if data.len() > 2 { data[2] } else { 0 };
-                        log_ble(&format!("[Colmi Sync] Sleep ACK dag={}: status={}", day_offset, status));
+                        log_ble(&format!("[Colmi Sync] Sleep ACK day={}: status={}", day_offset, status));
 
                         if status != 1 {
-                            log_ble(&format!("[Colmi Sync] Geen slaap data voor dag_offset={}", day_offset));
+                            log_ble(&format!("[Colmi Sync] No sleep data for day_offset={}", day_offset));
                             break;
                         }
 
@@ -1000,7 +1000,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                             log_ble(&format!("[Colmi Sync] Sleep timing: start={}min end={}min", sleep_start_min, sleep_end_min));
                             if data.len() >= 8 {
                                 data_packets_expected = data[7] as u32;
-                                log_ble(&format!("[Colmi Sync] Verwacht {} slaap data pakketten", data_packets_expected));
+                                log_ble(&format!("[Colmi Sync] Expecting {} sleep data packets", data_packets_expected));
                             }
                         }
                         continue;
@@ -1031,28 +1031,28 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
                             // Try both possible phase type encodings
                             match phase_type {
                                 // Encoding A: 0x02=Light, 0x03=Deep, 0x04=REM, 0x05=Awake
-                                0x02 => { phase_light_min += duration as i32; log_ble(&format!("[Colmi Sleep] Lichte slaap: {}min", duration)); }
-                                0x03 => { phase_deep_min += duration as i32; log_ble(&format!("[Colmi Sleep] Diepe slaap: {}min", duration)); }
-                                0x04 => { phase_rem_min += duration as i32; log_ble(&format!("[Colmi Sleep] REM slaap: {}min", duration)); }
-                                0x05 => { phase_awake_min += duration as i32; log_ble(&format!("[Colmi Sleep] Wakker: {}min", duration)); }
+                                0x02 => { phase_light_min += duration as i32; log_ble(&format!("[Colmi Sleep] Light sleep: {}min", duration)); }
+                                0x03 => { phase_deep_min += duration as i32; log_ble(&format!("[Colmi Sleep] Deep sleep: {}min", duration)); }
+                                0x04 => { phase_rem_min += duration as i32; log_ble(&format!("[Colmi Sleep] REM sleep: {}min", duration)); }
+                                0x05 => { phase_awake_min += duration as i32; log_ble(&format!("[Colmi Sleep] Awake: {}min", duration)); }
                                 // Encoding B: 0x00=Awake, 0x01=Light, 0x02=Deep, 0x03=REM (handled by 0x02/0x03 above)
-                                0x00 => { phase_awake_min += duration as i32; log_ble(&format!("[Colmi Sleep] Wakker(B): {}min", duration)); }
-                                0x01 => { phase_light_min += duration as i32; log_ble(&format!("[Colmi Sleep] Lichte slaap(B): {}min", duration)); }
+                                0x00 => { phase_awake_min += duration as i32; log_ble(&format!("[Colmi Sleep] Awake(B): {}min", duration)); }
+                                0x01 => { phase_light_min += duration as i32; log_ble(&format!("[Colmi Sleep] Light sleep(B): {}min", duration)); }
                                 _ => {
-                                    log_ble(&format!("[Colmi Sleep] Onbekend fase type: 0x{:02X} duur={}min", phase_type, duration));
+                                    log_ble(&format!("[Colmi Sleep] Unknown phase type: 0x{:02X} duration={}min", phase_type, duration));
                                 }
                             }
                             i += 2;
                         }
 
                         if data_packets_expected > 0 && data_packets_received >= data_packets_expected {
-                            log_ble(&format!("[Colmi Sync] Alle {} slaap pakketten ontvangen voor dag {}", data_packets_expected, day_offset));
+                            log_ble(&format!("[Colmi Sync] All {} sleep packets received for day {}", data_packets_expected, day_offset));
                             break;
                         }
                     }
                 }
                 _ => {
-                    log_ble(&format!("[Colmi Sync] Sleep timeout wachten op packet dag_offset={}", day_offset));
+                    log_ble(&format!("[Colmi Sync] Sleep timeout waiting for packet day_offset={}", day_offset));
                     break;
                 }
             }
@@ -1085,7 +1085,7 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
     let _ = peripheral.disconnect().await;
 
     if true {
-        log_ble("[Colmi Sync] Achtergrond-scanner hervatten...");
+        log_ble("[Colmi Sync] Resuming background scanner...");
         let _ = global_adapter.start_scan(ScanFilter::default()).await;
     }
 
@@ -1113,9 +1113,9 @@ async fn sync_colmi_ring_inner(app: tauri::AppHandle, simulate: bool, target_mac
         })
     }).collect();
 
-    emit_status(&app, "Synchronisatie afgerond!", 1.00);
+    emit_status(&app, "Synchronization complete!", 1.00);
     log_ble(&format!(
-        "[Colmi Sync] Klaar: {} dagen stappen, {} nachten slaap.",
+        "[Colmi Sync] Done: {} days of steps, {} nights of sleep.",
         steps_list.len(), sleep_list.len()
     ));
 
@@ -1170,7 +1170,7 @@ fn save_sleep_record(
     };
 
     log_ble(&format!(
-        "[Colmi Sleep] Slaap opgeslagen voor {}: totaal={}min diep={}min licht={}min rem={}min wakker={}min kwaliteit={}",
+        "[Colmi Sleep] Sleep saved for {}: total={}min deep={}min light={}min rem={}min awake={}min quality={}",
         date_str, effective_total, deep_min, light_min, rem_min, awake_min, quality
     ));
 

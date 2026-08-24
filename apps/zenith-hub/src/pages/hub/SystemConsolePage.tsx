@@ -44,7 +44,7 @@ export const SystemConsolePage: React.FC = () => {
             const text = event.payload || '';
             let category: 'Scale' | 'Colmi' | 'BLE' = 'BLE';
             if (text.includes('Colmi') || text.includes('Ring')) category = 'Colmi';
-            else if (text.includes('Scale') || text.includes('weight') || text.includes('Weegschaal')) category = 'Scale';
+            else if (text.includes('Scale') || text.includes('weight')) category = 'Scale';
 
             loggerService.addLog('ble', category, text);
           });
@@ -269,7 +269,7 @@ export const SystemConsolePage: React.FC = () => {
         {/* Category Filters */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <Filter size={12} /> Categorie:
+            <Filter size={12} /> Category:
           </span>
           {['ALL', 'Scale', 'Colmi', 'Supabase', 'ML', 'System'].map((cat) => (
             <button

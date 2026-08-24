@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { RideSummaryWithBests } from '../../types/workout';
 import { Award } from 'lucide-react';
+import { ZenithEmptyState } from '@zenith/shared';
 
 interface EFtpProgressionProps {
   rides: RideSummaryWithBests[];
@@ -12,7 +14,7 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
   const [viewMode, setViewMode] = useState<'watts' | 'wkg'>('watts');
 
   const chartData = useMemo(() => {
-    // Haal alle rides with eFTP op, sorteer chronologisch
+    // Get all rides with eFTP, sort chronologically
     return [...rides]
       .filter(r => r.eFTP && r.eFTP > 0)
       .sort((a, b) => a.date - b.date)
@@ -21,7 +23,7 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
         const wkg = parseFloat((val / weight).toFixed(2));
         return {
           rawDate: r.date,
-          date: new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' }),
+          date: new Date(r.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
           watts: val,
           wkg: wkg,
           name: r.name
@@ -35,12 +37,14 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
         <div className="wd-section-card__head">
           <span className="wd-section-card__title">
             <Award size={13} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5, color: '#cbd5e1' }} />
-            eFTP & Powersprogressie
+            eFTP & Power Progression
           </span>
         </div>
-        <p style={{ color: '#64748b', fontSize: 11, textAlign: 'center', margin: '20px 0' }}>
-          Ride more rides to view your eFTP progression over time.
-        </p>
+        <ZenithEmptyState
+          icon={<Award size={20} strokeWidth={1.8} />}
+          title="Not enough rides yet"
+          message="Log a few more rides to see your eFTP progression over time."
+        />
       </div>
     );
   }
@@ -55,10 +59,10 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
       <div className="wd-section-card__head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="wd-section-card__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Award size={13} style={{ color: '#cbd5e1' }} />
-          eFTP Progressie
+          eFTP Progression
         </span>
-        
-        {/* Toggle knoppen voor absolute Watts vs W/kg */}
+
+        {/* Toggle buttons for absolute Watts vs W/kg */}
         <div style={{ display: 'flex', gap: 4 }}>
           <button 
             onClick={() => setViewMode('watts')}
@@ -95,13 +99,13 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
         </div>
       </div>
 
-      {/* Progressie samenvatting badge */}
+      {/* Progression summary badge */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 12, alignItems: 'center' }}>
         <div>
           <span style={{ fontSize: 24, fontWeight: 700, color: '#f8fafc' }}>
             {viewMode === 'watts' ? `${currentEftp.watts} W` : `${currentEftp.wkg} W/kg`}
           </span>
-          <span style={{ fontSize: 10, color: '#64748b', marginLeft: 6 }}>Huidige eFTP</span>
+          <span style={{ fontSize: 10, color: '#64748b', marginLeft: 6 }}>Current eFTP</span>
         </div>
         <div style={{ 
           fontSize: 10, 
@@ -113,7 +117,7 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
           borderRadius: 6
         }}>
           {(viewMode === 'watts' ? diffWatts : diffWkg) >= 0 ? '▲ +' : '▼ '}
-          {viewMode === 'watts' ? `${diffWatts} W` : `${diffWkg} W/kg`} sinds eerste measurement
+          {viewMode === 'watts' ? `${diffWatts} W` : `${diffWkg} W/kg`} since first measurement
         </div>
       </div>
 
@@ -126,16 +130,17 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
                 <stop offset="95%" stopColor="#cbd5e1" stopOpacity={0.01}/>
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-            <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 8 }} />
-            <YAxis 
-              tick={{ fill: '#64748b', fontSize: 8 }} 
+            <CartesianGrid {...ZENITH_CHART_GRID} />
+            <XAxis dataKey="date" tick={ZENITH_CHART_AXIS_TICK} />
+            <YAxis
+              tick={ZENITH_CHART_AXIS_TICK}
               domain={viewMode === 'watts' ? ['dataMin - 15', 'dataMax + 15'] : ['dataMin - 0.2', 'dataMax + 0.2']}
             />
-            <Tooltip 
-              contentStyle={{ background: '#0d0d1a', border: 'none', borderRadius: 8, fontSize: 10 }}
-              labelFormatter={(label) => `Datum: ${label}`}
-              formatter={(v: any) => [viewMode === 'watts' ? `${v} W` : `${v} W/kg`, 'Geschat FTP']}
+            <Tooltip
+              contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+              labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
+              labelFormatter={(label) => `Date: ${label}`}
+              formatter={(v: any) => [viewMode === 'watts' ? `${v} W` : `${v} W/kg`, 'Estimated FTP']}
             />
             <Area 
               type="monotone" 

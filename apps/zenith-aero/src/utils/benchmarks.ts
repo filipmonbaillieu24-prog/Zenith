@@ -8,7 +8,7 @@
  * Categories: Poor / Below Average / Average / Above Average / Excellent / Superior
  */
 
-export type FitnessCategory = 'Slecht' | 'Ondergemiddeld' | 'Average' | 'Bovengemiddeld' | 'Excellent' | 'Superieur';
+export type FitnessCategory = 'Poor' | 'Below Average' | 'Average' | 'Above Average' | 'Excellent' | 'Superior';
 
 export interface VO2maxBenchmark {
   category: FitnessCategory;
@@ -39,12 +39,12 @@ const FEMALE_NORMS: Record<string, number[][]> = {
 };
 
 const CATEGORIES: { label: FitnessCategory; color: string; emoji: string }[] = [
-  { label: 'Slecht',          color: '#ff7675', emoji: '😞' },
-  { label: 'Ondergemiddeld',  color: '#e17055', emoji: '😐' },
+  { label: 'Poor',            color: '#ff7675', emoji: '😞' },
+  { label: 'Below Average',   color: '#e17055', emoji: '😐' },
   { label: 'Average',       color: '#fdcb6e', emoji: '🙂' },
-  { label: 'Bovengemiddeld',  color: '#00b894', emoji: '😊' },
+  { label: 'Above Average',   color: '#00b894', emoji: '😊' },
   { label: 'Excellent',       color: '#55efc4', emoji: '🌟' },
-  { label: 'Superieur',       color: '#a29bfe', emoji: '🏆' },
+  { label: 'Superior',        color: '#a29bfe', emoji: '🏆' },
 ];
 
 function ageGroup(age: number): string {
@@ -105,7 +105,7 @@ export function getVO2maxRanges(
 
 /**
  * Cycling W/kg performance category (based on FTP W/kg).
- * Source: Brideish Cycling / Coggan categories.
+ * Source: British Cycling / Coggan categories.
  */
 export interface CyclingCategory {
   label: string;
@@ -116,7 +116,7 @@ export interface CyclingCategory {
 }
 
 export const CYCLING_CATEGORIES: CyclingCategory[] = [
-  { label: 'Recreant',      color: '#b2bec3', emoji: '🚴', minWkg: 0,    maxWkg: 2.49 },
+  { label: 'Recreational',  color: '#b2bec3', emoji: '🚴', minWkg: 0,    maxWkg: 2.49 },
   { label: 'Cat 4 / Hobby', color: '#e17055', emoji: '🚵', minWkg: 2.5,  maxWkg: 3.19 },
   { label: 'Cat 3',         color: '#fdcb6e', emoji: '🥉', minWkg: 3.2,  maxWkg: 3.99 },
   { label: 'Cat 2',         color: '#00b894', emoji: '🥈', minWkg: 4.0,  maxWkg: 4.69 },

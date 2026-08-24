@@ -34,7 +34,7 @@ export async function parseFIT(buffer: ArrayBuffer): Promise<RidePoint[]> {
       }
 
       try {
-        // Robuuste extractie van records uit verschillende FIT structuren
+        // Robust extraction of records from various FIT structures
         let records: any[] = [];
         if (data?.records && Array.isArray(data.records) && data.records.length > 0) {
           records = data.records;
@@ -47,14 +47,14 @@ export async function parseFIT(buffer: ArrayBuffer): Promise<RidePoint[]> {
         }
 
         if (!records || !records.length) {
-          reject(new Error('No data-records gevonden in FIT bestand.'));
+          reject(new Error('No data records found in FIT file.'));
           return;
         }
 
         const points: RidePoint[] = records
           .filter(r => r.timestamp)
           .map(r => {
-            // Check alle mogelijke namen voor breedtegraad/lengtegraad
+            // Check all possible field names for latitude/longitude
             const rawLat = r.position_lat ?? r.lat ?? r.latitude ?? r.position_latitude;
             const rawLng = r.position_long ?? r.lng ?? r.longitude ?? r.position_longitude;
 
@@ -62,11 +62,11 @@ export async function parseFIT(buffer: ArrayBuffer): Promise<RidePoint[]> {
             let lng: number | undefined;
 
             if (rawLat != null) {
-              // Als de waarde al binnen de normale grenzen van graden ligt (-90 tot 90), niet omrekenen
+              // If the value is already within normal degree bounds (-90 to 90), don't convert
               lat = Math.abs(rawLat) <= 90 ? rawLat : semiCirclesToDeg(rawLat);
             }
             if (rawLng != null) {
-              // Als de waarde al binnen de normale grenzen van graden ligt (-180 tot 180), niet omrekenen
+              // If the value is already within normal degree bounds (-180 to 180), don't convert
               lng = Math.abs(rawLng) <= 180 ? rawLng : semiCirclesToDeg(rawLng);
             }
 

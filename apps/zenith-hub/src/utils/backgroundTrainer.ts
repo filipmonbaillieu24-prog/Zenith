@@ -121,6 +121,40 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       .eq('user_id', userId)
       .order('started_at', { ascending: false });
 
+    // Real daily step counts (Vigor) and logged food calories (Fuel), used below to
+    // replace the previously-hardcoded dailySteps=8000 / calorieBalance=0 constants
+    // in the training loops with actual per-day values where they exist.
+    const { data: stepLogs } = await supabase
+      .from('vigor_steps')
+      .select('logged_at, step_count')
+      .eq('user_id', userId)
+      .order('logged_at', { ascending: false });
+
+    const { data: foodLogs } = await supabase
+      .from('fuel_logs')
+      .select('logged_at, calories')
+      .eq('user_id', userId)
+      .order('logged_at', { ascending: false });
+
+    const getStepsForDate = (dStr: string): number => {
+      const rec = stepLogs?.find((s: any) => new Date(s.logged_at).toISOString().slice(0, 10) === dStr);
+      // No steps logged for that day -> genuinely 0, not a fabricated "average day" guess.
+      return rec ? Number(rec.step_count) || 0 : 0;
+    };
+
+    // Rough BMR heuristic (~1 kcal/kg body weight/day) — see the matching comment in
+    // ZenithHubPage.tsx. Hub doesn't have Fuel's full calibrated TDEE model available,
+    // so this only aims to give the training loop a real, non-fabricated directional
+    // signal instead of a permanent hardcoded 0.
+    const CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY = 24;
+    const getCalorieBalanceForDate = (dStr: string, bodyWeightKg: number): number => {
+      const dayLogs = foodLogs?.filter((f: any) => new Date(f.logged_at).toISOString().slice(0, 10) === dStr) || [];
+      if (dayLogs.length === 0) return 0; // no logged nutrition for that day -> neutral, not fabricated
+      const consumed = dayLogs.reduce((sum: number, f: any) => sum + Number(f.calories || 0), 0);
+      const roughTdee = bodyWeightKg * CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY;
+      return Math.round(consumed - roughTdee);
+    };
+
     // Load weights
     await Promise.all([
       kratosOverloadModel.loadFromSupabase(supabase, userId),
@@ -287,7 +321,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         return sum + Number(witha?.calories ?? 0);
       }, 0);
 
-      const dailySteps = 8000; // standard baseline
+      const dailySteps = getStepsForDate(dStr); // real logged steps for this day, 0 if unlogged (no fabricated baseline)
 
       const x = [
         Math.max(0, Math.min(1, (cTSB + 50) / 100)),
@@ -330,8 +364,8 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       const sleepQuality = daySleep?.quality_score || daySleep?.quality || 75;
       const sleepDuration = (daySleep?.duration_minutes || 480) / 60;
 
-      const dailySteps = 8000;
-      const calorieBalance = 0; // neutral baseline
+      const dailySteps = getStepsForDate(dStr); // real logged steps for this day, 0 if unlogged (no fabricated baseline)
+      const calorieBalance = getCalorieBalanceForDate(dStr, weight); // real logged intake vs rough TDEE, 0 if no food logged that day
 
       const x = [
         Math.max(0, Math.min(1, (cTSB + 50) / 100)),

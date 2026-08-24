@@ -1,22 +1,25 @@
 import { useState, useEffect, useMemo } from 'react';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
-import { 
-  Dumbbell, 
-  LayoutDashboard, 
-  FileText, 
-  Settings, 
-  Activity, 
-  Heart, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  Check, 
-  X, 
-  TrendingUp, 
+import {
+  Dumbbell,
+  LayoutDashboard,
+  FileText,
+  Settings,
+  Activity,
+  Heart,
+  Plus,
+  Trash2,
+  Edit3,
+  Check,
+  X,
+  TrendingUp,
   Info,
   Calendar,
-  Sparkles
+  Sparkles,
+  ListChecks,
+  NotebookText,
+  BarChart3
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -260,36 +263,91 @@ export default function App() {
     return Math.round(totalTSS * 10) / 10;
   };
 
-  const retrainAutoregModel = async (uid: string, historyWorkouts: any[]) => {
+  const retrainAutoregModel = async (
+    uid: string,
+    historyWorkouts: any[],
+    exList: Exercise[],
+    sleepHistory: any[]
+  ) => {
     try {
-      const trainingPairs: { x: number[]; y: number }[] = [];
       const sorted = [...historyWorkouts].sort((a, b) => new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime());
+      if (sorted.length === 0) return;
 
-      for (const w of sorted) {
+      // Persisted "trained up to" cursor: only replay sets logged since the last
+      // successful retrain instead of the FULL history on every login. Without this,
+      // opening the app N times replays all historical sets through 50 SGD epochs
+      // each time, over-amplifying whatever the data already showed.
+      const { data: cursorRow } = await supabase
+        .from('ml_weights')
+        .select('weights')
+        .eq('user_id', uid)
+        .eq('model_name', kratosAutoregModel.modelName)
+        .maybeSingle();
+      const lastTrainedAtMs = cursorRow?.weights?._retrainedUpTo
+        ? new Date(cursorRow.weights._retrainedUpTo).getTime()
+        : 0;
+
+      const newWorkouts = sorted.filter(w => new Date(w.completed_at).getTime() > lastTrainedAtMs);
+      if (newWorkouts.length === 0) return;
+
+      // Per-day sleep quality lookup so the sleep-quality feature reflects the
+      // athlete's actual recovery state on the day of each historical set,
+      // matching what live inference feeds the model.
+      const sleepQualityByDay = new Map<string, number>();
+      for (const s of sleepHistory) {
+        if (!s.logged_at) continue;
+        const key = new Date(s.logged_at).toISOString().slice(0, 10);
+        sleepQualityByDay.set(key, Number(s.quality_score ?? 80));
+      }
+
+      const exerciseDefaultRir = new Map(exList.map(e => [e.id, e.default_rir ?? 2]));
+      const trainingPairs: { x: number[]; y: number }[] = [];
+
+      for (const w of newWorkouts) {
         if (!w.sets || !Array.isArray(w.sets)) continue;
+        const dayKey = w.completed_at ? new Date(w.completed_at).toISOString().slice(0, 10) : '';
+        const sleepQualityForDay = sleepQualityByDay.get(dayKey) ?? 80;
+
         for (const exLog of w.sets) {
           if (!exLog.sets || exLog.sets.length < 2) continue;
+          const targetRir = exerciseDefaultRir.get(exLog.exercise_id) ?? 2;
+
           for (let i = 1; i < exLog.sets.length; i++) {
             const prev = exLog.sets[i - 1];
             const curr = exLog.sets[i];
             if (prev.type === 'warmup' || curr.type === 'warmup') continue;
             if (!prev.weight || !prev.reps || !curr.weight || !curr.reps) continue;
 
-            const currE1RM = curr.weight * (1.0 + (curr.reps + (curr.rir ?? 2)) / 30.0);
-            const x = [
-              Math.min(1.0, (i - 1) / 5.0),
-              Math.min(1.5, prev.weight / 200.0),
-              Math.min(1.5, prev.reps / 20.0),
-              Math.min(1.0, (prev.rir ?? 2) / 10.0),
-              Math.min(1.5, (prev.rest_seconds ?? 90) / 300.0)
-            ];
-            const target = Math.max(0.0, Math.min(1.0, currE1RM / 200.0));
+            // Build the EXACT same 6-dimensional feature vector (same dimensions,
+            // scaling, and sleep-quality inclusion) that live inference and online
+            // training use, via the single shared builder — so the persisted
+            // weights are never trained on one feature distribution and served on
+            // an incompatible one.
+            const rirDelta = (prev.rir ?? targetRir) - targetRir;
+            const restRatio = computeAutoregRestRatio(prev.rest_seconds ?? 90, 120);
+            const x = buildAutoregFeatureVector(i - 1, prev.weight, prev.reps, rirDelta, restRatio, sleepQualityForDay);
+            const target = computeAutoregE1RMTarget(curr.weight, curr.reps, curr.rir ?? targetRir);
             trainingPairs.push({ x, y: target });
           }
         }
       }
 
-      if (trainingPairs.length === 0) return;
+      const newCursor = newWorkouts[newWorkouts.length - 1].completed_at;
+
+      if (trainingPairs.length === 0) {
+        // Nothing trainable among the new workouts (e.g. all single-set sessions),
+        // but still advance the cursor so we don't keep re-scanning the same
+        // already-seen workouts on every future login.
+        if (cursorRow?.weights) {
+          await supabase.from('ml_weights').upsert({
+            user_id: uid,
+            model_name: kratosAutoregModel.modelName,
+            weights: { ...cursorRow.weights, _retrainedUpTo: newCursor },
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,model_name' });
+        }
+        return;
+      }
 
       await kratosAutoregModel.loadFromSupabase(supabase, uid);
       const lr = 0.05;
@@ -305,8 +363,22 @@ export default function App() {
           kratosAutoregModel.trainLocal(pair.x, [pair.y], lr);
         }
       }
-      await kratosAutoregModel.saveToSupabase(supabase, uid);
-      console.log("Kratos Autoreg model retrained with", trainingPairs.length, "samples.");
+
+      // Persist weights AND the advanced "trained up to" cursor together.
+      await supabase.from('ml_weights').upsert({
+        user_id: uid,
+        model_name: kratosAutoregModel.modelName,
+        weights: {
+          W1: kratosAutoregModel.W1,
+          B1: kratosAutoregModel.B1,
+          W2: kratosAutoregModel.W2,
+          B2: kratosAutoregModel.B2,
+          _retrainedUpTo: newCursor
+        },
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id,model_name' });
+
+      console.log("Kratos Autoreg model retrained with", trainingPairs.length, "new samples since", new Date(lastTrainedAtMs).toISOString());
     } catch (err) {
       console.error("Retrain error:", err);
     }
@@ -414,7 +486,7 @@ export default function App() {
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
     const { data: sleepDataAll } = await supabase
       .from('vigor_sleep')
-      .select('logged_at, duration_minutes, quality_score')
+      .select('logged_at, duration_minutes, quality_score, hrv_ms')
       .eq('user_id', uid)
       .gte('logged_at', ninetyDaysAgo)
       .order('logged_at', { ascending: true });
@@ -430,19 +502,25 @@ export default function App() {
 
     if (sleepDataAll && sleepDataAll.length > 0) {
       setSleepLogs(sleepDataAll);
-      const hrvHistory = sleepDataAll.map((s: any) => {
-        const baseVal = 55;
-        const offsetVal = ((s.quality_score || 80) - 75) * 0.8;
-        return Math.max(30, Math.min(110, baseVal + offsetVal));
-      });
-      const todayHrvVal = sleepData && sleepData.length > 0
-        ? Math.max(30, Math.min(110, 55 + (((sleepData[0].quality_score || 80) - 75) * 0.8)))
-        : 65;
-      
-      const ansState = HrvAnsTracker.calculateAnsState(hrvHistory.slice(0, -1), todayHrvVal);
-      setAnsIntensityMultiplier(ansState.intensityMultiplier);
-      setAnsToneInsight(ansState.insight);
-      console.log("[ZenithKratos] SOTA ML HRV ANS Tone Multiplier loaded:", ansState.intensityMultiplier);
+
+      // ANS/HRV readiness state must come from a REAL wearable rMSSD reading
+      // (vigor_sleep.hrv_ms, synced via Zenith Pulse / Health Connect or a paired
+      // smart ring) — never fabricated from the sleep quality score. If no real
+      // reading exists yet for this user, we do not silently invent one; the
+      // dashboard banner below falls back to an honest "connect a wearable" prompt
+      // and training targets stay unscaled (ansIntensityMultiplier = 1.0).
+      const realHrvSleeps = sleepDataAll.filter((s: any) => typeof s.hrv_ms === 'number' && s.hrv_ms > 0);
+      if (realHrvSleeps.length > 0) {
+        const hrvHistory = realHrvSleeps.slice(0, -1).map((s: any) => s.hrv_ms as number);
+        const todayHrvVal = realHrvSleeps[realHrvSleeps.length - 1].hrv_ms as number;
+        const ansState = HrvAnsTracker.calculateAnsState(hrvHistory, todayHrvVal);
+        setAnsIntensityMultiplier(ansState.intensityMultiplier);
+        setAnsToneInsight(ansState.insight);
+        console.log("[ZenithKratos] HRV ANS Tone Multiplier loaded from real wearable data:", ansState.intensityMultiplier);
+      } else {
+        setAnsIntensityMultiplier(1.0);
+        setAnsToneInsight('');
+      }
     }
 
     if (rideData) {
@@ -450,7 +528,7 @@ export default function App() {
     }
 
     if (localWorkouts.length > 0) {
-      retrainAutoregModel(uid, localWorkouts);
+      retrainAutoregModel(uid, localWorkouts, exData || [], sleepDataAll || []);
     }
   };
 
@@ -685,7 +763,7 @@ export default function App() {
   const fatigueSummaryText = useMemo(() => {
     const parts: string[] = [];
     if (isSleepFatigued) parts.push(`Sleep: ${todaySleepQuality}%`);
-    if (isStepsFatigued) parts.push(`Stappen: ${todaySteps?.toLocaleString()}`);
+    if (isStepsFatigued) parts.push(`Steps: ${todaySteps?.toLocaleString('en-US')}`);
     if (isCardioFatigued) parts.push(`TSB: ${currentPMC.tsb}`);
     if (isZScoreFatigued && !isCardioFatigued) parts.push(`Z-Score: +${aiStressConfig.zScore}`);
     return parts.join(', ');
@@ -699,6 +777,29 @@ export default function App() {
     if (isZScoreFatigued) extra += Math.round((aiStressConfig.factor - 1) * 100);
     return Math.max(15, extra);
   }, [isSleepFatigued, isStepsFatigued, isCardioFatigued, isZScoreFatigued, todaySleepQuality, currentPMC, aiStressConfig]);
+
+  // Form (TSB) status for the hero stat card — reuses the same -10 threshold
+  // that already drives isCardioFatigued/restTimerExtensionPct above, just
+  // reformatted into a pill label + one-line context sentence.
+  const tsbStatus = useMemo(() => {
+    if (currentPMC.tsb >= 0) {
+      return { label: 'Fresh', emoji: '✅', color: '#cbd5e1' };
+    }
+    if (currentPMC.tsb >= -10) {
+      return { label: 'Building fatigue', emoji: '⚠️', color: '#eccc68' };
+    }
+    return { label: 'High fatigue', emoji: '🔴', color: '#ff7675' };
+  }, [currentPMC.tsb]);
+
+  const tsbContextText = useMemo(() => {
+    if (currentPMC.tsb >= 0) {
+      return 'Fitness and freshness are balanced — a good window to push training intensity.';
+    }
+    if (currentPMC.tsb >= -10) {
+      return "You're accumulating some fatigue from training — normal during a build phase.";
+    }
+    return 'Fatigue is significantly outpacing recovery — rest periods are being extended automatically.';
+  }, [currentPMC.tsb]);
 
   // Helper for exercise name resolution
   const exerciseMap = useMemo(() => {
@@ -1208,7 +1309,7 @@ export default function App() {
         }
         if (maxEst > 0) {
           history.push({
-            dateStr: new Date(w.completed_at).toLocaleDateString('nl-NL', { month: 'short', day: 'numeric' }),
+            dateStr: new Date(w.completed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             estimated1RM: Math.round(maxEst * 2) / 2 // round to nearest 0.5
           });
         }
@@ -1223,18 +1324,29 @@ export default function App() {
     return getSparklineData(selectedExercise1RM);
   }, [selectedExercise1RM, workouts]);
 
+  // Whether this user has ANY real wearable HRV reading (vigor_sleep.hrv_ms) yet.
+  // Drives both the dashboard ANS banner and the chart below — we only ever plot
+  // measured HRV, or an explicitly-labeled sleep-quality ESTIMATE, never a value
+  // presented as real HRV without a real reading behind it.
+  const hasRealHrvData = useMemo(
+    () => sleepLogs.some((s: any) => typeof s.hrv_ms === 'number' && s.hrv_ms > 0),
+    [sleepLogs]
+  );
+
   // CNS Readiness vs. Lift Volume Correlation Chart Data (last 14 days)
   const cnsVolumeCorrelationData = useMemo(() => {
     const dataList = [];
-    const dateMap = new Map<string, { dateStr: string; volume: number; hrv: number }>();
+    const dateMap = new Map<string, { dateStr: string; volume: number; hrv: number | null }>();
 
     // Generate dates for the last 14 days
     for (let i = 13; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const yyyymmdd = d.toISOString().slice(0, 10);
-      const dateStr = d.toLocaleDateString('nl-NL', { month: 'short', day: 'numeric' });
-      dateMap.set(yyyymmdd, { dateStr, volume: 0, hrv: 65 }); // default baseline HRV
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      // With real HRV data, days without a reading are left as gaps (null) rather
+      // than filled with a fabricated baseline.
+      dateMap.set(yyyymmdd, { dateStr, volume: 0, hrv: hasRealHrvData ? null : 65 });
     }
 
     // 1. Accumulate workout volume per day
@@ -1252,16 +1364,24 @@ export default function App() {
       }
     });
 
-    // 2. Map sleep quality to daily HRV rMSSD proxy
-    sleepLogs.forEach(s => {
+    // 2. Populate daily HRV: real hrv_ms when this user has real readings,
+    // otherwise an explicitly-labeled sleep-quality-derived ESTIMATE (never
+    // presented as measured HRV — see the "CNS Readiness" line name below).
+    sleepLogs.forEach((s: any) => {
       if (s.logged_at) {
         try {
           const sDate = new Date(s.logged_at).toISOString().slice(0, 10);
           if (dateMap.has(sDate)) {
             const item = dateMap.get(sDate)!;
-            const baseVal = 55;
-            const offsetVal = ((s.quality_score || 80) - 75) * 0.8;
-            item.hrv = Math.round(Math.max(30, Math.min(110, baseVal + offsetVal)));
+            if (hasRealHrvData) {
+              if (typeof s.hrv_ms === 'number' && s.hrv_ms > 0) {
+                item.hrv = s.hrv_ms;
+              }
+            } else {
+              const baseVal = 55;
+              const offsetVal = ((s.quality_score || 80) - 75) * 0.8;
+              item.hrv = Math.round(Math.max(30, Math.min(110, baseVal + offsetVal)));
+            }
           }
         } catch (e) {
           console.error("Error parsing sleep logged_at date:", e);
@@ -1275,14 +1395,14 @@ export default function App() {
     }
 
     return dataList;
-  }, [workouts, sleepLogs]);
+  }, [workouts, sleepLogs, hasRealHrvData]);
 
   // Loading screen
   if (loadingSession) {
     return (
       <div className="kratos-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <div style={{ color: '#fff', fontSize: 16, fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>
-          Kratos initialiseren...
+          Initializing Kratos...
         </div>
       </div>
     );
@@ -1293,26 +1413,43 @@ export default function App() {
     return <ExtensionSessionGate appName="Kratos" icon={<Dumbbell size={28} />} />;
   }
 
+  // Minimum paired data points before we show a confident narrative verdict
+  // ("Strong Hypertrophic Response" etc). Below this, the raw r is still shown
+  // but framed as preliminary — 3-6 points is nowhere near enough to distinguish
+  // a real relationship from noise.
+  const MIN_CONFIDENT_CORRELATION_N = 7;
+
   const renderHypertrophyTab = () => {
-    const dataPoints = measurements
-      .map(m => {
-        const mDate = new Date(m.logged_at);
-        const cumVolume = workouts
-          .filter(w => new Date(w.completed_at) <= mDate)
+    // Sort first, then measure volume accumulated PER INTERVAL between
+    // consecutive measurements (i.e. training volume logged since the previous
+    // measurement date), not cumulative all-time volume. Cumulative volume is
+    // monotonically non-decreasing, so correlating it against any trending body
+    // measurement produces a spuriously strong |r| regardless of real causation.
+    const sortedMeasurements = [...measurements]
+      .map(m => ({ ...m, rawDate: new Date(m.logged_at) }))
+      .sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+
+    const dataPoints = sortedMeasurements
+      .map((m, idx) => {
+        const prevDate = idx > 0 ? sortedMeasurements[idx - 1].rawDate : null;
+        const intervalVolume = workouts
+          .filter(w => {
+            const wDate = new Date(w.completed_at);
+            return wDate <= m.rawDate && (prevDate === null || wDate > prevDate);
+          })
           .reduce((sum, w) => sum + (w.volume || 0), 0);
 
         return {
-          dateStr: new Date(m.logged_at).toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' }),
-          rawDate: mDate,
+          dateStr: m.rawDate.toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+          rawDate: m.rawDate,
           measurement: m[selectedCircumference] !== null ? Number(m[selectedCircumference]) : null,
-          volume: cumVolume
+          volume: intervalVolume
         };
       })
-      .filter(d => d.measurement !== null)
-      .sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+      .filter(d => d.measurement !== null);
 
     let rValue = 0;
-    let rStatus = 'Onvoldoende data';
+    let rStatus = 'Insufficient Data';
     let rColor = '#94a3b8';
     let rExplanation = 'Log at least 3 body measurements in Vigor to compute correlations.';
 
@@ -1341,35 +1478,41 @@ export default function App() {
       const den = Math.sqrt(denX * denY);
       rValue = den === 0 ? 0 : num / den;
 
-      if (selectedCircumference === 'waist_cm' || selectedCircumference === 'body_fat_pct') {
+      if (n < MIN_CONFIDENT_CORRELATION_N) {
+        // Not enough paired points yet for a confident narrative verdict — show
+        // the raw r with an explicit "preliminary" caveat instead.
+        rStatus = `Preliminary (n=${n})`;
+        rColor = '#94a3b8';
+        rExplanation = `r = ${rValue.toFixed(3)} on only ${n} paired measurements. Limited data — treat as preliminary until at least ${MIN_CONFIDENT_CORRELATION_N} paired measurements are logged.`;
+      } else if (selectedCircumference === 'waist_cm' || selectedCircumference === 'body_fat_pct') {
         if (rValue <= -0.5) {
-          rStatus = 'Sterke Recompositie (Perfect!)';
+          rStatus = 'Strong Recomposition (Perfect!)';
           rColor = 'var(--accent-neon)';
-          rExplanation = 'Geweldig! Je vetpercentage/tailleomtrek daalt gestaag naarmate je totale volume toeneemt.';
+          rExplanation = 'Great! Your body fat percentage/waist circumference is steadily decreasing as your training volume per interval increases.';
         } else if (rValue < 0) {
-          rStatus = 'Gunstige Trend';
+          rStatus = 'Favorable Trend';
           rColor = '#3b82f6';
           rExplanation = 'Slight decrease in body fat/waist circumference correlated with your training volume.';
         } else {
-          rStatus = 'Neutraal / Stagnatie';
+          rStatus = 'Neutral / Stagnation';
           rColor = '#ff9f43';
           rExplanation = 'Your waist circumference/body fat is increasing or remaining plateaued relative to volume. Consider adjusting nutrition.';
         }
       } else {
         if (rValue >= 0.6) {
-          rStatus = 'Sterk Hypertrofisch Antwoord';
+          rStatus = 'Strong Hypertrophic Response';
           rColor = 'var(--accent-neon)';
-          rExplanation = 'Excellent! Your muscle circumference is increasing directly in proportion to your cumulative volume.';
+          rExplanation = 'Excellent! Your muscle circumference is increasing directly in proportion to your training volume per interval.';
         } else if (rValue >= 0.3) {
-          rStatus = 'Matige Correlatie';
+          rStatus = 'Moderate Correlation';
           rColor = '#3b82f6';
           rExplanation = 'A positive muscle hypertrophy trend is visible linked to your training volume.';
         } else if (rValue > -0.3) {
-          rStatus = 'Zwakke Correlatie / Plateau';
+          rStatus = 'Weak Correlation / Plateau';
           rColor = '#94a3b8';
           rExplanation = 'Little change in muscle circumference relative to volume increase. Intensity (RIR) may be too low or recovery (sleep/protein) insufficient.';
         } else {
-          rStatus = 'Krimp / Atrofie';
+          rStatus = 'Shrinkage / Atrophy';
           rColor = '#ef4444';
           rExplanation = 'Negative correlation: muscle circumference decreases despite volume increase. Pay close attention to overtraining or extreme calorie deficits.';
         }
@@ -1377,26 +1520,26 @@ export default function App() {
     }
 
     const metricNames: { [key: string]: string } = {
-      body_fat_pct: 'Vetpercentage (%)',
+      body_fat_pct: 'Fat Percentage (%)',
       muscle_mass_kg: 'Muscle Mass (kg)',
-      waist_cm: 'Tailleomtrek (cm)',
-      chest_cm: 'Chestomtrek (cm)',
-      shoulders_cm: 'Schouderomtrek (cm)',
-      hips_cm: 'Heupomtrek (cm)',
+      waist_cm: 'Waist Circumference (cm)',
+      chest_cm: 'Chest Circumference (cm)',
+      shoulders_cm: 'Shoulder Circumference (cm)',
+      hips_cm: 'Hip Circumference (cm)',
       biceps_l_cm: 'Left Biceps (cm)',
       biceps_r_cm: 'Right Biceps (cm)',
-      thigh_l_cm: 'Bovenbeen Links (cm)',
-      thigh_r_cm: 'Bovenbeen Rechts (cm)',
-      calves_l_cm: 'Kuit Links (cm)',
-      calves_r_cm: 'Kuit Rechts (cm)',
-      neck_cm: 'Nekomtrek (cm)'
+      thigh_l_cm: 'Thigh Left (cm)',
+      thigh_r_cm: 'Thigh Right (cm)',
+      calves_l_cm: 'Calf Left (cm)',
+      calves_r_cm: 'Calf Right (cm)',
+      neck_cm: 'Neck Circumference (cm)'
     };
 
     return (
       <div className="animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div className="kratos-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <h3 className="kratos-card-title" style={{ margin: 0 }}>Hypertrophy & Volume Correlatie</h3>
+            <h3 className="kratos-card-title" style={{ margin: 0 }}>Hypertrophy & Volume Correlation</h3>
             <select
               className="kratos-input"
               style={{ width: 'auto', padding: '6px 12px', fontSize: 12, marginTop: 0 }}
@@ -1410,51 +1553,55 @@ export default function App() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
-            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', padding: 16, borderRadius: 12 }}>
-              <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Current Measurement</span>
-              <strong style={{ fontSize: 20, color: '#fff', display: 'block', marginTop: 4 }}>
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', padding: '16px 18px', borderRadius: 12 }}>
+              <div className="zenith-label">Current Measurement</div>
+              <div className="zenith-stat-value" style={{ marginTop: 4 }}>
                 {dataPoints.length > 0 ? `${dataPoints[dataPoints.length - 1].measurement} cm/%` : 'No data'}
-              </strong>
+              </div>
             </div>
 
-            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', padding: 16, borderRadius: 12 }}>
-              <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Cumulatief Kratos Volume</span>
-              <strong style={{ fontSize: 20, color: 'var(--accent-neon)', display: 'block', marginTop: 4 }}>
-                {workouts.reduce((sum, w) => sum + (w.volume || 0), 0).toLocaleString('nl-NL')} kg
-              </strong>
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', padding: '16px 18px', borderRadius: 12 }}>
+              <div className="zenith-label">Cumulative Kratos Volume</div>
+              <div className="zenith-stat-value" style={{ marginTop: 4, color: 'var(--accent-neon)' }}>
+                {workouts.reduce((sum, w) => sum + (w.volume || 0), 0).toLocaleString('en-US')} kg
+              </div>
             </div>
 
-            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', padding: 16, borderRadius: 12 }}>
-              <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 800 }}>Pearson r Correlatie</span>
-              <strong style={{ fontSize: 20, color: rColor, display: 'block', marginTop: 4 }}>
-                {dataPoints.length >= 3 ? `${rValue.toFixed(3)}` : 'Onvoldoende data'}
-              </strong>
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', padding: '16px 18px', borderRadius: 12 }}>
+              <div className="zenith-label">Pearson r Correlation</div>
+              <div className="zenith-stat-value" style={{ marginTop: 4, color: rColor }}>
+                {dataPoints.length >= 3 ? `${rValue.toFixed(3)}` : 'Insufficient Data'}
+              </div>
             </div>
           </div>
 
           <div style={{ background: 'rgba(255,255,255,0.02)', borderLeft: `4px solid ${rColor}`, padding: 14, borderRadius: '0 8px 8px 0', marginBottom: 24 }}>
-            <h4 style={{ margin: '0 0 4px 0', fontSize: 12, fontWeight: 900, color: '#fff', textTransform: 'uppercase' }}>{rStatus}</h4>
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{rExplanation}</p>
+            <span className="zenith-eyebrow" style={{ color: rColor }}>{rStatus}</span>
+            <p className="zenith-label" style={{ margin: '6px 0 0', lineHeight: 1.5 }}>{rExplanation}</p>
           </div>
 
           <div style={{ height: 300, width: '100%' }}>
             {dataPoints.length < 2 ? (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>
-                Not enough data to plot the chart. Add measurements in Zenith Vigor.
+              <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <ZenithEmptyState
+                  icon={<BarChart3 size={20} />}
+                  title="Not enough data to plot"
+                  message="Add measurements in Zenith Vigor to see the correlation chart."
+                />
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dataPoints} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="dateStr" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} stroke="var(--border-color)" />
-                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} stroke="rgba(255,255,255,0.15)" domain={['auto', 'auto']} label={{ value: 'Measurement', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 10 }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} stroke="rgba(57, 255, 20, 0.15)" domain={['auto', 'auto']} label={{ value: 'Cumulatief Volume (kg)', angle: 90, position: 'insideRight', fill: 'var(--accent-neon)', fontSize: 10 }} />
+                  <CartesianGrid {...ZENITH_CHART_GRID} />
+                  <XAxis dataKey="dateStr" tick={ZENITH_CHART_AXIS_TICK} stroke="var(--border-color)" />
+                  <YAxis yAxisId="left" tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.15)" domain={['auto', 'auto']} label={{ value: 'Measurement', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 10 }} />
+                  <YAxis yAxisId="right" orientation="right" tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(57, 255, 20, 0.15)" domain={['auto', 'auto']} label={{ value: 'Volume Since Last Measurement (kg)', angle: 90, position: 'insideRight', fill: 'var(--accent-neon)', fontSize: 10 }} />
                   <Tooltip
-                    contentStyle={{ background: '#1c1c23', border: '1px solid var(--border-color)', borderRadius: 10 }}
-                    labelStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
+                    contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                    labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                   />
                   <Line yAxisId="left" type="monotone" dataKey="measurement" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} name={metricNames[selectedCircumference]} />
-                  <Line yAxisId="right" type="monotone" dataKey="volume" stroke="var(--accent-neon)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} name="Cumulatief Volume" />
+                  <Line yAxisId="right" type="monotone" dataKey="volume" stroke="var(--accent-neon)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} name="Volume Since Last Measurement" />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -1464,7 +1611,15 @@ export default function App() {
     );
   };
 
-  const userName = session?.user?.user_metadata?.name || session?.user?.user_metadata?.fitness_profile?.name || 'Atleet';
+  const userName = session?.user?.user_metadata?.name || session?.user?.user_metadata?.fitness_profile?.name || 'Athlete';
+
+  const kratosNavItems = [
+    { key: 'dashboard',   icon: <LayoutDashboard size={16} strokeWidth={1.6} />, label: 'Dashboard' },
+    { key: 'routines',    icon: <Settings        size={16} strokeWidth={1.6} />, label: 'Routines' },
+    { key: 'exercises',   icon: <Dumbbell        size={16} strokeWidth={1.6} />, label: 'Exercises' },
+    { key: 'logs',        icon: <FileText        size={16} strokeWidth={1.6} />, label: 'Workout Log' },
+    { key: 'hypertrophy', icon: <TrendingUp      size={16} strokeWidth={1.6} />, label: 'Hypertrophy' },
+  ];
 
   return (
     <div className="kratos-container">
@@ -1472,85 +1627,22 @@ export default function App() {
         <div className="kratos-glow-radial" />
         <div className="kratos-glow-purple" />
       </div>
-      {/* Header */}
-      <header className="kratos-header animate-slide-down" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        borderBottom: '1px solid rgba(255, 255, 255, 0.06)', 
-        padding: '16px 24px', 
-        background: 'transparent',
-        height: '70px',
-        boxSizing: 'border-box',
-        flexShrink: 0,
-        marginBottom: '24px'
-      }}>
-        <div className="kratos-brand">
-          <div>
-            <h1 className="zh-hub-title" style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '0.5px', lineHeight: '1.2' }}>
-              ZENITH <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '16px' }}>KRATOS</span>
-            </h1>
-            <p className="zh-hub-subtitle" style={{ fontSize: '9px', color: 'var(--text-muted)', margin: '4px 0 0', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-              Strength & Conditioning for {userName}
-            </p>
-          </div>
-        </div>
-      </header>
+      {/* Header — shared shell used by every Zenith app */}
+      <ZenithPageHeader
+        appName="KRATOS"
+        subtitle={`Strength & Conditioning for ${userName}`}
+        tabs={kratosNavItems as unknown as ZenithHeaderTab[]}
+        activeTab={activeTab}
+        onTabChange={(key) => setActiveTab(key as any)}
+      />
 
-      {/* Navigation tabs bar in Vigor-style */}
-      <nav className="kratos-nav" style={{ 
-        display: 'flex', 
-        gap: 8, 
-        background: 'rgba(255,255,255,0.02)', 
-        border: '1px solid rgba(255,255,255,0.05)', 
-        padding: '6px', 
-        borderRadius: '14px', 
-        margin: '0 28px 24px',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)'
-      }}>
-        <button 
-          className={`kratos-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dashboard')}
-          style={{ flex: 1, justifyContent: 'center' }}
-        >
-          <LayoutDashboard size={13} /> Dashboard
-        </button>
-        <button 
-          className={`kratos-nav-btn ${activeTab === 'routines' ? 'active' : ''}`}
-          onClick={() => setActiveTab('routines')}
-          style={{ flex: 1, justifyContent: 'center' }}
-        >
-          <Settings size={13} /> Routines
-        </button>
-        <button 
-          className={`kratos-nav-btn ${activeTab === 'exercises' ? 'active' : ''}`}
-          onClick={() => setActiveTab('exercises')}
-          style={{ flex: 1, justifyContent: 'center' }}
-        >
-          <Dumbbell size={13} /> Exercises
-        </button>
-        <button 
-          className={`kratos-nav-btn ${activeTab === 'logs' ? 'active' : ''}`}
-          onClick={() => setActiveTab('logs')}
-          style={{ flex: 1, justifyContent: 'center' }}
-        >
-          <FileText size={13} /> Workout Log
-        </button>
-        <button 
-          className={`kratos-nav-btn ${activeTab === 'hypertrophy' ? 'active' : ''}`}
-          onClick={() => setActiveTab('hypertrophy')}
-          style={{ flex: 1, justifyContent: 'center' }}
-        >
-          <TrendingUp size={13} /> Hypertrophy
-        </button>
-      </nav>      {/* Content */}
+      {/* Content */}
       <main className="kratos-content animate-fade-in">
         {/* ----------------- DASHBOARD TAB ----------------- */}
         {activeTab === 'dashboard' && (
           <div className="animate-slide-up">
-            {/* HRV ANS State Warning Banner */}
-            {ansToneInsight && (
+            {/* HRV ANS State Banner — real wearable HRV only, otherwise an honest fallback */}
+            {ansToneInsight ? (
               <div style={{
                 background: 'rgba(56, 189, 248, 0.06)',
                 border: '1px solid rgba(56, 189, 248, 0.20)',
@@ -1563,30 +1655,59 @@ export default function App() {
               }}>
                 <Sparkles size={16} style={{ color: '#38bdf8' }} />
                 <div style={{ fontSize: '11px', color: '#e2e8f0', lineHeight: '1.4' }}>
-                  <strong style={{ color: '#38bdf8' }}>HRV ANS State Sync:</strong> {ansToneInsight} 
+                  <strong style={{ color: '#38bdf8' }}>HRV ANS State Sync:</strong> {ansToneInsight}
                   <span style={{ marginLeft: '6px', color: ansIntensityMultiplier < 1.0 ? '#ff7675' : '#55efc4', fontWeight: 800 }}>
                     (Workout targets auto-scaled by {ansIntensityMultiplier}x)
                   </span>
                 </div>
               </div>
-            )}
+            ) : (!hasRealHrvData && sleepLogs.length > 0) ? (
+              <div style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                marginBottom: '16px'
+              }}>
+                <ZenithEmptyState
+                  icon={<Heart size={16} />}
+                  title="No HRV data yet"
+                  message="Connect a wearable via Zenith Pulse, or pair a smart ring, for real HRV-based ANS readiness scaling. Workout targets stay unscaled until then."
+                />
+              </div>
+            ) : null}
 
-            {/* PMC Widget */}
-            <section className="kratos-pmc-card">
-              <div className="kratos-pmc-metric">
-                <span className="kratos-pmc-label">Fitness (CTL)</span>
-                <span className="kratos-pmc-value">{currentPMC.ctl}</span>
+            {/* PMC Hero Stat: Fitness (CTL) / Fatigue (ATL) / Form (TSB) */}
+            <div className="zenith-grid-12" style={{ marginBottom: 24 }}>
+              <div className="zenith-span-8">
+                <ZenithHeroStat
+                  eyebrow="Form · TSB"
+                  value={currentPMC.tsb >= 0 ? `+${currentPMC.tsb}` : currentPMC.tsb}
+                  sub={tsbContextText}
+                  pill={
+                    <span
+                      className="zenith-pill"
+                      style={{ background: `${tsbStatus.color}1f`, color: tsbStatus.color }}
+                    >
+                      {tsbStatus.emoji} {tsbStatus.label}
+                    </span>
+                  }
+                />
               </div>
-              <div className="kratos-pmc-metric">
-                <span className="kratos-pmc-label">Fatigue (ATL)</span>
-                <span className="kratos-pmc-value" style={{ color: '#ff7675' }}>{currentPMC.atl}</span>
+              <div className="zenith-span-4" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', flex: 1 }}>
+                  <div className="zenith-label">Fitness · CTL</div>
+                  <div className="zenith-stat-value" style={{ marginTop: 4 }}>{currentPMC.ctl}</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', flex: 1 }}>
+                  <div className="zenith-label">Fatigue · ATL</div>
+                  <div className="zenith-stat-value" style={{ marginTop: 4, color: '#f5a623' }}>{currentPMC.atl}</div>
+                </div>
               </div>
-              <div className="kratos-pmc-metric">
-                <span className="kratos-pmc-label">Form (TSB)</span>
-                <span className="kratos-pmc-value" style={{ color: currentPMC.tsb >= 0 ? '#cbd5e1' : '#eccc68' }}>
-                  {currentPMC.tsb >= 0 ? `+${currentPMC.tsb}` : currentPMC.tsb}
-                </span>
-              </div>
+            </div>
+
+            {/* AI Cardio & Recovery Link */}
+            <section className="kratos-pmc-card" style={{ gridTemplateColumns: '1fr' }}>
               <div className="kratos-pmc-ai-box">
                 <div className="kratos-pmc-ai-icon">
                   <Activity size={16} />
@@ -1632,12 +1753,12 @@ export default function App() {
                 <div style={{ width: '100%', height: 350 }}>
                   <ResponsiveContainer>
                     <BarChart data={dashboardChartsData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                      <XAxis dataKey="week" stroke="#94a3b8" style={{ fontSize: 10 }} />
-                      <YAxis stroke="#94a3b8" style={{ fontSize: 10 }} />
-                      <Tooltip 
-                        contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }}
-                        labelStyle={{ color: '#fff', fontWeight: 700 }}
+                      <CartesianGrid {...ZENITH_CHART_GRID} />
+                      <XAxis dataKey="week" stroke="#94a3b8" tick={ZENITH_CHART_AXIS_TICK} />
+                      <YAxis stroke="#94a3b8" tick={ZENITH_CHART_AXIS_TICK} />
+                      <Tooltip
+                        contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                        labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                       />
                       <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
                       <Bar dataKey="Chest" stackId="a" fill="#cbd5e1" />
@@ -1689,7 +1810,7 @@ export default function App() {
                 {selectedExercise1RM && (
                   <div style={{ marginTop: 24, flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Detailweergave</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Detail view</span>
                       <select 
                         className="kratos-select" 
                         value={selectedExercise1RM} 
@@ -1705,10 +1826,10 @@ export default function App() {
                     <div style={{ width: '100%', height: 160 }}>
                       <ResponsiveContainer>
                         <LineChart data={detailed1RMData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.02)" />
-                          <XAxis dataKey="dateStr" stroke="#64748b" style={{ fontSize: 8 }} />
-                          <YAxis stroke="#64748b" style={{ fontSize: 8 }} />
-                          <Tooltip contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, fontSize: 10 }} />
+                          <CartesianGrid {...ZENITH_CHART_GRID} />
+                          <XAxis dataKey="dateStr" stroke="#64748b" tick={ZENITH_CHART_AXIS_TICK} />
+                          <YAxis stroke="#64748b" tick={ZENITH_CHART_AXIS_TICK} />
+                          <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
                           <Line type="monotone" dataKey="estimated1RM" stroke="#cbd5e1" strokeWidth={2} activeDot={{ r: 4 }} />
                         </LineChart>
                       </ResponsiveContainer>
@@ -1726,23 +1847,34 @@ export default function App() {
                   <Activity size={16} style={{ color: '#38bdf8' }} /> CNS Readiness vs. Daily Lift Volume (Last 14 Days)
                 </h3>
                 <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                  Visualizes how Autonomic CNS readiness (Sleep HRV proxy) correlates with actual training volume
+                  {hasRealHrvData
+                    ? 'Visualizes how Autonomic CNS readiness (measured wearable HRV) correlates with actual training volume'
+                    : 'No wearable HRV data yet — showing a sleep-quality-derived ESTIMATE (not measured HRV) against actual training volume'}
                 </span>
               </div>
               <div style={{ width: '100%', height: 300 }}>
                 <ResponsiveContainer>
                   <ComposedChart data={cnsVolumeCorrelationData} margin={{ top: 10, right: -10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                    <XAxis dataKey="dateStr" stroke="#94a3b8" style={{ fontSize: 10 }} />
-                    <YAxis yAxisId="left" stroke="#94a3b8" style={{ fontSize: 10 }} />
-                    <YAxis yAxisId="right" orientation="right" domain={[30, 110]} stroke="#38bdf8" style={{ fontSize: 10 }} />
-                    <Tooltip 
-                      contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }}
-                      labelStyle={{ color: '#fff', fontWeight: 700 }}
+                    <CartesianGrid {...ZENITH_CHART_GRID} />
+                    <XAxis dataKey="dateStr" stroke="#94a3b8" tick={ZENITH_CHART_AXIS_TICK} />
+                    <YAxis yAxisId="left" stroke="#94a3b8" tick={ZENITH_CHART_AXIS_TICK} />
+                    <YAxis yAxisId="right" orientation="right" domain={[30, 110]} stroke="#38bdf8" tick={ZENITH_CHART_AXIS_TICK} />
+                    <Tooltip
+                      contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                      labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                     />
                     <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
                     <Bar yAxisId="left" dataKey="volume" name="Lifted Volume (kg)" fill="rgba(255, 255, 255, 0.08)" radius={[4, 4, 0, 0]} />
-                    <Line yAxisId="right" type="monotone" dataKey="hrv" name="CNS Readiness (HRV ms)" stroke="#38bdf8" strokeWidth={2.5} activeDot={{ r: 5 }} />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="hrv"
+                      name={hasRealHrvData ? 'CNS Readiness (HRV ms rMSSD)' : 'CNS Readiness (Sleep-Quality ESTIMATE, not measured HRV)'}
+                      stroke="#38bdf8"
+                      strokeWidth={2.5}
+                      activeDot={{ r: 5 }}
+                      connectNulls={false}
+                    />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -1757,7 +1889,7 @@ export default function App() {
               // List View
               <div className="kratos-card">
                 <div className="kratos-card-header">
-                  <h3 className="kratos-card-title">Templates Bibliotheek</h3>
+                  <h3 className="kratos-card-title"><ListChecks size={16} style={{ color: '#cbd5e1' }} /> Templates Library</h3>
                   <button 
                     className="kratos-btn kratos-btn-neon"
                     onClick={() => {
@@ -1772,11 +1904,26 @@ export default function App() {
                 </div>
 
                 {templates.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: 13 }}>
-                    No routines found. Create a new template to use in your strength workouts!
-                  </div>
+                  <ZenithEmptyState
+                    icon={<ListChecks size={20} />}
+                    title="No routines yet"
+                    message="Create a template to reuse in your strength workouts."
+                    action={
+                      <button
+                        className="kratos-btn kratos-btn-neon"
+                        onClick={() => {
+                          setEditingTemplate(null);
+                          setTemplateName('');
+                          setTemplateExercises([]);
+                          setIsTemplateModalOpen(true);
+                        }}
+                      >
+                        <Plus size={14} /> New Template
+                      </button>
+                    }
+                  />
                 ) : (
-                  <table className="kratos-table">
+                  <table className="zenith-table">
                     <thead>
                       <tr>
                         <th>Routine Name</th>
@@ -1790,11 +1937,11 @@ export default function App() {
                         const totalWorkingSets = temp.exercises.reduce((sum, ex) => sum + ex.sets.filter(s => s.type === 'working').length, 0);
                         return (
                           <tr key={temp.id}>
-                            <td style={{ fontWeight: 700, color: '#fff' }}>{temp.name}</td>
+                            <td><span className="zenith-table-name" title={temp.name}>{temp.name}</span></td>
                             <td>
                               {temp.exercises.map(ex => exerciseMap.get(ex.exercise_id)?.name).filter(Boolean).join(', ')}
                             </td>
-                            <td>{totalWorkingSets} sets</td>
+                            <td className="zenith-tnum">{totalWorkingSets} sets</td>
                             <td style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                               <button className="kratos-btn kratos-btn-secondary" style={{ padding: '6px 12px', fontSize: 10 }} onClick={() => handleEditTemplateClick(temp)}>
                                 <Edit3 size={11} /> Edit
@@ -1821,13 +1968,13 @@ export default function App() {
                 </div>
 
                 <div className="kratos-input-group" style={{ marginBottom: 24 }}>
-                  <label className="kratos-label">Routine Naam</label>
-                  <input 
-                    type="text" 
-                    className="kratos-input" 
-                    value={templateName} 
-                    onChange={(e) => setTemplateName(e.target.value)} 
-                    placeholder="Atv. Push B, Leg Day, Fullbody" 
+                  <label className="kratos-label">Routine Name</label>
+                  <input
+                    type="text"
+                    className="kratos-input"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="e.g. Push B, Leg Day, Fullbody"
                     style={{ fontSize: 16, padding: '12px 16px' }}
                   />
                 </div>
@@ -1918,7 +2065,7 @@ export default function App() {
                                     style={{ padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
                                   >
                                     <option value="warmup">Warm-up (W)</option>
-                                    <option value="working">Werkset</option>
+                                    <option value="working">Working Set</option>
                                   </select>
                                 </td>
                                 <td>
@@ -1968,7 +2115,7 @@ export default function App() {
 
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button className="kratos-btn kratos-btn-neon" onClick={handleSaveTemplate} style={{ padding: '12px 28px' }}>
-                    <Check size={14} /> Routine Save
+                    <Check size={14} /> Save Routine
                   </button>
                   <button className="kratos-btn kratos-btn-secondary" onClick={() => setIsTemplateModalOpen(false)}>
                     Cancel
@@ -1986,7 +2133,7 @@ export default function App() {
               // List View
               <div className="kratos-card">
                 <div className="kratos-card-header">
-                  <h3 className="kratos-card-title">Exercisesbibliotheek</h3>
+                  <h3 className="kratos-card-title"><Dumbbell size={16} style={{ color: '#cbd5e1' }} /> Exercises Library</h3>
                   <button 
                     className="kratos-btn kratos-btn-neon"
                     onClick={() => {
@@ -2008,20 +2155,51 @@ export default function App() {
                 </div>
 
                 {exercises.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: 13 }}>
-                    No exercises found. Add one to start building routines!
-                  </div>
+                  <ZenithEmptyState
+                    icon={<Dumbbell size={20} />}
+                    title="No exercises yet"
+                    message="Add one to start building routines."
+                    action={
+                      <button
+                        className="kratos-btn kratos-btn-neon"
+                        onClick={() => {
+                          setEditingExercise(null);
+                          setExerciseForm({
+                            name: '',
+                            category: 'Chest',
+                            notes: '',
+                            increment_weight: 2.5,
+                            increment_per_side: false,
+                            default_rir: 2,
+                            weight_unit: 'kg'
+                          });
+                          setIsExerciseModalOpen(true);
+                        }}
+                      >
+                        <Plus size={14} /> Add Exercise
+                      </button>
+                    }
+                  />
                 ) : (
-                  <table className="kratos-table">
+                  <table className="zenith-table">
+                    <colgroup>
+                      <col style={{ width: '24%' }} />
+                      <col style={{ width: '11%' }} />
+                      <col style={{ width: '19%' }} />
+                      <col style={{ width: '7%' }} />
+                      <col style={{ width: '8%' }} />
+                      <col style={{ width: '17%' }} />
+                      <col style={{ width: '14%' }} />
+                    </colgroup>
                     <thead>
                       <tr>
-                        <th>Naam</th>
+                        <th>Name</th>
                         <th>Muscle Group</th>
-                        <th>Stap (kg/lbs)</th>
-                        <th>Eenheid</th>
+                        <th>Step (kg/lbs)</th>
+                        <th>Unit</th>
                         <th>Target RIR</th>
-                        <th>Cues / Notities</th>
-                        <th style={{ textAlign: 'right' }}>Acties</th>
+                        <th>Cues / Notes</th>
+                        <th style={{ textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2052,18 +2230,20 @@ export default function App() {
 
                         return (
                           <tr key={ex.id}>
-                            <td style={{ fontWeight: 700, color: '#fff' }}>{ex.name}</td>
                             <td>
-                              <span style={{ fontSize: 10, background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: 4 }}>{ex.category}</span>
+                              <span className="zenith-table-name" title={ex.name}>{ex.name}</span>
                             </td>
                             <td>
+                              <ZenithStatusPill tone="info">{ex.category}</ZenithStatusPill>
+                            </td>
+                            <td className="zenith-tnum">
                               +{ex.increment_weight} {ex.increment_per_side ? '(per side)' : '(total)'}{' '}
                               <span style={{ color: 'var(--accent-neon)', fontSize: 11, marginLeft: 4 }}>
                                 {aiIncrementText}
                               </span>
                             </td>
                             <td style={{ textTransform: 'uppercase', fontWeight: 700 }}>{ex.weight_unit}</td>
-                            <td>RIR {ex.default_rir}</td>
+                            <td className="zenith-tnum">RIR {ex.default_rir}</td>
                             <td style={{ color: 'var(--text-secondary)', fontSize: 11, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {ex.notes || '-'}
                             </td>
@@ -2101,13 +2281,13 @@ export default function App() {
                       required 
                       value={exerciseForm.name} 
                       onChange={(e) => setExerciseForm({ ...exerciseForm, name: e.target.value })}
-                      placeholder="Atv. Bench Press, Squat, Lat Pulldown"
+                      placeholder="e.g. Bench Press, Squat, Lat Pulldown"
                     />
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     <div className="kratos-input-group">
-                      <label className="kratos-label">Muscle Group / Categorie (Primaire Spier)</label>
+                      <label className="kratos-label">Muscle Group / Category (Primary Muscle)</label>
                       <select 
                         className="kratos-select" 
                         value={exerciseForm.category} 
@@ -2117,22 +2297,22 @@ export default function App() {
                         <option value="Shoulders">Shoulders</option>
                         <option value="Biceps">Biceps (Upper Arms)</option>
                         <option value="Triceps">Triceps (Back of Arms)</option>
-                        <option value="Forearms">Forearms (Onderarmen)</option>
-                        <option value="Upper Back">Upper Back (Bovenrug)</option>
-                        <option value="Lats">Lats (Latissimus Dorsi / Zijkant Rug)</option>
-                        <option value="Lower Back">Lower Back (Lendenrug / Onderrug)</option>
-                        <option value="Traps">Traps (Monnikskapspier)</option>
+                        <option value="Forearms">Forearms</option>
+                        <option value="Upper Back">Upper Back</option>
+                        <option value="Lats">Lats</option>
+                        <option value="Lower Back">Lower Back</option>
+                        <option value="Traps">Traps</option>
                         <option value="Quads">Quads (Front Thighs)</option>
                         <option value="Hamstrings">Hamstrings (Back Thighs)</option>
-                        <option value="Glutes">Glutes (Zitvlak / Bilspieren)</option>
+                        <option value="Glutes">Glutes</option>
                         <option value="Calves">Calves</option>
-                        <option value="Abs">Abs (Buikspieren)</option>
-                        <option value="Obliques">Obliques (Schuine Buikspieren)</option>
+                        <option value="Abs">Abs</option>
+                        <option value="Obliques">Obliques</option>
                       </select>
                     </div>
 
                     <div className="kratos-input-group">
-                      <label className="kratos-label">Eenheid (kg of lbs)</label>
+                      <label className="kratos-label">Unit (kg or lbs)</label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 38 }}>
                         <span style={{ fontSize: 11, fontWeight: 700, color: exerciseForm.weight_unit === 'kg' ? '#fff' : 'var(--text-secondary)' }}>KG</span>
                         <label className="kratos-switch">
@@ -2150,7 +2330,7 @@ export default function App() {
 
                   <div className="kratos-input-group" style={{ marginBottom: 16 }}>
                     <label className="kratos-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Secundaire Muscle Groupen (Optioneel)</span>
+                      <span>Secondary Muscle Groups (Optional)</span>
                       <span style={{ color: 'var(--accent-neon)', fontSize: 10 }}>Heatmap Coupling (50% impact)</span>
                     </label>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
@@ -2159,16 +2339,16 @@ export default function App() {
                         { key: 'deltoids', label: 'Shoulders' },
                         { key: 'biceps', label: 'Biceps' },
                         { key: 'triceps', label: 'Triceps' },
-                        { key: 'upperBack', label: 'Bovenrug / Lats' },
-                        { key: 'trapezius', label: 'Monnikskap' },
-                        { key: 'lowerBack', label: 'Lendenrug' },
+                        { key: 'upperBack', label: 'Upper Back / Lats' },
+                        { key: 'trapezius', label: 'Trapezius' },
+                        { key: 'lowerBack', label: 'Lower Back' },
                         { key: 'quadriceps', label: 'Quads' },
                         { key: 'hamstring', label: 'Hamstrings' },
-                        { key: 'gluteal', label: 'Zitvlak' },
+                        { key: 'gluteal', label: 'Glutes' },
                         { key: 'calves', label: 'Calves' },
-                        { key: 'abs', label: 'Buikspieren' },
-                        { key: 'obliques', label: 'Schuine Buik' },
-                        { key: 'forearm', label: 'Onderarmen' }
+                        { key: 'abs', label: 'Abs' },
+                        { key: 'obliques', label: 'Obliques' },
+                        { key: 'forearm', label: 'Forearms' }
                       ].map(m => {
                         const isSelected = (exerciseForm.secondary_muscles || []).includes(m.key as any);
                         return (
@@ -2209,7 +2389,7 @@ export default function App() {
                         required 
                         value={exerciseForm.increment_weight} 
                         onChange={(e) => setExerciseForm({ ...exerciseForm, increment_weight: Number(e.target.value) })}
-                        placeholder="Atv. 2.5 of 1.0"
+                        placeholder="e.g. 2.5 or 1.0"
                       />
                       <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2221,7 +2401,7 @@ export default function App() {
                             style={{ accentColor: 'var(--accent-neon)' }}
                           />
                           <label htmlFor="increment_per_side" style={{ fontSize: 10, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                            Stappen per kant
+                            Steps per side
                           </label>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2233,33 +2413,33 @@ export default function App() {
                             style={{ accentColor: 'var(--accent-neon)' }}
                           />
                           <label htmlFor="is_bodyweight" style={{ fontSize: 10, color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                            Lichaamsgewicht
+                            Body weight
                           </label>
                         </div>
                       </div>
                     </div>
 
                     <div className="kratos-input-group">
-                      <label className="kratos-label">Standaard Target RIR</label>
+                      <label className="kratos-label">Default Target RIR</label>
                       <input 
                         type="number" 
                         className="kratos-input" 
                         required 
                         value={exerciseForm.default_rir} 
                         onChange={(e) => setExerciseForm({ ...exerciseForm, default_rir: Number(e.target.value) })}
-                        placeholder="Atv. 2"
+                        placeholder="e.g. 2"
                       />
                     </div>
                   </div>
 
                   <div className="kratos-input-group" style={{ marginBottom: 24 }}>
-                    <label className="kratos-label">Cues / Vorm Notities</label>
-                    <textarea 
-                      className="kratos-input" 
-                      rows={3} 
-                      value={exerciseForm.notes} 
+                    <label className="kratos-label">Cues / Form Notes</label>
+                    <textarea
+                      className="kratos-input"
+                      rows={3}
+                      value={exerciseForm.notes}
                       onChange={(e) => setExerciseForm({ ...exerciseForm, notes: e.target.value })}
-                      placeholder="Atv. Touch chest en druk explosief omhoog, ellebogen onder 45 graden."
+                      placeholder="e.g. Touch chest and press explosively up, elbows under 45 degrees."
                       style={{ resize: 'none', fontFamily: 'inherit' }}
                     />
                   </div>
@@ -2284,12 +2464,14 @@ export default function App() {
         {activeTab === 'logs' && (
           <div className="animate-slide-up">
             <div className="kratos-card">
-              <h3 className="kratos-card-title">Training Logbook</h3>
+              <h3 className="kratos-card-title"><NotebookText size={16} style={{ color: '#cbd5e1' }} /> Training Logbook</h3>
 
               {workouts.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', fontSize: 13 }}>
-                  No completed workouts logged. Start Kratos Pilot on your Android and log your first workout!
-                </div>
+                <ZenithEmptyState
+                  icon={<NotebookText size={20} />}
+                  title="No workouts logged yet"
+                  message="Start Kratos Pilot on your Android device and log your first workout to see it here."
+                />
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {workouts.map(w => {
@@ -2300,26 +2482,26 @@ export default function App() {
                           <div>
                             <h4 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: '#fff' }}>{w.name}</h4>
                             <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-secondary)', alignItems: 'center' }}>
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} /> {new Date(w.completed_at).toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Calendar size={12} /> {new Date(w.completed_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-secondary)' }} />
                               <span>Duration: {durationMins} min</span>
                               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-secondary)' }} />
-                              <button onClick={() => handleEditWorkoutClick(w)} style={{ background: 'none', border: 'none', color: 'var(--accent-neon)', cursor: 'pointer', padding: 0, fontSize: 11, fontWeight: 'bold' }}>Wijzig</button>
+                              <button onClick={() => handleEditWorkoutClick(w)} style={{ background: 'none', border: 'none', color: 'var(--accent-neon)', cursor: 'pointer', padding: 0, fontSize: 11, fontWeight: 'bold' }}>Edit</button>
                               <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--text-secondary)' }} />
                               <button onClick={() => handleDeleteWorkout(w.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: 11, fontWeight: 'bold' }}>Delete</button>
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', gap: 16, textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: 20, textAlign: 'right' }}>
                             <div>
-                              <span style={{ fontSize: 9, textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800, display: 'block' }}>Total Volume</span>
-                              <strong style={{ fontSize: 14, color: 'var(--accent-neon)' }}>{w.volume} kg</strong>
+                              <div className="zenith-label">Total Volume</div>
+                              <div className="zenith-stat-value" style={{ fontSize: 16, marginTop: 2 }}>{w.volume} kg</div>
                             </div>
                             <div>
-                              <span style={{ fontSize: 9, textTransform: 'uppercase', color: 'var(--text-secondary)', fontWeight: 800, display: 'block' }}>Cardio Recovery</span>
-                              <strong style={{ fontSize: 14, color: '#fff' }}>
-                                {w.cardio_stress_factor > 1.0 ? `+${Math.round((w.cardio_stress_factor - 1) * 100)}% rust` : 'Normaal'}
-                              </strong>
+                              <div className="zenith-label" style={{ marginBottom: 4 }}>Cardio Recovery</div>
+                              <ZenithStatusPill tone={w.cardio_stress_factor > 1.0 ? 'warn' : 'good'}>
+                                {w.cardio_stress_factor > 1.0 ? `+${Math.round((w.cardio_stress_factor - 1) * 100)}% rest` : 'Normal'}
+                              </ZenithStatusPill>
                             </div>
                           </div>
                         </div>
@@ -2330,15 +2512,15 @@ export default function App() {
                             const ex = exerciseMap.get(exLog.exercise_id);
                             if (!ex) return null;
                             return (
-                              <div key={idx} style={{ minWidth: 220, background: 'rgba(9,9,11,0.3)', border: '1px solid rgba(255,255,255,0.02)', borderRadius: 8, padding: 12 }}>
-                                <strong style={{ fontSize: 12, color: '#fff', display: 'block', marginBottom: 6 }}>{ex.name}</strong>
+                              <div key={idx} className="zenith-card" style={{ minWidth: 220, padding: 12, borderRadius: 10 }}>
+                                <span className="zenith-table-name" style={{ display: 'block', marginBottom: 6, maxWidth: 'none' }}>{ex.name}</span>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                   {exLog.sets.map((s, sIdx) => (
                                     <div key={sIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: s.type === 'warmup' ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
                                       <span>
                                         Set {sIdx + 1} {s.type === 'warmup' && <span style={{ fontSize: 9, opacity: 0.6 }}>(W)</span>}:
                                       </span>
-                                      <strong>
+                                      <strong className="zenith-tnum">
                                         {s.weight} {ex.weight_unit} x {s.reps} <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}> (RIR {s.rir})</span>
                                       </strong>
                                     </div>
@@ -2459,7 +2641,7 @@ export default function App() {
               )}
 
               <div className="kratos-input-group">
-                <label className="kratos-label">Workout Naam</label>
+                <label className="kratos-label">Workout Name</label>
                 <input 
                   type="text" 
                   className="kratos-input" 
@@ -2471,7 +2653,7 @@ export default function App() {
 
               <div style={{ display: 'flex', gap: 16 }}>
                 <div className="kratos-input-group" style={{ flex: 1 }}>
-                  <label className="kratos-label">Start Datum/Tijd</label>
+                  <label className="kratos-label">Start Date/Time</label>
                   <input 
                     type="datetime-local" 
                     className="kratos-input" 
@@ -2481,7 +2663,7 @@ export default function App() {
                   />
                 </div>
                 <div className="kratos-input-group" style={{ flex: 1 }}>
-                  <label className="kratos-label">Eind Datum/Tijd</label>
+                  <label className="kratos-label">End Date/Time</label>
                   <input 
                     type="datetime-local" 
                     className="kratos-input" 
@@ -2616,7 +2798,7 @@ export default function App() {
 
               <div style={{ display: 'flex', gap: 12, marginTop: 12, borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
                 <button type="submit" className="kratos-btn kratos-btn-neon" style={{ flex: 1 }}>
-                  Wijzigingen Save
+                  Save Changes
                 </button>
                 <button type="button" className="kratos-btn kratos-btn-secondary" onClick={() => setIsWorkoutModalOpen(false)}>
                   Cancel

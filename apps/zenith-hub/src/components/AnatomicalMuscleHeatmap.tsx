@@ -13,94 +13,12 @@ export type MuscleDataMap = Record<string, MuscleData>;
 
 interface Props {
   customFatigueData?: MuscleDataMap;
+  /** True while real fatigue data is still being fetched/computed. When true, the
+   * component shows a neutral loading state instead of ever falling back to
+   * defaultMuscleDataMap — that fallback previously rendered fake per-muscle
+   * numbers/session names during the fetch race, indistinguishable from real data. */
+  isLoading?: boolean;
 }
-
-const defaultMuscleDataMap: MuscleDataMap = {
-  chest: {
-    name: 'Borstspieren (Pectoralis Major)',
-    fatiguePercent: 85,
-    lastTrained: 'Yesterday (Bench Press)',
-    primaryExercises: ['Barbell Bench Press', 'Incline Dumbbell Press', 'Chest Flyes']
-  },
-  deltoids: {
-    name: 'Shoulders (Deltoids)',
-    fatiguePercent: 65,
-    lastTrained: 'Yesterday (Overhead Press)',
-    primaryExercises: ['Overhead Press', 'Lateral Raises', 'Arnold Press']
-  },
-  biceps: {
-    name: 'Biceps (Biceps Brachii)',
-    fatiguePercent: 55,
-    lastTrained: '2 days ago',
-    primaryExercises: ['Barbell Curls', 'Hammer Curls', 'Incline Dumbbell Curls']
-  },
-  triceps: {
-    name: 'Triceps (Triceps Brachii)',
-    fatiguePercent: 60,
-    lastTrained: 'Yesterday (Tricep Pushdowns)',
-    primaryExercises: ['Dips', 'Tricep Rope Pushdowns', 'Skullcrushers']
-  },
-  abs: {
-    name: 'Buikspieren (Rectus Abdominis)',
-    fatiguePercent: 35,
-    lastTrained: '3 days ago',
-    primaryExercises: ['Hanging Leg Raises', 'Cable Crunches', 'Plank']
-  },
-  obliques: {
-    name: 'Schuine Buikspieren (Obliques)',
-    fatiguePercent: 20,
-    lastTrained: '3 days ago',
-    primaryExercises: ['Russian Twists', 'Side Planks']
-  },
-  quadriceps: {
-    name: 'Dijspieren (Quadriceps Femoris)',
-    fatiguePercent: 80,
-    lastTrained: 'Today (Squats & Cycling)',
-    primaryExercises: ['Barbell Back Squats', 'Leg Press', 'Cardio Cycling']
-  },
-  upperBack: {
-    name: 'Bovenrug (Rhomboids & Trapezius)',
-    fatiguePercent: 40,
-    lastTrained: '2 days ago',
-    primaryExercises: ['Pull-ups', 'Barbell Rows', 'T-Bar Rows']
-  },
-  lowerBack: {
-    name: 'Lendenrug (Erector Spinae)',
-    fatiguePercent: 50,
-    lastTrained: '2 days ago',
-    primaryExercises: ['Deadlift', 'Hyperextensions']
-  },
-  gluteal: {
-    name: 'Zitvlakspieren (Gluteus Maximus)',
-    fatiguePercent: 75,
-    lastTrained: 'Today (Squats)',
-    primaryExercises: ['Hip Thrusts', 'Squats', 'Lunges']
-  },
-  hamstring: {
-    name: 'Achterdijbeen (Hamstrings)',
-    fatiguePercent: 70,
-    lastTrained: 'Today (Romanian Deadlift)',
-    primaryExercises: ['Romanian Deadlift', 'Lying Leg Curls']
-  },
-  calves: {
-    name: 'Kuitspieren (Gastrocnemius & Soleus)',
-    fatiguePercent: 45,
-    lastTrained: 'Today (Cycling)',
-    primaryExercises: ['Standing Calf Raises', 'Cycling']
-  },
-  forearm: {
-    name: 'Onderarmen (Forearms)',
-    fatiguePercent: 30,
-    lastTrained: '2 days ago',
-    primaryExercises: ['Wrist Curls', 'Farmer Walk']
-  },
-  trapezius: {
-    name: 'Monnikskapspier (Trapezius)',
-    fatiguePercent: 30,
-    lastTrained: '2 days ago',
-    primaryExercises: ['Barbell Shrugs', 'Deadlift']
-  }
-};
 
 const coswithicSlugs = new Set(['head', 'hair', 'hands', 'knees', 'feet', 'ankles']);
 const overlappingSubGroupSlugs = new Set([
@@ -115,8 +33,12 @@ const overlappingSubGroupSlugs = new Set([
   'hipFlexors'
 ]);
 
-export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) => {
-  const data = customFatigueData || defaultMuscleDataMap;
+export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData, isLoading = false }) => {
+  // Never silently substitute the fake defaultMuscleDataMap for real data. There are
+  // exactly three states: still loading (isLoading), confirmed no data (not loading,
+  // no customFatigueData), and real data (customFatigueData present).
+  const hasRealData = !!customFatigueData && Object.keys(customFatigueData).length > 0;
+  const data: MuscleDataMap = hasRealData ? (customFatigueData as MuscleDataMap) : {};
   const [activeView, setActiveView] = useState<'both' | 'front' | 'back'>('both');
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
@@ -293,6 +215,17 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
         </div>
       </div>
 
+      {isLoading ? (
+        <div style={{ padding: '60px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.5)', fontSize: '13px' }}>
+          Loading muscle fatigue data…
+        </div>
+      ) : (
+      <>
+      {!hasRealData && (
+        <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>
+          No training data recorded yet — muscle fatigue will appear here once you log an Aero ride, Kratos workout, or Stride run.
+        </div>
+      )}
       {/* Main Grid View */}
       <div style={{ display: 'grid', gridTemplateColumns: activeView === 'both' ? '1fr 1fr 310px' : '1fr 340px', gap: '24px', alignItems: 'start' }}>
 
@@ -300,7 +233,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
         {(activeView === 'both' || activeView === 'front') && (
           <div style={{ textAlign: 'center', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
             <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '12px' }}>
-              Voorzijde ({gender === 'male' ? 'Male' : 'Female'})
+              Front ({gender === 'male' ? 'Male' : 'Female'})
             </div>
 
             <svg viewBox={getViewBox('front')} style={{ width: '100%', maxHeight: '460px', filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.7))' }}>
@@ -313,7 +246,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
         {(activeView === 'both' || activeView === 'back') && (
           <div style={{ textAlign: 'center', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '16px', padding: '16px', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
             <div style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '1.2px', marginBottom: '12px' }}>
-              Achterzijde ({gender === 'male' ? 'Male' : 'Female'})
+              Back ({gender === 'male' ? 'Male' : 'Female'})
             </div>
 
             <svg viewBox={getViewBox('back')} style={{ width: '100%', maxHeight: '460px', filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.7))' }}>
@@ -342,7 +275,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
 
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px', color: 'rgba(255,255,255,0.7)' }}>
-                  <span>Spiervermoeidheid</span>
+                  <span>Muscle Fatigue</span>
                   <span style={{ fontWeight: 800, color: getMuscleFill(hoveredSlug || '') }}>{selectedMuscle.fatiguePercent}%</span>
                 </div>
                 <div style={{ height: '8px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
@@ -351,10 +284,10 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
               </div>
 
               <div style={{ fontSize: '12px', lineHeight: '1.6', color: 'rgba(255,255,255,0.8)', marginBottom: '12px' }}>
-                <strong>Laatst belast:</strong> {selectedMuscle.lastTrained}
+                <strong>Last trained:</strong> {selectedMuscle.lastTrained}
               </div>
               <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)' }}>
-                <strong>Oefeningen:</strong>
+                <strong>Exercises:</strong>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
                   {selectedMuscle.primaryExercises.map((ex, idx) => (
                     <span key={idx} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.05)', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', color: '#e2e8f0' }}>
@@ -378,19 +311,19 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#94a3b8' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Hersteld (Grey)</span>
+                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Recovered (Grey)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#eab308' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Licht (Yellow)</span>
+                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Light (Yellow)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#f97316' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Matig (Orange)</span>
+                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Moderate (Orange)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#ef4444' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Hoog (Red)</span>
+                <span style={{ color: 'rgba(255,255,255,0.7)' }}>High (Red)</span>
               </div>
             </div>
           </div>
@@ -398,6 +331,8 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData }) 
         </div>
 
       </div>
+      </>
+      )}
     </div>
   );
 };

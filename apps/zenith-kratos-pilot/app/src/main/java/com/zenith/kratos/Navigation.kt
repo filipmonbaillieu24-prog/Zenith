@@ -155,7 +155,7 @@ fun MainNavigation() {
                             context.deleteDatabase("kratos_database")
                             databaseInitializationError = "Database reset. Restart the app to continue."
                         } catch (e: Exception) {
-                            databaseInitializationError = "Reset mislukt: ${e.message}"
+                            databaseInitializationError = "Reset failed: ${e.message}"
                         }
                     },
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))

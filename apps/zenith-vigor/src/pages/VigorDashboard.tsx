@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { isTrustedZenithOrigin } from '@zenith/shared';
+import { isTrustedZenithOrigin, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState } from '@zenith/shared';
 import { 
   Scale, 
   Moon, 
@@ -13,7 +13,10 @@ import {
   X,
   Camera,
   Trash2,
-  Ruler
+  Ruler,
+  Zap,
+  Droplet,
+  HeartPulse
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -35,11 +38,27 @@ import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
 import { DeviceManagerModal } from '../components/DeviceManagerModal';
 import { ProPaywallModal } from '../components/ProPaywallModal';
-import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster } from '@zenith/shared';
+import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 
 interface VigorDashboardProps {
   session: any;
 }
+
+// Small colored "legend dot" used in place of emoji circles (🔵/🟡/etc.) next to
+// sleep-stage labels — renders consistently across platforms, unlike emoji glyphs.
+const SleepStageDot: React.FC<{ color: string }> = ({ color }) => (
+  <span
+    style={{
+      display: 'inline-block',
+      width: 8,
+      height: 8,
+      borderRadius: '50%',
+      background: color,
+      marginRight: 6,
+      flexShrink: 0
+    }}
+  />
+);
 
 const getLocalDateKey = (dateInput: string | Date | null | undefined): string => {
   if (!dateInput) return '';
@@ -67,10 +86,18 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     setProModal({ isOpen: true, featureName, desc });
   };
   const [dbProfile, setDbProfile] = useState<any>(null);
-  const userName = dbProfile?.name || user.user_metadata?.name || user.user_metadata?.fitness_profile?.name || 'Atleet';
+  const userName = dbProfile?.name || user.user_metadata?.name || user.user_metadata?.fitness_profile?.name || 'Athlete';
 
   // Navigation tab state
   const [currentTab, setCurrentTab] = useState<'home' | 'weight' | 'sleep' | 'steps' | 'progress'>('home');
+
+  const vigorNavItems: ZenithHeaderTab[] = [
+    { key: 'home',     icon: <Sparkles size={16} strokeWidth={1.6} />,   label: 'Overview' },
+    { key: 'weight',   icon: <Scale size={16} strokeWidth={1.6} />,      label: 'Weight' },
+    { key: 'steps',    icon: <Footprints size={16} strokeWidth={1.6} />, label: 'Steps' },
+    { key: 'sleep',    icon: <Moon size={16} strokeWidth={1.6} />,       label: 'Sleep' },
+    { key: 'progress', icon: <Camera size={16} strokeWidth={1.6} />,     label: 'Progress' },
+  ];
 
   // Progress states
   const [measurements, setMeasurements] = useState<any[]>([]);
@@ -536,8 +563,8 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   };
 
   const handleDeleteLog = async (type: 'weight' | 'sleep' | 'steps', id: string) => {
-    const typeNames = { weight: 'gewichtsmeasurement', sleep: 'slaapmeasurement', steps: 'stappenmeasurement' };
-    if (window.confirm(`Weet u zeker dat u deze ${typeNames[type]} wilt delete?`)) {
+    const typeNames = { weight: 'weight', sleep: 'sleep', steps: 'steps' };
+    if (window.confirm(`Are you sure you want to delete this ${typeNames[type]} measurement?`)) {
       const table = `vigor_${type}`;
       try {
         const { error } = await supabase
@@ -607,13 +634,13 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       
       alert('Measurements successfully saved!');
     } catch (err) {
-      console.error('Error saving measurementen:', err);
-      alert('Error saving measurementen.');
+      console.error('Error saving measurements:', err);
+      alert('Error saving measurements.');
     }
   };
 
   const handleDeleteMeasurement = async (id: string) => {
-    if (!confirm('Weet u zeker dat u deze measurement wilt delete?')) return;
+    if (!confirm('Are you sure you want to delete this measurement?')) return;
     try {
       const { error } = await supabase
         .from('vigor_body_measurements')
@@ -670,7 +697,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       
       setPhotoFile(null);
       setPhotoNotes('');
-      alert('Progressfoto succesvol geüpload!');
+      alert('Progress photo successfully uploaded!');
     } catch (err) {
       console.error('Error uploading photo:', err);
       alert('Error uploading photo.');
@@ -680,7 +707,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   };
 
   const handleDeletePhoto = async (photo: any) => {
-    if (!confirm('Weet u zeker dat u deze foto wilt delete?')) return;
+    if (!confirm('Are you sure you want to delete this photo?')) return;
     try {
       const urlParts = photo.image_url.split('/vigor-progress-photos/');
       if (urlParts.length > 1) {
@@ -698,7 +725,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       if (error) throw error;
       setPhotos(prev => prev.filter(p => p.id !== photo.id));
     } catch (err) {
-      console.error('Error deleting foto:', err);
+      console.error('Error deleting photo:', err);
     }
   };
 
@@ -893,16 +920,17 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       else { bmiCategory = 'Obese'; bmiColor = '#ef4444'; }
     }
 
-    // SOTA ML Telemetry calculations: HRV ANS state and ACWR workload index
-    const hrvHistory = sleeps.map(s => {
-      const baseVal = 55;
-      const offsetVal = ((s.quality_score || 80) - 75) * 0.8;
-      return Math.max(30, Math.min(110, baseVal + offsetVal));
-    });
-    const todayHrv = sleeps.length > 0 
-      ? Math.max(30, Math.min(110, 55 + (((sleeps[sleeps.length - 1].quality_score || 80) - 75) * 0.8)))
-      : 65;
-    const ansState = HrvAnsTracker.calculateAnsState(hrvHistory.slice(0, -1), todayHrv);
+    // HRV ANS state: sourced ONLY from real wearable HRV (rMSSD, ms) synced via
+    // Zenith Pulse / Health Connect or a paired smart ring into vigor_sleep.hrv_ms.
+    // We never fabricate an HRV number from sleep quality score — if no real
+    // reading exists yet, the UI below shows an honest "connect a wearable" state.
+    const realHrvSleeps = sleeps.filter(s => typeof s.hrv_ms === 'number' && s.hrv_ms > 0);
+    const hasRealHrv = realHrvSleeps.length > 0;
+    const todayHrv: number | null = hasRealHrv ? realHrvSleeps[realHrvSleeps.length - 1].hrv_ms : null;
+    const hrvHistory = hasRealHrv ? realHrvSleeps.slice(0, -1).map(s => s.hrv_ms as number) : [];
+    const ansState = hasRealHrv && todayHrv !== null
+      ? HrvAnsTracker.calculateAnsState(hrvHistory, todayHrv)
+      : null;
 
     const dailyLoads = steps.slice(-28).map(st => {
       return Math.round((st.step_count || 5000) / 100);
@@ -915,20 +943,20 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       ? Math.round((recentWeights[0].weight - recentWeights[1].weight) * 10) / 10
       : 0;
 
-    let fluctuationInsight: { title: string; desc: string; icon: string; color: string } | null = null;
+    let fluctuationInsight: { title: string; desc: string; icon: React.ReactNode; color: string } | null = null;
 
     if (weightDiff >= 0.4) {
       fluctuationInsight = {
         title: `Scale Shift Detected (+${weightDiff} kg)`,
         desc: "Heavy strength workouts cause localized muscle inflammation (DOMS) and glycogen supercompensation (1g glycogen holds 3g water). This is healthy recovery fluid, not fat mass. Expect scale weight to stabilize over 24-48 hours.",
-        icon: "⚡",
+        icon: <Zap size={18} />,
         color: "#cbd5e1"
       };
     } else if (weightDiff <= -0.5) {
       fluctuationInsight = {
         title: `Scale Drop (-${Math.abs(weightDiff)} kg)`,
         desc: "Water and glycogen flushing combined with active fat oxidation. True fat loss is tracked by your 7-day EMA trend weight.",
-        icon: "💧",
+        icon: <Droplet size={18} />,
         color: "#38bdf8"
       };
     }
@@ -957,7 +985,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '20px',
+              color: fluctuationInsight.color,
               flexShrink: 0
             }}>
               {fluctuationInsight.icon}
@@ -973,49 +1001,116 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           </div>
         )}
 
-        {/* Quick Metrics Grid */}
-        <div className="vigor-grid">
-          {/* Card 1: Weight */}
-          <div className="vigor-card col-4" style={{ cursor: 'pointer' }} onClick={() => setCurrentTab('weight')}>
-            <div className="metric-header">
-              <span className="metric-title">Weight</span>
+        {/* Hero row: ACWR Workload Forecaster (the single most actionable
+            "train hard or back off today" signal) + supporting HRV stat */}
+        <div className="zenith-grid-12">
+          <div className="zenith-span-8">
+            <ZenithHeroStat
+              eyebrow="Workload · ACWR"
+              value={workloadInsight.acwr.toFixed(2)}
+              sub={workloadInsight.recommendation}
+              pill={
+                <span
+                  className="zenith-pill"
+                  style={{
+                    background: workloadInsight.riskZone === 'optimal' ? 'rgba(85, 239, 196, 0.15)' : workloadInsight.riskZone === 'high' ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255, 118, 117, 0.15)',
+                    color: workloadInsight.riskZone === 'optimal' ? '#55efc4' : workloadInsight.riskZone === 'high' ? '#fbbf24' : '#ff7675',
+                  }}
+                >
+                  {workloadInsight.riskZone}
+                </span>
+              }
+            />
+          </div>
+          <div className="zenith-span-4" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(56, 189, 248, 0.15)', borderRadius: 12, padding: '16px 18px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="zenith-label">HRV Autonomic State (ANS)</div>
+                {ansState && (
+                  <span
+                    className="zenith-pill"
+                    style={{
+                      background: ansState.tone === 'parasympathetic' ? 'rgba(85, 239, 196, 0.15)' : ansState.tone === 'sympathetic' ? 'rgba(255, 118, 117, 0.15)' : 'rgba(255, 255, 255, 0.06)',
+                      color: ansState.tone === 'parasympathetic' ? '#55efc4' : ansState.tone === 'sympathetic' ? '#ff7675' : 'var(--text-muted)',
+                    }}
+                  >
+                    {ansState.tone}
+                  </span>
+                )}
+              </div>
+              {ansState && todayHrv !== null ? (
+                <>
+                  <div className="zenith-stat-value" style={{ marginTop: 10 }}>
+                    {Math.round(todayHrv * 10) / 10} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }}>ms rMSSD</span>
+                  </div>
+                  <p style={{ margin: '10px 0 0', fontSize: 12, color: '#e2e8f0', lineHeight: 1.5 }}>
+                    {ansState.insight}
+                  </p>
+                </>
+              ) : (
+                <div style={{ marginTop: 10, flex: 1, display: 'flex' }}>
+                  <ZenithEmptyState
+                    icon={<HeartPulse size={20} />}
+                    title="No HRV data yet"
+                    message="Connect a wearable via Zenith Pulse, or pair a smart ring, for real HRV-based readiness."
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Metrics Row: Weight, Steps, Sleep */}
+        <div className="zenith-grid-12">
+          {/* Weight */}
+          <div
+            className="zenith-span-4"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', cursor: 'pointer' }}
+            onClick={() => setCurrentTab('weight')}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div className="zenith-label">Weight</div>
               <div className="metric-icon-wrap" style={{ background: 'rgba(203, 213, 225, 0.08)', border: '1px solid rgba(203, 213, 225, 0.2)' }}>
                 <Scale size={18} style={{ color: '#cbd5e1' }} />
               </div>
             </div>
-            <div className="metric-value-container">
-              <span className="metric-value">{latestWeight ? latestWeight.weight : '--'}</span>
-              <span className="metric-unit">kg</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span className="zenith-stat-value">{latestWeight ? latestWeight.weight : '--'}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>kg</span>
             </div>
             {latestWeight && latestWeight.body_fat && (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12, display: 'flex', gap: 12 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10, display: 'flex', gap: 12 }}>
                 <span>Fat: <strong>{latestWeight.body_fat}%</strong></span>
                 {latestWeight.muscle_mass && <span>Muscle: <strong>{latestWeight.muscle_mass}%</strong></span>}
               </div>
             )}
-            <div className="metric-footer" style={{ marginTop: latestWeight && latestWeight.body_fat ? 0 : 20 }}>
+            <div className="metric-footer" style={{ marginTop: latestWeight && latestWeight.body_fat ? 8 : 16 }}>
               <Calendar size={12} />
               <span>
-                {latestWeight 
+                {latestWeight
                   ? `Weighed on ${new Date(latestWeight.logged_at).toLocaleDateString('en-US')}`
                   : 'No measurement'}
               </span>
             </div>
           </div>
 
-          {/* Card 2: Steps */}
-          <div className="vigor-card col-4" style={{ cursor: 'pointer' }} onClick={() => setCurrentTab('steps')}>
-            <div className="metric-header">
-              <span className="metric-title">Daily Steps</span>
+          {/* Steps */}
+          <div
+            className="zenith-span-4"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', cursor: 'pointer' }}
+            onClick={() => setCurrentTab('steps')}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div className="zenith-label">Daily Steps</div>
               <div className="metric-icon-wrap" style={{ background: 'rgba(92, 124, 250, 0.08)', border: '1px solid rgba(92, 124, 250, 0.2)' }}>
                 <Footprints size={18} style={{ color: '#5c7cfa' }} />
               </div>
             </div>
-            <div className="metric-value-container">
-              <span className="metric-value">{currentDailySteps.toLocaleString()}</span>
-              <span className="metric-unit">/ {profile.target_steps?.toLocaleString() || '10.000'}</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span className="zenith-stat-value">{currentDailySteps.toLocaleString('en-US')}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>/ {profile.target_steps?.toLocaleString('en-US') || '10,000'}</span>
             </div>
-            <div style={{ margin: '8px 0 12px' }}>
+            <div style={{ margin: '10px 0 8px' }}>
               <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
                 <div style={{ width: `${stepsProgress}%`, height: '100%', background: '#5c7cfa', borderRadius: 2 }} />
               </div>
@@ -1027,89 +1122,39 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             <div className="metric-footer" style={{ marginTop: 0 }}>
               <Sparkles size={12} style={{ color: '#5c7cfa' }} />
               <span style={{ fontSize: 10 }}>
-                {isTodayStepsPresent 
+                {isTodayStepsPresent
                   ? `Today (${new Date().toLocaleDateString('en-US')})`
-                  : `Today: 0 steps ${latestStepsItem ? `(Last: ${latestStepsItem.step_count.toLocaleString()} on ${new Date(latestStepsItem.logged_at).toLocaleDateString('en-US')})` : ''}`}
+                  : `Today: 0 steps ${latestStepsItem ? `(Last: ${latestStepsItem.step_count.toLocaleString('en-US')} on ${new Date(latestStepsItem.logged_at).toLocaleDateString('en-US')})` : ''}`}
               </span>
             </div>
           </div>
 
-          {/* Card 3: Sleep */}
-          <div className="vigor-card col-4" style={{ cursor: 'pointer' }} onClick={() => setCurrentTab('sleep')}>
-            <div className="metric-header">
-              <span className="metric-title">Sleep</span>
+          {/* Sleep */}
+          <div
+            className="zenith-span-4"
+            style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', cursor: 'pointer' }}
+            onClick={() => setCurrentTab('sleep')}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div className="zenith-label">Sleep</div>
               <div className="metric-icon-wrap" style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.2)' }}>
                 <Moon size={18} style={{ color: '#a855f7' }} />
               </div>
             </div>
-            <div className="metric-value-container">
-              <span className="metric-value">
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span className="zenith-stat-value">
                 {latestSleep ? Math.floor(latestSleep.duration_minutes / 60) : '--'}
               </span>
-              <span className="metric-unit">h {latestSleep ? latestSleep.duration_minutes % 60 : ''}m</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>h {latestSleep ? latestSleep.duration_minutes % 60 : ''}m</span>
             </div>
             {latestSleep && latestSleep.quality_score && (
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
                 Quality: <strong style={{ color: '#a855f7' }}>{latestSleep.quality_score}/100</strong>
               </div>
             )}
-            <div className="metric-footer" style={{ marginTop: latestSleep && latestSleep.quality_score ? 0 : 20 }}>
+            <div className="metric-footer" style={{ marginTop: latestSleep && latestSleep.quality_score ? 8 : 16 }}>
               <Moon size={12} style={{ color: '#a855f7' }} />
               <span>Goal: {profile.target_sleep_hours || 8} hours</span>
-            </div>
-          </div>
-        </div>
-
-        {/* SOTA ML Analytics Row */}
-        <div className="vigor-grid">
-          {/* HRV ANS Card */}
-          <div className="vigor-card col-6 animate-fade-in" style={{ border: '1px solid rgba(56, 189, 248, 0.25)', background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.05) 0%, rgba(9, 9, 11, 0.98) 100%)' }}>
-            <div className="metric-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Sparkles size={16} style={{ color: '#38bdf8' }} />
-                <span className="metric-title" style={{ color: '#fff', fontWeight: 800 }}>HRV Autonomic State (ANS)</span>
-              </div>
-              <span style={{ fontSize: 10, background: ansState.tone === 'parasympathetic' ? 'rgba(85, 239, 196, 0.15)' : ansState.tone === 'sympathetic' ? 'rgba(255, 118, 117, 0.15)' : 'rgba(255, 255, 255, 0.05)', color: ansState.tone === 'parasympathetic' ? '#55efc4' : ansState.tone === 'sympathetic' ? '#ff7675' : 'var(--text-muted)', padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', fontWeight: 800 }}>
-                {ansState.tone}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '16px 0 8px' }}>
-              <span style={{ fontSize: '28px', fontWeight: 900, color: '#fff', fontFamily: 'Outfit, sans-serif' }}>{todayHrv}</span>
-              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>ms rMSSD</span>
-              <span style={{ fontSize: '11px', color: '#38bdf8', marginLeft: 'auto', fontWeight: 700 }}>Z-Score: {ansState.zScore > 0 ? `+${ansState.zScore}` : ansState.zScore}</span>
-            </div>
-            <p style={{ margin: 0, fontSize: '12px', color: '#e2e8f0', lineHeight: 1.5, minHeight: 44 }}>
-              {ansState.insight}
-            </p>
-            <div style={{ display: 'flex', gap: 16, borderTop: '1px solid var(--border-color)', marginTop: 14, paddingTop: 10, fontSize: '11px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>CNS Adaptability: <strong style={{ color: '#fff' }}>{ansState.tone === 'parasympathetic' ? 'High' : ansState.tone === 'sympathetic' ? 'Suppressed' : 'Normal'}</strong></span>
-              <span style={{ color: 'var(--text-muted)' }}>Calorie Buffer: <strong style={{ color: '#55efc4' }}>{ansState.calorieAdjustmentMultiplier > 1.0 ? `+${Math.round((ansState.calorieAdjustmentMultiplier - 1) * 100)}%` : 'Baseline'}</strong></span>
-            </div>
-          </div>
-
-          {/* ACWR Workload Card */}
-          <div className="vigor-card col-6 animate-fade-in" style={{ border: '1px solid rgba(251, 191, 36, 0.25)', background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.05) 0%, rgba(9, 9, 11, 0.98) 100%)' }}>
-            <div className="metric-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Scale size={16} style={{ color: '#fbbf24' }} />
-                <span className="metric-title" style={{ color: '#fff', fontWeight: 800 }}>ACWR Workload Forecaster</span>
-              </div>
-              <span style={{ fontSize: 10, background: workloadInsight.riskZone === 'optimal' ? 'rgba(85, 239, 196, 0.15)' : workloadInsight.riskZone === 'high' ? 'rgba(251, 191, 36, 0.15)' : 'rgba(255, 118, 117, 0.15)', color: workloadInsight.riskZone === 'optimal' ? '#55efc4' : workloadInsight.riskZone === 'high' ? '#fbbf24' : '#ff7675', padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', fontWeight: 800 }}>
-                {workloadInsight.riskZone}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '16px 0 8px' }}>
-              <span style={{ fontSize: '28px', fontWeight: 900, color: '#fff', fontFamily: 'Outfit, sans-serif' }}>{workloadInsight.acwr.toFixed(2)}</span>
-              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Ratio (7d/28d)</span>
-              <span style={{ fontSize: '11px', color: '#fbbf24', marginLeft: 'auto', fontWeight: 700 }}>
-                {workloadInsight.acwr < 0.8 ? 'Under-load' : workloadInsight.acwr <= 1.3 ? 'Sweet Spot' : 'Over-load'}
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: '12px', color: '#e2e8f0', lineHeight: 1.5, minHeight: 44 }}>
-              {workloadInsight.insight}
-            </p>
-            <div style={{ display: 'flex', gap: 16, borderTop: '1px solid var(--border-color)', marginTop: 14, paddingTop: 10, fontSize: '11px' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Coaching action: <strong style={{ color: '#fff' }}>{workloadInsight.recommendation}</strong></span>
             </div>
           </div>
         </div>
@@ -1150,7 +1195,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                 <span style={{ color: 'var(--text-muted)' }}>Steps Target:</span>
-                <span style={{ fontWeight: 800, color: '#5c7cfa' }}>{profile.target_steps ? profile.target_steps.toLocaleString() : '10.000'} steps</span>
+                <span style={{ fontWeight: 800, color: '#5c7cfa' }}>{profile.target_steps ? profile.target_steps.toLocaleString('en-US') : '10,000'} steps</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                 <span style={{ color: 'var(--text-muted)' }}>Sleep Target:</span>
@@ -1175,7 +1220,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             {/* Left section: Header & description */}
             <div style={{ flex: '1.2', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: 'var(--color-primary)', letterSpacing: '1.5px' }}>
+                <span className="zenith-eyebrow" style={{ color: 'var(--color-primary)' }}>
                   Goal Progress
                 </span>
                 {goalProgress.isFallbackRate && (
@@ -1199,15 +1244,15 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             {/* Middle section: Spaced out metrics cards */}
             <div style={{ flex: '1', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, alignSelf: 'stretch', alignItems: 'center' }}>
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'center' }}>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Start</span>
+                <span className="zenith-eyebrow">Start</span>
                 <strong style={{ fontSize: 16, color: '#fff', fontWeight: 800 }}>{goalProgress.oldestWeight} <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)' }}>kg</span></strong>
               </div>
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'center' }}>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Current</span>
+                <span className="zenith-eyebrow">Current</span>
                 <strong style={{ fontSize: 16, color: '#fff', fontWeight: 800 }}>{goalProgress.currentWeight} <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)' }}>kg</span></strong>
               </div>
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'center' }}>
-                <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Rate</span>
+                <span className="zenith-eyebrow">Rate</span>
                 <strong style={{ fontSize: 16, color: 'var(--color-primary-bright)', fontWeight: 800 }}>{goalProgress.ratePerWeek} <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)' }}>kg/wk</span></strong>
               </div>
             </div>
@@ -1251,7 +1296,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           {/* Weight trend chart */}
           <div className="vigor-card col-6" style={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
+              <h3 className="zenith-eyebrow" style={{ margin: 0 }}>
                 Weight Progress (kg)
               </h3>
               <button 
@@ -1272,12 +1317,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartWeightData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                    <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                    <YAxis stroke="var(--text-muted)" domain={['dataMin - 2', 'dataMax + 2']} fontSize={10} tickLine={false} />
-                    <Tooltip 
-                      contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 12, color: '#fff' }}
-                      labelStyle={{ fontWeight: 800, color: '#cbd5e1', marginBottom: 4 }}
+                    <CartesianGrid {...ZENITH_CHART_GRID} />
+                    <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                    <YAxis stroke="var(--text-muted)" domain={['dataMin - 2', 'dataMax + 2']} tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                    <Tooltip
+                      contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                      labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                     />
                     {profile.target_weight && (
                       <ReferenceLine y={profile.target_weight} stroke="rgba(239, 68, 68, 0.4)" strokeDasharray="3 3" label={{ value: `Goal: ${profile.target_weight}kg`, fill: '#ef4444', fontSize: 9, position: 'right' }} />
@@ -1292,7 +1337,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           {/* Body Composition trend chart */}
           <div className="vigor-card col-6" style={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
+              <h3 className="zenith-eyebrow" style={{ margin: 0 }}>
                 Body Composition (%)
               </h3>
               {!isPro && (
@@ -1330,11 +1375,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                         <stop offset="95%" stopColor="#64748b" stopOpacity={0.02}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                    <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                    <YAxis stroke="var(--text-muted)" domain={[0, 100]} fontSize={10} tickLine={false} />
-                    <Tooltip 
-                      contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 12, color: '#fff' }}
+                    <CartesianGrid {...ZENITH_CHART_GRID} />
+                    <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                    <YAxis stroke="var(--text-muted)" domain={[0, 100]} tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                    <Tooltip
+                      contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                      labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                     />
                     {/* Areas stacked to exactly 100% */}
                     <Area type="monotone" name="Fat %" dataKey="fat" stackId="1" stroke="#ef4444" strokeWidth={1.5} fill="url(#colorVet)" />
@@ -1351,7 +1397,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
         {/* Weight history table */}
         <div className="vigor-card col-12">
-          <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
+          <h3 className="zenith-eyebrow" style={{ marginBottom: 20 }}>
             Weight Measurements History
           </h3>
           <div style={{ overflowX: 'auto' }}>
@@ -1360,9 +1406,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <tr style={{ color: 'var(--text-muted)', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <th style={{ padding: '8px 12px' }}>Date</th>
                   <th style={{ padding: '8px 12px' }}>Weight</th>
-                  <th style={{ padding: '8px 12px' }}>Vet %</th>
-                  <th style={{ padding: '8px 12px' }}>Vocht %</th>
-                  <th style={{ padding: '8px 12px' }}>Spier %</th>
+                  <th style={{ padding: '8px 12px' }}>Fat %</th>
+                  <th style={{ padding: '8px 12px' }}>Water %</th>
+                  <th style={{ padding: '8px 12px' }}>Muscle %</th>
                   <th style={{ padding: '8px 12px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -1382,7 +1428,13 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 ))}
                 {weights.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No weight measurements logged.</td>
+                    <td colSpan={6} style={{ padding: 0, border: 'none' }}>
+                      <ZenithEmptyState
+                        icon={<Scale size={20} />}
+                        title="No weight measurements yet"
+                        message="Log your weight to start tracking trends and body composition over time."
+                      />
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -1400,19 +1452,19 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     const photo2Url = comparePhoto2 || anglePhotos[anglePhotos.length - 1]?.image_url || '';
 
     const metricNames: { [key: string]: string } = {
-      body_fat_pct: 'Vetpercentage (%)',
+      body_fat_pct: 'Body Fat (%)',
       muscle_mass_kg: 'Muscle Mass (kg)',
-      waist_cm: 'Waistomtrek (cm)',
-      chest_cm: 'Chestomtrek (cm)',
-      shoulders_cm: 'Schouderomtrek (cm)',
-      hips_cm: 'Heupomtrek (cm)',
-      biceps_l_cm: 'Left Bicepsinks (cm)',
-      biceps_r_cm: 'Right Bicepsechts (cm)',
-      thigh_l_cm: 'Bovenbeen Links (cm)',
-      thigh_r_cm: 'Bovenbeen Rechts (cm)',
-      calves_l_cm: 'Kuit Links (cm)',
-      calves_r_cm: 'Kuit Rechts (cm)',
-      neck_cm: 'Neckomtrek (cm)'
+      waist_cm: 'Waist (cm)',
+      chest_cm: 'Chest (cm)',
+      shoulders_cm: 'Shoulders (cm)',
+      hips_cm: 'Hips (cm)',
+      biceps_l_cm: 'Left Biceps (cm)',
+      biceps_r_cm: 'Right Biceps (cm)',
+      thigh_l_cm: 'Left Thigh (cm)',
+      thigh_r_cm: 'Right Thigh (cm)',
+      calves_l_cm: 'Left Calf (cm)',
+      calves_r_cm: 'Right Calf (cm)',
+      neck_cm: 'Neck (cm)'
     };
 
     const chartData = measurements.map(m => {
@@ -1457,7 +1509,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               transition: 'all 0.2s'
             }}
           >
-            Progressfoto's
+            Progress Photos
           </button>
         </div>
 
@@ -1483,53 +1535,55 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             <div className="vigor-grid">
             {/* Quick Log Measurements Card */}
             <div className="vigor-card col-4">
-              <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
+              <h3 className="zenith-eyebrow" style={{ marginBottom: 20 }}>
                 Log Measurements
               </h3>
               <form onSubmit={handleSaveMeasurement} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Log Date</label>
-                    <input 
-                      type="date" 
-                      className="form-input" 
+                    <input
+                      type="date"
+                      className="form-input"
                       value={newMeasurement.logged_at}
                       onChange={e => setNewMeasurement({ ...newMeasurement, logged_at: e.target.value })}
                       required
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Vetpercentage (%)</label>
-                    <input 
-                      type="number" 
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Body Fat (%)</label>
+                    <input
+                      type="number"
                       step="any"
                       placeholder="e.g. 12.5"
-                      className="form-input" 
+                      className="form-input"
                       value={newMeasurement.body_fat_pct}
                       onChange={e => setNewMeasurement({ ...newMeasurement, body_fat_pct: e.target.value })}
                     />
                   </div>
                 </div>
 
+                <div className="zenith-eyebrow" style={{ marginTop: 4 }}>Core</div>
+
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Waist (cm)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="any"
                       placeholder="e.g. 80"
-                      className="form-input" 
+                      className="form-input"
                       value={newMeasurement.waist_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, waist_cm: e.target.value })}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Muscle Mass (kg)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="any"
                       placeholder="e.g. 65"
-                      className="form-input" 
+                      className="form-input"
                       value={newMeasurement.muscle_mass_kg}
                       onChange={e => setNewMeasurement({ ...newMeasurement, muscle_mass_kg: e.target.value })}
                     />
@@ -1538,23 +1592,50 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Chest (cm)</label>
-                    <input 
-                      type="number" 
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Hips (cm)</label>
+                    <input
+                      type="number"
                       step="any"
-                      placeholder="Chest"
-                      className="form-input" 
+                      placeholder="e.g. 95"
+                      className="form-input"
+                      value={newMeasurement.hips_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, hips_cm: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Neck (cm)</label>
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="e.g. 38"
+                      className="form-input"
+                      value={newMeasurement.neck_cm}
+                      onChange={e => setNewMeasurement({ ...newMeasurement, neck_cm: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="zenith-eyebrow" style={{ marginTop: 4 }}>Upper Body</div>
+
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Chest (cm)</label>
+                    <input
+                      type="number"
+                      step="any"
+                      placeholder="e.g. 100"
+                      className="form-input"
                       value={newMeasurement.chest_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, chest_cm: e.target.value })}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Shoulders (cm)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="any"
-                      placeholder="Shoulders"
-                      className="form-input" 
+                      placeholder="e.g. 110"
+                      className="form-input"
                       value={newMeasurement.shoulders_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, shoulders_cm: e.target.value })}
                     />
@@ -1564,47 +1645,49 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Left Biceps (cm)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="any"
-                      placeholder="Left Biceps"
-                      className="form-input" 
+                      placeholder="e.g. 35"
+                      className="form-input"
                       value={newMeasurement.biceps_l_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, biceps_l_cm: e.target.value })}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Right Biceps (cm)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="any"
-                      placeholder="Right Biceps"
-                      className="form-input" 
+                      placeholder="e.g. 35"
+                      className="form-input"
                       value={newMeasurement.biceps_r_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, biceps_r_cm: e.target.value })}
                     />
                   </div>
                 </div>
 
+                <div className="zenith-eyebrow" style={{ marginTop: 4 }}>Lower Body</div>
+
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Left Thigh (cm)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="any"
-                      placeholder="Thigh L"
-                      className="form-input" 
+                      placeholder="e.g. 55"
+                      className="form-input"
                       value={newMeasurement.thigh_l_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, thigh_l_cm: e.target.value })}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Right Thigh (cm)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="any"
-                      placeholder="Thigh R"
-                      className="form-input" 
+                      placeholder="e.g. 55"
+                      className="form-input"
                       value={newMeasurement.thigh_r_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, thigh_r_cm: e.target.value })}
                     />
@@ -1614,49 +1697,24 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Left Calf (cm)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="any"
-                      placeholder="Calf L"
-                      className="form-input" 
+                      placeholder="e.g. 37"
+                      className="form-input"
                       value={newMeasurement.calves_l_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, calves_l_cm: e.target.value })}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Right Calf (cm)</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       step="any"
-                      placeholder="Calf R"
-                      className="form-input" 
+                      placeholder="e.g. 37"
+                      className="form-input"
                       value={newMeasurement.calves_r_cm}
                       onChange={e => setNewMeasurement({ ...newMeasurement, calves_r_cm: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Hips (cm)</label>
-                    <input 
-                      type="number" 
-                      step="any"
-                      placeholder="Hips"
-                      className="form-input" 
-                      value={newMeasurement.hips_cm}
-                      onChange={e => setNewMeasurement({ ...newMeasurement, hips_cm: e.target.value })}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Neck (cm)</label>
-                    <input 
-                      type="number" 
-                      step="any"
-                      placeholder="Neck"
-                      className="form-input" 
-                      value={newMeasurement.neck_cm}
-                      onChange={e => setNewMeasurement({ ...newMeasurement, neck_cm: e.target.value })}
                     />
                   </div>
                 </div>
@@ -1670,7 +1728,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             {/* Chart Card */}
             <div className="vigor-card col-8" style={{ display: 'flex', flexDirection: 'column', minHeight: 350 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', margin: 0 }}>
+                <h3 className="zenith-eyebrow" style={{ margin: 0 }}>
                   Measurement Progress
                 </h3>
                 <select
@@ -1693,12 +1751,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                      <XAxis dataKey="dateStr" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} stroke="rgba(255,255,255,0.1)" />
-                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} stroke="rgba(255,255,255,0.1)" domain={['auto', 'auto']} />
-                      <Tooltip 
-                        contentStyle={{ background: '#09090b', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10 }}
-                        labelStyle={{ color: '#fff', fontSize: 11, fontWeight: 700 }}
+                      <CartesianGrid {...ZENITH_CHART_GRID} />
+                      <XAxis dataKey="dateStr" tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.1)" />
+                      <YAxis tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.1)" domain={['auto', 'auto']} />
+                      <Tooltip
+                        contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                        labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                         itemStyle={{ fontSize: 11, color: 'var(--color-primary)' }}
                       />
                       <Line type="monotone" dataKey="value" stroke="var(--color-primary)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} name={metricNames[chartMetric]} />
@@ -1710,7 +1768,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
             {/* History Table */}
             <div className="vigor-card col-12" style={{ marginTop: 12 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
+              <h3 className="zenith-eyebrow" style={{ marginBottom: 20 }}>
                 Historical Measurements Log
               </h3>
               <div style={{ overflowX: 'auto' }}>
@@ -1718,7 +1776,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-muted)' }}>
                       <th style={{ padding: '10px 12px', textAlign: 'left' }}>Date</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Vet %</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Fat %</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Muscle (kg)</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Waist</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Chest</th>
@@ -1758,8 +1816,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     ))}
                     {measurements.length === 0 && (
                       <tr>
-                        <td colSpan={10} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                          No body measurements recorded.
+                        <td colSpan={10} style={{ padding: 0, border: 'none' }}>
+                          <ZenithEmptyState
+                            icon={<Ruler size={20} />}
+                            title="No body measurements recorded"
+                            message="Log your first set of measurements to start tracking changes across body zones."
+                          />
                         </td>
                       </tr>
                     )}
@@ -1780,7 +1842,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 Upload photos monthly (Front, Side, Back) and compare your physical transformation directly side-by-side with the interactive slider.
               </p>
               <button 
-                onClick={() => handleRequestProModal("Progress Photos & Comparer", "Upload maandelijks foto's en vergelijk je fysieke transformatie direct Side-by-Side with de interactieve slider.")} 
+                onClick={() => handleRequestProModal("Progress Photos & Comparer", "Upload photos monthly and compare your physical transformation directly side-by-side with the interactive slider.")}
                 className="btn-primary" 
                 style={{ padding: '10px 24px', fontSize: 12, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900 }}
               >
@@ -1791,19 +1853,28 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             <div className="vigor-grid">
             {/* Photo Uploader Card */}
             <div className="vigor-card col-4">
-              <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
+              <h3 className="zenith-eyebrow" style={{ marginBottom: 20 }}>
                 Upload Photo
               </h3>
               <form onSubmit={handleUploadPhoto} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
                   <label style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Select Photo</label>
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
+                    id="progress-photo-input"
                     accept="image/*"
                     onChange={e => setPhotoFile(e.target.files ? e.target.files[0] : null)}
                     required
-                    style={{ fontSize: 11, color: 'var(--text-muted)' }}
+                    style={{ display: 'none' }}
                   />
+                  <label
+                    htmlFor="progress-photo-input"
+                    className="form-input"
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: photoFile ? '#cbd5e1' : 'var(--text-muted)' }}
+                  >
+                    <Camera size={14} />
+                    {photoFile ? photoFile.name : 'Choose a photo…'}
+                  </label>
                 </div>
                 
                 <div>
@@ -1849,13 +1920,17 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
             {/* Photo Library Grid */}
             <div className="vigor-card col-8" style={{ minHeight: 350 }}>
-              <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', marginBottom: 20 }}>
+              <h3 className="zenith-eyebrow" style={{ marginBottom: 20 }}>
                 Photo Library
               </h3>
               
               {photos.length === 0 ? (
-                <div style={{ height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12 }}>
-                  No progress photos uploaded.
+                <div style={{ height: '80%', minHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ZenithEmptyState
+                    icon={<Camera size={20} />}
+                    title="No progress photos uploaded"
+                    message="Upload a photo (front, side, or back) to start building your visual timeline."
+                  />
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, maxHeight: 300, overflowY: 'auto' }}>
@@ -1911,8 +1986,8 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             {/* Side-by-Side Visual Compare Card */}
             <div className="vigor-card col-12" style={{ marginTop: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h3 style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase', color: '#fff', letterSpacing: '0.8px', margin: 0 }}>
-                  Side-by-Side Progress Vergelijker
+                <h3 className="zenith-eyebrow" style={{ margin: 0 }}>
+                  Side-by-Side Progress Comparer
                 </h3>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <select
@@ -1975,7 +2050,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   <div style={{ display: 'flex', gap: 20, justifyContent: 'center' }}>
                     <div style={{ flex: 1, maxWidth: 450, textAlign: 'center' }}>
                       <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#000' }}>
-                        {photo1Url && <img src={photo1Url} alt="Foto 1 comparison" style={{ width: '100%', height: 350, objectFit: 'contain' }} />}
+                        {photo1Url && <img src={photo1Url} alt="Photo 1 comparison" style={{ width: '100%', height: 350, objectFit: 'contain' }} />}
                       </div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8 }}>
                         Older status
@@ -1983,7 +2058,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     </div>
                     <div style={{ flex: 1, maxWidth: 450, textAlign: 'center' }}>
                       <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: '#000' }}>
-                        {photo2Url && <img src={photo2Url} alt="Foto 2 comparison" style={{ width: '100%', height: 350, objectFit: 'contain' }} />}
+                        {photo2Url && <img src={photo2Url} alt="Photo 2 comparison" style={{ width: '100%', height: 350, objectFit: 'contain' }} />}
                       </div>
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8 }}>
                         Newer status
@@ -2098,25 +2173,25 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 {/* 4 Phase Cards Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
                   <div style={{ background: 'rgba(139, 92, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#a855f7', marginBottom: 4 }}>🟣 Deep Sleep</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#a855f7', marginBottom: 4, display: 'flex', alignItems: 'center' }}><SleepStageDot color="#a855f7" />Deep Sleep</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(deepMins / 60)}h {deepMins % 60}m</div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{deepPct}% (Muscle recovery)</div>
                   </div>
 
                   <div style={{ background: 'rgba(59, 130, 246, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4 }}>🔵 Light Sleep</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#60a5fa', marginBottom: 4, display: 'flex', alignItems: 'center' }}><SleepStageDot color="#60a5fa" />Light Sleep</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(lightMins / 60)}h {lightMins % 60}m</div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{lightPct}% (Memory)</div>
                   </div>
 
                   <div style={{ background: 'rgba(236, 72, 153, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(236, 72, 153, 0.2)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#f472b6', marginBottom: 4 }}>💖 REM Sleep</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#f472b6', marginBottom: 4, display: 'flex', alignItems: 'center' }}><SleepStageDot color="#f472b6" />REM Sleep</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{Math.floor(remMins / 60)}h {remMins % 60}m</div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{remPct}% (Mental Energy)</div>
                   </div>
 
                   <div style={{ background: 'rgba(245, 158, 11, 0.08)', padding: '12px', borderRadius: 10, border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#fbbf24', marginBottom: 4 }}>🟡 Awake</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: '#fbbf24', marginBottom: 4, display: 'flex', alignItems: 'center' }}><SleepStageDot color="#fbbf24" />Awake</div>
                     <div style={{ fontSize: 16, fontWeight: 900, color: '#fff' }}>{awakeMins}m</div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{awakePct}% (Micro-awakenings)</div>
                   </div>
@@ -2150,12 +2225,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartSleepData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                  <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 12, color: '#fff' }}
-                    labelStyle={{ fontWeight: 800, color: '#a855f7', marginBottom: 4 }}
+                  <CartesianGrid {...ZENITH_CHART_GRID} />
+                  <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <YAxis stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <Tooltip
+                    contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                    labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                   />
                   {profile.target_sleep_hours && (
                     <ReferenceLine y={profile.target_sleep_hours} stroke="rgba(168, 85, 247, 0.4)" strokeDasharray="3 3" label={{ value: `Goal: ${profile.target_sleep_hours}h`, fill: '#a855f7', fontSize: 9, position: 'right' }} />
@@ -2225,7 +2300,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         {/* Steps chart */}
         <div className="vigor-card col-12" style={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', margin: 0 }}>
+            <h3 className="zenith-eyebrow" style={{ margin: 0 }}>
               Daily Steps Trend
             </h3>
             <button 
@@ -2246,12 +2321,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartStepData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                  <YAxis stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 12, color: '#fff' }}
-                    labelStyle={{ fontWeight: 800, color: '#5c7cfa', marginBottom: 4 }}
+                  <CartesianGrid {...ZENITH_CHART_GRID} />
+                  <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <YAxis stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <Tooltip
+                    contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                    labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                   />
                   {profile.target_steps && (
                     <ReferenceLine y={profile.target_steps} stroke="rgba(92, 124, 250, 0.4)" strokeDasharray="3 3" />
@@ -2265,7 +2340,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
         {/* Steps history table */}
         <div className="vigor-card col-12">
-          <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
+          <h3 className="zenith-eyebrow" style={{ marginBottom: 20 }}>
             Steps Measurements History
           </h3>
           <div style={{ overflowX: 'auto' }}>
@@ -2281,7 +2356,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 {[...steps].reverse().slice(0, 15).map((s: any) => (
                   <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(s.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                    <td style={{ padding: '10px 12px', fontWeight: 800, color: '#5c7cfa' }}>{s.step_count.toLocaleString()} steps</td>
+                    <td style={{ padding: '10px 12px', fontWeight: 800, color: '#5c7cfa' }}>{s.step_count.toLocaleString('en-US')} steps</td>
                     <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                       <button onClick={() => handleEditClick('steps', s)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Edit</button>
                       <button onClick={() => handleDeleteLog('steps', s.id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', height: 'auto' }}>Delete</button>
@@ -2290,7 +2365,13 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 ))}
                 {steps.length === 0 && (
                   <tr>
-                    <td colSpan={3} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>No step logs recorded.</td>
+                    <td colSpan={3} style={{ padding: 0, border: 'none' }}>
+                      <ZenithEmptyState
+                        icon={<Footprints size={20} />}
+                        title="No step logs recorded"
+                        message="Log your daily steps to start tracking progress toward your step goal."
+                      />
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -2306,173 +2387,41 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     <div className="vigor-container animate-fade-in">
       <div className="vigor-glow" />
 
-      {/* Header section */}
-      <header className="vigor-header animate-slide-down" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        borderBottom: '1px solid rgba(255, 255, 255, 0.06)', 
-        padding: '16px 24px', 
-        background: 'transparent',
-        height: '70px',
-        boxSizing: 'border-box',
-        flexShrink: 0,
-        marginBottom: '24px'
-      }}>
-        <div className="vigor-brand">
-          <div>
-            <h1 className="zh-hub-title" style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '0.5px', lineHeight: '1.2' }}>
-              ZENITH <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '16px' }}>VIGOR</span>
-            </h1>
-            <p className="zh-hub-subtitle" style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, marginTop: '2px' }}>
-              Health & Vitality Tracker for {userName}
-            </p>
+      {/* Header section — shared shell used by every Zenith app */}
+      <ZenithPageHeader
+        appName="VIGOR"
+        subtitle={`Health & Vitality Tracker for ${userName}`}
+        tabs={vigorNavItems}
+        activeTab={currentTab}
+        onTabChange={(key) => setCurrentTab(key as any)}
+        actions={
+          <>
+            <button onClick={() => window.parent.postMessage({ type: 'NAVIGATE_TAB', tab: 'profile' }, '*')} className="zenith-header-btn">
+              <Settings size={14} /> Set Goals
+            </button>
+
+            <button onClick={() => setShowManualLog(true)} className="zenith-header-btn zenith-header-btn--primary">
+              <Plus size={14} /> Log Manually
+            </button>
+          </>
+        }
+      />
+
+      <div style={{ padding: '0 24px 24px' }}>
+        {loading ? (
+          <div style={{ padding: '100px 0', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Outfit' }}>
+            Synchronizing health data...
           </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button onClick={() => window.parent.postMessage({ type: 'NAVIGATE_TAB', tab: 'profile' }, '*')} className="vigor-nav-btn" style={{ background: 'rgba(255, 255, 255, 0.03)', borderColor: 'rgba(255, 255, 255, 0.08)' }}>
-            <Settings size={15} /> Set Goals
-          </button>
-          
-          <button onClick={() => setShowManualLog(true)} className="btn-secondary" style={{ padding: '10px 18px', fontSize: 13, height: '40px' }}>
-            <Plus size={16} /> Log Manually
-          </button>
-        </div>
-      </header>
-
-      {/* Navigation tabs bar */}
-      <nav style={{ 
-        display: 'flex', 
-        gap: 8, 
-        background: 'rgba(255,255,255,0.02)', 
-        border: '1px solid rgba(255,255,255,0.05)', 
-        padding: '6px', 
-        borderRadius: '14px', 
-        marginBottom: '24px',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)'
-      }}>
-        <button 
-          onClick={() => setCurrentTab('home')} 
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: '10px 16px',
-            borderRadius: '10px',
-            border: '1px solid ' + (currentTab === 'home' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
-            fontSize: '13px',
-            fontWeight: 800,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            background: currentTab === 'home' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
-            color: currentTab === 'home' ? '#fff' : 'var(--text-muted)'
-          }}
-        >
-          <Sparkles size={16} style={{ color: currentTab === 'home' ? '#cbd5e1' : 'inherit' }} /> Overview
-        </button>
-        <button 
-          onClick={() => setCurrentTab('weight')} 
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: '10px 16px',
-            borderRadius: '10px',
-            border: '1px solid ' + (currentTab === 'weight' ? 'rgba(57, 255, 20, 0.2)' : 'transparent'),
-            fontSize: '13px',
-            fontWeight: 800,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            background: currentTab === 'weight' ? 'rgba(203, 213, 225, 0.06)' : 'transparent',
-            color: currentTab === 'weight' ? '#cbd5e1' : 'var(--text-muted)'
-          }}
-        >
-          <Scale size={16} /> Weight
-        </button>
-        <button 
-          onClick={() => setCurrentTab('steps')} 
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: '10px 16px',
-            borderRadius: '10px',
-            border: '1px solid ' + (currentTab === 'steps' ? 'rgba(92, 124, 250, 0.2)' : 'transparent'),
-            fontSize: '13px',
-            fontWeight: 800,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            background: currentTab === 'steps' ? 'rgba(92, 124, 250, 0.06)' : 'transparent',
-            color: currentTab === 'steps' ? '#5c7cfa' : 'var(--text-muted)'
-          }}
-        >
-          <Footprints size={16} /> Steps
-        </button>
-        <button 
-          onClick={() => setCurrentTab('sleep')} 
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: '10px 16px',
-            borderRadius: '10px',
-            border: '1px solid ' + (currentTab === 'sleep' ? 'rgba(168, 85, 247, 0.2)' : 'transparent'),
-            fontSize: '13px',
-            fontWeight: 800,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            background: currentTab === 'sleep' ? 'rgba(168, 85, 247, 0.06)' : 'transparent',
-            color: currentTab === 'sleep' ? '#a855f7' : 'var(--text-muted)'
-          }}
-        >
-          <Moon size={16} /> Sleep
-        </button>
-        <button 
-          onClick={() => setCurrentTab('progress')} 
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            padding: '10px 16px',
-            borderRadius: '10px',
-            border: '1px solid ' + (currentTab === 'progress' ? 'rgba(255, 159, 67, 0.2)' : 'transparent'),
-            fontSize: '13px',
-            fontWeight: 800,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            background: currentTab === 'progress' ? 'rgba(255, 159, 67, 0.06)' : 'transparent',
-            color: currentTab === 'progress' ? '#ff9f43' : 'var(--text-muted)'
-          }}
-        >
-          <Camera size={16} /> Progress
-        </button>
-      </nav>
-
-      {loading ? (
-        <div style={{ padding: '100px 0', textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'Outfit' }}>
-          Synchronizing health data...
-        </div>
-      ) : (
-        <>
-          {currentTab === 'home' && renderHomeTab()}
-          {currentTab === 'weight' && renderWeightTab()}
-          {currentTab === 'sleep' && renderSleepTab()}
-          {currentTab === 'steps' && renderStepsTab()}
-          {currentTab === 'progress' && renderProgressTab()}
-        </>
-      )}
+        ) : (
+          <>
+            {currentTab === 'home' && renderHomeTab()}
+            {currentTab === 'weight' && renderWeightTab()}
+            {currentTab === 'sleep' && renderSleepTab()}
+            {currentTab === 'steps' && renderStepsTab()}
+            {currentTab === 'progress' && renderProgressTab()}
+          </>
+        )}
+      </div>
 
       {/* Edit Log Modal */}
       {editingLog && (
@@ -2544,7 +2493,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
                   {/* 1. Deep Sleep */}
                   <div style={{ background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', padding: 10, borderRadius: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase', marginBottom: 6 }}>🟣 Deep Sleep</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#a855f7', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center' }}><SleepStageDot color="#a855f7" />Deep Sleep</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
                         <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
@@ -2572,7 +2521,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
                   {/* 2. Light Sleep */}
                   <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: 10, borderRadius: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 6 }}>🔵 Light Sleep</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center' }}><SleepStageDot color="#60a5fa" />Light Sleep</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
                         <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
@@ -2600,7 +2549,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
                   {/* 3. REM Sleep */}
                   <div style={{ background: 'rgba(236, 72, 153, 0.08)', border: '1px solid rgba(236, 72, 153, 0.2)', padding: 10, borderRadius: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', marginBottom: 6 }}>💖 REM Sleep</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#f472b6', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center' }}><SleepStageDot color="#f472b6" />REM Sleep</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
                         <label className="form-label" style={{ fontSize: 10 }}>Hours</label>
@@ -2628,7 +2577,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
                   {/* 4. Awake */}
                   <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: 10, borderRadius: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', marginBottom: 6 }}>🟡 Awake</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24', textTransform: 'uppercase', marginBottom: 6, display: 'flex', alignItems: 'center' }}><SleepStageDot color="#fbbf24" />Awake</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                       <div>
                         <label className="form-label" style={{ fontSize: 10 }}>Hours</label>

@@ -19,7 +19,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
   const [reportLoading, setReportLoading] = useState(false);
   const [reportLoadingStep, setReportLoadingStep] = useState('');
   const [reportData, setReportData] = useState<any>(null);
-  const [reportActiveTab, setReportActiveTab] = useState<'summary' | 'progress' | 'werkpunten' | 'risico' | 'actieplan'>('summary');
+  const [reportActiveTab, setReportActiveTab] = useState<'summary' | 'progress' | 'focus' | 'risk' | 'actionplan'>('summary');
   const [copySuccess, setCopySuccess] = useState(false);
 
   const loadLocalLog = (): any[] => {
@@ -33,16 +33,16 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
 
   const handleGenerateReport = () => {
     setReportLoading(true);
-    setReportLoadingStep('Gegevens verzamelen...');
+    setReportLoadingStep('Collecting data...');
 
     setTimeout(() => {
-      setReportLoadingStep('Fysiologische parameters analyseren...');
+      setReportLoadingStep('Analyzing physiological parameters...');
 
       setTimeout(() => {
-        setReportLoadingStep('Thresholdprogressie & hartslagstabiliteit vergelijken...');
+        setReportLoadingStep('Comparing threshold progression & heart rate stability...');
 
         setTimeout(() => {
-          setReportLoadingStep('Rapport samenstellen...');
+          setReportLoadingStep('Compiling report...');
 
           setTimeout(() => {
             const nowMs = Date.now();
@@ -136,7 +136,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
               `**Endurance Baseline Foundation**: Your longest ride was **${longestRideStr}**. Such rides are crucial for building capillary density of your muscles.`,
             ];
 
-            const werkpuntenBullets = [
+            const focusBullets = [
               avgRpe >= 7
                 ? `**Intensity Distribution & Muscle Stress**: Your average RPE is **${avgRpe.toFixed(1)}/10**. We advise completing 80% of rides strictly in Zone 2.`
                 : `**Healthy Intensity Distribution**: Your average RPE of **${avgRpe.toFixed(1)}/10** demonstrates excellent training polarization.`,
@@ -148,7 +148,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                 : `**Excellent Pacing Strategy**: With an average Variability Index of **${avgVI.toFixed(2)}** you distribute your power efficiently.`,
             ];
 
-            const risicoBullets = [
+            const riskBullets = [
               avgRpe > 7.5
                 ? `**High Risk of Overtraining**: Training stimuli accumulate faster than your body can recover. Schedule a recovery week immediately.`
                 : `**Balanced Workload Risk**: Your training workload and recovery weeks are in optimal balance.`,
@@ -157,11 +157,11 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
                 : `**Stable Cardiovascular Tolerance**: Your responses show no signs of chronic fatigue or overtraining.`,
             ];
 
-            const actieplanBullets = [
+            const actionPlanBullets = [
               `**Week 1 (Volume & Recovery)**: Focus entirely on aerobic base in Zone 2.`,
               ftpDiff > 0
-                ? `**Week 2 (Gerichte Intensiteit)**: Add one specific threshold session (e.g. 2x12 min at 95% FTP).`
-                : `**Week 3 (Tempohardheid)**: Add two shorter tempo blocks (e.g. 3x8 min in Zone 3 at 85% FTP).`,
+                ? `**Week 2 (Targeted Intensity)**: Add one specific threshold session (e.g. 2x12 min at 95% FTP).`
+                : `**Week 3 (Tempo Work)**: Add two shorter tempo blocks (e.g. 3x8 min in Zone 3 at 85% FTP).`,
               `**Week 4 (Supercompensation/De-load)**: Halve weekly training volume to allow your body to supercompensate.`,
             ];
 
@@ -178,9 +178,9 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
               avgRpe,
               activeWeeks,
               progressBullets,
-              werkpuntenBullets,
-              risicoBullets,
-              actieplanBullets,
+              focusBullets,
+              riskBullets,
+              actionPlanBullets,
             });
             setReportLoading(false);
           }, 400);
@@ -199,10 +199,10 @@ PROGRESSION & STRENGTHS:
 ${reportData.progressBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).join('\n')}
 
 AREAS OF IMPROVEMENT & FOCUS:
-${reportData.werkpuntenBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).join('\n')}
+${reportData.focusBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).join('\n')}
 
 ACTION PLAN FOR COMING WEEKS:
-${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).join('\n')}
+${reportData.actionPlanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).join('\n')}
 `;
     navigator.clipboard.writeText(plainText);
     setCopySuccess(true);
@@ -217,7 +217,7 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
             <Sparkles size={18} color="#cbd5e1" />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#f8fafc' }}>AI Voortgangsrapport Generator</h3>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#f8fafc' }}>AI Progress Report Generator</h3>
             <p style={{ margin: 0, fontSize: 11, color: '#94a3b8' }}>
               Automated physiological analysis of your performance & recovery
             </p>
@@ -231,7 +231,7 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
                 { label: '30 Days', val: 30 },
                 { label: '90 Days', val: 90 },
                 { label: '365 Days', val: 365 },
-                { label: 'Alles', val: 'all' },
+                { label: 'All', val: 'all' },
               ] as const
             ).map((item) => (
               <button
@@ -299,9 +299,9 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
                   [
                     { id: 'summary', label: '📊 Summary' },
                     { id: 'progress', label: '🚀 Progression' },
-                    { id: 'werkpunten', label: '🎯 Focus Points' },
-                    { id: 'risico', label: '⚠️ Risk Analysis' },
-                    { id: 'actieplan', label: '🗓️ Action Plan' },
+                    { id: 'focus', label: '🎯 Focus Points' },
+                    { id: 'risk', label: '⚠️ Risk Analysis' },
+                    { id: 'actionplan', label: '🗓️ Action Plan' },
                   ] as const
                 ).map((tab) => (
                   <button
@@ -344,25 +344,25 @@ ${reportData.actieplanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, '')).
                   </ul>
                 )}
 
-                {reportActiveTab === 'werkpunten' && (
+                {reportActiveTab === 'focus' && (
                   <ul className="progress-ai-bullet-list">
-                    {reportData.werkpuntenBullets.map((b: string, i: number) => (
+                    {reportData.focusBullets.map((b: string, i: number) => (
                       <li key={i} dangerouslySetInnerHTML={{ __html: b.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                     ))}
                   </ul>
                 )}
 
-                {reportActiveTab === 'risico' && (
+                {reportActiveTab === 'risk' && (
                   <ul className="progress-ai-bullet-list">
-                    {reportData.risicoBullets.map((b: string, i: number) => (
+                    {reportData.riskBullets.map((b: string, i: number) => (
                       <li key={i} dangerouslySetInnerHTML={{ __html: b.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                     ))}
                   </ul>
                 )}
 
-                {reportActiveTab === 'actieplan' && (
+                {reportActiveTab === 'actionplan' && (
                   <ul className="progress-ai-bullet-list">
-                    {reportData.actieplanBullets.map((b: string, i: number) => (
+                    {reportData.actionPlanBullets.map((b: string, i: number) => (
                       <li key={i} dangerouslySetInnerHTML={{ __html: b.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
                     ))}
                   </ul>

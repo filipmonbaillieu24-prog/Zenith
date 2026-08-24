@@ -1,8 +1,10 @@
 import React from 'react';
 import {
   Search, CalendarDays, MoveRight, Mountain, BarChart2, Zap,
-  Clock, Repeat2, Flag, Heart, Users, ArrowLeftRight, AlertTriangle, Activity
+  Clock, Repeat2, Flag, Heart, Users, ArrowLeftRight, AlertTriangle, Activity,
+  Bike, Trophy, Scale, Trash2
 } from 'lucide-react';
+import { ZenithEmptyState } from '@zenith/shared';
 import { RideSummaryWithBests, RIDE_LABELS, Gear, EFFORT_DURATIONS, SPEED_EFFORT_DURATIONS } from '../../types/workout';
 import { getRidePRLabels } from '../../utils/dashboardHelpers';
 import { analyzeNotesLocally } from '../../utils/localNeuralNet';
@@ -48,7 +50,9 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
     <div className="wd-main-single animate-slide-up" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main,#f8fafc)', margin: '0 0 4px' }}>🚲 My Rides</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: 'var(--text-main,#f8fafc)', margin: '0 0 4px' }}>
+            <Bike size={16} strokeWidth={1.8} /> My Rides
+          </h2>
           <p style={{ fontSize: 12, color: 'var(--text-muted,#94a3b8)', margin: 0 }}>View, filter, and compare all your recorded rides.</p>
         </div>
 
@@ -97,14 +101,14 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
         <button
           className={`wd-label-chip ${labelFilter === 'all' ? 'wd-label-chip--active' : ''}`}
           onClick={() => setLabelFilter('all')}
-          style={{ fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', fontFamily: 'inheride' }}
+          style={{ fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', fontFamily: 'inherit' }}
         >All</button>
         {RIDE_LABELS.map(l => {
           const labelIcon: Record<string, React.ReactNode> = {
             duurride:   <Clock         size={11} strokeWidth={1.6} />,
             interval:  <Repeat2       size={11} strokeWidth={1.6} />,
             wedstrijd: <Flag          size={11} strokeWidth={1.6} />,
-            recovery:   <Heart         size={11} strokeWidth={1.6} />,
+            herstel:   <Heart         size={11} strokeWidth={1.6} />,
             groepsride: <Users         size={11} strokeWidth={1.6} />,
             pendel:    <ArrowLeftRight size={11} strokeWidth={1.6} />,
             berg:      <Mountain      size={11} strokeWidth={1.6} />,
@@ -115,8 +119,8 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
               key={l.key}
               className={`wd-label-chip ${isActive ? 'wd-label-chip--active' : ''}`}
               style={isActive
-                ? { background: l.color + '22', borderColor: l.color, color: l.color, fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inheride', display: 'flex', alignItems: 'center', gap: 4 }
-                : { color: l.color, background: 'transparent', borderColor: 'rgba(255,255,255,0.03)', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inheride', display: 'flex', alignItems: 'center', gap: 4 }
+                ? { background: l.color + '22', borderColor: l.color, color: l.color, fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }
+                : { color: l.color, background: 'transparent', borderColor: 'rgba(255,255,255,0.03)', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }
               }
               onClick={() => setLabelFilter((prev: string) => prev === l.key ? 'all' : l.key)}
               title={l.label}
@@ -146,8 +150,18 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
             <tbody>
               {sortedRides.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '32px 14px', textAlign: 'center', color: '#94a3b8' }}>
-                    No rides found matching the selected filters.
+                  <td colSpan={8} style={{ padding: 0 }}>
+                    {search === '' && labelFilter === 'all' ? (
+                      <ZenithEmptyState
+                        icon={<Bike size={20} strokeWidth={1.8} />}
+                        title="No rides yet"
+                        message="Import a FIT, GPX or TCX file via the Import Ride button in the header to see your activity history here."
+                      />
+                    ) : (
+                      <div style={{ padding: '32px 14px', textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
+                        No rides found matching the selected filters.
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -186,14 +200,14 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
                             </span>
                           )}
                           {prs.length > 0 && (
-                            <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'rgba(253, 203, 110, 0.12)', color: '#fdcb6e', border: '1px solid rgba(253, 203, 110, 0.2)' }}>
-                              🏆 PR ({prs.length})
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'rgba(253, 203, 110, 0.12)', color: '#fdcb6e', border: '1px solid rgba(253, 203, 110, 0.2)' }}>
+                              <Trophy size={10} /> PR ({prs.length})
                             </span>
                           )}
                           {aiAnalysis && (
                             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                               {aiAnalysis.illness >= 0.4 && (
-                                <span title={`Ziekte/Pijn gedetecteerd: ${Math.round(aiAnalysis.illness * 100)}%`} style={{ display: 'flex', alignItems: 'center', color: '#d63031', background: 'rgba(214, 48, 49, 0.1)', padding: 3, borderRadius: 5 }}>
+                                <span title={`Illness/Pain detected: ${Math.round(aiAnalysis.illness * 100)}%`} style={{ display: 'flex', alignItems: 'center', color: '#d63031', background: 'rgba(214, 48, 49, 0.1)', padding: 3, borderRadius: 5 }}>
                                   <Activity size={10} />
                                 </span>
                               )}
@@ -203,7 +217,7 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
                                 </span>
                               )}
                               {aiAnalysis.recovery >= 0.6 && (
-                                <span title={`Recovery gedetecteerd: ${Math.round(aiAnalysis.recovery * 100)}%`} style={{ display: 'flex', alignItems: 'center', color: '#00b894', background: 'rgba(0, 184, 148, 0.1)', padding: 3, borderRadius: 5 }}>
+                                <span title={`Recovery detected: ${Math.round(aiAnalysis.recovery * 100)}%`} style={{ display: 'flex', alignItems: 'center', color: '#00b894', background: 'rgba(0, 184, 148, 0.1)', padding: 3, borderRadius: 5 }}>
                                   <Zap size={10} />
                                 </span>
                               )}
@@ -229,6 +243,9 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
                           <button
                             onClick={() => onCompareRide?.(ride.id)}
                             style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
                               background: compareRideId === ride.id ? 'rgba(203, 213, 225, 0.12)' : 'rgba(255,255,255,0.02)',
                               border: '1px solid rgba(255,255,255,0.05)',
                               borderRadius: 6,
@@ -237,15 +254,18 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
                               fontWeight: 600,
                               padding: '4px 8px',
                               cursor: 'pointer',
-                              fontFamily: 'inheride'
+                              fontFamily: 'inherit'
                             }}
-                            title="Vergelijk deze ride"
+                            title="Compare this ride"
                           >
-                            ⚖️ Vergelijk
+                            <Scale size={12} strokeWidth={1.8} /> Compare
                           </button>
                           <button
                             onClick={() => handleDelete(ride.id)}
                             style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
                               background: 'rgba(255,118,117,0.08)',
                               border: '1px solid rgba(255,118,117,0.15)',
                               borderRadius: 6,
@@ -254,11 +274,12 @@ export const RideListSection: React.FC<RideListSectionProps> = ({
                               fontWeight: 600,
                               padding: '4px 8px',
                               cursor: 'pointer',
-                              fontFamily: 'inheride'
+                              fontFamily: 'inherit'
                             }}
                             disabled={deleting === ride.id}
+                            title="Delete this ride"
                           >
-                            {deleting === ride.id ? 'Bezig…' : '🗑️'}
+                            {deleting === ride.id ? 'In progress…' : <Trash2 size={12} strokeWidth={1.8} />}
                           </button>
                         </div>
                       </td>

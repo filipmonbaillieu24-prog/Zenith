@@ -88,7 +88,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
               }}
             >
               <UploadCloud size={48} style={{ color: '#38bdf8', marginBottom: 12 }} />
-              <h4>Sleep je GPX bestand hier naartoe</h4>
+              <h4>Drag your GPX file here</h4>
               <p>or click to select a file (.gpx, .xml, .tcx)</p>
               <input 
                 type="file" 

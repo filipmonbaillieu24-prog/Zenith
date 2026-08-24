@@ -336,7 +336,7 @@ fun TrackerScreen(
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold
                                         )
-                                        val weightLabel = if (exState.incrementPerSide) "per kant" else "totaalgewicht"
+                                        val weightLabel = if (exState.incrementPerSide) "per side" else "total weight"
                                         Text(
                                             text = "${exState.category} • ${exState.weightUnit.uppercase()} ($weightLabel)",
                                             color = ZenithSecondary,
@@ -389,7 +389,7 @@ fun TrackerScreen(
                                             }
                                         )
                                         DropdownMenuItem(
-                                            text = { Text("Verwijder oefening", color = ZenithError, fontSize = 12.sp) },
+                                            text = { Text("Delete exercise", color = ZenithError, fontSize = 12.sp) },
                                             onClick = {
                                                 exerciseDropdownExpanded[exIndex] = false
                                                 mutableExercises.removeAt(exIndex)
@@ -1120,7 +1120,7 @@ fun TrackerScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = if (activeFocusField == "weight") "VOLGENDE" else "KLAAR",
+                                        text = if (activeFocusField == "weight") "NEXT" else "DONE",
                                         color = Color(0xFF09090B),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold
@@ -1170,7 +1170,7 @@ fun TrackerScreen(
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
-                            Text(text = "RUSTTIMER", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(text = "REST TIMER", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             if (cardioStressFactor > 1.0) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
@@ -1181,7 +1181,7 @@ fun TrackerScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "+${Math.round((cardioStressFactor - 1) * 100)}% rust (cardio stress)",
+                                        text = "+${Math.round((cardioStressFactor - 1) * 100)}% rest (cardio stress)",
                                         fontSize = 9.sp,
                                         color = ZenithSecondary
                                     )
@@ -1282,7 +1282,7 @@ fun TrackerScreen(
                             triggerSave()
                         }
                     ) {
-                        Text("Opslaan", color = ZenithPrimary, fontWeight = FontWeight.Bold)
+                        Text("Save", color = ZenithPrimary, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {

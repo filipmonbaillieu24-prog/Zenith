@@ -83,12 +83,12 @@ export async function fetchWindData(
     direction = data.current.wind_direction_10m;
   } else {
     const slotMap: Record<string, { dayOffset: number; hour: number; label: string }> = {
-      today_afternoon:              { dayOffset: 0, hour: 14, label: 'Today Middag (14:00)' },
-      today_evening:                { dayOffset: 0, hour: 19, label: 'Today Avond (19:00)' },
-      tomorrow_morning:             { dayOffset: 1, hour:  9, label: 'Tomorrow Ochtend (09:00)' },
-      tomorrow_afternoon:           { dayOffset: 1, hour: 14, label: 'Tomorrow Middag (14:00)' },
-      day_after_tomorrow_morning:   { dayOffset: 2, hour:  9, label: 'Overmorgen Ochtend (09:00)' },
-      day_after_tomorrow_afternoon: { dayOffset: 2, hour: 14, label: 'Overmorgen Middag (14:00)' },
+      today_afternoon:              { dayOffset: 0, hour: 14, label: 'Today Afternoon (14:00)' },
+      today_evening:                { dayOffset: 0, hour: 19, label: 'Today Evening (19:00)' },
+      tomorrow_morning:             { dayOffset: 1, hour:  9, label: 'Tomorrow Morning (09:00)' },
+      tomorrow_afternoon:           { dayOffset: 1, hour: 14, label: 'Tomorrow Afternoon (14:00)' },
+      day_after_tomorrow_morning:   { dayOffset: 2, hour:  9, label: 'Day After Tomorrow Morning (09:00)' },
+      day_after_tomorrow_afternoon: { dayOffset: 2, hour: 14, label: 'Day After Tomorrow Afternoon (14:00)' },
     };
     const slot = slotMap[timeSlotKey];
     if (slot) {
@@ -135,7 +135,7 @@ export async function calculateRoute(
 
   const geojson = JSON.parse(await fetchUrl(url));
   const feature  = geojson.features?.find((f: any) => f.geowithry?.type === 'LineString');
-  if (!feature) throw new Error('Geen route gevonden in BRouter response.');
+  if (!feature) throw new Error('No route found in BRouter response.');
 
   const coords: number[][] = feature.geowithry.coordinates;
   if (!coords?.length) throw new Error('Lege route ontvangen.');

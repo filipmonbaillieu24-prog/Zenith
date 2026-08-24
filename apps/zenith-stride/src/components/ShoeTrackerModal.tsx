@@ -105,6 +105,14 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
             </form>
           )}
 
+          {shoes.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '24px 12px', color: 'var(--text-muted, #94a3b8)' }}>
+              <Footprints size={22} style={{ opacity: 0.5, marginBottom: 8 }} />
+              <p style={{ margin: 0, fontSize: 13 }}>No shoes added yet.</p>
+              <p style={{ margin: '4px 0 0', fontSize: 12, opacity: 0.8 }}>Add a pair to start tracking wear as you log runs.</p>
+            </div>
+          )}
+
           <div className="shoes-list">
             {shoes.map(shoe => {
               const percent = Math.min(100, Math.round((shoe.totalDistanceKm / shoe.maxDistanceKm) * 100));

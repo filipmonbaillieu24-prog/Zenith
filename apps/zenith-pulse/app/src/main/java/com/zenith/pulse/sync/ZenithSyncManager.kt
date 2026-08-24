@@ -45,13 +45,13 @@ object ZenithSyncManager {
         private set
 
     @Volatile
-    var lastSyncStatus: String = "Nooit gesynchroniseerd"
+    var lastSyncStatus: String = "Never synced"
         private set
 
     suspend fun performSync(context: Context, syncType: String = "MANUAL"): Boolean = withContext(Dispatchers.IO) {
         try {
             if (!UserAuthManager.isLoggedIn(context)) {
-                lastSyncStatus = "⛔ Inloggen verplicht: Geen gekoppeld Zenith account"
+                lastSyncStatus = "⛔ Login required: No linked Zenith account"
                 Log.w("ZenithSyncManager", "Sync aborted: user not logged in.")
                 return@withContext false
             }
@@ -142,16 +142,16 @@ object ZenithSyncManager {
             lastSyncTimestamp = System.currentTimeMillis()
 
             if (response.status.value in 200..299) {
-                lastSyncStatus = "Succesvol gesynchroniseerd with Zenith! (${data.stepsCount} stappen)"
+                lastSyncStatus = "Successfully synced with Zenith! (${data.stepsCount} steps)"
                 Log.i("ZenithSyncManager", "Sync to Zenith Supabase succeeded: $bodyText")
                 return@withContext true
             } else {
-                lastSyncStatus = "Sync Fout (HTTP ${response.status.value}): $bodyText"
+                lastSyncStatus = "Sync Error (HTTP ${response.status.value}): $bodyText"
                 Log.w("ZenithSyncManager", "Sync failed with status ${response.status.value}: $bodyText")
                 return@withContext false
             }
         } catch (e: Exception) {
-            lastSyncStatus = "Fout bij synchroniseren: ${e.localizedMessage}"
+            lastSyncStatus = "Error while syncing: ${e.localizedMessage}"
             Log.e("ZenithSyncManager", "Exception during Zenith sync", e)
             return@withContext false
         }

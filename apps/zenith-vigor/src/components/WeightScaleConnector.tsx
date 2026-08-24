@@ -443,7 +443,7 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
             const w1516 = (bytes[15] << 8 | bytes[16]) / 100;
             if (w1516 >= 40 && w1516 <= 150) {
               foundWeight = w1516;
-              methodUsed = "Yolanda Standaard (bytes 15-16, big-endian / 100)";
+              methodUsed = "Yolanda Standard (bytes 15-16, big-endian / 100)";
             }
           }
 
@@ -489,15 +489,15 @@ export const WeightScaleConnector: React.FC<WeightScaleConnectorProps> = ({
               
               if (valBE100 >= 45 && valBE100 <= 130) {
                 foundWeight = valBE100;
-                methodUsed = `Dynamische Auto-Scan (bytes ${i}-${i+1}, big-endian / 100)`;
+                methodUsed = `Dynamic Auto-Scan (bytes ${i}-${i+1}, big-endian / 100)`;
                 break;
               } else if (valLE100 >= 45 && valLE100 <= 130) {
                 foundWeight = valLE100;
-                methodUsed = `Dynamische Auto-Scan (bytes ${i}-${i+1}, little-endian / 100)`;
+                methodUsed = `Dynamic Auto-Scan (bytes ${i}-${i+1}, little-endian / 100)`;
                 break;
               } else if (valBE10 >= 45 && valBE10 <= 130) {
                 foundWeight = valBE10;
-                methodUsed = `Dynamische Auto-Scan (bytes ${i}-${i+1}, big-endian / 10)`;
+                methodUsed = `Dynamic Auto-Scan (bytes ${i}-${i+1}, big-endian / 10)`;
                 break;
               }
             }

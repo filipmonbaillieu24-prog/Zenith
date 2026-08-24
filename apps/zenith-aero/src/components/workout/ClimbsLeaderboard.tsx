@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Mountain } from 'lucide-react';
+import { ZenithEmptyState } from '@zenith/shared';
 import { RideSummaryWithBests } from '../../types/workout';
 
 interface ClimbRecord {
@@ -67,19 +68,11 @@ export const ClimbsLeaderboard: React.FC<Props> = ({ rides }) => {
 
   if (sorted.length === 0) {
     return (
-      <div style={{
-        background: 'rgba(255,255,255,0.01)',
-        border: '1px solid rgba(255,255,255,0.04)',
-        borderRadius: 12,
-        padding: '28px 20px',
-        textAlign: 'center',
-      }}>
-        <Mountain size={30} color="#334155" style={{ marginBottom: 10 }} />
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>No klimdata</div>
-        <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>
-          Upload rides with elevation gain to view climbing performance.
-        </div>
-      </div>
+      <ZenithEmptyState
+        icon={<Mountain size={20} strokeWidth={1.8} />}
+        title="No climb data yet"
+        message="Upload rides with elevation gain to see your climbing performance here."
+      />
     );
   }
 
@@ -105,7 +98,7 @@ export const ClimbsLeaderboard: React.FC<Props> = ({ rides }) => {
               fontSize: 11, fontWeight: 800, color: '#f8fafc',
               textTransform: 'uppercase', letterSpacing: '0.6px',
             }}>
-              Klimmen Leaderboard
+              Climbs Leaderboard
             </div>
             <div style={{ fontSize: 10, color: '#64748b', marginTop: 1 }}>
               Top climb performances — sorted by VAM (m/h elevation speed)
@@ -128,11 +121,11 @@ export const ClimbsLeaderboard: React.FC<Props> = ({ rides }) => {
                 fontWeight: 700,
                 padding: '4px 8px',
                 cursor: 'pointer',
-                fontFamily: 'inheride',
+                fontFamily: 'inherit',
                 textTransform: 'uppercase',
               }}
             >
-              {s === 'vam' ? 'VAM' : s === 'elev' ? 'Hoogte' : 'Steilheid'}
+              {s === 'vam' ? 'VAM' : s === 'elev' ? 'Elevation' : 'Steepness'}
             </button>
           ))}
         </div>
@@ -199,7 +192,7 @@ export const ClimbsLeaderboard: React.FC<Props> = ({ rides }) => {
                       +{climb.elevGain}m
                     </div>
                     <div style={{ fontSize: 9, color: '#64748b' }}>
-                      {climb.avgGrade.toFixed(1)}% gem.
+                      {climb.avgGrade.toFixed(1)}% avg
                     </div>
                   </div>
                 </div>
@@ -221,7 +214,7 @@ export const ClimbsLeaderboard: React.FC<Props> = ({ rides }) => {
                   }} />
                 </div>
                 <span style={{ fontSize: 9, color: '#475569', flexShrink: 0 }}>
-                  {new Date(climb.bestRideDate).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })}
+                  {new Date(climb.bestRideDate).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })}
                 </span>
               </div>
             </div>

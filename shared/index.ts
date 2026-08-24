@@ -23,3 +23,8 @@ export * from './components/ZenithModuleHeader';
 export * from './components/ZenithCard';
 export * from './components/ZenithStatWidget';
 export * from './components/ZenithTabs';
+export * from './components/ZenithStatusPill';
+export * from './components/ZenithHeroStat';
+export * from './components/ZenithPageHeader';
+export * from './components/ZenithEmptyState';
+export * from './chartTheme';

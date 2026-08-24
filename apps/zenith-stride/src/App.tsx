@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from './utils/supabaseClient';
+import { ZenithHeroStat, ZenithEmptyState, ZenithPageHeader, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { RunActivity, RunningShoe } from './types/stride';
 import { RunModal } from './components/RunModal';
 import { GpxImportModal } from './components/GpxImportModal';
@@ -15,14 +16,12 @@ import {
   CartesianGrid
 } from 'recharts';
 import { 
-  Footprints, 
-  Plus, 
-  UploadCloud, 
-  Zap, 
-  Calendar, 
-  Clock, 
-  TrendingUp, 
-  Heart, 
+  Footprints,
+  Plus,
+  UploadCloud,
+  Zap,
+  Calendar,
+  Heart,
   Flame, 
   Layers, 
   Search, 
@@ -57,11 +56,7 @@ export function App() {
         console.error("Error loading stride shoes:", e);
       }
     }
-    return [
-      { id: 'shoe-1', brand: 'Nike', model: 'ZoomX Vaporfly 3', totalDistanceKm: 342, maxDistanceKm: 600, retired: false },
-      { id: 'shoe-2', brand: 'Hoka', model: 'Clifton 9', totalDistanceKm: 520, maxDistanceKm: 750, retired: false },
-      { id: 'shoe-3', brand: 'Saucony', model: 'Endorphin Speed 3', totalDistanceKm: 185, maxDistanceKm: 700, retired: false }
-    ];
+    return [];
   });
 
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
@@ -136,7 +131,7 @@ export function App() {
   const totalDurationSec = useMemo(() => runs.reduce((acc, r) => acc + r.durationSec, 0), [runs]);
   const totalTreadmillKm = useMemo(() => runs.filter(r => r.isTreadmill).reduce((acc, r) => acc + r.distanceKm, 0), [runs]);
   const avgPace = useMemo(() => {
-    if (runs.length === 0 || totalKm === 0) return 5.0;
+    if (runs.length === 0 || totalKm === 0) return null;
     return (totalDurationSec / 60) / totalKm;
   }, [runs, totalKm, totalDurationSec]);
 
@@ -209,78 +204,65 @@ export function App() {
   const formatDuration = (totalSec: number) => {
     const hrs = Math.floor(totalSec / 3600);
     const mins = Math.floor((totalSec % 3600) / 60);
-    if (hrs > 0) return `${hrs}u ${mins}m`;
+    if (hrs > 0) return `${hrs}h ${mins}m`;
     return `${mins} min`;
   };
 
   return (
     <div className="stride-app">
-      {/* Header */}
-      <header className="stride-header">
-        <div>
-          <div className="stride-brand-badge">
-            <Footprints size={14} style={{ color: '#38bdf8' }} />
-            <span>Zenith Stride Running Ecosystem</span>
-          </div>
-          <h1>Running & Treadmill Performance</h1>
-          <p>Analyze your outdoor runs, GPX files, and indoor treadmill sessions with Polar, Strava & Health Connect integration.</p>
-        </div>
+      {/* Header — shared shell used by every Zenith app; Stride has no page-level
+          tabs (single-page app), so tabs is simply omitted. */}
+      <ZenithPageHeader
+        appName="STRIDE"
+        subtitle="Running & Treadmill Performance"
+        actions={
+          <>
+            <button className="zenith-header-btn zenith-header-btn--primary" onClick={() => setIsRunModalOpen(true)}>
+              <Plus size={14} />
+              <span>Log Manually</span>
+            </button>
+            <button className="zenith-header-btn" onClick={() => setIsGpxModalOpen(true)}>
+              <UploadCloud size={14} />
+              <span>Import GPX</span>
+            </button>
+            <button className="zenith-header-btn" onClick={() => setIsIntegrationsModalOpen(true)}>
+              <Zap size={14} style={{ color: '#f59e0b' }} />
+              <span>Polar / Strava Import</span>
+            </button>
+            <button className="zenith-header-btn" onClick={() => setIsShoeModalOpen(true)}>
+              <Footprints size={14} />
+              <span>Shoes ({shoes.filter(s => !s.retired).length})</span>
+            </button>
+          </>
+        }
+      />
 
-        <div className="stride-header-actions">
-          <button className="btn-action primary" onClick={() => setIsRunModalOpen(true)}>
-            <Plus size={16} />
-            <span>Log Manually</span>
-          </button>
-          <button className="btn-action secondary" onClick={() => setIsGpxModalOpen(true)}>
-            <UploadCloud size={16} />
-            <span>Import GPX</span>
-          </button>
-          <button className="btn-action secondary" onClick={() => setIsIntegrationsModalOpen(true)}>
-            <Zap size={16} style={{ color: '#f59e0b' }} />
-            <span>Polar / Strava Import</span>
-          </button>
-          <button className="btn-action outline" onClick={() => setIsShoeModalOpen(true)}>
-            <Footprints size={16} />
-            <span>Shoes ({shoes.filter(s => !s.retired).length})</span>
-          </button>
+      <div style={{ padding: '0 24px 24px' }}>
+      {/* Hero Metric + Supporting Stats */}
+      <div className="zenith-grid-12" style={{ marginBottom: 20 }}>
+        <div className="zenith-span-8">
+          <ZenithHeroStat
+            eyebrow="Total Distance"
+            value={<>{totalKm.toFixed(1)} <small>km</small></>}
+            sub={`Including ${totalTreadmillKm.toFixed(1)} km on treadmill`}
+          />
         </div>
-      </header>
-
-      {/* KPI Cards */}
-      <div className="stride-kpi-grid">
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper blue">
-            <Footprints size={20} />
-          </div>
-          <div>
-            <span className="kpi-label">Total Distance</span>
-            <span className="kpi-value">{totalKm.toFixed(1)} <small>km</small></span>
-            <span className="kpi-subtext">Including {totalTreadmillKm.toFixed(1)} km on treadmill</span>
-          </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper green">
-            <Clock size={20} />
-          </div>
-          <div>
-            <span className="kpi-label">Total Running Time</span>
-            <span className="kpi-value">{formatDuration(totalDurationSec)}</span>
+        <div className="zenith-span-4" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', flex: 1 }}>
+            <div className="zenith-label">Total Running Time</div>
+            <div className="zenith-stat-value" style={{ marginTop: 4 }}>{formatDuration(totalDurationSec)}</div>
             <span className="kpi-subtext">{runs.length} total recorded sessions</span>
           </div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-icon-wrapper orange">
-            <TrendingUp size={20} />
-          </div>
-          <div>
-            <span className="kpi-label">Average Pace</span>
-            <span className="kpi-value">{formatPace(avgPace)} <small>/km</small></span>
-            <span className="kpi-subtext">Strong aerobic efficiency</span>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', flex: 1 }}>
+            <div className="zenith-label">Average Pace</div>
+            <div className="zenith-stat-value" style={{ marginTop: 4 }}>{avgPace !== null ? <>{formatPace(avgPace)} <small>/km</small></> : '–:––'}</div>
+            <span className="kpi-subtext">{avgPace !== null ? 'Strong aerobic efficiency' : 'No data yet'}</span>
           </div>
         </div>
+      </div>
 
+      {/* Treadmill Volume */}
+      <div className="stride-kpi-grid" style={{ marginBottom: 32 }}>
         <div className="kpi-card">
           <div className="kpi-icon-wrapper purple">
             <Layers size={20} />
@@ -339,9 +321,22 @@ export function App() {
           </div>
 
           {filteredRuns.length === 0 && (
-            <div className="table-empty-state" style={{ padding: '32px 16px', textAlign: 'center', opacity: 0.6 }}>
-              No runs logged yet. Add one manually or import from GPX/TCX to get started.
-            </div>
+            <ZenithEmptyState
+              icon={
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 18s6-5.686 6-10.5A6 6 0 0 0 4 7.5C4 12.314 10 18 10 18Z" />
+                  <circle cx="10" cy="7.5" r="2" />
+                </svg>
+              }
+              title="No runs logged yet"
+              message="Add one manually, or import from GPX/TCX to see your pace and trends here."
+              action={
+                <button className="btn-action primary" onClick={() => setIsRunModalOpen(true)}>
+                  <Plus size={16} />
+                  <span>Log Manually</span>
+                </button>
+              }
+            />
           )}
 
           {filteredRuns.map(run => (
@@ -385,7 +380,7 @@ export function App() {
               </div>
 
               <div className="col-shoe">
-                <span className="shoe-name">{run.shoeName || 'Standaard'}</span>
+                <span className="shoe-name">{run.shoeName || 'Standard'}</span>
                 <span className="source-tag">{run.source.toUpperCase()}</span>
               </div>
 
@@ -398,6 +393,7 @@ export function App() {
             </div>
           ))}
         </div>
+      </div>
       </div>
 
       {/* Activity Detail Modal */}
@@ -448,13 +444,13 @@ export function App() {
                   </span>
                 </div>
                 <div className="detail-stat-box">
-                  <span className="stat-label">Energieverbruik</span>
+                  <span className="stat-label">Calories Burned</span>
                   <span className="stat-val" style={{ color: '#f59e0b' }}>
                     {selectedRunDetail.calories ? `${selectedRunDetail.calories} kcal` : '-'}
                   </span>
                 </div>
                 <div className="detail-stat-box">
-                  <span className="stat-label">Stapfrequentie (Cadans)</span>
+                  <span className="stat-label">Step Frequency (Cadence)</span>
                   <span className="stat-val" style={{ color: '#38bdf8' }}>
                     {selectedRunDetail.avgCadenceSpm ? `${selectedRunDetail.avgCadenceSpm} spm` : '-'}
                   </span>
@@ -493,10 +489,10 @@ export function App() {
                       <div style={{ height: 140, width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={selectedRunDetail.splits.map(s => ({ km: `${s.km}`, bpm: s.hr || 0 }))} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                            <XAxis dataKey="km" stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                            <YAxis domain={['dataMin - 10', 'dataMax + 10']} stroke="var(--text-muted)" fontSize={10} tickLine={false} />
-                            <Tooltip contentStyle={{ background: '#1c1c23', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12, color: '#fff' }} />
+                            <CartesianGrid {...ZENITH_CHART_GRID} />
+                            <XAxis dataKey="km" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                            <YAxis domain={['dataMin - 10', 'dataMax + 10']} stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                            <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
                             <Bar dataKey="bpm" fill="#ef4444" radius={[4, 4, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>

@@ -227,16 +227,16 @@ export function calcTSS(durationSec: number, normPower: number, ftp: number): nu
 // ─── VO₂max estimate ─────────────────────────────────────────────────────────
 
 /**
- * Zoekt het gewicht van de gebruiker op voor een specifieke datum.
- * Kijkt in de weightHistory array van het profiel naar de meest recente measurement
- * die op of vóór de meegegeven datum (in milliseconds) ligt.
+ * Looks up the user's weight for a specific date.
+ * Checks the profile's weightHistory array for the most recent measurement
+ * on or before the given date (in milliseconds).
  */
 export function getWeightForDate(profile: any, dateMs: number): number | undefined {
   if (profile.weightHistory && Array.isArray(profile.weightHistory) && profile.weightHistory.length > 0) {
-    // Sorteer historie op datum (nieuw naar oud)
+    // Sort history by date (newest to oldest)
     const sorted = [...profile.weightHistory].sort((a, b) => b.date.localeCompare(a.date));
     const targetDate = new Date(dateMs).toISOString().slice(0, 10);
-    // Zoek de eerste measurement die <= targetDate is
+    // Find the first measurement that is <= targetDate
     const entry = sorted.find(e => e.date <= targetDate);
     if (entry) return entry.weight;
   }
@@ -262,7 +262,7 @@ export function cyclingCategory(wpkg: number): { label: string; color: string } 
   if (wpkg >= 4.0) return { label: 'Cat 2',             color: '#00b894' };
   if (wpkg >= 3.2) return { label: 'Cat 3',             color: '#fdcb6e' };
   if (wpkg >= 2.5) return { label: 'Cat 4',             color: '#e17055' };
-  return                   { label: 'Cat 5 / Recreant', color: '#b2bec3' };
+  return                   { label: 'Cat 5 / Recreational', color: '#b2bec3' };
 }
 
 // ─── Efficiency Factor ────────────────────────────────────────────────────────
@@ -345,10 +345,10 @@ export function calcVAM(points: RidePoint[]): number | undefined {
   return Math.round(totalGain / durationHours);
 }
 
-// ─── Geavanceerde progressie-algoridemes (Fase 2) ───────────────────────────────
+// ─── Advanced progression algorithms (Phase 2) ───────────────────────────────
 
 export function determinePhenotype(bestEfforts: BestEfforts, weight?: number): string {
-  const w = weight ?? 75; // fallback gewicht
+  const w = weight ?? 75; // fallback weight
   const p5s = bestEfforts.s5 ?? 0;
   const p1m = bestEfforts.m1 ?? 0;
   const p5m = bestEfforts.m5 ?? 0;
@@ -371,7 +371,7 @@ export function determinePhenotype(bestEfforts: BestEfforts, weight?: number): s
 
   if (maxScore === sprinterScore) return 'Sprinter';
   if (maxScore === puncheurScore) return 'Puncheur';
-  if (maxScore === timeTrialScore) return 'Tijdridespecialist';
+  if (maxScore === timeTrialScore) return 'Time Trial Specialist';
   return 'Climber';
 }
 
@@ -522,7 +522,7 @@ function isGenericFilename(name: string): boolean {
   const lower = name.toLowerCase();
   
   // Check if it matches the auto-generated pattern so we can re-generate/update it on recalculate
-  const isAutoPattern = /^(Ochtend|Middag|Avond|Nacht) (Wegride|Gravelride|MTB-ride|ride) \(\d+(\.\d+)? km\)$/.test(name);
+  const isAutoPattern = /^(Morning|Afternoon|Evening|Night) (Road ride|Gravel ride|MTB ride|ride) \(\d+(\.\d+)? km\)$/.test(name);
   if (isAutoPattern) return true;
 
   return (
@@ -540,15 +540,15 @@ function isGenericFilename(name: string): boolean {
 function getAutoRideName(dateMs: number, discipline: string, distanceKm: number): string {
   const date = new Date(dateMs);
   const hour = date.getHours();
-  let tod = "Nacht";
-  if (hour >= 5 && hour < 12) tod = "Ochtend";
-  else if (hour >= 12 && hour < 17) tod = "Middag";
-  else if (hour >= 17 && hour < 22) tod = "Avond";
+  let tod = "Night";
+  if (hour >= 5 && hour < 12) tod = "Morning";
+  else if (hour >= 12 && hour < 17) tod = "Afternoon";
+  else if (hour >= 17 && hour < 22) tod = "Evening";
 
   let disc = "ride";
-  if (discipline === 'road') disc = "Wegride";
-  else if (discipline === 'gravel') disc = "Gravelride";
-  else if (discipline === 'mtb') disc = "MTB-ride";
+  if (discipline === 'road') disc = "Road ride";
+  else if (discipline === 'gravel') disc = "Gravel ride";
+  else if (discipline === 'mtb') disc = "MTB ride";
 
   return `${tod} ${disc} (${distanceKm.toFixed(1)} km)`;
 }
@@ -736,7 +736,7 @@ export function computeRide(
     }
   }
 
-  // ── Geavanceerde progressie metrics (Fase 2) ───────────────────────────────
+  // ── Advanced progression metrics (Phase 2) ─────────────────────────────────
 
   // 1. Totale kJ
   const pwrPts = points.filter(p => p.power != null && p.time != null);

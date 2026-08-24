@@ -1,4 +1,4 @@
-import { SimpleMLP } from './SimpleMLP';
+import { SimpleMLP, buildSymmetryBrokenHiddenLayer } from './SimpleMLP';
 import { MinMaxScaler } from './MinMaxScaler';
 
 export const volumeScaler = new MinMaxScaler(0, 5000);
@@ -14,18 +14,21 @@ export const repsScaler = new MinMaxScaler(0, 20);
 function generateKratosOverloadDefaultWeights() {
   // Inputs (5): [pastSetsVolume/5000, weightProgression/10, sleepQuality/1.0, cardioTsbScaled/1.0, targetReps/20]
   // Hidden: 6, Output: 1
-  const W1: number[][] = Array.from({ length: 5 }, () => new Array(6).fill(0));
-  const B1: number[] = new Array(6).fill(0.05);
+  // Higher past volume & positive progression trend -> positive effect
+  const priorWeightsByInput = [
+    0.5,   // past volume
+    0.6,   // weight progression
+    0.8,   // sleep quality (better sleep = more overload capability)
+    0.7,   // cardio TSB (positive TSB = fresh legs/body = more capability)
+    -0.3   // higher reps -> lower overload increment (more reps = lighter weight)
+  ];
+  // Small deterministic per-neuron perturbation breaks weight symmetry so hidden
+  // ReLU units don't stay identical (and identically-gradiented) forever.
+  const { W1, B1 } = buildSymmetryBrokenHiddenLayer(priorWeightsByInput, 6, 0.05);
   const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
   const B2: number[] = [0.1]; // base offset for output
 
-  // Higher past volume & positive progression trend -> positive effect
   for (let j = 0; j < 6; j++) {
-    W1[0][j] = 0.5;  // past volume
-    W1[1][j] = 0.6;  // weight progression
-    W1[2][j] = 0.8;  // sleep quality (better sleep = more overload capability)
-    W1[3][j] = 0.7;  // cardio TSB (positive TSB = fresh legs/body = more capability)
-    W1[4][j] = -0.3; // higher reps -> lower overload increment (more reps = lighter weight)
     W2[j][0] = 0.45;
   }
 
@@ -103,23 +106,26 @@ export async function trainProgressiveOverloadModel(
 function generateKratosAutoregDefaultWeights() {
   // Inputs (6): [setIndex/10.0, prevWeight/400.0, prevReps/30.0, rirDelta/5.0, restRatio/1.5, sleepQuality/100.0]
   // Hidden: 6, Output: 1
-  const W1: number[][] = Array.from({ length: 6 }, () => new Array(6).fill(0));
-  const B1: number[] = new Array(6).fill(0.05);
-  const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
-  const B2: number[] = [0.2];
-
   // Set default strength regression weights:
   // - More sets = higher fatigue = lower e1RM capacity -> negative weight on setIndex
   // - High previous weight/reps = high baseline strength -> positive weights
   // - Positive RIR Delta (overperformed) = higher capacity -> positive weight
   // - More rest = better ATP recovery = higher capacity -> positive weight on restRatio
+  const priorWeightsByInput = [
+    -0.3, // set index fatigue
+    0.8,  // prev weight (scaled 0..400kg)
+    0.4,  // prev reps
+    0.5,  // rir delta (+ if overperformed, - if early failure)
+    0.3,  // rest recovery ratio
+    0.2   // sleep quality
+  ];
+  // Small deterministic per-neuron perturbation breaks weight symmetry so hidden
+  // ReLU units don't stay identical (and identically-gradiented) forever.
+  const { W1, B1 } = buildSymmetryBrokenHiddenLayer(priorWeightsByInput, 6, 0.05);
+  const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
+  const B2: number[] = [0.2];
+
   for (let j = 0; j < 6; j++) {
-    W1[0][j] = -0.3; // set index fatigue
-    W1[1][j] = 0.8;  // prev weight (scaled 0..400kg)
-    W1[2][j] = 0.4;  // prev reps
-    W1[3][j] = 0.5;  // rir delta (+ if overperformed, - if early failure)
-    W1[4][j] = 0.3;  // rest recovery ratio
-    W1[5][j] = 0.2;  // sleep quality
     W2[j][0] = 0.5;
   }
 
@@ -133,6 +139,47 @@ export const kratosAutoregModel = new SimpleMLP(
   'kratos_autoreg_weights',
   generateKratosAutoregDefaultWeights
 );
+
+/**
+ * Converts a rest duration (seconds) into the [0.2, 1.5]-clamped "rest ratio"
+ * feature used by the autoregulation model (actual rest vs. the recommended rest
+ * for the set).
+ */
+export function computeAutoregRestRatio(restSeconds: number, recommendedRestSeconds: number = 120): number {
+  return Math.min(1.5, Math.max(0.2, restSeconds / Math.max(45, recommendedRestSeconds)));
+}
+
+/**
+ * Builds the EXACT feature vector consumed by the Kratos Autoregulation 2.0 model
+ * (predict, online train, and the background retrainer all funnel through this one
+ * function) so the model is never trained on one feature distribution and served on
+ * another (train/serve skew).
+ *
+ * Inputs (6): [setIndex/10.0, prevWeight/400.0, prevReps/30.0, rirDelta/5.0, restRatio, sleepQuality/100.0]
+ */
+export function buildAutoregFeatureVector(
+  setIndex: number,
+  prevWeight: number,
+  prevReps: number,
+  rirDelta: number,
+  restRatio: number,
+  sleepQuality: number
+): number[] {
+  return [
+    Math.min(1.0, setIndex / 10.0),
+    Math.min(1.5, prevWeight / 400.0),
+    Math.min(1.5, prevReps / 30.0),
+    Math.max(-1.5, Math.min(1.5, rirDelta / 5.0)),
+    restRatio,
+    Math.min(1.0, sleepQuality / 100.0)
+  ];
+}
+
+/** Scales an achieved e1RM (kg) down to the model's 0..1 target space (0..400kg). */
+export function computeAutoregE1RMTarget(weight: number, reps: number, rir: number): number {
+  const e1RM = weight * (1.0 + (reps + rir) / 30.0);
+  return Math.max(0.0, Math.min(1.0, e1RM / 400.0));
+}
 
 /**
  * Predicts the optimal weight (in kg) for the next set based on the previous set's parawithers,
@@ -152,16 +199,9 @@ export function predictAutoregWeight(
   sleepQuality: number = 80
 ): number {
   const rirDelta = prevRir - targetRir;
-  const restRatio = Math.min(1.5, Math.max(0.2, restSeconds / Math.max(45, recommendedRestSeconds)));
+  const restRatio = computeAutoregRestRatio(restSeconds, recommendedRestSeconds);
 
-  const x = [
-    Math.min(1.0, setIndex / 10.0),
-    Math.min(1.5, prevWeight / 400.0),
-    Math.min(1.5, prevReps / 30.0),
-    Math.max(-1.5, Math.min(1.5, rirDelta / 5.0)),
-    restRatio,
-    Math.min(1.0, sleepQuality / 100.0)
-  ];
+  const x = buildAutoregFeatureVector(setIndex, prevWeight, prevReps, rirDelta, restRatio, sleepQuality);
 
   const y = kratosAutoregModel.predict(x);
   
@@ -217,22 +257,17 @@ export async function trainAutoregModel(
   sleepQuality: number = 80
 ): Promise<number> {
   const rirDelta = prevRir - targetRir;
-  const restRatio = Math.min(1.5, Math.max(0.2, restSeconds / Math.max(45, recommendedRestSeconds)));
+  const restRatio = computeAutoregRestRatio(restSeconds, recommendedRestSeconds);
 
-  const x = [
-    Math.min(1.0, setIndex / 10.0),
-    Math.min(1.5, prevWeight / 400.0),
-    Math.min(1.5, prevReps / 30.0),
-    Math.max(-1.5, Math.min(1.5, rirDelta / 5.0)),
-    restRatio,
-    Math.min(1.0, sleepQuality / 100.0)
-  ];
+  const x = buildAutoregFeatureVector(setIndex, prevWeight, prevReps, rirDelta, restRatio, sleepQuality);
 
   // Actual next e1rm achieved:
-  const actualNextE1RM = actualNextWeight * (1.0 + (actualNextReps + actualNextRir) / 30.0);
-  const target = Math.max(0.0, Math.min(1.0, actualNextE1RM / 400.0));
+  const target = computeAutoregE1RMTarget(actualNextWeight, actualNextReps, actualNextRir);
 
-  const y = await kratosAutoregModel.train(supabase, userId, x, [target], 0.15);
+  // Single-example online SGD: kept deliberately conservative (was 0.15) so one
+  // outlier set (unusually good or bad) nudges the persisted weights gradually
+  // instead of swinging them immediately. Momentum/EMA in SimpleMLP is unchanged.
+  const y = await kratosAutoregModel.train(supabase, userId, x, [target], 0.03);
   return y[0] * 400.0;
 }
 
@@ -243,18 +278,21 @@ export async function trainAutoregModel(
 function generateDualSportFatigueWeights() {
   // Input (6): [cardioTSB/100, cardioATL/100, gymVolume7d/10000, sleepQuality/100, steps7d/100000, activeCalories/5000]
   // Hidden: 6, Output: 1 (fatigue score 0..1)
-  const W1: number[][] = Array.from({ length: 6 }, () => new Array(6).fill(0));
-  const B1: number[] = new Array(6).fill(0.05);
+  const priorWeightsByInput = [
+    -0.8,  // High TSB = less fatigued (negative correlation)
+    0.7,   // High cardio ATL = more fatigued
+    0.6,   // High gym volume = more fatigued
+    -0.5,  // Good sleep quality = less fatigued
+    0.3,   // Maley steps = slight fatigue
+    0.5    // High active calories = more fatigued
+  ];
+  // Small deterministic per-neuron perturbation breaks weight symmetry so hidden
+  // ReLU units don't stay identical (and identically-gradiented) forever.
+  const { W1, B1 } = buildSymmetryBrokenHiddenLayer(priorWeightsByInput, 6, 0.05);
   const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
   const B2: number[] = [0.15];
 
   for (let j = 0; j < 6; j++) {
-    W1[0][j] = -0.8;  // High TSB = less fatigued (negative correlation)
-    W1[1][j] = 0.7;   // High cardio ATL = more fatigued
-    W1[2][j] = 0.6;   // High gym volume = more fatigued
-    W1[3][j] = -0.5;  // Good sleep quality = less fatigued
-    W1[4][j] = 0.3;   // Maley steps = slight fatigue
-    W1[5][j] = 0.5;   // High active calories = more fatigued
     W2[j][0] = 0.45;
   }
 

@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import './PMCPanel.css';
 import { TrendingUp } from 'lucide-react';
 import { ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, ResponsiveContainer } from 'recharts';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { RideSummaryWithBests } from '../../types/workout';
 import { computePMC, interpretTSB, type RideTSS } from '../../utils/pmc';
 
@@ -11,7 +12,7 @@ interface PMCPanelProps {
 }
 
 function fmtShortDate(ms: number) {
-  return new Date(ms).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' });
+  return new Date(ms).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 }
 
 export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => {
@@ -51,7 +52,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
       <div className="wd-pmc-kpis">
         <div className="wd-pmc-kpi" style={{ borderColor: '#00b894' }}>
           <span className="wd-pmc-kpi__val" style={{ color: '#00b894' }}>{today.ctl}</span>
-          <span className="wd-pmc-kpi__lbl">CTL · Fitheid</span>
+          <span className="wd-pmc-kpi__lbl">CTL · Fitness</span>
         </div>
         <div className="wd-pmc-kpi" style={{ borderColor: '#e17055' }}>
           <span className="wd-pmc-kpi__val" style={{ color: '#e17055' }}>{today.atl}</span>
@@ -59,15 +60,15 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
         </div>
         <div className="wd-pmc-kpi" style={{ borderColor: '#a29bfe' }}>
           <span className="wd-pmc-kpi__val" style={{ color: '#a29bfe' }}>{today.tsb > 0 ? '+' : ''}{today.tsb}</span>
-          <span className="wd-pmc-kpi__lbl">TSB · Vorm</span>
+          <span className="wd-pmc-kpi__lbl">TSB · Form</span>
         </div>
       </div>
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={recent} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-          <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#64748b' }} interval={13} />
-          <YAxis tick={{ fontSize: 9, fill: '#64748b' }} width={28} />
-          <Tooltip contentStyle={{ background: '#0d0d1a', border: 'none', borderRadius: 8, fontSize: 11 }}
+          <CartesianGrid {...ZENITH_CHART_GRID} />
+          <XAxis dataKey="date" tick={ZENITH_CHART_AXIS_TICK} interval={13} />
+          <YAxis tick={ZENITH_CHART_AXIS_TICK} width={28} />
+          <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
             formatter={(v: any, name: any) => [v, name === 'ctl' ? 'Fitness (CTL)' : name === 'atl' ? 'Fatigue (ATL)' : 'Form (TSB)']} />
           <ReferenceLine y={50} stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />
           <ReferenceLine y={25} stroke="rgba(255,255,255,0.03)" strokeDasharray="3 3" />

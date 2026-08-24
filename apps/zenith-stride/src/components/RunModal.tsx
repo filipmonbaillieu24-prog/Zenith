@@ -230,7 +230,7 @@ export const RunModal: React.FC<RunModalProps> = ({
               />
             </div>
             <div className="form-group flex-1">
-              <label>Cadans (spm)</label>
+              <label>Cadence (spm)</label>
               <input 
                 type="number" 
                 value={avgCadenceSpm} 
@@ -254,7 +254,7 @@ export const RunModal: React.FC<RunModalProps> = ({
             </div>
 
             <div className="form-group flex-1">
-              <label>Ervaren Zwaarte (RPE: 1 - 10)</label>
+              <label>Perceived Effort (RPE: 1-10)</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
                 <input 
                   type="range" 
@@ -270,12 +270,12 @@ export const RunModal: React.FC<RunModalProps> = ({
           </div>
 
           <div className="form-group">
-            <label>Notities & Gevoel</label>
-            <textarea 
-              rows={2} 
-              value={notes} 
-              onChange={e => setNotes(e.target.value)} 
-              placeholder="Atv. Vlot gevoel op de benen, lichte tegenwind op de heenweg."
+            <label>Notes & Feel</label>
+            <textarea
+              rows={2}
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="e.g. Smooth feeling in the legs, light headwind on the way out."
             />
           </div>
 

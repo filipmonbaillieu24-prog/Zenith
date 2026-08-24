@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
   MapPin, Compass, Sliders, Download, Search,
   ChevronRight, Wind, Mountain, Route, Layers,
-  Star, Trash2, Check, Pencil, X, Coffee, ChevronDown, ChevronUp, Crown
+  Star, Trash2, Check, Pencil, X, Coffee, ChevronDown, ChevronUp, Crown,
+  Road, Leaf, Bot, Lock, CupSoda, Cookie, Zap
 } from 'lucide-react';
 import {
   RouteProfile, RouteType, DirectionBias,
@@ -52,17 +53,17 @@ interface SidebarProps {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const climbLabels: Record<ClimbCategory, { label: string; color: string }> = {
-  flat:         { label: 'Vlak',          color: '#94a3b8' },
-  rolling:      { label: 'Licht heuvelachtig', color: '#cbd5e1' },
-  hilly:        { label: 'Heuvelachtig',   color: '#ff9f43' },
-  mountainous:  { label: 'Bergachtig',     color: '#ff3366' },
+  flat:         { label: 'Flat',          color: '#94a3b8' },
+  rolling:      { label: 'Slightly hilly', color: '#cbd5e1' },
+  hilly:        { label: 'Hilly',   color: '#ff9f43' },
+  mountainous:  { label: 'Mountainous',     color: '#ff3366' },
 };
 
 function formatDuration(seconds: number): string {
   const mins  = Math.round(seconds / 60);
   const h     = Math.floor(mins / 60);
   const m     = mins % 60;
-  return h > 0 ? `${h}u ${m}m` : `${m}m`;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
 function getWindArrow(deg: number): string {
@@ -187,13 +188,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        {/* ── 1. Startlocatie ─────────────────────────── */}
+        {/* ── 1. Start Location ─────────────────────────── */}
         <section className="sidebar-section">
-          <h2><MapPin className="section-icon" strokeWidth={1.6} /> 1. Startlocatie</h2>
+          <h2><MapPin className="section-icon" strokeWidth={1.6} /> 1. Start Location</h2>
 
           <form onSubmit={handleSearch} className="search-form">
             <input
-              type="text" placeholder="Zoek plaats of adres..."
+              type="text" placeholder="Search place or address..."
               value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input"
             />
@@ -234,7 +235,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <input
                     autoFocus
                     type="text"
-                    placeholder="Naam (bv. Thuis, Werk...)"
+                    placeholder="Name (e.g. Home, Work...)"
                     value={saveNameInput}
                     onChange={(e) => setSaveNameInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmSave(); if (e.key === 'Escape') setIsSaving(false); }}
@@ -322,10 +323,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="form-group">
             <label>Ride Type</label>
             <select value={profile} onChange={(e) => setProfile(e.target.value as RouteProfile)} className="select-input">
-              <option value="road">Racefiets (Asfalt)</option>
-              <option value="gravel">Gravelbike (Mix)</option>
-              <option value="trekking">Recreatief (Trekking)</option>
-              <option value="mtb">Mountainbike (Off-road)</option>
+              <option value="road">Road Bike (Asphalt)</option>
+              <option value="gravel">Gravel Bike (Mix)</option>
+              <option value="trekking">Recreational (Trekking)</option>
+              <option value="mtb">Mountain Bike (Off-road)</option>
             </select>
           </div>
 
@@ -340,34 +341,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {routeType === 'loop' && (
             <div className="form-group">
-              <label>Richting / Loop Oriëntatie</label>
+              <label>Direction / Loop Orientation</label>
               <select value={direction} onChange={(e) => setDirection(e.target.value as DirectionBias)} className="select-input">
-                <option value="wind">Wind-optimaal (Tegenwind heen)</option>
-                <option value="random">Willekeurig (Random)</option>
-                <option value="N">Noord (N)</option>
-                <option value="E">Oost (O)</option>
-                <option value="S">Zuid (Z)</option>
+                <option value="wind">Wind-optimal (Headwind out)</option>
+                <option value="random">Random</option>
+                <option value="N">North (N)</option>
+                <option value="E">East (E)</option>
+                <option value="S">South (S)</option>
                 <option value="W">West (W)</option>
               </select>
             </div>
           )}
         </section>
 
-        {/* ── 3. Route Optimalisatie ───────────────────── */}
+        {/* ── 3. Route Optimization ───────────────────── */}
         <section className="sidebar-section">
-          <h2><Layers className="section-icon" strokeWidth={1.6} /> 3. Route Optimalisatie</h2>
+          <h2><Layers className="section-icon" strokeWidth={1.6} /> 3. Route Optimization</h2>
 
           {/* Surface preference */}
           <div className="form-group">
-            <label>Ondergrond</label>
+            <label>Surface</label>
             <div className="surface-toggle">
               {(['asphalt', 'mixed', 'unpaved'] as SurfacePreference[]).map((s) => (
                 <button
                   key={s}
                   className={`surface-btn ${surfacePreference === s ? 'active' : ''}`}
                   onClick={() => setSurface(s)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
                 >
-                  {s === 'asphalt' ? '🛣️ Alleen asfalt' : s === 'mixed' ? '🌿 Mix' : '⛰️ Onverhard OK'}
+                  {s === 'asphalt' ? <Road size={13} strokeWidth={1.8} /> : s === 'mixed' ? <Leaf size={13} strokeWidth={1.8} /> : <Mountain size={13} strokeWidth={1.8} />}
+                  {s === 'asphalt' ? 'Asphalt only' : s === 'mixed' ? 'Mix' : 'Unpaved OK'}
                 </button>
               ))}
             </div>
@@ -379,8 +382,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="toggle-info">
                 <Route size={15} className="toggle-icon" strokeWidth={1.6} />
                 <div>
-                  <span className="toggle-label">Fietsroutes & knooppunten</span>
-                  <span className="toggle-desc">Volg officiële fietsnetwerken</span>
+                  <span className="toggle-label">Cycling routes & junctions</span>
+                  <span className="toggle-desc">Follow official cycling networks</span>
                 </div>
               </div>
               <button
@@ -400,7 +403,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Mountain size={15} className="toggle-icon" strokeWidth={1.6} />
                 <div>
                   <span className="toggle-label">Avoid steep hills</span>
-                  <span className="toggle-desc">Hogere heuvelkostenpenalty</span>
+                  <span className="toggle-desc">Higher hill cost penalty</span>
                 </div>
               </div>
               <button
@@ -416,7 +419,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Max elevation gain */}
           <div className="form-group">
             <div className="label-with-value">
-              <label>Max. hoogtemeters</label>
+              <label>Max Elevation (m)</label>
               <span className="value-display">
                 {maxElevationGain === 0 ? 'No limit' : `${maxElevationGain} m`}
               </span>
@@ -430,7 +433,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </section>
 
-        {/* ── 4. Windplanner ──────────────────────────── */}
+        {/* ── 4. Wind Planner ──────────────────────────── */}
         {startPoint && (
           <section className="sidebar-section animate-fade-in">
             <h2><Wind className="section-icon" strokeWidth={1.6} /> 4. Wind Planner</h2>
@@ -450,7 +453,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {isFetchingWind ? (
-              <p className="wind-loading">Windgegevens laden...</p>
+              <p className="wind-loading">Loading wind data...</p>
             ) : windData ? (
               <div className="wind-report-card">
                 <div className="wind-icon-box">
@@ -458,7 +461,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span className="wind-direction-arrow">{getWindArrow(windData.direction)}</span>
                 </div>
                 <div className="wind-text-box">
-                  <h4>{windData.speed} km/u</h4>
+                  <h4>{windData.speed} km/h</h4>
                   <p>wind from {windData.cardinal} ({windData.direction}°)</p>
                 </div>
               </div>
@@ -481,7 +484,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           disabled={isGenerating || !startPoint || (routeType === 'point-to-point' && !endPoint)}
           style={{ position: 'relative' }}
         >
-          {isGenerating ? 'Route Generating...' : 'Genereer Route'}
+          {isGenerating ? 'Route Generating...' : 'Generate Route'}
           {!isPro && (
             <span style={{ 
               position: 'absolute', right: 12, top: 12, 
@@ -494,10 +497,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </button>
 
-        {/* ── 5. Route Alternatieven ───────────────────── */}
+        {/* ── 5. Route Alternatives ───────────────────── */}
         {routes.length > 0 && (
           <section className="sidebar-section alternatives-section animate-fade-in">
-            <h2><Compass className="section-icon" strokeWidth={1.6} /> 5. Kies Route</h2>
+            <h2><Compass className="section-icon" strokeWidth={1.6} /> 5. Choose Route</h2>
 
             <div className="alternatives-list">
               {routes.map((rt, idx) => {
@@ -512,8 +515,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <div className="alt-card-header">
                       <h3>Route {idx + 1}</h3>
                       <div className="alt-card-badges">
-                        {overLimit    && <span className="badge badge-warn">↑ Limiet</span>}
-                        {hasBacktrack && <span className="badge badge-backtrack" title="Route may contain back-and-forth segments">↩ Backrijden</span>}
+                        {overLimit    && <span className="badge badge-warn">↑ Limit</span>}
+                        {hasBacktrack && <span className="badge badge-backtrack" title="Route may contain back-and-forth segments">↩ Backtrack</span>}
                         <span className="badge" style={{ color: climb.color, borderColor: climb.color }}>
                           {climb.label}
                         </span>
@@ -540,8 +543,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           windAngleRad
                         );
                         return (
-                          <span style={{ color: '#cbd5e1', display: 'inline-flex', alignItems: 'center', gap: 3 }} title="AI Geschatte Ritduur (incl. wind-effect)">
-                            🤖 {formatDuration(aiDur)}
+                          <span style={{ color: '#cbd5e1', display: 'inline-flex', alignItems: 'center', gap: 3 }} title="AI Estimated Ride Duration (incl. wind effect)">
+                            <Bot size={12} strokeWidth={1.8} /> {formatDuration(aiDur)}
                           </span>
                         );
                       })()}
@@ -556,26 +559,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button 
                   onClick={() => {
                     if (!isPro && onRequestProModal) {
-                      onRequestProModal('GPX Route Export', 'Upgrade to Zenith Pro to download GPX and TCX files for your bike computerer (Garmin, Wahoo).');
+                      onRequestProModal('GPX Route Export', 'Upgrade to Zenith Pro to download GPX and TCX files for your bike computer (Garmin, Wahoo).');
                       return;
                     }
                     onDownloadGPX();
                   }} 
                   className="download-button gpx"
                 >
-                  <Download size={16} strokeWidth={1.6} /> GPX Download {!isPro && '🔒'}
+                  <Download size={16} strokeWidth={1.6} /> GPX Download {!isPro && <Lock size={12} strokeWidth={1.8} />}
                 </button>
                 <button 
                   onClick={() => {
                     if (!isPro && onRequestProModal) {
-                      onRequestProModal('TCX Route Export', 'Upgrade to Zenith Pro to download GPX and TCX files for your bike computerer (Garmin, Wahoo).');
+                      onRequestProModal('TCX Route Export', 'Upgrade to Zenith Pro to download GPX and TCX files for your bike computer (Garmin, Wahoo).');
                       return;
                     }
                     onDownloadTCX();
                   }} 
                   className="download-button tcx"
                 >
-                  <Download size={16} strokeWidth={1.6} /> TCX Download {!isPro && '🔒'}
+                  <Download size={16} strokeWidth={1.6} /> TCX Download {!isPro && <Lock size={12} strokeWidth={1.8} />}
                 </button>
               </div>
             )}
@@ -597,7 +600,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               );
               const fuelPlan = calculateFuel(
                 activeAIDurationSec,
-                2, // Zone 2 (Duurride)
+                2, // Zone 2 (Endurance ride)
                 fitnessProfile.weight ?? 75,
                 fitnessProfile.ftp ?? 220,
                 20
@@ -622,7 +625,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     }}
                   >
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Coffee size={14} strokeWidth={1.6} /> Fuel & Nutrideion Plan (AI Estimate)
+                      <Coffee size={14} strokeWidth={1.6} /> Fuel & Nutrition Plan (AI Estimate)
                     </span>
                     {fuelPanelOpen ? <ChevronUp size={14} strokeWidth={1.6} /> : <ChevronDown size={14} strokeWidth={1.6} />}
                   </button>
@@ -630,37 +633,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {fuelPanelOpen && (
                     <div className="fuel-plan-details" style={{ marginTop: 8, background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: '#cbd5e1' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Geschat energieverbruik:</span>
+                        <span>Estimated energy consumption:</span>
                         <strong style={{ color: '#f8fafc' }}>{fuelPlan.totalCalories} kcal</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Koolhydraatbehoefte:</span>
-                        <strong style={{ color: '#cbd5e1' }}>{fuelPlan.totalCarbs}g ({fuelPlan.carbsPerHour}g/u)</strong>
+                        <span>Carbohydrate needs:</span>
+                        <strong style={{ color: '#cbd5e1' }}>{fuelPlan.totalCarbs}g ({fuelPlan.carbsPerHour}g/h)</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Vochtbehoefte:</span>
-                        <strong style={{ color: '#cbd5e1' }}>{(fuelPlan.totalFluid / 1000).toFixed(1)}L ({fuelPlan.fluidPerHour}ml/u)</strong>
+                        <span>Fluid needs:</span>
+                        <strong style={{ color: '#cbd5e1' }}>{(fuelPlan.totalFluid / 1000).toFixed(1)}L ({fuelPlan.fluidPerHour}ml/h)</strong>
                       </div>
                       {fuelPlan.totalSodium > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Natriumbehoefte:</span>
-                          <strong style={{ color: '#ff9f43' }}>{fuelPlan.totalSodium} mg ({fuelPlan.sodiumPerHour}mg/u)</strong>
+                          <span>Sodium needs:</span>
+                          <strong style={{ color: '#ff9f43' }}>{fuelPlan.totalSodium} mg ({fuelPlan.sodiumPerHour}mg/h)</strong>
                         </div>
                       )}
-                      
+
                       <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', marginTop: 4, paddingTop: 8 }}>
-                        <span style={{ fontWeight: 700, color: '#f8fafc', display: 'block', marginBottom: 6 }}>Inname Boodschappenlijst:</span>
+                        <span style={{ fontWeight: 700, color: '#f8fafc', display: 'block', marginBottom: 6 }}>Intake Shopping List:</span>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>🍼 Bidons Sportdrank (500ml):</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><CupSoda size={12} strokeWidth={1.8} /> Sports Drink Bottles (500ml):</span>
                             <strong>{fuelPlan.bottles}x</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>🍫 Energierepen:</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Cookie size={12} strokeWidth={1.8} /> Energy Bars:</span>
                             <strong>{fuelPlan.bars}x</strong>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>⚡ Energiegels:</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Zap size={12} strokeWidth={1.8} /> Energy Gels:</span>
                             <strong>{fuelPlan.gels}x</strong>
                           </div>
                         </div>

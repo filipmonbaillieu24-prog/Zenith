@@ -1,4 +1,5 @@
 import React from 'react';
+import { ZenithHeroStat } from '@zenith/shared';
 
 interface DashboardStatsHeaderProps {
   profileName?: string;
@@ -6,6 +7,25 @@ interface DashboardStatsHeaderProps {
   setTimeRange: (val: 30 | 90 | 365 | 'all') => void;
   latestPMC: { ctl: number; atl: number; tsb: number };
   tsbStatus: { label: string; emoji: string; color: string };
+}
+
+/** One-line context for the hero card — matches the tone of interpretTSB's
+ * five states without repeating the pill label verbatim. */
+function tsbContext(label: string, tsb: number): string {
+  switch (label) {
+    case 'Fresh / too little stimulus':
+      return "You're well recovered but training load has been light — there's room to push harder.";
+    case 'Peak condition':
+      return "Fitness and freshness are both high right now — this is a good window for your hardest efforts.";
+    case 'Optimal training period':
+      return 'A healthy, sustainable balance of fitness and fatigue for consistent training.';
+    case 'Build phase / fatigued':
+      return "You're carrying more fatigue than fitness right now — expected mid-build, not a warning sign.";
+    default:
+      return tsb < -25
+        ? 'Fatigue has been outpacing recovery for a while — consider prioritizing rest this week.'
+        : 'Keep an eye on recovery markers over the next few sessions.';
+  }
 }
 
 export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
@@ -16,28 +36,13 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
   tsbStatus,
 }) => {
   return (
-    <div
-      className="wd-dashboard-header"
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '16px',
-        background: 'rgba(255,255,255,0.01)',
-        border: '1px solid rgba(255,255,255,0.03)',
-        padding: '16px 20px',
-        borderRadius: '12px',
-        backdropFilter: 'blur(10px)',
-        marginBottom: '10px',
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="wd-dashboard-header" style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 10 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
         <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#f8fafc', margin: 0, fontFamily: 'Outfit, sans-serif' }}>
-          Welkom terug, {profileName ?? 'Filip'}
+          Welcome back, {profileName ?? 'Filip'}
         </h2>
 
-        {/* Tijdspanne Filter */}
+        {/* Timespan filter */}
         <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.02)', padding: '3px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)', width: 'fit-content' }}>
           {([
             { label: '30 Days', value: 30 },
@@ -58,7 +63,7 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
                 borderRadius: '6px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                fontFamily: 'inheride',
+                fontFamily: 'inherit',
               }}
             >
               {opt.label}
@@ -67,93 +72,30 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
         </div>
       </div>
 
-      {/* Fitness Status Meters */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        <div style={{ display: 'flex', gap: '14px' }}>
-          {/* CTL / Fitheid */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ position: 'relative', width: '36px', height: '36px' }}>
-              <svg width="36" height="36" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="3" />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15"
-                  fill="none"
-                  stroke="#cbd5e1"
-                  strokeWidth="3"
-                  strokeDasharray="94.2"
-                  strokeDashoffset={94.2 - Math.min(100, latestPMC.ctl) * 0.942}
-                  strokeLinecap="round"
-                  transform="rotate(-90 18 18)"
-                />
-              </svg>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: '#cbd5e1' }}>
-                {Math.round(latestPMC.ctl)}
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Fitheid (CTL)</span>
-              <span style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 700 }}>Conditionering</span>
-            </div>
-          </div>
-
-          {/* ATL / Fatigue */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ position: 'relative', width: '36px', height: '36px' }}>
-              <svg width="36" height="36" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="3" />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15"
-                  fill="none"
-                  stroke="#ff7675"
-                  strokeWidth="3"
-                  strokeDasharray="94.2"
-                  strokeDashoffset={94.2 - Math.min(100, latestPMC.atl) * 0.942}
-                  strokeLinecap="round"
-                  transform="rotate(-90 18 18)"
-                />
-              </svg>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: '#ff7675' }}>
-                {Math.round(latestPMC.atl)}
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Fatigue (ATL)</span>
-              <span style={{ fontSize: '11px', color: '#cbd5e1', fontWeight: 700 }}>Recente stress</span>
-            </div>
-          </div>
-
-          {/* TSB / Vorm */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ position: 'relative', width: '36px', height: '36px' }}>
-              <svg width="36" height="36" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="3" />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="15"
-                  fill="none"
-                  stroke="#a29bfe"
-                  strokeWidth="3"
-                  strokeDasharray="94.2"
-                  strokeDashoffset={94.2 - Math.min(100, Math.max(0, latestPMC.tsb + 50)) * 0.942}
-                  strokeLinecap="round"
-                  transform="rotate(-90 18 18)"
-                />
-              </svg>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: '#a29bfe' }}>
-                {Math.round(latestPMC.tsb)}
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Vorm (TSB)</span>
-              <span style={{ fontSize: '11px', color: tsbStatus.color, fontWeight: 700 }}>
+      <div className="zenith-grid-12">
+        <div className="zenith-span-8">
+          <ZenithHeroStat
+            eyebrow="Form · TSB"
+            value={latestPMC.tsb >= 0 ? `+${Math.round(latestPMC.tsb)}` : Math.round(latestPMC.tsb)}
+            sub={tsbContext(tsbStatus.label, latestPMC.tsb)}
+            pill={
+              <span
+                className="zenith-pill"
+                style={{ background: `${tsbStatus.color}1f`, color: tsbStatus.color }}
+              >
                 {tsbStatus.emoji} {tsbStatus.label}
               </span>
-            </div>
+            }
+          />
+        </div>
+        <div className="zenith-span-4" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', flex: 1 }}>
+            <div className="zenith-label">Fitness · CTL</div>
+            <div className="zenith-stat-value" style={{ marginTop: 4 }}>{Math.round(latestPMC.ctl)}</div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', flex: 1 }}>
+            <div className="zenith-label">Fatigue · ATL</div>
+            <div className="zenith-stat-value" style={{ marginTop: 4, color: '#f5a623' }}>{Math.round(latestPMC.atl)}</div>
           </div>
         </div>
       </div>

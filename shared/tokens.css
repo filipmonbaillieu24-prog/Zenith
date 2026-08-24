@@ -15,11 +15,33 @@
   --zenith-color-error: #ef4444;
   --zenith-color-border: rgba(255, 255, 255, 0.08);
 
+  /* Signature brand color — the one color meant to mean "this is Zenith":
+     primary actions, active nav state, focus rings, the one line that
+     matters on a chart. Everything else stays neutral so this reads as
+     deliberate rather than decorative. */
+  --zenith-color-signature: #38bdf8;
+  --zenith-color-signature-bright: #7dd3fc;
+  --zenith-color-signature-soft: rgba(56, 189, 248, 0.12);
+  --zenith-color-signature-border: rgba(56, 189, 248, 0.35);
+
+  /* Semantic status colors — for state (improved/needs-attention/overreached/learned),
+     kept separate from --zenith-color-accent so per-app category colors (macros, sleep
+     stages, etc.) don't collide with status meaning. */
+  --zenith-color-good: #4ade80;
+  --zenith-color-good-soft: rgba(74, 222, 128, 0.12);
+  --zenith-color-warn: #f5a623;
+  --zenith-color-warn-soft: rgba(245, 166, 35, 0.12);
+  --zenith-color-crit: #ef4444;
+  --zenith-color-crit-soft: rgba(239, 68, 68, 0.12);
+  --zenith-color-info: #7dd3fc;
+  --zenith-color-info-soft: rgba(125, 211, 252, 0.12);
+
   --zenith-space-xs: 4px;
   --zenith-space-sm: 8px;
   --zenith-space-md: 16px;
   --zenith-space-lg: 24px;
   --zenith-space-xl: 32px;
+  --zenith-space-xxl: 48px;
 
   --zenith-radius-sm: 8px;
   --zenith-radius-md: 12px;
@@ -112,8 +134,8 @@
 }
 
 .zenith-btn-primary {
-  background: var(--zenith-color-accent);
-  color: #09090b;
+  background: var(--zenith-color-signature);
+  color: #05131c;
   border: none;
   padding: 10px 18px;
   border-radius: var(--zenith-radius-md);
@@ -127,12 +149,12 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 14px rgba(203, 213, 225, 0.15);
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.2);
 }
 
 .zenith-btn-primary:hover {
-  background: var(--zenith-color-accent-bright);
-  box-shadow: 0 6px 20px rgba(203, 213, 225, 0.3);
+  background: var(--zenith-color-signature-bright);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.35);
   transform: translateY(-1px);
 }
 
@@ -171,6 +193,389 @@
   color: var(--zenith-color-primary);
   text-transform: uppercase;
   letter-spacing: 0.8px;
+}
+
+/* ==========================================================
+ * STATUS PILLS
+ * ========================================================== */
+
+.zenith-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.zenith-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.zenith-pill--good { background: var(--zenith-color-good-soft); color: var(--zenith-color-good); }
+.zenith-pill--warn { background: var(--zenith-color-warn-soft); color: var(--zenith-color-warn); }
+.zenith-pill--crit { background: var(--zenith-color-crit-soft); color: var(--zenith-color-crit); }
+.zenith-pill--info { background: var(--zenith-color-info-soft); color: var(--zenith-color-info); }
+
+/* ==========================================================
+ * DENSE DATA TABLE (replaces fixed equal-width columns that
+ * force long labels to wrap many lines deep)
+ * ========================================================== */
+
+.zenith-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.zenith-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-family: var(--zenith-font-heading);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  border-bottom: 1px solid var(--zenith-color-border);
+  white-space: nowrap;
+}
+
+.zenith-table td {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--zenith-color-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+}
+
+.zenith-table tr:last-child td { border-bottom: none; }
+.zenith-table tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+.zenith-table-name {
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+  display: block;
+}
+
+.zenith-tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================
+ * TYPE SCALE — a real ladder instead of bold-uppercase-for-everything.
+ * Reserve .zenith-eyebrow for true tiny category tags; section titles
+ * and stat values get their own steps so they can actually stand out.
+ * ========================================================== */
+
+.zenith-eyebrow {
+  font-family: var(--zenith-font-body);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--zenith-color-secondary);
+}
+
+.zenith-label {
+  font-family: var(--zenith-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--zenith-color-secondary);
+}
+
+.zenith-title-lg {
+  font-family: var(--zenith-font-heading);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #f1f5f9;
+}
+
+.zenith-stat-value {
+  font-family: var(--zenith-font-heading);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: #f1f5f9;
+}
+
+.zenith-hero-value {
+  font-family: var(--zenith-font-heading);
+  font-size: 48px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  line-height: 1.05;
+}
+
+/* ==========================================================
+ * 12-COLUMN CARD GRID — card size communicates priority: hero cards
+ * span more columns than supporting stats, instead of every card on
+ * a dashboard being the same size regardless of importance.
+ * ========================================================== */
+
+.zenith-grid-12 {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--zenith-space-md);
+}
+
+.zenith-span-3 { grid-column: span 3; }
+.zenith-span-4 { grid-column: span 4; }
+.zenith-span-6 { grid-column: span 6; }
+.zenith-span-8 { grid-column: span 8; }
+.zenith-span-12 { grid-column: span 12; }
+
+/* Natural spans (8/4 hero+support pairs, 4/4/4 triplets) hold all the way
+   down to 768px — plenty of room for their content. Below that, jump
+   straight to full-width stacking. A middle 6/6 fallback tier used to sit
+   here, but with an odd number of siblings (3 equal stat cards, or an 8+4
+   pair) it stranded one card alone in its row with dead space beside it. */
+@media (max-width: 768px) {
+  .zenith-grid-12 > * { grid-column: span 12 !important; }
+}
+
+.zenith-hero-card {
+  background: linear-gradient(160deg, var(--zenith-color-signature-soft), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--zenith-color-signature-border);
+  border-radius: var(--zenith-radius-lg);
+  padding: var(--zenith-space-lg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--zenith-space-md);
+  box-sizing: border-box;
+}
+
+/* Stretch a hero card to match a taller sibling column ONLY when it is the
+   sole content of its grid cell (span-8/span-4 pairs) — done on the grid
+   item itself via flex, not with height:100% on .zenith-hero-card directly.
+   A blanket height:100% there breaks pages where other content (stat
+   grids, charts) is stacked below the hero card inside the same parent:
+   the hero would claim the whole parent's height and push everything
+   after it into overflow instead of leaving room for it. */
+.zenith-span-8:has(> .zenith-hero-card:only-child),
+.zenith-span-4:has(> .zenith-hero-card:only-child) {
+  display: flex;
+}
+
+/* Some pages (e.g. Fuel) put the span and hero-card classes on the same
+   element instead of wrapping — no stacked sibling content inside that
+   node, so height:100% is safe there and needed since there's no separate
+   grid-item parent left to stretch via flex. */
+.zenith-hero-card.zenith-span-8,
+.zenith-hero-card.zenith-span-4 {
+  height: 100%;
+}
+
+/* ==========================================================
+ * EMPTY STATE — one pattern (icon + message + action), used
+ * everywhere data is missing instead of ad hoc "Loading..." text.
+ * ========================================================== */
+
+.zenith-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--zenith-color-border);
+  border-radius: var(--zenith-radius-md);
+}
+
+.zenith-empty-state__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--zenith-color-signature-soft);
+  color: var(--zenith-color-signature);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.zenith-empty-state h4 {
+  font-family: var(--zenith-font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.zenith-empty-state p {
+  font-size: 12.5px;
+  color: var(--zenith-color-secondary);
+  max-width: 36ch;
+  margin: 4px 0 14px;
+}
+
+/* ==========================================================
+ * PAGE HEADER — one shared shell for every app's top chrome.
+ * Tabs and actions size to their own content (NOT flex:1-stretched),
+ * so tab width/padding/gap is identical whether an app has 4 tabs
+ * and no buttons or 6 tabs and one — only the empty middle spacer
+ * absorbs the leftover width. This is what actually makes five
+ * apps with different tab counts look like one product.
+ * ========================================================== */
+
+.zenith-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: rgba(18, 18, 22, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 14px 24px;
+  flex-shrink: 0;
+  margin-bottom: 24px;
+  box-sizing: border-box;
+}
+
+.zenith-header-brand {
+  flex-shrink: 0;
+}
+
+.zenith-header-brand h1 {
+  font-family: var(--zenith-font-heading);
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.zenith-header-brand h1 span {
+  font-weight: 400;
+  color: var(--zenith-color-secondary);
+  font-size: 14px;
+}
+
+.zenith-header-brand p {
+  font-family: var(--zenith-font-body);
+  font-size: 9px;
+  color: var(--zenith-color-secondary);
+  margin: 2px 0 0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.zenith-header-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 6px;
+  border-radius: 14px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.zenith-header-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-family: var(--zenith-font-heading);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--zenith-color-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.zenith-header-tab:hover:not(.active) {
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.zenith-header-tab.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.zenith-header-spacer {
+  flex: 1;
+  min-width: 12px;
+}
+
+.zenith-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* Shared action-button look, so "Import Ride" / "Log Manually" /
+ * "Set Goals" / etc. all read as the same button across apps —
+ * one filled primary per header at most, everything else secondary. */
+.zenith-header-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-family: var(--zenith-font-heading);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #f1f5f9;
+}
+
+.zenith-header-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.zenith-header-btn--primary {
+  background: var(--zenith-color-signature);
+  border-color: transparent;
+  color: #05131c;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.2);
+}
+
+.zenith-header-btn--primary:hover {
+  background: var(--zenith-color-signature-bright);
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.35);
+}
+
+.zenith-header-btn--warn {
+  background: var(--zenith-color-warn-soft);
+  border-color: rgba(245, 166, 35, 0.25);
+  color: var(--zenith-color-warn);
 }
 
 .zenith-glow-ambient {

@@ -3,6 +3,8 @@ import {
   ResponsiveContainer, ComposedChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from 'recharts';
+import { ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK } from '@zenith/shared';
+import { Zap, Bike } from 'lucide-react';
 import { BestEfforts, BestSpeedEfforts, EFFORT_DURATIONS, SPEED_EFFORT_DURATIONS } from '../types/workout';
 
 interface Props {
@@ -65,7 +67,10 @@ export const PowerDurationCurve: React.FC<Props> = ({
   return (
     <div className="pdc-wrap" data-has-record={data.length > 0 ? "true" : "false"}>
       <div className="pdc-header">
-        <h3 className="pdc-title">{hasPower ? '⚡ Power Duration Curve' : '🚴 Speedscurve'}</h3>
+        <h3 className="pdc-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {hasPower ? <Zap size={14} strokeWidth={1.8} /> : <Bike size={14} strokeWidth={1.8} />}
+          {hasPower ? 'Power Duration Curve' : 'Speed Curve'}
+        </h3>
         <div className="pdc-legend">
           <span className="pdc-legend__dot" style={{ background: '#cbd5e1' }} /> All-time
           {hasLast90Data && (
@@ -92,10 +97,10 @@ export const PowerDurationCurve: React.FC<Props> = ({
               <stop offset="95%" stopColor="#ffffff" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-          <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8', opacity: 0.6 }} />
+          <CartesianGrid {...ZENITH_CHART_GRID} />
+          <XAxis dataKey="label" tick={ZENITH_CHART_AXIS_TICK} />
           <YAxis
-            tick={{ fontSize: 11, fill: '#94a3b8', opacity: 0.6 }}
+            tick={ZENITH_CHART_AXIS_TICK}
             unit={` ${unit}`}
             width={52}
             domain={[yMin, 'auto']}

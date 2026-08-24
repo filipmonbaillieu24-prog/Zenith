@@ -38,7 +38,7 @@ export const LoginPage: React.FC = () => {
           password,
           options: {
             data: {
-              name: fullName || 'Atleet'
+              name: fullName || 'Athlete'
             }
           }
         });

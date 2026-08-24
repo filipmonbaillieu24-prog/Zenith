@@ -10,7 +10,7 @@ interface RacePredictorProps {
 }
 
 export const RacePredictor: React.FC<RacePredictorProps> = ({ ftp, weight = 75, rides }) => {
-  // Bepaal bruikbare FTP
+  // Resolve a usable FTP
   const resolvedFTP = (ftp ?? (rides.length > 0 ? Math.max(...rides.map(r => r.eFTP ?? 0)) : 250)) || 250;
   const wkg = resolvedFTP / weight;
 
@@ -24,10 +24,13 @@ export const RacePredictor: React.FC<RacePredictorProps> = ({ ftp, weight = 75, 
   const driftPenalty = avgDrift > 6 ? 0.94 : 1.0;
 
   const distances = [
-    { label: '20 km Tijdride', dist: 20, ftpPct: 0.95, baseSpeed: 22, wkgFactor: 4.5, penalty: 1.0 },
-    { label: '50 km Soloride', dist: 50, ftpPct: 0.83, baseSpeed: 20, wkgFactor: 4.0, penalty: 1.0 },
+    { label: '20 km Time Trial', dist: 20, ftpPct: 0.95, baseSpeed: 22, wkgFactor: 4.5, penalty: 1.0 },
+    { label: '50 km Solo Ride', dist: 50, ftpPct: 0.83, baseSpeed: 20, wkgFactor: 4.0, penalty: 1.0 },
     { label: '100 km Gran Fondo', dist: 100, ftpPct: 0.73, baseSpeed: 18, wkgFactor: 3.6, penalty: driftPenalty },
-    { label: '150 km Epic Ride', dist: 150, ftpPct: 0.65, baseSpeed: 16, wkgFactor: 3.2, penalty: Math.min(1.0, driftPenalty * 0.97) }
+    // Only stack the extra 3% fade penalty on top of the drift penalty when real cardiac
+    // drift was actually detected (driftPenalty < 1.0). Previously this was applied
+    // unconditionally, silently docking 3% power even for riders with zero measured drift.
+    { label: '150 km Epic Ride', dist: 150, ftpPct: 0.65, baseSpeed: 16, wkgFactor: 3.2, penalty: driftPenalty < 1.0 ? driftPenalty * 0.97 : 1.0 }
   ];
 
   const predictions = distances.map(d => {
@@ -40,7 +43,7 @@ export const RacePredictor: React.FC<RacePredictorProps> = ({ ftp, weight = 75, 
     const s = Math.round(((timeHrs % 1) * 60 % 1) * 60);
 
     const timeStr = h > 0
-      ? `${h}u ${String(m).padStart(2, '0')}m`
+      ? `${h}h ${String(m).padStart(2, '0')}m`
       : `${m}m ${String(s).padStart(2, '0')}s`;
 
     return {
@@ -55,7 +58,7 @@ export const RacePredictor: React.FC<RacePredictorProps> = ({ ftp, weight = 75, 
   return (
     <div className="pp-predictor-card">
       <div className="pp-predictor-header">
-        <h3 className="pp-predictor-title">🧭 Race Predictor & Tempovoorspeller</h3>
+        <h3 className="pp-predictor-title">🧭 Race Predictor</h3>
         <span className="pp-predictor-subtitle">Estimate based on {resolvedFTP}W FTP ({wkg.toFixed(2)} W/kg)</span>
       </div>
 

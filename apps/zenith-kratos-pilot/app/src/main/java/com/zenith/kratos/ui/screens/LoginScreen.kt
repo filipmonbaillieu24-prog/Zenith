@@ -70,7 +70,7 @@ fun LoginScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Zenith Ecosysteem Login",
+                        text = "Zenith Ecosystem Login",
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
@@ -79,7 +79,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = emailInput,
                         onValueChange = { emailInput = it; errorMessage = null },
-                        label = { Text("E-mailadres") },
+                        label = { Text("Email address") },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
@@ -93,7 +93,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = passwordInput,
                         onValueChange = { passwordInput = it; errorMessage = null },
-                        label = { Text("Wachtwoord") },
+                        label = { Text("Password") },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
@@ -118,7 +118,7 @@ fun LoginScreen(
                     Button(
                         onClick = {
                             if (emailInput.isBlank() || passwordInput.isBlank()) {
-                                errorMessage = "Vul alle velden in."
+                                errorMessage = "Please fill in all fields."
                                 return@Button
                             }
                             isLoggingIn = true
@@ -130,7 +130,7 @@ fun LoginScreen(
                                     }
                                     onLoginSuccess()
                                 } catch (e: Exception) {
-                                    errorMessage = "Inloggen mislukt: ${e.localizedMessage ?: "Verifieer gegevens"}"
+                                    errorMessage = "Login failed: ${e.localizedMessage ?: "Verify credentials"}"
                                 } finally {
                                     isLoggingIn = false
                                 }
