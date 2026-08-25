@@ -2060,10 +2060,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               <div style={{ padding: '16px', background: 'rgba(168, 85, 247, 0.06)', borderRadius: 12, border: '1px solid rgba(168, 85, 247, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 900, color: '#fff', marginBottom: 2 }}>Total Sleep: {Math.floor(durMins / 60)}h {durMins % 60}m</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Connect your Colmi Smart Ring and unlock your Deep Sleep, REM & Recovery Scores (PRO).</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Unlock your Deep Sleep, REM & Recovery Scores (PRO).</div>
                 </div>
-                <button 
-                  onClick={() => handleRequestProModal('Sleep Stages Breakdown', 'View your exact deep sleep, REM sleep, and light sleep percentages from your Colmi Smart Ring.')} 
+                <button
+                  onClick={() => handleRequestProModal('Sleep Stages Breakdown', 'View your exact deep sleep, REM sleep, and light sleep percentages.')}
                   className="btn-primary" 
                   style={{ padding: '8px 16px', fontSize: 11, background: 'linear-gradient(135deg, #a855f7 0%, #7e22ce 100%)', border: 'none', color: '#fff', fontWeight: 900, flexShrink: 0 }}
                 >
@@ -2198,10 +2198,19 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </thead>
               <tbody>
                 {[...sleeps].reverse().slice(0, 15).map((s: any) => {
-                  const sDur = s.duration_minutes || 450;
-                  const sDeep = s.deep_minutes || Math.round(sDur * 0.25);
-                  const sLight = s.light_minutes || Math.round(sDur * 0.55);
-                  const sRem = s.rem_minutes || Math.round(sDur * 0.18);
+                  // Reuse the exact same engine the hero card above uses (calculateZenithSleepScore)
+                  // instead of separate, ad-hoc fallbacks - the previous per-field `s.rem_minutes ||
+                  // Math.round(sDur * 0.18)` style synthesis fabricated a non-zero REM/deep/light
+                  // split even on nights where the real stage data existed but one field (e.g. REM)
+                  // was genuinely 0, while the hero card's all-or-nothing fallback correctly showed
+                  // that real 0 - so the two disagreed. Quality similarly fell back to a hardcoded
+                  // '82/100' literal whenever quality_score was unset, which it always is (no current
+                  // write path ever sets that column), showing the same fake score on every row.
+                  const rowAnalysis = calculateZenithSleepScore(s, [], profile.target_sleep_hours || 8.0);
+                  const sDur = rowAnalysis.metrics.totalMins;
+                  const sDeep = rowAnalysis.metrics.deepMins;
+                  const sLight = rowAnalysis.metrics.lightMins;
+                  const sRem = rowAnalysis.metrics.remMins;
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                       <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{new Date(s.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
@@ -2209,7 +2218,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                       <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: 11 }}>
                         <span style={{ color: '#a855f7', fontWeight: 700 }}>{Math.floor(sDeep/60)}h{sDeep%60}m</span> / <span style={{ color: '#60a5fa' }}>{Math.floor(sLight/60)}h{sLight%60}m</span> / <span style={{ color: '#f472b6' }}>{Math.floor(sRem/60)}h{sRem%60}m</span>
                       </td>
-                      <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{s.quality_score ? s.quality_score + '/100' : '82/100'}</td>
+                      <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{rowAnalysis.score}/100</td>
                       <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                         <button onClick={() => handleEditClick('sleep', s)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, marginRight: 8, height: 'auto' }}>Edit</button>
                         <button onClick={() => handleDeleteLog('sleep', s.id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: 10, color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)', height: 'auto' }}>Delete</button>
