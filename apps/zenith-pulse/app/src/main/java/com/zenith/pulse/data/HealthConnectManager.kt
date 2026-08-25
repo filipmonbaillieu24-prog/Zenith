@@ -49,11 +49,7 @@ data class HealthDataPayload(
     val dailyStepsList: List<Map<String, Any>> = emptyList(),
     val dailySleepList: List<Map<String, Any>> = emptyList(),
     val dailyWeightList: List<Map<String, Any>> = emptyList(),
-    val timestamp: String = Instant.now().toString(),
-    // TEMPORARY DIAGNOSTIC fields - see the comment above sleepSessionsDebug in
-    // fetchLatestHealthData(). Remove once the sleep-stage root cause is confirmed.
-    val sleepSessionsDebug: List<Map<String, Any>> = emptyList(),
-    val sleepStagesDebug: List<Map<String, Any>> = emptyList()
+    val timestamp: String = Instant.now().toString()
 )
 
 class HealthConnectManager(private val context: Context) {
@@ -138,8 +134,6 @@ class HealthConnectManager(private val context: Context) {
 
         val stepsMaps = mutableListOf<Map<String, Any>>()
         val sleepMaps = mutableListOf<Map<String, Any>>()
-        var sleepSessionsDebugList: List<Map<String, Any>> = emptyList()
-        var sleepStagesDebugList: List<Map<String, Any>> = emptyList()
         val exerciseMaps = mutableListOf<Map<String, Any>>()
         val dailyStepsList = mutableListOf<Map<String, Any>>()
         val dailySleepList = mutableListOf<Map<String, Any>>()
@@ -381,27 +375,6 @@ class HealthConnectManager(private val context: Context) {
                 dailySleepList.add(mapOf("date" to dateStr, "duration_minutes" to mins))
             }
 
-            // TEMPORARY DIAGNOSTIC: two targeted fixes to the per-session stage-summing
-            // loop (STAGE_TYPE_UNKNOWN fallback, then seconds-not-minutes accumulation)
-            // both shipped and synced with zero change to the output - deep/light/rem/
-            // awake came back byte-for-byte identical both times. That rules out the
-            // summing logic itself and points at session SELECTION instead: if more than
-            // one app writes SleepSessionRecords to Health Connect for the same night
-            // (e.g. the phone's own OS-level sleep detection alongside a ring app),
-            // maxByOrNull { it.endTime } below has no source-awareness and could be
-            // picking a different, coarser record than the ring's actual detailed one -
-            // remove once the real cause is confirmed from this data.
-            sleepSessionsDebugList = sleepRes.records.map { r ->
-                mapOf(
-                    "origin" to r.metadata.dataOrigin.packageName,
-                    "start_time" to r.startTime.toString(),
-                    "end_time" to r.endTime.toString(),
-                    "duration_minutes" to ChronoUnit.MINUTES.between(r.startTime, r.endTime),
-                    "stage_count" to r.stages.size,
-                    "stages_total_seconds" to r.stages.sumOf { st -> ChronoUnit.SECONDS.between(st.startTime, st.endTime) }
-                )
-            }
-
             val latestSession = sleepRes.records.maxByOrNull { it.endTime }
             if (latestSession != null) {
                 val durSec = ChronoUnit.SECONDS.between(latestSession.startTime, latestSession.endTime)
@@ -416,28 +389,39 @@ class HealthConnectManager(private val context: Context) {
                         "duration_seconds" to stDur
                     )
                 }
-                sleepStagesDebugList = stagesList
 
                 // Sum per-stage SECONDS (not minutes) for the sync payload (sleep_deep_minutes
                 // etc.) so Vigor can show real deep/light/REM/awake breakdown instead of a
                 // synthetic 25/55/18% split. Health Connect's stage-type codes: 1/3/7 = awake
                 // variants, 2/4 = light-ish, 5 = deep, 6 = REM.
                 //
-                // Critical: accumulate seconds and only divide by 60 once, at the very end.
-                // Dividing per-segment (ChronoUnit.SECONDS.between(...) / 60 inside the loop)
-                // truncates every individual segment under 60 seconds to exactly 0, contributing
-                // nothing no matter how many of them there are. Some ring/band Health Connect
-                // bridges report stages as many short, fragmented segments rather than a few
-                // long blocks - REM in particular tends to occur in shorter, more broken-up
-                // bursts than deep sleep - so this could silently zero out an entire stage
-                // category (confirmed: a night with real REM sleep synced with 0 REM minutes,
-                // and the totals were missing tens of minutes overall) even though every segment
-                // had a perfectly recognized stage type.
+                // Accumulate seconds and only divide by 60 once, at the very end - dividing
+                // per-segment truncates any individual segment under 60 seconds to exactly 0.
+                //
+                // Confirmed via diagnostic instrumentation against this exact ring app
+                // (com.app.cq.ring) that it never writes a STAGE_TYPE_REM segment at all: a
+                // full night's stage list was 100% LIGHT/DEEP/AWAKE, but left four unexplained
+                // gaps between consecutive segments totaling exactly the missing minutes
+                // (15-27 min each, recurring roughly every 90 minutes - the classic REM-cycle
+                // spacing) even though the ring's own app displayed real REM sleep for that
+                // night. This ring detects REM internally but its Health Connect export
+                // doesn't tag it as a stage - it just leaves a hole. So: a gap sandwiched
+                // between two recorded stages is treated as REM (the physiologically
+                // plausible read of "detected but not exported as a stage type"), while a
+                // gap at the very start or end of the session (before the first stage /
+                // after the last) is treated as awake - much more likely to be settling in
+                // or lying awake after waking than a REM period.
                 var deepSec = 0L
                 var remSec = 0L
                 var lightSec = 0L
                 var awakeSec = 0L
-                for (st in latestSession.stages) {
+                val sortedStages = latestSession.stages.sortedBy { it.startTime }
+                var coveredUntil = latestSession.startTime
+                for ((index, st) in sortedStages.withIndex()) {
+                    val gapSec = ChronoUnit.SECONDS.between(coveredUntil, st.startTime)
+                    if (gapSec > 0) {
+                        if (index == 0) awakeSec += gapSec else remSec += gapSec
+                    }
                     val stSec = ChronoUnit.SECONDS.between(st.startTime, st.endTime)
                     when (st.stage) {
                         SleepSessionRecord.STAGE_TYPE_DEEP -> deepSec += stSec
@@ -449,7 +433,11 @@ class HealthConnectManager(private val context: Context) {
                         // stage type, so an unrecognized segment is never silently dropped.
                         else -> lightSec += stSec
                     }
+                    if (st.endTime.isAfter(coveredUntil)) coveredUntil = st.endTime
                 }
+                val trailingGapSec = ChronoUnit.SECONDS.between(coveredUntil, latestSession.endTime)
+                if (trailingGapSec > 0) awakeSec += trailingGapSec
+
                 sleepDeepMin = deepSec / 60
                 sleepRemMin = remSec / 60
                 sleepLightMin = lightSec / 60
@@ -677,9 +665,7 @@ class HealthConnectManager(private val context: Context) {
             rawExerciseList = exerciseMaps,
             dailyStepsList = dailyStepsList,
             dailySleepList = dailySleepList,
-            dailyWeightList = dailyWeightList,
-            sleepSessionsDebug = sleepSessionsDebugList,
-            sleepStagesDebug = sleepStagesDebugList
+            dailyWeightList = dailyWeightList
         )
     }
 }
