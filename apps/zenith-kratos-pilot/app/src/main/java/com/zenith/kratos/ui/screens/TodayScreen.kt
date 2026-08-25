@@ -51,6 +51,7 @@ fun TodayScreen(
 
     // Update unsynced count
     LaunchedEffect(Unit) {
+        repository.restoreWorkoutHistoryIfEmpty()
         val uns = db.workoutDao().getUnsyncedWorkouts()
         unsyncedCount = uns.size
         cardioFactor = repository.calculateCardioStressFactor()

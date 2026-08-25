@@ -2,6 +2,8 @@ package com.zenith.kratos.data
 
 import android.content.Context
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 // 1. Entities
@@ -82,8 +84,14 @@ interface WorkoutDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWorkout(workout: LocalWorkout)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWorkouts(workouts: List<LocalWorkout>)
+
     @Query("UPDATE completed_workouts SET isSynced = 1 WHERE id = :workoutId")
     suspend fun markSynced(workoutId: String)
+
+    @Query("SELECT COUNT(*) FROM completed_workouts")
+    suspend fun getWorkoutCount(): Int
 
     @Query("DELETE FROM completed_workouts")
     suspend fun deleteAll()
@@ -111,6 +119,19 @@ interface ActiveWorkoutDao {
     suspend fun deleteActiveWorkout()
 }
 
+// Adds min_weight/max_weight to the exercises cache without touching any other table.
+// A prior version of this migration relied on fallbackToDestructiveMigration(), which
+// wipes every table on any un-handled version bump - including completed_workouts, the
+// only local source for "Previous" set values and PR history (workouts only ever sync
+// UP to Supabase, never back down), silently erasing that history for every user who
+// updated. An explicit Migration takes priority over the fallback for this exact jump.
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE exercises ADD COLUMN minWeight REAL")
+        db.execSQL("ALTER TABLE exercises ADD COLUMN maxWeight REAL")
+    }
+}
+
 // 3. Database
 @Database(entities = [LocalExercise::class, LocalTemplate::class, LocalWorkout::class, LocalActiveWorkout::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
@@ -129,7 +150,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "kratos_database"
-                ).fallbackToDestructiveMigration().build()
+                ).addMigrations(MIGRATION_3_4).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance
             }
