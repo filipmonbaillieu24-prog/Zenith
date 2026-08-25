@@ -86,15 +86,15 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
             <Activity size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Body Composition (Fat % & Muscle Mass)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Automatic readings from smart scales: Body Fat %, Muscle Mass kg, Visceral Fat, and Water %.</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Track Body Fat %, Muscle Mass kg, Visceral Fat, and Water % over time.</div>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: 'rgba(255, 255, 255, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
             <Moon size={18} color="#a855f7" style={{ marginTop: 2, flexShrink: 0 }} />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Sleep Stages Breakdown (Smart Ring Sync)</div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Full breakdown of Deep Sleep (%), REM Sleep (%), Light Sleep (%), and Awake time from your Colmi Smart Ring.</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f8fafc' }}>Sleep Stages Breakdown</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Full breakdown of Deep Sleep (%), REM Sleep (%), Light Sleep (%), and Awake time.</div>
             </div>
           </div>
         </div>

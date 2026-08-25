@@ -39,8 +39,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const [targetSleep, setTargetSleep] = useState<string>('8');
   const [targetRate, setTargetRate] = useState<string>('0.5');
   const [dietType, setDietType] = useState<string>('balanced');
-  const [scaleModel, setScaleModel] = useState<string>('neo-health-onyx-se');
-  const [ringModel, setRingModel] = useState<string>('colbi-r02');
 
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -69,8 +67,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           setTargetWeight(vigorData.target_weight?.toString() || '');
           setTargetSteps(vigorData.target_steps?.toString() || '10000');
           setTargetSleep(vigorData.target_sleep_hours?.toString() || '8');
-          setScaleModel(vigorData.scale_model || 'neo-health-onyx-se');
-          setRingModel(vigorData.ring_model || 'colbi-r02');
         }
 
         // Fetch Fuel Profile
@@ -171,8 +167,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
           target_weight: parsedWeight,
           target_steps: targetSteps ? parseInt(targetSteps) : null,
           target_sleep_hours: targetSleep ? parseFloat(targetSleep) : null,
-          scale_model: scaleModel,
-          ring_model: ringModel,
           updated_at: new Date().toISOString()
         });
       if (vigorErr) throw vigorErr;
@@ -492,38 +486,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                     <option value="balanced">Balanced (2.0g/kg Pro, moderate Carbs/Fat)</option>
                     <option value="high-carb">High-Carb (1.7g/kg Pro, high Carbs)</option>
                     <option value="low-carb">Low-Carb (2.3g/kg Pro, low Carbs)</option>
-                  </select>
-                </div>
-
-                {/* scaleModel */}
-                <div className="zh-profile-row">
-                  <label htmlFor="goalScale">Paired Body Composition Scale</label>
-                  <select
-                    id="goalScale"
-                    className="zh-profile-select"
-                    value={scaleModel}
-                    onChange={(e) => setScaleModel(e.target.value)}
-                  >
-                    <option value="neo-health-onyx-se">Neo Health Onyx SE (BLE)</option>
-                    <option value="withings-body-cardio">Withings Body Cardio (WiFi/Cloud)</option>
-                    <option value="garmin-index-s2">Garmin Index S2 (WiFi/Cloud)</option>
-                    <option value="manual">Manual Entry Only</option>
-                  </select>
-                </div>
-
-                {/* ringModel */}
-                <div className="zh-profile-row">
-                  <label htmlFor="goalRing">Paired Smart Ring</label>
-                  <select
-                    id="goalRing"
-                    className="zh-profile-select"
-                    value={ringModel}
-                    onChange={(e) => setRingModel(e.target.value)}
-                  >
-                    <option value="colbi-r02">Colbi Ring R02 (BLE)</option>
-                    <option value="oura-ring-gen3">Oura Ring Gen 3 (Cloud API)</option>
-                    <option value="ultrahuman-ring-air">Ultrahuman Ring Air (Cloud API)</option>
-                    <option value="manual">Manual Entry Only</option>
                   </select>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { supabase } from './utils/supabaseClient';
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -26,10 +26,6 @@ const EXTENSION_TABS = new Set<TabKey>(['aero', 'vigor', 'kratos', 'fuel', 'stri
 
 function App() {
   const [session, setSession] = useState<any>(null);
-  const sessionRef = useRef<any>(null);
-  useEffect(() => {
-    sessionRef.current = session;
-  }, [session]);
 
   // Automatic 15-minute background sync with local Health Connect HTTP server
   useEffect(() => {
@@ -189,10 +185,6 @@ function App() {
     }
   };
 
-  const pendingWeight = useRef<number | null>(null);
-  const pendingRawBytes = useRef<number[] | null>(null);
-  const pendingMetrics = useRef<any | null>(null);
-
   // Memoized Aero URL containing auth hashes
   const aeroUrl = useMemo(() => {
     if (!session) return '';
@@ -248,134 +240,8 @@ function App() {
       : `${window.location.origin}/stride/index.html#access_token=${token}&refresh_token=${refresh}`;
   }, [session]);
 
-  // Listen for native Tauri BLE weight and metrics events and forward to Vigor iframe
+  // Handle close-app and other postMessages from iframe
   useEffect(() => {
-    let unlistenWeight: (() => void) | null = null;
-    let unlistenMetrics: (() => void) | null = null;
-
-    async function autoRegisterScale(userId: string) {
-      try {
-        const { data, error } = await supabase
-          .from('vigor_paired_devices')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('device_type', 'scale')
-          .limit(1);
-
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-          console.log("Auto-registering Neo Health Onyx SE scale in database...");
-          const { error: insError } = await supabase
-            .from('vigor_paired_devices')
-            .insert({
-              user_id: userId,
-              device_type: 'scale',
-              brand: 'Neo Health',
-              model: 'Onyx SE',
-              auto_connect: true,
-              settings: {}
-            });
-
-          if (insError) throw insError;
-
-          // Tell the iframe to reload devices
-          const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
-          if (iframe && iframe.contentWindow) {
-            iframe.contentWindow.postMessage({ type: 'refresh-paired-devices' }, '*');
-          }
-        }
-      } catch (err) {
-        console.error("Error auto-registering scale:", err);
-      }
-    }
-
-    async function setupTauriListener() {
-      if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
-        try {
-          const { listen } = await import('@tauri-apps/api/event');
-          unlistenWeight = await listen('native-weight-received', (event: any) => {
-            const payload = event.payload as { weight: number, raw_bytes?: number[] };
-            console.log("Hub received native weight from Tauri Rust:", payload.weight);
-            
-            // Auto-register scale in DB if not already done
-            const currentUserId = sessionRef.current?.user?.id;
-            if (currentUserId) {
-              autoRegisterScale(currentUserId);
-            }
-            
-            pendingWeight.current = payload.weight;
-            pendingRawBytes.current = payload.raw_bytes ?? null;
-            
-            // Switch to Vigor app if not already active
-            setActiveTab('vigor');
-            
-            // Send to iframe (with timeout in case the iframe is already mounted and active)
-            setTimeout(() => {
-              const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
-              if (iframe && iframe.contentWindow) {
-                console.log("Sending weight immediately to iframe:", payload.weight);
-                iframe.contentWindow.postMessage({ 
-                  type: 'native-weight-received', 
-                  weight: payload.weight,
-                  raw_bytes: payload.raw_bytes 
-                }, '*');
-              }
-            }, 300);
-          });
-
-          unlistenMetrics = await listen('native-metrics-received', (event: any) => {
-            const payload = event.payload as { body_fat: number, water: number, impedance: number };
-            console.log("Hub received native metrics from Tauri Rust:", payload);
-            
-            pendingMetrics.current = payload;
-            
-            setTimeout(() => {
-              const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
-              if (iframe && iframe.contentWindow) {
-                console.log("Sending metrics immediately to iframe:", payload);
-                iframe.contentWindow.postMessage({ type: 'native-metrics-received', payload }, '*');
-              }
-            }, 300);
-          });
-        } catch (err) {
-          console.error("Failed to setup Tauri native BLE listener in Hub:", err);
-        }
-      }
-    }
-
-    setupTauriListener();
-
-    return () => {
-      if (unlistenWeight) unlistenWeight();
-      if (unlistenMetrics) unlistenMetrics();
-    };
-  }, []);
-
-  // Handle close-app and ready postMessages from iframe
-  useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    
-    const setupTauriListener = async () => {
-      if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
-        try {
-          const { listen } = await import('@tauri-apps/api/event');
-          unlisten = await listen<string>('colmi-sync-status', (event) => {
-            const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
-            if (iframe && iframe.contentWindow) {
-              iframe.contentWindow.postMessage({
-                type: 'colmi-sync-status-update',
-                payload: event.payload
-              }, '*');
-            }
-          });
-        } catch (e) {
-          console.error("Failed to setup Tauri colmi-sync-status listener", e);
-        }
-      }
-    };
-    setupTauriListener();
-
     const handleMessage = (event: MessageEvent) => {
       if (!isTrustedZenithOrigin(event.origin)) return;
       if (event.data?.type === 'close-app') {
@@ -387,61 +253,11 @@ function App() {
         console.log("Hub received open-bug-report event from iframe:", event.data);
         setBugPrefilledCategory(event.data.category || null);
         setIsBugReportOpen(true);
-      } else if (event.data?.type === 'vigor-dashboard-ready') {
-        console.log("Hub received ready notification from Vigor iframe");
-        const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
-        if (iframe && iframe.contentWindow) {
-          if (pendingWeight.current !== null) {
-            console.log("Sending pending weight to ready iframe:", pendingWeight.current);
-            iframe.contentWindow.postMessage({ 
-              type: 'native-weight-received', 
-              weight: pendingWeight.current,
-              raw_bytes: pendingRawBytes.current
-            }, '*');
-            pendingWeight.current = null;
-            pendingRawBytes.current = null;
-          }
-          if (pendingMetrics.current !== null) {
-            console.log("Sending pending metrics to ready iframe:", pendingMetrics.current);
-            iframe.contentWindow.postMessage({ type: 'native-metrics-received', payload: pendingMetrics.current }, '*');
-            pendingMetrics.current = null;
-          }
-        }
-      } else if (event.data?.type === 'request-colmi-sync') {
-        console.log("Hub received request-colmi-sync from iframe");
-        const targetMac = event.data?.targetMac || null;
-        const runSync = async () => {
-          try {
-            const simulate = event.data?.simulate || false;
-            const { invoke } = await import('@tauri-apps/api/core');
-            const resultStr = await invoke<string>('sync_colmi_ring', { simulate, targetMac });
-            const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
-            if (iframe && iframe.contentWindow) {
-              iframe.contentWindow.postMessage({
-                type: 'colmi-sync-result',
-                success: true,
-                data: resultStr
-              }, '*');
-            }
-          } catch (err: any) {
-            console.error("Hub failed to sync Colmi ring:", err);
-            const iframe = document.getElementById('vigor-iframe') as HTMLIFrameElement;
-            if (iframe && iframe.contentWindow) {
-              iframe.contentWindow.postMessage({
-                type: 'colmi-sync-result',
-                success: false,
-                error: err.message || String(err)
-              }, '*');
-            }
-          }
-        };
-        runSync();
       }
     };
     window.addEventListener('message', handleMessage);
     return () => {
       window.removeEventListener('message', handleMessage);
-      if (unlisten) unlisten();
     };
   }, []);
 
@@ -1025,7 +841,6 @@ ${logsMarkdown}
                 src={getAeroUrl()}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 title="Zenith Aero"
-                allow="bluetooth"
               />
             </div>
           )}
@@ -1036,7 +851,6 @@ ${logsMarkdown}
                 src={vigorUrl}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 title="Zenith Vigor"
-                allow="bluetooth"
               />
             </div>
           )}

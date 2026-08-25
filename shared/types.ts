@@ -46,33 +46,6 @@ export interface RidePoint {
   distance?: number;  // cumulative meters
 }
 
-export interface WeightLog {
-  id?: string;
-  user_id: string;
-  weight: number;
-  body_fat?: number;
-  water_percentage?: number;
-  impedance?: number;
-  source?: 'ble_scale' | 'manual';
-  recorded_at: string;
-}
-
-export interface ColmiRingData {
-  steps: {
-    timestamp: number;
-    step_count: number;
-  }[];
-  sleep: {
-    timestamp: number;
-    duration_minutes: number;
-    deep_minutes?: number;
-    light_minutes?: number;
-    rem_minutes?: number;
-    awake_minutes?: number;
-    quality_score: number;
-  }[];
-}
-
 export interface FoodItem {
   id: string;
   name: string;
