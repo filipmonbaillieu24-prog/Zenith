@@ -170,6 +170,43 @@ class WorkoutRepository(
         }
     }
 
+    // 5b. One-time backfill: pulls this user's full workout history back down from
+    // Supabase into the local completed_workouts cache. Workouts otherwise only ever
+    // sync UP (logWorkout / syncUnsyncedWorkouts) - if the local cache is ever emptied
+    // (e.g. a Room migration that fell back to destructive), "Previous" set values and
+    // PR history silently go blank even though the data is safe in Supabase. Only runs
+    // when the local cache is empty so it never overwrites more recent local edits.
+    suspend fun restoreWorkoutHistoryIfEmpty() = withContext(Dispatchers.IO) {
+        try {
+            if (workoutDao.getWorkoutCount() > 0) return@withContext
+            val uId = client.auth.currentUserOrNull()?.id ?: return@withContext
+            val response = client.postgrest["kratos_workouts"].select {
+                filter {
+                    eq("user_id", uId)
+                }
+            }
+            val remoteWorkouts = response.decodeList<Workout>()
+            val localWorkouts = remoteWorkouts.map { w ->
+                LocalWorkout(
+                    id = w.id,
+                    templateId = w.templateId,
+                    name = w.name,
+                    startedAt = w.startedAt,
+                    completedAt = w.completedAt,
+                    volume = w.volume,
+                    cardioStressFactor = w.cardioStressFactor,
+                    setsJson = json.encodeToString(w.sets),
+                    isSynced = true
+                )
+            }
+            if (localWorkouts.isNotEmpty()) {
+                workoutDao.insertWorkouts(localWorkouts)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     // 6. Calculate PMC Z-score scaling factor based on ride history
     suspend fun calculateCardioStressFactor(): Double = withContext(Dispatchers.IO) {
         try {
