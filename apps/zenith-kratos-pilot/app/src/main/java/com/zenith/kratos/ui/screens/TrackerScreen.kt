@@ -786,12 +786,21 @@ fun TrackerScreen(
                                                             }
                                                             val predictedW = rawPredictedW.coerceIn(minSafeW, maxSafeW)
 
-                                                            // Snap relative to the last actually-lifted weight (w), not to an
-                                                            // absolute zero-based grid: w itself proves that grid offset is
-                                                            // achievable, but Math.round(predictedW / step) * step does not
-                                                            // (e.g. step=15, w=70 -> nearest absolute multiple is 75, which
-                                                            // was never reachable from 70 on this machine).
-                                                            val roundedW = w + Math.round((predictedW - w) / step) * step
+                                                            // Snap to the equipment's real grid. When a known minWeight
+                                                            // exists (the stack's actual lowest pin), anchor the grid to
+                                                            // it rather than to w: w is only guaranteed grid-aligned if it
+                                                            // came from a previous working set snapped this same way - a
+                                                            // warmup weight (computed as a rough percentage, never
+                                                            // snapped) is not, and anchoring to an off-grid w silently
+                                                            // shifts the whole grid, letting through positions the
+                                                            // machine doesn't actually have (e.g. step=15, minWeight=55 ->
+                                                            // real positions are 55/70/85/.../115/130; anchoring to an
+                                                            // off-grid 75 warmup could still produce 120, which never
+                                                            // exists on this machine). Falls back to anchoring on w when
+                                                            // no minWeight is configured, since there's no better
+                                                            // reference (matches the previous behavior for that case).
+                                                            val gridAnchor = exState.minWeight ?: w
+                                                            val roundedW = gridAnchor + Math.round((predictedW - gridAnchor) / step) * step
                                                             val diff = Math.abs(w - roundedW)
                                                             if (diff >= 0.5 * step) {
                                                                 nextSet.targetWeight = roundedW

@@ -243,18 +243,27 @@ export function predictAutoregWeight(
 
   const rawClampedWeight = Math.max(0.0, Math.min(maxSafeW, Math.max(minSafeW, predictedWeight)));
 
-  // Hardware Step Snapping (Autoregulatie 2.0)
+  // Hardware Step Snapping (Autoregulatie 2.0). Anchor the grid to hardMinWeight
+  // (the stack's actual lowest pin) when it's known, rather than to prevWeight:
+  // prevWeight is only guaranteed grid-aligned if it came from a previous
+  // working set snapped this same way - a warmup weight (computed as a rough
+  // percentage, never snapped) is not, and anchoring to an off-grid prevWeight
+  // silently shifts the whole grid, letting through positions the equipment
+  // doesn't actually have (e.g. step=15, hardMinWeight=55 -> real positions are
+  // 55/70/85/.../115/130; anchoring to an off-grid 75 warmup could still
+  // produce 120, which never exists on this machine). Falls back to anchoring
+  // on prevWeight when no hardMinWeight is configured.
   const validStep = Math.max(0.25, stepWeight);
   if (isPerSide) {
     const perSideRaw = rawClampedWeight / 2.0;
-    const perSidePrev = prevWeight > 0 ? prevWeight / 2.0 : 0;
-    const diff = perSideRaw - perSidePrev;
-    const snappedPerSide = perSidePrev + Math.round(diff / validStep) * validStep;
+    const gridAnchor = hardMinWeight != null ? hardMinWeight / 2.0 : (prevWeight > 0 ? prevWeight / 2.0 : 0);
+    const diff = perSideRaw - gridAnchor;
+    const snappedPerSide = gridAnchor + Math.round(diff / validStep) * validStep;
     return Math.max(validStep * 2.0, snappedPerSide * 2.0);
   } else {
-    const prevW = prevWeight > 0 ? prevWeight : 0;
-    const diff = rawClampedWeight - prevW;
-    const snapped = prevW + Math.round(diff / validStep) * validStep;
+    const gridAnchor = hardMinWeight ?? (prevWeight > 0 ? prevWeight : 0);
+    const diff = rawClampedWeight - gridAnchor;
+    const snapped = gridAnchor + Math.round(diff / validStep) * validStep;
     return Math.max(validStep, snapped);
   }
 }
