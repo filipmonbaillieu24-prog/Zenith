@@ -19,19 +19,20 @@ import {
   HeartPulse,
   Wind
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
   AreaChart,
   Area,
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ReferenceLine 
+  ComposedChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ReferenceLine
 } from 'recharts';
 
 import { ManualLogModal } from '../components/ManualLogModal';
@@ -734,6 +735,84 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       steps: s.step_count,
     }));
   }, [steps]);
+
+  // Resting HR is already synced per-night (vigor_sleep.resting_hr) and shown as a
+  // single "latest night" badge on the sleep hero card, but never as a trend -
+  // a sustained upward drift is one of the more reliable early illness/overtraining
+  // signals. Filter out nights without a reading rather than plotting a false 0.
+  const chartRestingHrData = useMemo(() => {
+    return sleeps
+      .filter(s => s.resting_hr)
+      .map(s => ({
+        date: new Date(s.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+        restingHr: s.resting_hr,
+      }));
+  }, [sleeps]);
+
+  // Same idea for HRV (vigor_sleep.hrv_ms): raw values are noisy night to night, so
+  // plot a rolling 7-night mean alongside the raw line (same raw-vs-trend convention
+  // already used for the weight chart) rather than the raw series alone.
+  const chartHrvData = useMemo(() => {
+    const withHrv = sleeps.filter(s => s.hrv_ms);
+    const rollingWindow: number[] = [];
+    return withHrv.map(s => {
+      const hrv = Number(s.hrv_ms);
+      rollingWindow.push(hrv);
+      if (rollingWindow.length > 7) rollingWindow.shift();
+      const rollingMean = rollingWindow.reduce((sum, v) => sum + v, 0) / rollingWindow.length;
+      return {
+        date: new Date(s.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+        hrv,
+        hrvTrend: Math.round(rollingMean * 10) / 10,
+      };
+    });
+  }, [sleeps]);
+
+  // Joins the already-fetched sleep and cross-app training-load series by UTC
+  // calendar day - trainingLoads.date is explicitly UTC (see trainingLoad.ts), so
+  // this must NOT join on vigor_sleep.local_date (device-local) or it reintroduces
+  // the exact UTC-vs-local mismatch just fixed for vigor_sleep/vigor_steps.
+  const sleepVsLoadData = useMemo(() => {
+    const loadByDate = new Map(trainingLoads.map(l => [l.date, l.load]));
+    return sleeps
+      .map(s => {
+        const utcDateKey = new Date(s.logged_at).toISOString().slice(0, 10);
+        const load = loadByDate.get(utcDateKey);
+        if (load === undefined) return null;
+        const analysis = calculateZenithSleepScore(s, [], profile.target_sleep_hours || 8.0);
+        return {
+          date: new Date(s.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+          trainingLoad: Math.round(load * 10) / 10,
+          sleepScore: analysis.score,
+        };
+      })
+      .filter((d): d is { date: string; trainingLoad: number; sleepScore: number } => d !== null);
+  }, [sleeps, trainingLoads, profile.target_sleep_hours]);
+
+  // Simple Pearson correlation between same-day training load and that night's
+  // sleep score. Only meaningful with enough overlapping nights - fewer than ~10
+  // points would make a correlation claim more misleading than useful.
+  const sleepVsLoadCorrelation = useMemo(() => {
+    const n = sleepVsLoadData.length;
+    if (n < 10) return null;
+    const loads = sleepVsLoadData.map(d => d.trainingLoad);
+    const scores = sleepVsLoadData.map(d => d.sleepScore);
+    const meanLoad = loads.reduce((a, b) => a + b, 0) / n;
+    const meanScore = scores.reduce((a, b) => a + b, 0) / n;
+    let cov = 0, varLoad = 0, varScore = 0;
+    for (let i = 0; i < n; i++) {
+      const dLoad = loads[i] - meanLoad;
+      const dScore = scores[i] - meanScore;
+      cov += dLoad * dScore;
+      varLoad += dLoad * dLoad;
+      varScore += dScore * dScore;
+    }
+    if (varLoad === 0 || varScore === 0) return null;
+    const r = Math.round((cov / Math.sqrt(varLoad * varScore)) * 100) / 100;
+    const strength = Math.abs(r) >= 0.5 ? 'Strong' : Math.abs(r) >= 0.3 ? 'Moderate' : 'Weak';
+    const direction = r < 0 ? 'reduce' : 'raise';
+    return { r, text: `${strength} ${r < 0 ? 'negative' : 'positive'} correlation (r = ${r.toFixed(2)}): higher training days tend to slightly ${direction} that night's sleep score.` };
+  }, [sleepVsLoadData]);
 
   // Handles saving manual entries (Steps, Sleep, Weight)
   const handleManualSave = async (type: 'weight' | 'sleep' | 'steps', payload: any) => {
@@ -2178,6 +2257,86 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </ResponsiveContainer>
             )}
           </div>
+        </div>
+
+        {/* Resting HR trend */}
+        <div className="vigor-card col-6" style={{ minHeight: 280, display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <HeartPulse size={14} style={{ color: '#38bdf8' }} /> Resting Heart Rate Trend
+          </h3>
+          <div style={{ height: 220, width: '100%' }}>
+            {chartRestingHrData.length === 0 ? (
+              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
+                <Info size={14} style={{ marginRight: 6 }} /> No resting heart rate readings yet.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartRestingHrData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid {...ZENITH_CHART_GRID} />
+                  <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <YAxis stroke="var(--text-muted)" domain={['dataMin - 3', 'dataMax + 3']} tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
+                  <Line type="monotone" name="Resting HR" dataKey="restingHr" stroke="#38bdf8" strokeWidth={2} dot={{ r: 3, stroke: '#38bdf8', strokeWidth: 1, fill: '#09090b' }} activeDot={{ r: 5 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* HRV trend */}
+        <div className="vigor-card col-6" style={{ minHeight: 280, display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Zap size={14} style={{ color: '#a855f7' }} /> HRV Trend
+          </h3>
+          <div style={{ height: 220, width: '100%' }}>
+            {chartHrvData.length === 0 ? (
+              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
+                <Info size={14} style={{ marginRight: 6 }} /> No HRV readings yet.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartHrvData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid {...ZENITH_CHART_GRID} />
+                  <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <YAxis stroke="var(--text-muted)" domain={['dataMin - 5', 'dataMax + 5']} tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
+                  <Line type="monotone" name="HRV (rMSSD)" dataKey="hrv" stroke="rgba(168, 85, 247, 0.35)" strokeWidth={1.5} dot={false} />
+                  <Line type="monotone" name="7-night avg" dataKey="hrvTrend" stroke="#a855f7" strokeWidth={2.5} dot={false} activeDot={{ r: 6 }} isAnimationActive={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Sleep vs. training load */}
+        <div className="vigor-card col-12" style={{ minHeight: 320, display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', color: '#cbd5e1', letterSpacing: '0.8px', marginBottom: 20 }}>
+            Sleep vs. Training Load
+          </h3>
+          <div style={{ height: 240, width: '100%' }}>
+            {sleepVsLoadData.length === 0 ? (
+              <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--text-muted)' }}>
+                <Info size={14} style={{ marginRight: 6 }} /> Not enough overlapping sleep and training data yet.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={sleepVsLoadData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid {...ZENITH_CHART_GRID} />
+                  <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <YAxis yAxisId="load" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <YAxis yAxisId="score" orientation="right" domain={[0, 100]} stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
+                  <Bar yAxisId="load" name="Training Load" dataKey="trainingLoad" fill="rgba(245, 158, 11, 0.5)" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                  <Line yAxisId="score" type="monotone" name="Sleep Score" dataKey="sleepScore" stroke="#a855f7" strokeWidth={2.5} dot={{ r: 3, stroke: '#a855f7', strokeWidth: 1, fill: '#09090b' }} activeDot={{ r: 5 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          {sleepVsLoadCorrelation && (
+            <p style={{ margin: '12px 0 0', fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Sparkles size={12} style={{ color: '#a855f7', flexShrink: 0 }} /> {sleepVsLoadCorrelation.text}
+            </p>
+          )}
         </div>
 
         {/* Sleep history table */}
