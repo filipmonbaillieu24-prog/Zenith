@@ -390,29 +390,42 @@ class HealthConnectManager(private val context: Context) {
                     )
                 }
 
-                // Sum per-stage minutes for the sync payload (sleep_deep_minutes etc.) so
-                // Vigor can show real deep/light/REM/awake breakdown instead of a synthetic
-                // 25/55/18% split. Health Connect's stage-type codes: 1/3/7 = awake variants,
-                // 2/4 = light-ish, 5 = deep, 6 = REM.
+                // Sum per-stage SECONDS (not minutes) for the sync payload (sleep_deep_minutes
+                // etc.) so Vigor can show real deep/light/REM/awake breakdown instead of a
+                // synthetic 25/55/18% split. Health Connect's stage-type codes: 1/3/7 = awake
+                // variants, 2/4 = light-ish, 5 = deep, 6 = REM.
+                //
+                // Critical: accumulate seconds and only divide by 60 once, at the very end.
+                // Dividing per-segment (ChronoUnit.SECONDS.between(...) / 60 inside the loop)
+                // truncates every individual segment under 60 seconds to exactly 0, contributing
+                // nothing no matter how many of them there are. Some ring/band Health Connect
+                // bridges report stages as many short, fragmented segments rather than a few
+                // long blocks - REM in particular tends to occur in shorter, more broken-up
+                // bursts than deep sleep - so this could silently zero out an entire stage
+                // category (confirmed: a night with real REM sleep synced with 0 REM minutes,
+                // and the totals were missing tens of minutes overall) even though every segment
+                // had a perfectly recognized stage type.
+                var deepSec = 0L
+                var remSec = 0L
+                var lightSec = 0L
+                var awakeSec = 0L
                 for (st in latestSession.stages) {
-                    val stMin = ChronoUnit.SECONDS.between(st.startTime, st.endTime) / 60
+                    val stSec = ChronoUnit.SECONDS.between(st.startTime, st.endTime)
                     when (st.stage) {
-                        SleepSessionRecord.STAGE_TYPE_DEEP -> sleepDeepMin += stMin
-                        SleepSessionRecord.STAGE_TYPE_REM -> sleepRemMin += stMin
-                        SleepSessionRecord.STAGE_TYPE_LIGHT, SleepSessionRecord.STAGE_TYPE_SLEEPING -> sleepLightMin += stMin
-                        SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> sleepAwakeMin += stMin
-                        // STAGE_TYPE_UNKNOWN (or any future/unrecognized type): some Health
-                        // Connect bridges - especially third-party ring/band ones - don't tag
-                        // their REM/light detection with the standard constants and fall back
-                        // to unknown. Previously these minutes were silently dropped entirely
-                        // (deep+light+rem+awake summed to well under the real session length,
-                        // and REM specifically could read 0 even on a night with real REM
-                        // sleep). Fold them into light sleep, the same treatment already given
-                        // to the other generic/undifferentiated stage type, so the breakdown
-                        // always accounts for the full session instead of losing time.
-                        else -> sleepLightMin += stMin
+                        SleepSessionRecord.STAGE_TYPE_DEEP -> deepSec += stSec
+                        SleepSessionRecord.STAGE_TYPE_REM -> remSec += stSec
+                        SleepSessionRecord.STAGE_TYPE_LIGHT, SleepSessionRecord.STAGE_TYPE_SLEEPING -> lightSec += stSec
+                        SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> awakeSec += stSec
+                        // STAGE_TYPE_UNKNOWN (or any future/unrecognized type): fold into light,
+                        // the same treatment already given to the other generic/undifferentiated
+                        // stage type, so an unrecognized segment is never silently dropped.
+                        else -> lightSec += stSec
                     }
                 }
+                sleepDeepMin = deepSec / 60
+                sleepRemMin = remSec / 60
+                sleepLightMin = lightSec / 60
+                sleepAwakeMin = awakeSec / 60
 
                 sleepMaps.add(
                     mapOf(
