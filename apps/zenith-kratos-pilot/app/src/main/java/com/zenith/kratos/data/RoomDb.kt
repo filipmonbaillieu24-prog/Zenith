@@ -13,6 +13,8 @@ data class LocalExercise(
     val notes: String?,
     val incrementWeight: Double,
     val incrementPerSide: Boolean,
+    val minWeight: Double? = null,
+    val maxWeight: Double? = null,
     val defaultRir: Int,
     val weightUnit: String,
     val isBodyweight: Boolean = false
@@ -110,7 +112,7 @@ interface ActiveWorkoutDao {
 }
 
 // 3. Database
-@Database(entities = [LocalExercise::class, LocalTemplate::class, LocalWorkout::class, LocalActiveWorkout::class], version = 3, exportSchema = false)
+@Database(entities = [LocalExercise::class, LocalTemplate::class, LocalWorkout::class, LocalActiveWorkout::class], version = 4, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun exerciseDao(): ExerciseDao
     abstract fun templateDao(): TemplateDao

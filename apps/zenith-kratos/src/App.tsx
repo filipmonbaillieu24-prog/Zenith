@@ -46,6 +46,8 @@ interface Exercise {
   notes?: string;
   increment_weight: number;
   increment_per_side: boolean;
+  min_weight?: number;
+  max_weight?: number;
   is_bodyweight: boolean;
   default_rir: number;
   weight_unit: 'kg' | 'lbs';
@@ -645,7 +647,9 @@ export default function App() {
     stepWeight: number,
     isPerSide: boolean,
     restSeconds: number = 120,
-    recommendedRestSeconds: number = 120
+    recommendedRestSeconds: number = 120,
+    hardMinWeight?: number,
+    hardMaxWeight?: number
   ) => {
     const rawRec = predictAutoregWeight(
       setIndex,
@@ -658,11 +662,16 @@ export default function App() {
       stepWeight,
       isPerSide,
       recommendedRestSeconds,
-      todaySleepQuality || 80
+      todaySleepQuality || 80,
+      hardMinWeight,
+      hardMaxWeight
     );
 
-    // Scale by SOTA HRV Autonomic Tone multiplier
-    const scaledRec = rawRec * ansIntensityMultiplier;
+    // Scale by SOTA HRV Autonomic Tone multiplier, then re-apply the hard equipment
+    // limits since this multiplier is applied after predictAutoregWeight's own clamp.
+    let scaledRec = rawRec * ansIntensityMultiplier;
+    if (hardMinWeight != null) scaledRec = Math.max(scaledRec, hardMinWeight);
+    if (hardMaxWeight != null) scaledRec = Math.min(scaledRec, hardMaxWeight);
 
     // Snap target back to the hardware equipment's weight steps (e.g. 0.5kg or 2.5kg steps)
     const validStep = Math.max(0.25, stepWeight);
@@ -777,6 +786,15 @@ export default function App() {
     e.preventDefault();
     if (!session?.user?.id || !exerciseForm.name) return;
 
+    if (
+      exerciseForm.min_weight != null &&
+      exerciseForm.max_weight != null &&
+      Number(exerciseForm.min_weight) > Number(exerciseForm.max_weight)
+    ) {
+      alert("Min Weight can't be greater than Max Weight.");
+      return;
+    }
+
     const payload = {
       name: exerciseForm.name,
       category: exerciseForm.category,
@@ -800,6 +818,8 @@ export default function App() {
       notes: exerciseForm.notes,
       increment_weight: Number(exerciseForm.increment_weight || 2.5),
       increment_per_side: !!exerciseForm.increment_per_side,
+      min_weight: exerciseForm.min_weight != null ? Number(exerciseForm.min_weight) : null,
+      max_weight: exerciseForm.max_weight != null ? Number(exerciseForm.max_weight) : null,
       is_bodyweight: !!exerciseForm.is_bodyweight,
       default_rir: Number(exerciseForm.default_rir || 2),
       weight_unit: exerciseForm.weight_unit || 'kg',
@@ -915,6 +935,8 @@ export default function App() {
           const snapped = prevW + Math.round(diff / validStep) * validStep;
           deloadWeight = Math.max(validStep, snapped);
         }
+
+        if (ex?.min_weight != null) deloadWeight = Math.max(deloadWeight, ex.min_weight);
 
         return {
           ...s,
@@ -2207,6 +2229,13 @@ export default function App() {
                               <span style={{ color: 'var(--accent-neon)', fontSize: 11, marginLeft: 4 }}>
                                 {aiIncrementText}
                               </span>
+                              {(ex.min_weight != null || ex.max_weight != null) && (
+                                <div style={{ color: 'var(--text-secondary)', fontSize: 10, marginTop: 2 }}>
+                                  {ex.min_weight != null ? ex.min_weight : '–'}
+                                  {'–'}
+                                  {ex.max_weight != null ? ex.max_weight : '–'} {ex.weight_unit}
+                                </div>
+                              )}
                             </td>
                             <td style={{ textTransform: 'uppercase', fontWeight: 700 }}>{ex.weight_unit}</td>
                             <td className="zenith-tnum">RIR {ex.default_rir}</td>
@@ -2394,6 +2423,32 @@ export default function App() {
                         value={exerciseForm.default_rir} 
                         onChange={(e) => setExerciseForm({ ...exerciseForm, default_rir: Number(e.target.value) })}
                         placeholder="e.g. 2"
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div className="kratos-input-group">
+                      <label className="kratos-label">Min Weight (optional)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="kratos-input"
+                        value={exerciseForm.min_weight ?? ''}
+                        onChange={(e) => setExerciseForm({ ...exerciseForm, min_weight: e.target.value === '' ? undefined : Number(e.target.value) })}
+                        placeholder="No minimum"
+                      />
+                    </div>
+
+                    <div className="kratos-input-group">
+                      <label className="kratos-label">Max Weight (optional)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        className="kratos-input"
+                        value={exerciseForm.max_weight ?? ''}
+                        onChange={(e) => setExerciseForm({ ...exerciseForm, max_weight: e.target.value === '' ? undefined : Number(e.target.value) })}
+                        placeholder="No maximum"
                       />
                     </div>
                   </div>

@@ -196,7 +196,9 @@ export function predictAutoregWeight(
   stepWeight: number = 1,
   isPerSide: boolean = false,
   recommendedRestSeconds: number = 120,
-  sleepQuality: number = 80
+  sleepQuality: number = 80,
+  hardMinWeight?: number,
+  hardMaxWeight?: number
 ): number {
   const rirDelta = prevRir - targetRir;
   const restRatio = computeAutoregRestRatio(restSeconds, recommendedRestSeconds);
@@ -230,9 +232,15 @@ export function predictAutoregWeight(
   const growthPct = Math.min(MAX_ADJUSTMENT_PCT, BASE_ADJUSTMENT_PCT + RIR_ADJUSTMENT_PCT * Math.max(0, rirDelta));
   const shrinkPct = Math.min(MAX_ADJUSTMENT_PCT, BASE_ADJUSTMENT_PCT + RIR_ADJUSTMENT_PCT * Math.max(0, -rirDelta));
 
-  const minSafeW = Math.max(prevWeight * (1 - shrinkPct), epleyW * 0.92);
-  const maxSafeW = Math.min(prevWeight * (1 + growthPct), epleyW * 1.08);
-  
+  let minSafeW = Math.max(prevWeight * (1 - shrinkPct), epleyW * 0.92);
+  let maxSafeW = Math.min(prevWeight * (1 + growthPct), epleyW * 1.08);
+
+  // Hard equipment limits (e.g. a machine's actual stack range) always win over the
+  // rirDelta-scaled band above - no amount of overperformance should suggest a weight
+  // the equipment physically can't provide.
+  if (hardMinWeight != null) minSafeW = Math.max(minSafeW, hardMinWeight);
+  if (hardMaxWeight != null) maxSafeW = Math.min(maxSafeW, hardMaxWeight);
+
   const rawClampedWeight = Math.max(0.0, Math.min(maxSafeW, Math.max(minSafeW, predictedWeight)));
 
   // Hardware Step Snapping (Autoregulatie 2.0)
