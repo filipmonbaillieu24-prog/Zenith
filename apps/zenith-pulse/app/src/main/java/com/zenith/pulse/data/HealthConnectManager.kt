@@ -392,7 +392,7 @@ class HealthConnectManager(private val context: Context) {
 
                 // Sum per-stage minutes for the sync payload (sleep_deep_minutes etc.) so
                 // Vigor can show real deep/light/REM/awake breakdown instead of a synthetic
-                // 25/55/18% split. Health Connect's stage-type codes: 1/3 = awake variants,
+                // 25/55/18% split. Health Connect's stage-type codes: 1/3/7 = awake variants,
                 // 2/4 = light-ish, 5 = deep, 6 = REM.
                 for (st in latestSession.stages) {
                     val stMin = ChronoUnit.SECONDS.between(st.startTime, st.endTime) / 60
@@ -401,7 +401,16 @@ class HealthConnectManager(private val context: Context) {
                         SleepSessionRecord.STAGE_TYPE_REM -> sleepRemMin += stMin
                         SleepSessionRecord.STAGE_TYPE_LIGHT, SleepSessionRecord.STAGE_TYPE_SLEEPING -> sleepLightMin += stMin
                         SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED, SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> sleepAwakeMin += stMin
-                        else -> {}
+                        // STAGE_TYPE_UNKNOWN (or any future/unrecognized type): some Health
+                        // Connect bridges - especially third-party ring/band ones - don't tag
+                        // their REM/light detection with the standard constants and fall back
+                        // to unknown. Previously these minutes were silently dropped entirely
+                        // (deep+light+rem+awake summed to well under the real session length,
+                        // and REM specifically could read 0 even on a night with real REM
+                        // sleep). Fold them into light sleep, the same treatment already given
+                        // to the other generic/undifferentiated stage type, so the breakdown
+                        // always accounts for the full session instead of losing time.
+                        else -> sleepLightMin += stMin
                     }
                 }
 
