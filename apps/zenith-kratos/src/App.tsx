@@ -673,18 +673,21 @@ export default function App() {
     if (hardMinWeight != null) scaledRec = Math.max(scaledRec, hardMinWeight);
     if (hardMaxWeight != null) scaledRec = Math.min(scaledRec, hardMaxWeight);
 
-    // Snap target back to the hardware equipment's weight steps (e.g. 0.5kg or 2.5kg steps)
+    // Snap target back to the hardware equipment's weight steps (e.g. 0.5kg or 2.5kg
+    // steps), anchored to hardMinWeight (the stack's actual lowest pin) when known
+    // rather than to prevWeight, which may itself be an off-grid warmup weight - see
+    // the matching comment in predictAutoregWeight for why that matters.
     const validStep = Math.max(0.25, stepWeight);
     if (isPerSide) {
       const perSideRaw = scaledRec / 2.0;
-      const perSidePrev = prevWeight > 0 ? prevWeight / 2.0 : 0;
-      const diff = perSideRaw - perSidePrev;
-      const snappedPerSide = perSidePrev + Math.round(diff / validStep) * validStep;
+      const gridAnchor = hardMinWeight != null ? hardMinWeight / 2.0 : (prevWeight > 0 ? prevWeight / 2.0 : 0);
+      const diff = perSideRaw - gridAnchor;
+      const snappedPerSide = gridAnchor + Math.round(diff / validStep) * validStep;
       return Math.max(validStep * 2.0, snappedPerSide * 2.0);
     } else {
-      const prevW = prevWeight > 0 ? prevWeight : 0;
-      const diff = scaledRec - prevW;
-      const snapped = prevW + Math.round(diff / validStep) * validStep;
+      const gridAnchor = hardMinWeight ?? (prevWeight > 0 ? prevWeight : 0);
+      const diff = scaledRec - gridAnchor;
+      const snapped = gridAnchor + Math.round(diff / validStep) * validStep;
       return Math.max(validStep, snapped);
     }
   };
