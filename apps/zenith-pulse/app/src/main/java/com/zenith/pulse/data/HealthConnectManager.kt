@@ -49,7 +49,11 @@ data class HealthDataPayload(
     val dailyStepsList: List<Map<String, Any>> = emptyList(),
     val dailySleepList: List<Map<String, Any>> = emptyList(),
     val dailyWeightList: List<Map<String, Any>> = emptyList(),
-    val timestamp: String = Instant.now().toString()
+    val timestamp: String = Instant.now().toString(),
+    // TEMPORARY DIAGNOSTIC fields - see the comment above sleepSessionsDebug in
+    // fetchLatestHealthData(). Remove once the sleep-stage root cause is confirmed.
+    val sleepSessionsDebug: List<Map<String, Any>> = emptyList(),
+    val sleepStagesDebug: List<Map<String, Any>> = emptyList()
 )
 
 class HealthConnectManager(private val context: Context) {
@@ -134,6 +138,8 @@ class HealthConnectManager(private val context: Context) {
 
         val stepsMaps = mutableListOf<Map<String, Any>>()
         val sleepMaps = mutableListOf<Map<String, Any>>()
+        var sleepSessionsDebugList: List<Map<String, Any>> = emptyList()
+        var sleepStagesDebugList: List<Map<String, Any>> = emptyList()
         val exerciseMaps = mutableListOf<Map<String, Any>>()
         val dailyStepsList = mutableListOf<Map<String, Any>>()
         val dailySleepList = mutableListOf<Map<String, Any>>()
@@ -375,6 +381,27 @@ class HealthConnectManager(private val context: Context) {
                 dailySleepList.add(mapOf("date" to dateStr, "duration_minutes" to mins))
             }
 
+            // TEMPORARY DIAGNOSTIC: two targeted fixes to the per-session stage-summing
+            // loop (STAGE_TYPE_UNKNOWN fallback, then seconds-not-minutes accumulation)
+            // both shipped and synced with zero change to the output - deep/light/rem/
+            // awake came back byte-for-byte identical both times. That rules out the
+            // summing logic itself and points at session SELECTION instead: if more than
+            // one app writes SleepSessionRecords to Health Connect for the same night
+            // (e.g. the phone's own OS-level sleep detection alongside a ring app),
+            // maxByOrNull { it.endTime } below has no source-awareness and could be
+            // picking a different, coarser record than the ring's actual detailed one -
+            // remove once the real cause is confirmed from this data.
+            sleepSessionsDebugList = sleepRes.records.map { r ->
+                mapOf(
+                    "origin" to r.metadata.dataOrigin.packageName,
+                    "start_time" to r.startTime.toString(),
+                    "end_time" to r.endTime.toString(),
+                    "duration_minutes" to ChronoUnit.MINUTES.between(r.startTime, r.endTime),
+                    "stage_count" to r.stages.size,
+                    "stages_total_seconds" to r.stages.sumOf { st -> ChronoUnit.SECONDS.between(st.startTime, st.endTime) }
+                )
+            }
+
             val latestSession = sleepRes.records.maxByOrNull { it.endTime }
             if (latestSession != null) {
                 val durSec = ChronoUnit.SECONDS.between(latestSession.startTime, latestSession.endTime)
@@ -389,6 +416,7 @@ class HealthConnectManager(private val context: Context) {
                         "duration_seconds" to stDur
                     )
                 }
+                sleepStagesDebugList = stagesList
 
                 // Sum per-stage SECONDS (not minutes) for the sync payload (sleep_deep_minutes
                 // etc.) so Vigor can show real deep/light/REM/awake breakdown instead of a
@@ -649,7 +677,9 @@ class HealthConnectManager(private val context: Context) {
             rawExerciseList = exerciseMaps,
             dailyStepsList = dailyStepsList,
             dailySleepList = dailySleepList,
-            dailyWeightList = dailyWeightList
+            dailyWeightList = dailyWeightList,
+            sleepSessionsDebug = sleepSessionsDebugList,
+            sleepStagesDebug = sleepStagesDebugList
         )
     }
 }

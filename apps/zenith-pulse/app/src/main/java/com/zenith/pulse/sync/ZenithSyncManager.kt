@@ -124,6 +124,30 @@ object ZenithSyncManager {
                         })
                     }
                 })
+                // TEMPORARY DIAGNOSTIC - see the comment in HealthConnectManager.kt above
+                // sleepSessionsDebug. Remove once the sleep-stage root cause is confirmed.
+                put("sleep_sessions_debug", buildJsonArray {
+                    for (s in data.sleepSessionsDebug) {
+                        add(buildJsonObject {
+                            put("origin", (s["origin"] as? String) ?: "")
+                            put("start_time", (s["start_time"] as? String) ?: "")
+                            put("end_time", (s["end_time"] as? String) ?: "")
+                            put("duration_minutes", (s["duration_minutes"] as? Long) ?: 0)
+                            put("stage_count", (s["stage_count"] as? Int) ?: 0)
+                            put("stages_total_seconds", (s["stages_total_seconds"] as? Long) ?: 0)
+                        })
+                    }
+                })
+                put("sleep_stages_debug", buildJsonArray {
+                    for (st in data.sleepStagesDebug) {
+                        add(buildJsonObject {
+                            put("stage", (st["stage"] as? Int) ?: 0)
+                            put("start_time", (st["start_time"] as? String) ?: "")
+                            put("end_time", (st["end_time"] as? String) ?: "")
+                            put("duration_seconds", (st["duration_seconds"] as? Long) ?: 0)
+                        })
+                    }
+                })
             }.toString()
 
             val rpcBodyJson = buildJsonObject {
