@@ -20,8 +20,6 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const [targetWeight, setTargetWeight] = useState<string>('');
   const [targetSteps, setTargetSteps] = useState<string>('10000');
   const [targetSleep, setTargetSleep] = useState<string>('8');
-  const [scaleModel, setScaleModel] = useState<string>('neo-health-onyx-se');
-  const [ringModel, setRingModel] = useState<string>('colbi-r02');
 
   useEffect(() => {
     async function fetchProfile() {
@@ -40,8 +38,6 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           setTargetWeight(data.target_weight?.toString() || '');
           setTargetSteps(data.target_steps?.toString() || '10000');
           setTargetSleep(data.target_sleep_hours?.toString() || '8');
-          setScaleModel(data.scale_model || 'neo-health-onyx-se');
-          setRingModel(data.ring_model || 'colbi-r02');
         }
       } catch (err) {
         console.error('Error fetching profile:', err);
@@ -63,8 +59,6 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({
         target_weight: targetWeight ? parseFloat(targetWeight) : null,
         target_steps: targetSteps ? parseInt(targetSteps) : null,
         target_sleep_hours: targetSleep ? parseFloat(targetSleep) : null,
-        scale_model: scaleModel,
-        ring_model: ringModel,
         updated_at: new Date().toISOString(),
       };
 

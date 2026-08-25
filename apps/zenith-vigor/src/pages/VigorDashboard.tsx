@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { isTrustedZenithOrigin, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState } from '@zenith/shared';
+import { ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState } from '@zenith/shared';
 import { 
   Scale, 
   Moon, 
@@ -34,10 +34,8 @@ import {
   ReferenceLine 
 } from 'recharts';
 
-import { WeightScaleConnector } from '../components/WeightScaleConnector';
 import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
-import { DeviceManagerModal } from '../components/DeviceManagerModal';
 import { ProPaywallModal } from '../components/ProPaywallModal';
 import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore } from '@zenith/shared';
 
@@ -135,16 +133,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   const [comparePhoto1, setComparePhoto1] = useState<string>('');
   const [comparePhoto2, setComparePhoto2] = useState<string>('');
 
-  // Pre-received native weight/metrics to solve race conditions
-  const [initialWeight, setInitialWeight] = useState<number | null>(null);
-  const [initialMetrics, setInitialMetrics] = useState<any>(null);
-
   // Modals state
   const [showSettings, setShowSettings] = useState(false);
   const [showManualLog, setShowManualLog] = useState(false);
-  const [showScaleConnect, setShowScaleConnect] = useState(false);
-  const [showDeviceManager, setShowDeviceManager] = useState(false);
-  const [pairedDevices, setPairedDevices] = useState<any[]>([]);
 
   // Profile data
   const [profile, setProfile] = useState<any>({
@@ -161,11 +152,6 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
   // Loading
   const [loading, setLoading] = useState(true);
-
-  // Auto-connect BLE scale state
-  const [autoConnectedDevice, setAutoConnectedDevice] = useState<any>(null);
-  const [_backgroundConnecting, setBackgroundConnecting] = useState(false);
-
 
   // Logs management state
   const [editingLog, setEditingLog] = useState<{ type: 'weight' | 'sleep' | 'steps'; item: any } | null>(null);
@@ -301,19 +287,6 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     }
   }, [user.id]);
 
-  const fetchPairedDevices = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('vigor_paired_devices')
-        .select('*')
-        .eq('user_id', user.id);
-      if (error && error.code !== 'PGRST116') throw error;
-      setPairedDevices(data || []);
-    } catch (err) {
-      console.error('Error fetching paired devices:', err);
-    }
-  }, [user.id]);
-
   // Real cross-app training load (steps + Kratos strength sessions + Aero
   // rides) for the ACWR workload forecaster — not just a steps proxy.
   const [trainingLoads, setTrainingLoads] = useState<DailyTrainingLoad[]>([]);
@@ -329,10 +302,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   // Load profile and logs on start
   useEffect(() => {
     fetchProfile();
-    fetchPairedDevices();
     fetchLogs();
     fetchTrainingLoads();
-  }, [fetchProfile, fetchPairedDevices, fetchLogs, fetchTrainingLoads]);
+  }, [fetchProfile, fetchLogs, fetchTrainingLoads]);
 
   // Load the shared cross-app Recovery Score model (trained by Zenith Hub's
   // background trainer — Vigor only reads its weights here, it never trains).
@@ -344,172 +316,6 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     });
     return () => { cancelled = true; };
   }, [user.id]);
-
-  // Background Web BLE scanner for Yolanda/Qingniu scales
-  useEffect(() => {
-    const isNativeMode = window.parent && window.parent !== window;
-    if (isNativeMode) {
-      // Skip Web Bluetooth scan if running in Tauri native app
-      return;
-    }
-
-    const isScalePaired = pairedDevices.some(
-      d => d.device_type === 'scale' && d.brand === 'Neo Health' && d.model === 'Onyx SE' && d.auto_connect
-    );
-    const pairedScaleId = localStorage.getItem('vigor_paired_scale_id');
-    if (!isScalePaired || !pairedScaleId || autoConnectedDevice) return;
-
-    let scanTimeout: any;
-
-    async function tryAutoConnect() {
-      if (!(navigator as any).bluetooth) {
-        console.log("Web Bluetooth not supported on this browser.");
-        return;
-      }
-
-      console.log("Auto-connecting to previously paired scale:", pairedScaleId);
-      setBackgroundConnecting(true);
-
-      try {
-        // Yolanda/Qingniu scale advertises custom FFF0 service
-        const device = await (navigator as any).bluetooth.requestDevice({
-          filters: [{ services: ['0000fff0-0000-1000-8000-00805f9b34fb'] }],
-          optionalServices: ['0000fff0-0000-1000-8000-00805f9b34fb']
-        });
-
-        if (device.id === pairedScaleId) {
-          console.log("Device found, connecting...");
-          const server = await device.gatt?.connect();
-          
-          if (server) {
-            console.log("GATT Server connected!");
-            setAutoConnectedDevice(device);
-
-            const service = await server.getPrimaryService('0000fff0-0000-1000-8000-00805f9b34fb');
-            const characteristic = await service.getCharacteristic('0000fff1-0000-1000-8000-00805f9b34fb');
-            
-            await characteristic.startNotifications();
-            console.log("Notifications started!");
-
-            characteristic.addEventListener('characteristicvaluechanged', (event: any) => {
-              const value = event.target.value;
-              const bytes = new Uint8Array(value.buffer);
-              let foundWeight = null;
-    
-              if (bytes[0] === 0x12 && bytes.length >= 17) {
-                const rawW = (bytes[13] << 8 | bytes[14]);
-                const w1314 = Math.round((rawW / 28.82) * 100) / 100;
-                if (w1314 >= 40 && w1314 <= 150) foundWeight = w1314;
-              } else if (bytes.length >= 17) {
-                const w1516 = (bytes[15] << 8 | bytes[16]) / 100;
-                if (w1516 >= 40 && w1516 <= 150) foundWeight = w1516;
-              }
-    
-              // Heuristic scan for non-0x12 packets
-              if (!foundWeight && bytes[0] !== 0x12) {
-                if (bytes.length >= 6) {
-                  const w34 = (bytes[3] << 8 | bytes[4]) / 100;
-                  if (w34 >= 40 && w34 <= 150) foundWeight = w34;
-                }
-                if (!foundWeight && bytes.length >= 3) {
-                  const w12 = (bytes[1] << 8 | bytes[2]) / 100;
-                  if (w12 >= 40 && w12 <= 150) foundWeight = w12;
-                }
-              }
-
-              if (foundWeight) {
-                console.log("Auto-connect weight received:", foundWeight);
-                setCurrentTab('weight'); // Switch to weight view
-                setShowScaleConnect(true);
-              }
-            });
-
-            device.addEventListener('gattserverdisconnected', () => {
-              console.log("Device disconnected!");
-              setAutoConnectedDevice(null);
-              setBackgroundConnecting(false);
-            });
-          }
-        } else {
-          console.log("Found device does not match paired scale ID.");
-          setBackgroundConnecting(false);
-        }
-
-      } catch (err) {
-        console.error("Auto connect failed:", err);
-        setBackgroundConnecting(false);
-      }
-    }
-
-    tryAutoConnect();
-
-    return () => {
-      clearTimeout(scanTimeout);
-    };
-  }, [autoConnectedDevice, pairedDevices]);
-
-  // Listen for native Tauri BLE weight events (direct or forwarded via parent window postMessage)
-  useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    let unlistenMetrics: (() => void) | null = null;
-
-    async function setupTauriListener() {
-      if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
-        try {
-          const { listen } = await import('@tauri-apps/api/event');
-          unlisten = await listen('native-weight-received', (event: any) => {
-            const payload = event.payload as { weight: number };
-            console.log("Dashboard received native weight from Tauri Rust:", payload.weight);
-            sessionStorage.setItem('vigor_last_weight', payload.weight.toString());
-            setInitialWeight(payload.weight);
-            setCurrentTab('weight'); // Switch to weight tab
-            setShowScaleConnect(true);
-          });
-          unlistenMetrics = await listen('native-metrics-received', (event: any) => {
-            const payload = event.payload as { body_fat: number, water: number, impedance: number };
-            console.log("Dashboard received native metrics from Tauri Rust:", payload);
-            sessionStorage.setItem('vigor_last_metrics', JSON.stringify(payload));
-            setInitialMetrics(payload);
-          });
-        } catch (err) {
-          console.error("Failed to setup Tauri native BLE listener:", err);
-        }
-      }
-    }
-
-    const handleMessage = (event: MessageEvent) => {
-      if (!isTrustedZenithOrigin(event.origin)) return;
-      if (event.data?.type === 'native-weight-received') {
-        const weight = event.data.weight;
-        console.log("Dashboard received native weight forwarded from parent Hub:", weight);
-        sessionStorage.setItem('vigor_last_weight', weight.toString());
-        setInitialWeight(weight);
-        setCurrentTab('weight'); // Switch to weight tab
-        setShowScaleConnect(true);
-      } else if (event.data?.type === 'native-metrics-received') {
-        const payload = event.data.payload;
-        console.log("Dashboard received native metrics forwarded from parent Hub:", payload);
-        sessionStorage.setItem('vigor_last_metrics', JSON.stringify(payload));
-        setInitialMetrics(payload);
-      } else if (event.data?.type === 'refresh-paired-devices') {
-        console.log("Dashboard received refresh-paired-devices request");
-        fetchPairedDevices();
-      }
-    };
-
-    setupTauriListener();
-    window.addEventListener('message', handleMessage);
-
-    // Notify parent Hub that Vigor is mounted and ready to receive messages
-    console.log("Notifying parent Hub that Vigor dashboard is ready");
-    window.parent.postMessage({ type: 'vigor-dashboard-ready' }, '*');
-
-    return () => {
-      if (unlisten) unlisten();
-      if (unlistenMetrics) unlistenMetrics();
-      window.removeEventListener('message', handleMessage);
-    };
-  }, [fetchPairedDevices]);
 
   const handleEditClick = (type: 'weight' | 'sleep' | 'steps', item: any) => {
     setEditingLog({ type, item });
@@ -901,25 +707,6 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       steps: s.step_count,
     }));
   }, [steps]);
-
-  // Handles adding weights via Neo scale BLE
-  const handleScaleWeightLogged = async (weight: number, bodyFat?: number, water?: number, muscle?: number) => {
-    try {
-      const { error } = await supabase.from('vigor_weight').insert({
-        user_id: user.id,
-        weight,
-        body_fat: bodyFat,
-        water_percent: water,
-        muscle_mass: muscle,
-        logged_at: new Date().toISOString()
-      });
-
-      if (error) throw error;
-      fetchLogs();
-    } catch (err) {
-      console.error('Error logging weight:', err);
-    }
-  };
 
   // Handles saving manual entries (Steps, Sleep, Weight)
   const handleManualSave = async (type: 'weight' | 'sleep' | 'steps', payload: any) => {
@@ -2770,36 +2557,6 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         <ManualLogModal 
           onClose={() => setShowManualLog(false)}
           onSave={handleManualSave}
-        />
-      )}
-
-      {showDeviceManager && (
-        <DeviceManagerModal 
-          userId={user.id}
-          onClose={() => {
-            setShowDeviceManager(false);
-            fetchLogs();
-          }}
-          fitnessProfile={dbProfile || user.user_metadata?.fitness_profile || {}}
-          onDevicesUpdated={fetchPairedDevices}
-        />
-      )}
-
-      {showScaleConnect && (
-        <WeightScaleConnector 
-          onClose={() => {
-            setShowScaleConnect(false);
-            setInitialWeight(null);
-            setInitialMetrics(null);
-            sessionStorage.removeItem('vigor_last_weight');
-            sessionStorage.removeItem('vigor_last_metrics');
-          }}
-          onWeightLogged={handleScaleWeightLogged}
-          autoConnectDevice={autoConnectedDevice}
-          initialWeight={initialWeight}
-          initialMetrics={initialMetrics}
-          fitnessProfile={dbProfile || user.user_metadata?.fitness_profile || {}}
-          scaleModel={pairedDevices.find(d => d.device_type === 'scale')?.model}
         />
       )}
 

@@ -30,35 +30,8 @@ export const SystemConsolePage: React.FC = () => {
       }
     });
 
-    // Also listen to Tauri Rust BLE log events if available
-    let unlistenBle: any = null;
-    let unlistenBleLog: any = null;
-    async function setupBleTauriListener() {
-      if ((window as any).__TAURI__ || (window as any).__TAURI_INTERNALS__) {
-        try {
-          const { listen } = await import('@tauri-apps/api/event');
-          unlistenBle = await listen<string>('colmi-sync-status', (event) => {
-            loggerService.addLog('sync', 'Colmi', `Colmi Status: ${event.payload}`);
-          });
-          unlistenBleLog = await listen<string>('ble-log-message', (event) => {
-            const text = event.payload || '';
-            let category: 'Scale' | 'Colmi' | 'BLE' = 'BLE';
-            if (text.includes('Colmi') || text.includes('Ring')) category = 'Colmi';
-            else if (text.includes('Scale') || text.includes('weight')) category = 'Scale';
-
-            loggerService.addLog('ble', category, text);
-          });
-        } catch (err) {
-          console.error("Failed to setup BLE listeners in console page:", err);
-        }
-      }
-    }
-    setupBleTauriListener();
-
     return () => {
       unsubscribe();
-      if (unlistenBle) unlistenBle();
-      if (unlistenBleLog) unlistenBleLog();
     };
   }, [isPaused]);
 
@@ -118,10 +91,6 @@ export const SystemConsolePage: React.FC = () => {
         return { bg: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: 'rgba(239, 68, 68, 0.3)' };
       case 'warn':
         return { bg: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: 'rgba(245, 158, 11, 0.3)' };
-      case 'ble':
-        return { bg: 'rgba(6, 182, 212, 0.15)', color: '#38bdf8', border: 'rgba(6, 182, 212, 0.3)' };
-      case 'sync':
-        return { bg: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', border: 'rgba(168, 85, 247, 0.3)' };
       default:
         return { bg: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: 'rgba(16, 185, 129, 0.3)' };
     }
@@ -141,7 +110,7 @@ export const SystemConsolePage: React.FC = () => {
             </h1>
           </div>
           <p style={{ margin: '6px 0 0 0', color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-            Real-time log of background sync, Bluetooth BLE events, and system notifications.
+            Real-time log of background sync and system notifications.
           </p>
         </div>
 
@@ -250,7 +219,7 @@ export const SystemConsolePage: React.FC = () => {
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
           <input
             type="text"
-            placeholder="Zoek in console logs (bijv. BLE, weight, Colmi, 86.4, error)..."
+            placeholder="Zoek in console logs (bijv. Supabase, ML, error)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -271,7 +240,7 @@ export const SystemConsolePage: React.FC = () => {
           <span style={{ fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Filter size={12} /> Category:
           </span>
-          {['ALL', 'Scale', 'Colmi', 'Supabase', 'ML', 'System'].map((cat) => (
+          {['ALL', 'Supabase', 'ML', 'System'].map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}

@@ -234,7 +234,6 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                     <option value="functional">Functionality / Crash</option>
                     <option value="performance">Performance / Sluggishness</option>
                     <option value="sync">Data-synchronization</option>
-                    <option value="bluetooth">Bluetooth / BLE Coupling</option>
                     <option value="feature">Suggestion / Feature Request</option>
                     <option value="other">Other</option>
                   </select>
@@ -268,7 +267,7 @@ export const BugReportModal: React.FC<BugReportModalProps> = ({
                 <input 
                   type="text" 
                   id="title" 
-                  placeholder="E.g. Bluetooth connection drops in Vigor app"
+                  placeholder="E.g. Sleep data not syncing in Vigor app"
                   value={title} 
                   onChange={(e) => setTitle(e.target.value)}
                   maxLength={100}
