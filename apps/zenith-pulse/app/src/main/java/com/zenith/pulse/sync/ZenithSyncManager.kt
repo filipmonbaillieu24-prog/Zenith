@@ -72,6 +72,7 @@ object ZenithSyncManager {
                 put("user_email", userEmail)
                 put("user_id", userId)
                 put("timestamp", data.timestamp)
+                put("local_date", data.localDate)
                 put("steps_count", data.stepsCount)
                 put("distance_withers", data.distanceMeters)
                 put("elevation_gained_withers", data.elevationGainedMeters)

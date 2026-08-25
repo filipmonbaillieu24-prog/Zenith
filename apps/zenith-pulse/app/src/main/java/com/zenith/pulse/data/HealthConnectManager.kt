@@ -15,6 +15,7 @@ import kotlin.math.max
 import kotlin.math.sqrt
 
 data class HealthDataPayload(
+    val localDate: String = "",
     val stepsCount: Long = 0,
     val distanceMeters: Double = 0.0,
     val elevationGainedMeters: Double = 0.0,
@@ -98,7 +99,8 @@ class HealthConnectManager(private val context: Context) {
 
         val now = Instant.now()
         val systemZone = ZoneId.systemDefault()
-        val localMidnight = ZonedDateTime.now(systemZone).toLocalDate().atStartOfDay(systemZone).toInstant()
+        val todayLocalDate = ZonedDateTime.now(systemZone).toLocalDate()
+        val localMidnight = todayLocalDate.atStartOfDay(systemZone).toInstant()
         val startTime24h = now.minus(24, ChronoUnit.HOURS)
         val startTime48h = now.minus(48, ChronoUnit.HOURS)
         val startTime30Days = now.minus(30, ChronoUnit.DAYS)
@@ -592,6 +594,7 @@ class HealthConnectManager(private val context: Context) {
         }
 
         return HealthDataPayload(
+            localDate = todayLocalDate.toString(),
             stepsCount = totalSteps,
             distanceMeters = totalDistMeters,
             elevationGainedMeters = totalElevMeters,

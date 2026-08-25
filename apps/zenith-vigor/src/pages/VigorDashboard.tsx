@@ -245,11 +245,27 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         .limit(90);
       if (sError) throw sError;
 
-      // Deduplicate sleeps by date (keep latest per local calendar date)
+      // Deduplicate sleeps by date. Prefers the row's own local_date (set server-side
+      // by the same day-key every writer uses) over re-deriving a date from logged_at
+      // in the browser's timezone, which could disagree with the server near a day
+      // boundary. Rows are fetched newest-first, so when a second row for an
+      // already-seen day turns up, fill in only the fields still missing on the kept
+      // entry rather than discarding it outright - a defensive merge in case any
+      // duplicate ever slips through despite the DB-level uniqueness constraint.
       const uniqueSleepsMap = new Map<string, any>();
       (sleepData || []).forEach((item: any) => {
-        const dateKey = getLocalDateKey(item.logged_at);
-        if (dateKey && !uniqueSleepsMap.has(dateKey)) uniqueSleepsMap.set(dateKey, item);
+        const dateKey = item.local_date || getLocalDateKey(item.logged_at);
+        if (!dateKey) return;
+        const existing = uniqueSleepsMap.get(dateKey);
+        if (!existing) {
+          uniqueSleepsMap.set(dateKey, item);
+        } else {
+          const merged = { ...existing };
+          for (const key of Object.keys(item)) {
+            if (merged[key] === null || merged[key] === undefined) merged[key] = item[key];
+          }
+          uniqueSleepsMap.set(dateKey, merged);
+        }
       });
       const sortedSleeps = Array.from(uniqueSleepsMap.values()).sort(
         (a: any, b: any) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime()
@@ -265,11 +281,22 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         .limit(90);
       if (stError) throw stError;
 
-      // Deduplicate steps by date (keep latest per local calendar date)
+      // Deduplicate steps by date - same local_date-first, merge-not-discard approach
+      // as sleep above.
       const uniqueStepsMap = new Map<string, any>();
       (stepData || []).forEach((item: any) => {
-        const dateKey = getLocalDateKey(item.logged_at);
-        if (dateKey && !uniqueStepsMap.has(dateKey)) uniqueStepsMap.set(dateKey, item);
+        const dateKey = item.local_date || getLocalDateKey(item.logged_at);
+        if (!dateKey) return;
+        const existing = uniqueStepsMap.get(dateKey);
+        if (!existing) {
+          uniqueStepsMap.set(dateKey, item);
+        } else {
+          const merged = { ...existing };
+          for (const key of Object.keys(item)) {
+            if (merged[key] === null || merged[key] === undefined) merged[key] = item[key];
+          }
+          uniqueStepsMap.set(dateKey, merged);
+        }
       });
       const sortedSteps = Array.from(uniqueStepsMap.values()).sort(
         (a: any, b: any) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime()
