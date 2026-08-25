@@ -19,9 +19,16 @@ object UpdateManager {
     suspend fun checkForUpdates(currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
-            val url = URL(VERSION_URL)
+            // raw.githubusercontent.com is served through a CDN that caches responses by
+            // URL - a static URL here could keep returning a stale versionCode long after
+            // a new release lands on main, silently hiding every update from this device.
+            // Cache-bust with a timestamp query param and disable caching explicitly.
+            val url = URL("$VERSION_URL?t=${System.currentTimeMillis()}")
             connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
+            connection.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate")
+            connection.setRequestProperty("Pragma", "no-cache")
+            connection.instanceFollowRedirects = true
             connection.connectTimeout = 10000
             connection.readTimeout = 10000
             connection.connect()
