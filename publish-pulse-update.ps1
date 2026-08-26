@@ -66,13 +66,17 @@ Write-Host "Updated $GradleFile with new version numbers." -ForegroundColor Gree
 
 # 2. Compile APK using gradle
 Write-Host "Starting Gradle build (assembleDebug)..." -ForegroundColor Yellow
+# Check $LASTEXITCODE rather than try/catch: Gradle writes warnings to stderr,
+# and in Windows PowerShell a native command's stderr surfaces as ErrorRecords,
+# so the catch fired on successful builds that merely emitted a deprecation
+# warning - failing the publish for no reason.
 Push-Location "apps/zenith-pulse"
-try {
-    ./gradlew.bat assembleDebug
-} catch {
-    Write-Error "Gradle build failed."
-} finally {
-    Pop-Location
+./gradlew.bat assembleDebug
+$GradleExitCode = $LASTEXITCODE
+Pop-Location
+
+if ($GradleExitCode -ne 0) {
+    Write-Error "Gradle build failed with exit code $GradleExitCode."
 }
 
 # 3. Copy APK to destination folder if built
