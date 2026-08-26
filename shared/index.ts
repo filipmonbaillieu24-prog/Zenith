@@ -5,7 +5,6 @@
 export * from './types';
 export { supabase, supabaseUrl, supabaseAnonKey } from './supabaseClient';
 export * from './pro';
-export * from './services/healthConnectSync';
 export * from './services/zenithSleepEngine';
 export * from './services/trainingLoad';
 export * from './ml/SimpleMLP';
@@ -17,6 +16,7 @@ export * from './ml/RecoveryScore';
 export * from './ml/HrvAnsTracker';
 export * from './ml/AcwrForecaster';
 export * from './ml/ZenithFusionNet';
+export * from './dateKey';
 export * from './pmc';
 export * from './trustedOrigins';
 export * from './gpxParser';

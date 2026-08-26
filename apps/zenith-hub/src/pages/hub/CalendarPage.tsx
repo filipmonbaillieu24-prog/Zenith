@@ -294,7 +294,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
 
   const handleDeleteWorkout = async (id: string) => {
     try {
-      const { error } = await supabase.from('planned_workouts').delete().eq('id', id);
+      const { error } = await supabase.from('planned_workouts').delete().eq('id', id).eq('user_id', userId);
       if (error) throw error;
 
       setPlannedWorkouts(prev => prev.filter(p => p.id !== id));

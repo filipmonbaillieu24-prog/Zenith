@@ -1,26 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  RefreshCw, 
-  Settings, 
-  Zap, 
-  Clock, 
-  ShieldCheck, 
-  Sliders, 
-  Database,
+import {
+  CheckCircle2,
+  XCircle,
+  Settings,
+  Zap,
+  Clock,
+  ShieldCheck,
+  Sliders,
   ArrowRight,
   Copy,
   Check,
   Globe,
-  Wifi,
   Smartphone
 } from 'lucide-react';
 import {
-  checkPhoneServerStatus,
-  syncPhoneDataToEcosystem,
-  savePhoneServerConfig,
-  PhoneServerStatus,
   supabaseUrl,
   supabaseAnonKey
 } from '@zenith/shared';
@@ -47,47 +40,47 @@ export const IntegrationsPage: React.FC = () => {
   const defaultWebhookUrl = `${supabaseUrl}/rest/v1/rpc/health_connect_ingest?apikey=${supabaseAnonKey}`;
 
   const [services, setServices] = useState<IntegrationService[]>(() => {
+    // Health Connect (via Zenith Pulse) is the one integration that's actually built:
+    // Pulse authenticates with Supabase and pushes data to it directly in the
+    // background — there's no local server or manual pull step on Hub's side.
+    // Its *descriptive* fields (name, copy, feature list, icon) are re-seeded
+    // fresh on every load so an out-of-date cached shape can never misrepresent
+    // what the integration does, but the user's own toggles are preserved -
+    // blanket-replacing the saved entry silently reverted autoSync every reload.
+    const defaultHealthConnect: IntegrationService = {
+      id: 'health_connect',
+      name: 'Google Health Connect & Zenith Pulse',
+      category: 'Official Active Companion Sync',
+      icon: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Google_Health_Connect_icon.svg',
+      accentColor: '#38BDF8',
+      connected: true,
+      autoSync: true,
+      description: 'Official active health & workout sync pathway for Zenith using the Zenith Pulse app. Automatically syncs steps, heart rate, HRV, sleep, calories, weight, and workouts directly to Supabase in the background.',
+      features: ['Steps & Heart Rate Sync', 'HRV & Sleep Stages Ingestion', 'Biometric Weight Logging', 'Background WorkManager Sync']
+    };
+
     const saved = localStorage.getItem('zenith_integrations_config');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const filtered = parsed.filter(s => s.id !== 'health_connect');
-          if (!filtered.some(s => s.id === 'onelapfit')) {
-            filtered.push({
-              id: 'onelapfit',
-              name: 'Onelapfit (Magene)',
-              category: 'Indoor Cycling & FIT Data',
-              icon: 'https://www.onelap.com/favicon.ico',
-              accentColor: '#00A3FF',
-              connected: true,
-              lastSync: 'Today at 15:40',
-              clientId: 'onelap_user_992',
-              clientSecret: '••••••••••••••••',
-              autoSync: true,
-              description: 'Sync your Onelap indoor rides and Magene bike computer data directly via Strava Auto-Bridge or FIT file import into Zenith Aero.',
-              features: ['Onelap FIT Files & Power', 'Magene Smart Trainer Sync', 'Strava Auto-Bridge Ingestion', 'TSS & Power Curves to Aero']
-            });
-          }
-          return filtered;
+          const savedHealthConnect = parsed.find((s: IntegrationService) => s.id === 'health_connect');
+          const withoutHealthConnect = parsed.filter((s: IntegrationService) => s.id !== 'health_connect');
+          // Fresh descriptive fields, saved user preferences.
+          const mergedHealthConnect: IntegrationService = {
+            ...defaultHealthConnect,
+            ...(savedHealthConnect
+              ? { autoSync: savedHealthConnect.autoSync ?? defaultHealthConnect.autoSync }
+              : {})
+          };
+          return [mergedHealthConnect, ...withoutHealthConnect];
         }
       } catch (e) {
         console.error("Error loading integrations config:", e);
       }
     }
     return [
-      {
-        id: 'health_connect',
-        name: 'Google Health Connect & Zenith Pulse',
-        category: 'Official Active Companion Sync',
-        icon: 'https://upload.wikimedia.org/wikipedia/commons/c/ca/Google_Health_Connect_icon.svg',
-        accentColor: '#38BDF8',
-        connected: true,
-        lastSync: 'Today (Live background worker)',
-        autoSync: true,
-        description: 'Official active health & workout sync pathway for Zenith using the Zenith Pulse app. Automatically syncs steps, heart rate, HRV, sleep, calories, weight, and workouts.',
-        features: ['Steps & Heart Rate Sync', 'HRV & Sleep Stages Ingestion', 'Biometric Weight Logging', 'Background WorkManager Sync']
-      },
+      defaultHealthConnect,
       {
         id: 'strava',
         name: 'Strava',
@@ -147,58 +140,13 @@ export const IntegrationsPage: React.FC = () => {
   });
 
   const [selectedService, setSelectedService] = useState<IntegrationService | null>(null);
-  const [isSyncing, setIsSyncing] = useState<string | null>(null);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [editClientId, setEditClientId] = useState('');
   const [editClientSecret, setEditClientSecret] = useState('');
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  // Phone local server state
-  const [phoneIp, setPhoneIp] = useState(() => localStorage.getItem('zenith_phone_server_ip') || '192.168.129.113');
-  const [phonePort, setPhonePort] = useState(() => localStorage.getItem('zenith_phone_server_port') || '8787');
-  const [phoneStatus, setPhoneStatus] = useState<PhoneServerStatus | null>(null);
-  const [isTestingPhone, setIsTestingPhone] = useState(false);
-
   useEffect(() => {
     localStorage.setItem('zenith_integrations_config', JSON.stringify(services));
   }, [services]);
-
-  // Check phone server liveness on mount
-  useEffect(() => {
-    checkPhoneServerStatus(phoneIp, parseInt(phonePort, 10)).then(setPhoneStatus);
-  }, []);
-
-  const handleTestPhoneConnection = async () => {
-    setIsTestingPhone(true);
-    savePhoneServerConfig(phoneIp, parseInt(phonePort, 10));
-    const status = await checkPhoneServerStatus(phoneIp, parseInt(phonePort, 10));
-    setPhoneStatus(status);
-    setIsTestingPhone(false);
-
-    if (status.online) {
-      setSyncMessage(`Phone locally reachable at ${phoneIp}:${phonePort}! (Version ${status.appVersion})`);
-    } else {
-      setSyncMessage(`⚠️ Could not connect to http://${phoneIp}:${phonePort}/ping. Make sure Local HTTP Server is enabled in the mobile app.`);
-    }
-    setTimeout(() => setSyncMessage(null), 5000);
-  };
-
-  const handlePullFromPhone = async () => {
-    setIsSyncing('phone_local');
-    setSyncMessage(`Fetching health data live from phone (http://${phoneIp}:${phonePort})...`);
-    
-    const result = await syncPhoneDataToEcosystem();
-    setIsSyncing(null);
-
-    if (result.success) {
-      const nowStr = `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-      setServices(prev => prev.map(s => s.id === 'health_connect' ? { ...s, lastSync: `${nowStr} via Local HTTP Server (${phoneIp}:${phonePort})` } : s));
-      setSyncMessage(`✅ Phone Data Successfully Imported! ${result.stepsCount} steps & ${result.exerciseCount} workouts synced to Vigor & Stride.`);
-    } else {
-      setSyncMessage(`⚠️ Import failed. Ensure your phone is connected to Wi-Fi at http://${phoneIp}:${phonePort}.`);
-    }
-    setTimeout(() => setSyncMessage(null), 6000);
-  };
 
   const handleToggleConnect = (serviceId: string) => {
     setServices(prev => prev.map(s => {
@@ -221,24 +169,6 @@ export const IntegrationsPage: React.FC = () => {
       }
       return s;
     }));
-  };
-
-  const handleManualSync = (service: IntegrationService) => {
-    if (service.id === 'health_connect') {
-      handlePullFromPhone();
-      return;
-    }
-
-    setIsSyncing(service.id);
-    setSyncMessage(`Syncing with ${service.name}...`);
-
-    setTimeout(() => {
-      setIsSyncing(null);
-      const nowStr = `Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-      setServices(prev => prev.map(s => s.id === service.id ? { ...s, lastSync: nowStr } : s));
-      setSyncMessage(`✅ Successfully synced with ${service.name}! Data updated in Zenith.`);
-      setTimeout(() => setSyncMessage(null), 4000);
-    }, 1800);
   };
 
   const openConfigModal = (service: IntegrationService) => {
@@ -270,14 +200,6 @@ export const IntegrationsPage: React.FC = () => {
     setTimeout(() => setCopiedUrl(false), 2500);
   };
 
-  const mockLogs = [
-    { time: '16:16:21', service: 'Local Phone HTTP Server', type: 'Live Wi-Fi Sync', name: '1,032 steps + 4 sleep sessions + Running Workout', status: 'Success' },
-    { time: '16:12:01', service: 'Health Connect Webhook', type: 'Test & Sync', name: '8,432 steps + Sleep 7h 30m + Run 5.4km', status: 'Success' },
-    { time: '14:15:02', service: 'Strava', type: 'Running', name: 'Sunday Threshold Session (12.4 km)', status: 'Success' },
-    { time: '12:04:18', service: 'Polar Flow', type: 'Nightly Recharge', name: 'Recovery Score: 88% (Good)', status: 'Success' },
-    { time: 'Yesterday', service: 'Strava', type: 'Cycling', name: 'Aerobic Endurance Ride (64.2 km)', status: 'Success' },
-  ];
-
   return (
     <div className="integrations-page">
       {/* Header */}
@@ -288,90 +210,13 @@ export const IntegrationsPage: React.FC = () => {
             API & Ecosystem Hub
           </div>
           <h1>Integrations & Platform Connectors</h1>
-          <p>Connect your favorite fitness and health platforms like Google Health Connect (Wi-Fi Local HTTP Server), Strava, and Polar for automatic sync to Zenith.</p>
-        </div>
-        <button className="integrations-global-sync-btn" onClick={() => services.filter(s => s.connected).forEach(handleManualSync)}>
-          <RefreshCw size={16} className={isSyncing ? 'spin' : ''} />
-          <span>Sync All Services</span>
-        </button>
-      </div>
-
-      {syncMessage && (
-        <div className="integrations-toast animate-fade-in">
-          <CheckCircle2 size={18} style={{ color: '#38bdf8', flexShrink: 0 }} />
-          <span>{syncMessage}</span>
-        </div>
-      )}
-
-      {/* Local Phone Server Dedicated Widget */}
-      <div className="local-phone-widget animate-fade-in">
-        <div className="local-phone-header">
-          <div className="phone-brand-title">
-            <div className={`phone-status-dot ${phoneStatus?.online ? 'online' : 'offline'}`}></div>
-            <Smartphone size={20} style={{ color: '#38bdf8' }} />
-            <div>
-              <h3>Local Phone HTTP Server Sync (Wi-Fi)</h3>
-              <span className="phone-sub">Direct wireless connection to your Android smartphone</span>
-            </div>
-          </div>
-
-          <div className="phone-actions-row">
-            <button className="btn-phone-test" onClick={handleTestPhoneConnection} disabled={isTestingPhone}>
-              <Wifi size={14} className={isTestingPhone ? 'spin' : ''} />
-              <span>{isTestingPhone ? 'Testing...' : 'Test Connection'}</span>
-            </button>
-            <button className="btn-phone-pull" onClick={handlePullFromPhone} disabled={isSyncing === 'phone_local'}>
-              <RefreshCw size={14} className={isSyncing === 'phone_local' ? 'spin' : ''} />
-              <span>Fetch & Distribute Data Now</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="local-phone-body">
-          <div className="phone-config-inputs">
-            <div className="phone-input-group">
-              <label>Phone IP Address on Wi-Fi</label>
-              <input 
-                type="text" 
-                value={phoneIp} 
-                onChange={e => setPhoneIp(e.target.value)} 
-                placeholder="192.168.129.113"
-              />
-            </div>
-            <div className="phone-input-group small">
-              <label>Port</label>
-              <input 
-                type="number" 
-                value={phonePort} 
-                onChange={e => setPhonePort(e.target.value)} 
-                placeholder="8787"
-              />
-            </div>
-          </div>
-
-          <div className="phone-status-details">
-            <div className="phone-stat">
-              <span className="label">Status:</span>
-              <span className={`val ${phoneStatus?.online ? 'success' : 'warning'}`}>
-                {phoneStatus?.online ? `Online (v${phoneStatus.appVersion})` : 'Unreachable'}
-              </span>
-            </div>
-            <div className="phone-stat">
-              <span className="label">Target Endpoint:</span>
-              <span className="val code">http://{phoneIp}:{phonePort}/latest</span>
-            </div>
-            <div className="phone-stat">
-              <span className="label">Extensions:</span>
-              <span className="val highlight">Vigor (Steps & Sleep) + Stride (Workouts)</span>
-            </div>
-          </div>
+          <p>Google Health Connect syncs automatically via the Zenith Pulse app. Everything else below is coming soon.</p>
         </div>
       </div>
 
       {/* Grid of Integration Cards */}
       <div className="integrations-grid">
         {services.map((service) => {
-          const isCurrentSyncing = isSyncing === service.id;
           return (
             <div key={service.id} className="integration-card" style={{ '--accent-color': service.accentColor } as React.CSSProperties}>
               <div className="integration-card-header">
@@ -417,19 +262,19 @@ export const IntegrationsPage: React.FC = () => {
                 <div className="integration-witha-box">
                   <div className="integration-witha-row">
                     <span className="witha-label">
-                      <Clock size={12} /> Last Sync:
+                      <Clock size={12} /> Sync:
                     </span>
-                    <span className="witha-value">{service.lastSync || 'Not synced yet'}</span>
+                    <span className="witha-value">Automatic, in the background</span>
                   </div>
                   <div className="integration-witha-row">
                     <span className="witha-label">
                       <Sliders size={12} /> Auto-Sync:
                     </span>
                     <label className="toggle-switch">
-                      <input 
-                        type="checkbox" 
-                        checked={service.autoSync} 
-                        onChange={() => handleToggleAutoSync(service.id)} 
+                      <input
+                        type="checkbox"
+                        checked={service.autoSync}
+                        onChange={() => handleToggleAutoSync(service.id)}
                       />
                       <span className="toggle-slider"></span>
                     </label>
@@ -440,14 +285,6 @@ export const IntegrationsPage: React.FC = () => {
               <div className="integration-card-actions">
                 {service.connected ? (
                   <>
-                    <button 
-                      className="btn-sync" 
-                      onClick={() => handleManualSync(service)}
-                      disabled={isCurrentSyncing}
-                    >
-                      <RefreshCw size={14} className={isCurrentSyncing ? 'spin' : ''} />
-                      <span>{isCurrentSyncing ? 'Syncing...' : 'Sync Now'}</span>
-                    </button>
                     <button className="btn-icon" onClick={() => openConfigModal(service)} title="Webhook & API Configurations">
                       <Settings size={15} />
                     </button>
@@ -482,34 +319,6 @@ export const IntegrationsPage: React.FC = () => {
         })}
       </div>
 
-      {/* Sync Log Section */}
-      <div className="integrations-logs-section">
-        <div className="section-title">
-          <Database size={18} style={{ color: '#38bdf8' }} />
-          <h2>Sync History & Activity Log</h2>
-        </div>
-        <div className="sync-logs-table">
-          <div className="table-header">
-            <span>Timestamp</span>
-            <span>Platform</span>
-            <span>Type</span>
-            <span>Activity / Payload</span>
-            <span>Status</span>
-          </div>
-          {mockLogs.map((log, idx) => (
-            <div key={idx} className="table-row">
-              <span className="col-time">{log.time}</span>
-              <span className="col-platform">{log.service}</span>
-              <span className="col-type">{log.type}</span>
-              <span className="col-name">{log.name}</span>
-              <span className="col-status">
-                <span className="status-badge success">{log.status}</span>
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Credentials / Webhook Modal */}
       {selectedService && (
         <div className="modal-backdrop" onClick={() => setSelectedService(null)}>
@@ -531,7 +340,7 @@ export const IntegrationsPage: React.FC = () => {
                       Official Companion App: Zenith Pulse
                     </div>
                     <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0' }}>
-                      Zenith Pulse comes pre-configured with direct Zenith Supabase Webhook integration &amp; local Wi-Fi sync (`:8787`).
+                      Zenith Pulse comes pre-configured with authenticated background sync straight to Zenith&apos;s Supabase backend.
                     </p>
                   </div>
 

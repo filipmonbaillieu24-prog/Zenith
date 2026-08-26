@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import {
   Dumbbell,
@@ -298,7 +298,7 @@ export default function App() {
       const sleepQualityByDay = new Map<string, number>();
       for (const s of sleepHistory) {
         if (!s.logged_at) continue;
-        const key = new Date(s.logged_at).toISOString().slice(0, 10);
+        const key = toDateKey(new Date(s.logged_at).getTime());
         sleepQualityByDay.set(key, Number(s.quality_score ?? 80));
       }
 
@@ -307,7 +307,7 @@ export default function App() {
 
       for (const w of newWorkouts) {
         if (!w.sets || !Array.isArray(w.sets)) continue;
-        const dayKey = w.completed_at ? new Date(w.completed_at).toISOString().slice(0, 10) : '';
+        const dayKey = w.completed_at ? toDateKey(new Date(w.completed_at).getTime()) : '';
         const sleepQualityForDay = sleepQualityByDay.get(dayKey) ?? 80;
 
         for (const exLog of w.sets) {
@@ -528,74 +528,36 @@ export default function App() {
       };
     });
 
-    // Group TSS by Day
-    const tssPerDay = new Map<string, number>();
-    for (const r of parsedRides) {
-      const key = new Date(r.date).toISOString().split('T')[0];
-      tssPerDay.set(key, (tssPerDay.get(key) ?? 0) + r.tss);
-    }
-
-    // Include Strength Training TSS
+    // Combined cycling + strength TSS list, fed straight into the shared PMC
+    // calculator (the same CTL/ATL/TSB Banister model Aero and Hub use) so
+    // Kratos's Form numbers can never drift from theirs.
+    const combinedTssList: { date: number; tss: number }[] = parsedRides.map(r => ({ date: r.date, tss: r.tss }));
     for (const w of woData) {
       if (!w.completed_at) continue;
-      const key = new Date(w.completed_at).toISOString().split('T')[0];
-      const strengthTSS = calculateWorkoutTSS(w, exData, woData);
-      tssPerDay.set(key, (tssPerDay.get(key) ?? 0) + strengthTSS);
+      combinedTssList.push({ date: new Date(w.completed_at).getTime(), tss: calculateWorkoutTSS(w, exData, woData) });
     }
 
     // Group Sleep logs by Day
     const sleepPerDay = new Map<string, { duration: number; quality: number }>();
     for (const s of sleepData) {
-      const key = new Date(s.logged_at).toISOString().split('T')[0];
+      const key = toDateKey(new Date(s.logged_at).getTime());
       sleepPerDay.set(key, {
         duration: Number(s.duration_minutes || 0) / 60.0,
         quality: Number(s.quality_score ?? 0)
       });
     }
 
-    // Determine range: first activity to today
-    const dates = [
-      ...parsedRides.map(r => r.date),
-      ...woData.map(w => new Date(w.completed_at).getTime())
-    ].filter(Boolean);
-    if (dates.length === 0) return;
+    const pmcPoints = computePMC(combinedTssList);
+    if (pmcPoints.length === 0) return;
 
-    const firstDate = new Date(Math.min(...dates));
-    const today = new Date();
-    firstDate.setHours(0,0,0,0);
-    today.setHours(0,0,0,0);
-
-    const K_CTL = 1 - Math.exp(-1 / 42);
-    const K_ATL = 1 - Math.exp(-1 / 7);
-
-    const points: PMCPoint[] = [];
-    let ctl = 0;
-    let atl = 0;
-    const cur = new Date(firstDate);
-
-    while (cur <= today) {
-      const key = cur.toISOString().split('T')[0];
-      const tss = tssPerDay.get(key) ?? 0;
-      ctl = ctl + K_CTL * (tss - ctl);
-      atl = atl + K_ATL * (tss - atl);
-
-      // Sleep deficit calculation
+    // Sleep deficit isn't part of the shared PMC model, so it's attached
+    // per-day here for the Z-score/ATL baseline calculation below.
+    const points: PMCPoint[] = pmcPoints.map(p => {
+      const key = toDateKey(p.date);
       const sleep = sleepPerDay.get(key);
-      let sleepDeficit = 0;
-      if (sleep) {
-        sleepDeficit = Math.max(0, targetSleep - sleep.duration);
-      }
-
-      points.push({
-        date: cur.getTime(),
-        ctl,
-        atl,
-        tsb: ctl - atl,
-        sleepDeficit
-      });
-
-      cur.setDate(cur.getDate() + 1);
-    }
+      const sleepDeficit = sleep ? Math.max(0, targetSleep - sleep.duration) : 0;
+      return { date: p.date, ctl: p.ctl, atl: p.atl, tsb: p.tsb, sleepDeficit };
+    });
 
     // Latest PMC values
     if (points.length > 0) {
@@ -760,28 +722,10 @@ export default function App() {
     return Math.max(15, extra);
   }, [isSleepFatigued, isStepsFatigued, isCardioFatigued, isZScoreFatigued, todaySleepQuality, currentPMC, aiStressConfig]);
 
-  // Form (TSB) status for the hero stat card — reuses the same -10 threshold
-  // that already drives isCardioFatigued/restTimerExtensionPct above, just
-  // reformatted into a pill label + one-line context sentence.
-  const tsbStatus = useMemo(() => {
-    if (currentPMC.tsb >= 0) {
-      return { label: 'Fresh', emoji: '✅', color: '#cbd5e1' };
-    }
-    if (currentPMC.tsb >= -10) {
-      return { label: 'Building fatigue', emoji: '⚠️', color: '#eccc68' };
-    }
-    return { label: 'High fatigue', emoji: '🔴', color: '#ff7675' };
-  }, [currentPMC.tsb]);
-
-  const tsbContextText = useMemo(() => {
-    if (currentPMC.tsb >= 0) {
-      return 'Fitness and freshness are balanced — a good window to push training intensity.';
-    }
-    if (currentPMC.tsb >= -10) {
-      return "You're accumulating some fatigue from training — normal during a build phase.";
-    }
-    return 'Fatigue is significantly outpacing recovery — rest periods are being extended automatically.';
-  }, [currentPMC.tsb]);
+  // Form (TSB) status for the hero stat card — same shared interpretation
+  // Aero and Hub use, so the same TSB value reads the same way everywhere.
+  const tsbStatus = useMemo(() => interpretTSB(currentPMC.tsb), [currentPMC.tsb]);
+  const tsbContextText = useMemo(() => tsbContext(currentPMC.tsb), [currentPMC.tsb]);
 
   // Helper for exercise name resolution
   const exerciseMap = useMemo(() => {
@@ -1337,7 +1281,7 @@ export default function App() {
     for (let i = 13; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const yyyymmdd = d.toISOString().slice(0, 10);
+      const yyyymmdd = toDateKeyFromDate(d);
       const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       // With real HRV data, days without a reading are left as gaps (null) rather
       // than filled with a fabricated baseline.
@@ -1348,7 +1292,7 @@ export default function App() {
     workouts.forEach(w => {
       if (w.completed_at) {
         try {
-          const wDate = new Date(w.completed_at).toISOString().slice(0, 10);
+          const wDate = toDateKey(new Date(w.completed_at).getTime());
           if (dateMap.has(wDate)) {
             const item = dateMap.get(wDate)!;
             item.volume += w.volume || 0;
@@ -1365,7 +1309,7 @@ export default function App() {
     sleepLogs.forEach((s: any) => {
       if (s.logged_at) {
         try {
-          const sDate = new Date(s.logged_at).toISOString().slice(0, 10);
+          const sDate = toDateKey(new Date(s.logged_at).getTime());
           if (dateMap.has(sDate)) {
             const item = dateMap.get(sDate)!;
             if (hasRealHrvData) {

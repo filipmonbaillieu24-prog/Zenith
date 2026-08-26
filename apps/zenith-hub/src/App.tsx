@@ -15,7 +15,7 @@ const FeatureRequestsPage = lazy(() => import('./pages/community/FeatureRequests
 import { loggerService } from './utils/loggerService';
 import { Sidebar, TabKey } from './components/Sidebar';
 import { computePMC } from './utils/pmc';
-import { recoveryModel, syncPhoneDataToEcosystem, isTrustedZenithOrigin, activateProTrial } from '@zenith/shared';
+import { recoveryModel, isTrustedZenithOrigin, activateProTrial } from '@zenith/shared';
 import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
@@ -26,31 +26,6 @@ const EXTENSION_TABS = new Set<TabKey>(['aero', 'vigor', 'kratos', 'fuel', 'stri
 
 function App() {
   const [session, setSession] = useState<any>(null);
-
-  // Automatic 15-minute background sync with local Health Connect HTTP server
-  useEffect(() => {
-    if (!session?.user?.id) return;
-    const activeUserId = session.user.id;
-
-    // Run initial sync on app load
-    syncPhoneDataToEcosystem(activeUserId).then((res: any) => {
-      if (res.success) {
-        console.log(`[Zenith Auto-Sync] Initial Health Connect sync completed: ${res.stepsCount} steps, ${res.exerciseCount} exercises, ${res.sleepCount} sleep records.`);
-      }
-    });
-
-    // Schedule automatic sync every 15 minutes (15 * 60 * 1000 = 900,000 ms)
-    const intervalId = setInterval(() => {
-      console.log("[Zenith Auto-Sync] Running 15-minute background Health Connect sync...");
-      syncPhoneDataToEcosystem(activeUserId).then((res: any) => {
-        if (res.success) {
-          console.log(`[Zenith Auto-Sync] 15-min background sync completed: ${res.stepsCount} steps, ${res.exerciseCount} exercises, ${res.sleepCount} sleep records.`);
-        }
-      });
-    }, 15 * 60 * 1000);
-
-    return () => clearInterval(intervalId);
-  }, [session?.user?.id]);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAccountConfirmed, setShowAccountConfirmed] = useState(false);
@@ -348,6 +323,7 @@ function App() {
       const { data } = await supabase
         .from('rides')
         .select('date, metadata')
+        .eq('user_id', session.user.id)
         .order('date', { ascending: true });
       
       if (data) {
@@ -536,9 +512,13 @@ function App() {
     const envBrowser = navigator.userAgent || 'Onbekend';
     const envScreen = `${window.screen.width}x${window.screen.height} (Venster: ${window.innerWidth}x${window.innerHeight})`;
 
-    // 3. Resolve GitHub credentials
+    // 3. Resolve GitHub credentials. The access token is intentionally never read from
+    // a bundled env var (import.meta.env.VITE_-prefixed values are inlined into the
+    // client bundle at build time) — a repo-write token baked into the app would be
+    // extractable by any user. It must always come from what the user themselves
+    // typed into "Developer Settings" for this session.
     const repo = data.developerRepo || import.meta.env.VITE_GITHUB_REPO || 'filipmonbaillieu24-prog/Zenith';
-    const token = data.developerToken || import.meta.env.VITE_GITHUB_TOKEN;
+    const token = data.developerToken;
 
     if (!token) {
       throw new Error(

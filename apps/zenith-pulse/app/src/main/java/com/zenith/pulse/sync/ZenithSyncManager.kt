@@ -27,9 +27,6 @@ object ZenithSyncManager {
         "https://usvddplwtrelmqsecprp.supabase.co/rest/v1/rpc/health_connect_ingest"
 
     private const val SUPABASE_ANON_KEY =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmRkcGx3dHJlbG1xc2VjcHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1NzAyMjksImV4cCI6MjEwMTE4NjIyOX0.WGLIaVq-7bzOQGtSpypApOBt1UyBeATnREmPgz8BacM"
-
-    private const val VALID_SUPABASE_ANON_KEY =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmRkcGx3dHJlbG1xc2VjcHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1NzAyMjksImV4cCI6MjEwMTE0NjIyOX0.WGLIaVq-7bzOQGtSpypApOBt1UyBeATnREmPgz8BacM"
 
     private val httpClient by lazy {
@@ -53,6 +50,19 @@ object ZenithSyncManager {
             if (!UserAuthManager.isLoggedIn(context)) {
                 lastSyncStatus = "⛔ Login required: No linked Zenith account"
                 Log.w("ZenithSyncManager", "Sync aborted: user not logged in.")
+                return@withContext false
+            }
+
+            // health_connect_ingest() now requires an authenticated caller (identity is
+            // derived server-side from this token, never from the payload - see
+            // shared/09_secure_health_connect_ingest.sql), so a fresh access token is
+            // required, not just the anon key. Refreshed on every sync rather than
+            // tracked for expiry locally: simpler, and immune to clock-skew bugs.
+            val userAccessToken = UserAuthManager.refreshAccessToken(context)
+                ?: UserAuthManager.getAccessToken(context)
+            if (userAccessToken.isNullOrEmpty()) {
+                lastSyncStatus = "⛔ Login expired: please sign in to Zenith Pulse again"
+                Log.w("ZenithSyncManager", "Sync aborted: no valid access token (refresh failed and no cached token).")
                 return@withContext false
             }
 
@@ -100,6 +110,23 @@ object ZenithSyncManager {
                 put("avg_power_watts", data.avgPowerWatts)
                 put("avg_speed_kmh", data.avgSpeedKmh)
                 put("exercise_sessions_count", data.exerciseSessionsCount)
+                // Full exercise sessions, not just the count. The server-side
+                // ingest turns these into Stride activities - before this, the
+                // only path that ever populated stride_activities from Health
+                // Connect was the (now removed) LAN bridge, so dropping the
+                // detail here silently ended workout sync to Stride.
+                put("exercise_sessions", buildJsonArray {
+                    for (ex in data.rawExerciseList) {
+                        add(buildJsonObject {
+                            put("type", (ex["type"] as? Int)?.toString() ?: (ex["type"] as? String) ?: "workout")
+                            put("title", (ex["title"] as? String) ?: "Workout")
+                            put("start_time", (ex["start_time"] as? String) ?: "")
+                            put("end_time", (ex["end_time"] as? String) ?: "")
+                            put("duration_seconds", (ex["duration_seconds"] as? Long) ?: ((ex["duration_seconds"] as? Int)?.toLong()) ?: 0L)
+                            put("data_origin", ((ex["metadata"] as? Map<*, *>)?.get("data_origin") as? String) ?: "")
+                        })
+                    }
+                })
                 put("daily_steps", buildJsonArray {
                     for (s in data.dailyStepsList) {
                         add(buildJsonObject {
@@ -137,8 +164,8 @@ object ZenithSyncManager {
             val response = httpClient.post(ZENITH_RPC_URL) {
                 contentType(ContentType.Application.Json)
                 headers {
-                    append("apikey", VALID_SUPABASE_ANON_KEY)
-                    append("Authorization", "Bearer $VALID_SUPABASE_ANON_KEY")
+                    append("apikey", SUPABASE_ANON_KEY)
+                    append("Authorization", "Bearer $userAccessToken")
                 }
                 setBody(rpcBodyJson)
             }

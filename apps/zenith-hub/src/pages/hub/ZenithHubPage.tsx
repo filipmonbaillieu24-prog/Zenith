@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, recoveryModel, calculateZenithSleepScore, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { predictRecoveryScore, recoveryModel, calculateZenithSleepScore, estimateKratosSessionLoad, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
@@ -16,25 +16,6 @@ import {
 } from 'recharts';
 import { AnatomicalMuscleHeatmap } from '../../components/AnatomicalMuscleHeatmap';
 import './ZenithHub.css';
-
-/** One-line context for the PMC hero card — mirrors the tone used in Aero/Kratos's
- * own hero-metric dashboards, which show this exact same TSB-derived status. */
-function tsbContext(label: string, tsb: number): string {
-  switch (label) {
-    case 'Fresh / too little stimulus':
-      return "You're well recovered but training load has been light — there's room to push harder.";
-    case 'Peak condition':
-      return 'Fitness and freshness are both high right now — a good window for your hardest efforts.';
-    case 'Optimal training period':
-      return 'A healthy, sustainable balance of fitness and fatigue across your linked extensions.';
-    case 'Build phase / fatigued':
-      return "You're carrying more fatigue than fitness right now — expected mid-build, not a warning sign.";
-    default:
-      return tsb < -25
-        ? 'Fatigue has been outpacing recovery for a while — consider prioritizing rest this week.'
-        : 'Keep an eye on recovery markers over the next few sessions.';
-  }
-}
 
 interface ZenithHubPageProps {
   fitnessProfile: any;
@@ -259,11 +240,12 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   // against real physiological cost (HR, power, RPE-based session load, etc.) — out
   // of scope for this pass; for now we at least name and document the constants so
   // future work can find and replace them.
+  // Kratos's own scalar/floor/ceiling live in shared/services/trainingLoad.ts
+  // (estimateKratosSessionLoad) — imported below instead of redefined here, so this
+  // pool and Vigor's ACWR forecaster can never drift onto different conversion
+  // numbers for the same Kratos volume.
   const STRIDE_RSS_HR_REFERENCE_BPM = 150; // "threshold-ish" reference HR used to scale a session's average HR into an intensity ratio
   const STRIDE_RSS_SCALAR = 1.1; // duration(min) * intensity-ratio -> "RSS" (estimated running TSS-equivalent), rough heuristic
-  const KRATOS_STSS_VOLUME_SCALAR = 0.012; // kg lifted (sets*reps*weight) -> "strength TSS", rough heuristic
-  const KRATOS_STSS_MIN = 15; // floor so any completed session registers some load
-  const KRATOS_STSS_MAX = 80; // ceiling so one huge-volume day doesn't dominate the shared pool
 
   // ── PMC Simulation Logic ──
   const simPMC = useMemo(() => {
@@ -295,8 +277,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     allKratos.forEach(k => {
       if (k.completed_at && k.volume) {
         const ts = new Date(k.completed_at).getTime();
-        const volume = Number(k.volume);
-        const sTSS = Math.min(KRATOS_STSS_MAX, Math.max(KRATOS_STSS_MIN, Math.round(volume * KRATOS_STSS_VOLUME_SCALAR)));
+        const sTSS = estimateKratosSessionLoad(Number(k.volume));
         tssList.push({ date: ts, tss: sTSS, source: 'kratos', isEstimated: true });
       }
     });
@@ -832,7 +813,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
               <ZenithHeroStat
                 eyebrow="Form · TSB"
                 value={tsb >= 0 ? `+${tsb}` : tsb}
-                sub={tsbContext(currentFormStatus.label, tsb)}
+                sub={tsbContext(tsb)}
                 pill={
                   <span className="zenith-pill" style={{ background: `${currentFormStatus.color}1f`, color: currentFormStatus.color }}>
                     {currentFormStatus.emoji} {currentFormStatus.label}

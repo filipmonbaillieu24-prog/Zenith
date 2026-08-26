@@ -301,9 +301,9 @@ export const PilotPanel: React.FC<PilotPanelProps> = ({ userName }) => {
                   <div style={{ display: 'flex', gap: 10 }}>
                     <Wifi size={16} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 2 }} />
                     <div>
-                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Dual Cloud &amp; Local Sync</h4>
+                      <h4 style={{ margin: '0 0 2px', fontSize: 12, fontWeight: 700, color: '#f1f5f9' }}>Background Cloud Sync</h4>
                       <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', lineHeight: 1.4 }}>
-                        Syncs automatically over 4G/5G directly to Supabase and hosts an embedded Wi-Fi server on port 8787 for Zenith Hub.
+                        Syncs automatically over Wi-Fi or 4G/5G straight to Supabase, authenticated as you - no local server, no pairing step.
                       </p>
                     </div>
                   </div>

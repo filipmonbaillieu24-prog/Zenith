@@ -1,3 +1,5 @@
+import { toDateKey } from './dateKey';
+
 /**
  * Performance Management Chart (PMC) calculations.
  *
@@ -200,20 +202,64 @@ export function recoveryAdvice(tss: number): { hours: string; color: string; tip
 }
 
 /**
+ * TSB (form) zone breakpoints - the single source of truth for every app.
+ *
+ * These are exported as named constants rather than being retyped as literals
+ * in each consumer. Aero's week-plan grid, coach advice and single-workout
+ * recommender each had their own hardcoded copies that silently drifted apart
+ * (-30/-20/10/20 vs -25/-10/5/25), so the dashboard could show "optimal" while
+ * the recommender was already forcing recovery. Import these instead of
+ * re-typing the numbers.
+ */
+export const TSB_FRESH_ABOVE = 25;      // above: fresh, losing stimulus
+export const TSB_PEAK_ABOVE = 5;        // above: peaked / race-ready
+export const TSB_OPTIMAL_ABOVE = -10;   // above: productive training zone
+export const TSB_FATIGUED_ABOVE = -25;  // above: build phase; at or below: overtraining risk
+
+/** Machine-readable TSB zone, for callers that branch on state rather than display it. */
+export type TsbZone = 'fresh' | 'peak' | 'optimal' | 'fatigued' | 'overtraining';
+
+export function getTsbZone(tsb: number): TsbZone {
+  if (tsb > TSB_FRESH_ABOVE) return 'fresh';
+  if (tsb > TSB_PEAK_ABOVE) return 'peak';
+  if (tsb > TSB_OPTIMAL_ABOVE) return 'optimal';
+  if (tsb > TSB_FATIGUED_ABOVE) return 'fatigued';
+  return 'overtraining';
+}
+
+/**
  * Interpret TSB (form).
  */
 export function interpretTSB(tsb: number): { label: string; color: string; emoji: string } {
-  if (tsb >  25)  return { label: 'Fresh / too little stimulus', color: '#74b9ff', emoji: '😴' };
-  if (tsb >   5)  return { label: 'Peak condition',             color: '#55efc4', emoji: '🏆' };
-  if (tsb >  -10) return { label: 'Optimal training period',   color: '#00b894', emoji: '💪' };
-  if (tsb >  -25) return { label: 'Build phase / fatigued',    color: '#fdcb6e', emoji: '📈' };
-  return                  { label: 'Overtraining risk',     color: '#d63031', emoji: '⚠️' };
+  switch (getTsbZone(tsb)) {
+    case 'fresh':    return { label: 'Fresh / too little stimulus', color: '#74b9ff', emoji: '😴' };
+    case 'peak':     return { label: 'Peak condition',             color: '#55efc4', emoji: '🏆' };
+    case 'optimal':  return { label: 'Optimal training period',   color: '#00b894', emoji: '💪' };
+    case 'fatigued': return { label: 'Build phase / fatigued',    color: '#fdcb6e', emoji: '📈' };
+    default:         return { label: 'Overtraining risk',     color: '#d63031', emoji: '⚠️' };
+  }
 }
 
-function toDateKey(ms: number): string {
-  const date = new Date(ms);
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+/**
+ * One-line, human-readable context sentence for a TSB value — matches the
+ * tone of interpretTSB's five states without repeating the pill label
+ * verbatim. Single source of truth for the "Form · TSB" hero card copy so
+ * every app (Aero, Kratos, Hub) says the same thing for the same TSB.
+ */
+export function tsbContext(tsb: number): string {
+  const { label } = interpretTSB(tsb);
+  switch (label) {
+    case 'Fresh / too little stimulus':
+      return "You're well recovered but training load has been light — there's room to push harder.";
+    case 'Peak condition':
+      return "Fitness and freshness are both high right now — this is a good window for your hardest efforts.";
+    case 'Optimal training period':
+      return 'A healthy, sustainable balance of fitness and fatigue for consistent training.';
+    case 'Build phase / fatigued':
+      return "You're carrying more fatigue than fitness right now — expected mid-build, not a warning sign.";
+    default:
+      return tsb < -25
+        ? 'Fatigue has been outpacing recovery for a while — consider prioritizing rest this week.'
+        : 'Keep an eye on recovery markers over the next few sessions.';
+  }
 }

@@ -23,6 +23,7 @@ object UserAuthManager {
     private const val KEY_USER_EMAIL = "key_user_email"
     private const val KEY_USER_ID = "key_user_id"
     private const val KEY_ACCESS_TOKEN = "key_access_token"
+    private const val KEY_REFRESH_TOKEN = "key_refresh_token"
 
     private const val SUPABASE_URL = "https://usvddplwtrelmqsecprp.supabase.co"
     private const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzdmRkcGx3dHJlbG1xc2VjcHJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1NzAyMjksImV4cCI6MjEwMTE0NjIyOX0.WGLIaVq-7bzOQGtSpypApOBt1UyBeATnREmPgz8BacM"
@@ -52,13 +53,77 @@ object UserAuthManager {
         return getPrefs(context).getString(KEY_ACCESS_TOKEN, null)
     }
 
-    fun saveUserAccount(context: Context, email: String, userId: String = "", accessToken: String = "") {
-        getPrefs(context).edit()
+    fun getRefreshToken(context: Context): String? {
+        return getPrefs(context).getString(KEY_REFRESH_TOKEN, null)
+    }
+
+    fun saveUserAccount(
+        context: Context,
+        email: String,
+        userId: String = "",
+        accessToken: String = "",
+        refreshToken: String = ""
+    ) {
+        val editor = getPrefs(context).edit()
             .putString(KEY_USER_EMAIL, email.trim().lowercase())
             .putString(KEY_USER_ID, userId.ifEmpty { email.trim().lowercase() })
             .putString(KEY_ACCESS_TOKEN, accessToken)
-            .apply()
+        // Only overwrite a stored refresh token when a new one was actually issued -
+        // e.g. a bare access-token refresh (see refreshAccessToken below) must not
+        // wipe out the refresh token it was itself supplied with.
+        if (refreshToken.isNotEmpty()) {
+            editor.putString(KEY_REFRESH_TOKEN, refreshToken)
+        }
+        editor.apply()
         Log.i("UserAuthManager", "Saved user account for: $email")
+    }
+
+    /**
+     * Exchanges the stored refresh token for a fresh access token. Zenith Pulse's
+     * background sync runs hourly and Supabase access tokens are short-lived, so this
+     * is called before every sync (see ZenithSyncManager) rather than tracking token
+     * expiry locally - simpler and immune to clock-skew bugs. Returns the fresh access
+     * token, or null if there's no refresh token stored or the refresh itself fails
+     * (e.g. the session was revoked), in which case the caller should prompt re-login.
+     */
+    suspend fun refreshAccessToken(context: Context): String? = withContext(Dispatchers.IO) {
+        val refreshToken = getRefreshToken(context)
+        if (refreshToken.isNullOrEmpty()) {
+            return@withContext null
+        }
+
+        try {
+            val response = httpClient.post("$SUPABASE_URL/auth/v1/token?grant_type=refresh_token") {
+                contentType(ContentType.Application.Json)
+                headers {
+                    append("apikey", SUPABASE_ANON_KEY)
+                }
+                setBody(kotlinx.serialization.json.buildJsonObject {
+                    put("refresh_token", kotlinx.serialization.json.JsonPrimitive(refreshToken))
+                }.toString())
+            }
+
+            if (response.status.value !in 200..299) {
+                Log.w("UserAuthManager", "Token refresh failed with status ${response.status.value}")
+                return@withContext null
+            }
+
+            val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val newAccessToken = json["access_token"]?.jsonPrimitive?.content
+            val newRefreshToken = json["refresh_token"]?.jsonPrimitive?.content
+
+            if (newAccessToken.isNullOrEmpty()) {
+                return@withContext null
+            }
+
+            val email = getUserEmail(context) ?: ""
+            val userId = getUserId(context) ?: ""
+            saveUserAccount(context, email, userId, newAccessToken, newRefreshToken ?: "")
+            newAccessToken
+        } catch (e: Exception) {
+            Log.e("UserAuthManager", "Token refresh exception", e)
+            null
+        }
     }
 
     fun logout(context: Context) {
@@ -97,11 +162,12 @@ object UserAuthManager {
             if (response.status.value in 200..299) {
                 val json = Json.parseToJsonElement(bodyText).jsonObject
                 val accessToken = json["access_token"]?.jsonPrimitive?.content ?: ""
+                val refreshToken = json["refresh_token"]?.jsonPrimitive?.content ?: ""
                 val userObj = json["user"]?.jsonObject
                 val userId = userObj?.get("id")?.jsonPrimitive?.content ?: email
                 val userEmail = userObj?.get("email")?.jsonPrimitive?.content ?: email
 
-                saveUserAccount(context, userEmail, userId, accessToken)
+                saveUserAccount(context, userEmail, userId, accessToken, refreshToken)
                 return@withContext Pair(true, "Successfully logged in as $userEmail!")
             } else {
                 val errorReason = try {

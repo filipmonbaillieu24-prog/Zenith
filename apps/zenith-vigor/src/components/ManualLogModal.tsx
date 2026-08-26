@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Moon, Footprints, Scale, SlidersHorizontal } from 'lucide-react';
+import { localDateToISO, toDateKeyFromDate } from '@zenith/shared';
 
 interface ManualLogModalProps {
   onClose: () => void;
@@ -12,7 +13,7 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'steps' | 'sleep' | 'weight'>('steps');
   const [loading, setLoading] = useState(false);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(toDateKeyFromDate(new Date()));
 
   // Steps state
   const [stepsCount, setStepsCount] = useState<number>(10000);
@@ -51,7 +52,9 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
     e.preventDefault();
     setLoading(true);
     try {
-      const loggedAt = new Date(date).toISOString();
+      // Local midday, not UTC midnight: a bare 'YYYY-MM-DD' parsed as UTC reads
+      // back as the previous day for any user west of UTC (see shared/dateKey.ts).
+      const loggedAt = localDateToISO(date);
       if (activeTab === 'steps') {
         await onSave('steps', {
           step_count: stepsCount,

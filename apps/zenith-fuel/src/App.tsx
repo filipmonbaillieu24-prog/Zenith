@@ -909,7 +909,12 @@ function App() {
         const prod = data.product;
         setIngName(prod.product_name || '');
         
-        const kcal = prod.nutriments?.['energy-kcal_100g'] || prod.nutriments?.energy_100g || '';
+        // Open Food Facts' energy-kcal_100g is already kcal, but its energy_100g
+        // fallback is in kJ, not kcal — using it directly (as this used to) inflated
+        // the calorie count by ~4.18x for any product missing the kcal field.
+        const kcalDirect = prod.nutriments?.['energy-kcal_100g'];
+        const kjFallback = prod.nutriments?.energy_100g;
+        const kcal = kcalDirect != null ? kcalDirect : (kjFallback != null ? Math.round(kjFallback / 4.184) : '');
         setIngKcal(kcal.toString());
         setIngCarbs((prod.nutriments?.carbohydrates_100g || 0).toString());
         setIngProtein((prod.nutriments?.proteins_100g || 0).toString());
@@ -1634,7 +1639,8 @@ function App() {
   const todaySleepDuration = todaySleep ? Number(todaySleep.duration_minutes) / 60 : null;
 
   // Bug fix: deep/REM sleep ratios are real data from vigor_sleep (synced from the
-  // wearable via healthConnectSync.ts, which already persists deep_minutes/rem_minutes).
+  // wearable by Pulse's authenticated Health Connect ingest, whose Supabase trigger
+  // persists deep_minutes/rem_minutes - see shared/09_secure_health_connect_ingest.sql).
   // Previously these were hardcoded constants (0.25 / 0.18) fed into ZenithFusionNet
   // forever, even though the real per-day values were sitting in the same table.
   // Fall back to the population-average defaults only when today's log lacks the fields
