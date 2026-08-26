@@ -83,11 +83,35 @@ export function App() {
         setRuns(readCache<RunActivity>(runsCacheKey(uid)));
         setShoes(readCache<RunningShoe>(shoesCacheKey(uid)));
 
-        const { data, error } = await supabase
-          .from('stride_activities')
-          .select('*')
-          .eq('user_id', uid)
-          .order('date', { ascending: false });
+        // Shoes and runs are independent queries; fetch them together rather
+        // than serially.
+        const [{ data, error }, { data: shoeRows, error: shoeError }] = await Promise.all([
+          supabase
+            .from('stride_activities')
+            .select('*')
+            .eq('user_id', uid)
+            .order('date', { ascending: false }),
+          supabase
+            .from('stride_shoes')
+            .select('*')
+            .eq('user_id', uid)
+            .order('created_at', { ascending: true }),
+        ]);
+
+        if (shoeError) {
+          console.error('Failed to load stride_shoes:', shoeError);
+        } else {
+          setShoes((shoeRows ?? []).map(row => ({
+            id: row.id,
+            brand: row.brand,
+            model: row.model,
+            nickname: row.nickname ?? undefined,
+            totalDistanceKm: Number(row.total_distance_km) || 0,
+            maxDistanceKm: Number(row.max_distance_km) || 700,
+            retired: !!row.retired,
+            purchaseDate: row.purchase_date ?? undefined,
+          })));
+        }
 
         if (error) {
           console.error('Failed to load stride_activities:', error);
@@ -155,7 +179,12 @@ export function App() {
 
     // Update shoe mileage if linked
     if (newRun.shoeId) {
-      setShoes(prev => prev.map(s => s.id === newRun.shoeId ? { ...s, totalDistanceKm: parseFloat((s.totalDistanceKm + newRun.distanceKm).toFixed(1)) } : s));
+      setShoes(prev => prev.map(s => {
+        if (s.id !== newRun.shoeId) return s;
+        const updated = parseFloat((s.totalDistanceKm + newRun.distanceKm).toFixed(1));
+        void persistShoeMileage(s.id, updated);
+        return { ...s, totalDistanceKm: updated };
+      }));
     }
 
     // Persist to Supabase stride_activities
@@ -216,9 +245,12 @@ export function App() {
     // Give back the mileage this run contributed, so deleting a run doesn't
     // leave a shoe permanently over-counted.
     if (target.shoeId) {
-      setShoes(prev => prev.map(sh => sh.id === target.shoeId
-        ? { ...sh, totalDistanceKm: parseFloat(Math.max(0, sh.totalDistanceKm - target.distanceKm).toFixed(1)) }
-        : sh));
+      setShoes(prev => prev.map(sh => {
+        if (sh.id !== target.shoeId) return sh;
+        const updated = parseFloat(Math.max(0, sh.totalDistanceKm - target.distanceKm).toFixed(1));
+        void persistShoeMileage(sh.id, updated);
+        return { ...sh, totalDistanceKm: updated };
+      }));
     }
 
     try {
@@ -241,12 +273,71 @@ export function App() {
     }
   };
 
-  const handleAddShoe = (newShoe: RunningShoe) => {
+  const handleAddShoe = async (newShoe: RunningShoe) => {
     setShoes(prev => [...prev, newShoe]);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) return;
+      const { data: inserted, error } = await supabase.from('stride_shoes').insert({
+        user_id: uid,
+        brand: newShoe.brand,
+        model: newShoe.model,
+        nickname: newShoe.nickname ?? null,
+        total_distance_km: newShoe.totalDistanceKm,
+        max_distance_km: newShoe.maxDistanceKm,
+        retired: newShoe.retired,
+        purchase_date: newShoe.purchaseDate ?? null,
+      }).select('id').single();
+      if (error) {
+        console.error('Failed to save shoe:', error);
+        return;
+      }
+      // Adopt the database id, so later mileage/retire updates address the row.
+      if (inserted?.id) {
+        setShoes(prev => prev.map(sh => (sh.id === newShoe.id ? { ...sh, id: inserted.id } : sh)));
+      }
+    } catch (e) {
+      console.error('Failed to save shoe:', e);
+    }
   };
 
-  const handleToggleRetireShoe = (shoeId: string) => {
-    setShoes(prev => prev.map(s => s.id === shoeId ? { ...s, retired: !s.retired } : s));
+  const handleToggleRetireShoe = async (shoeId: string) => {
+    const target = shoes.find(sh => sh.id === shoeId);
+    if (!target) return;
+    const nextRetired = !target.retired;
+    setShoes(prev => prev.map(sh => sh.id === shoeId ? { ...sh, retired: nextRetired } : sh));
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) return;
+      const { error } = await supabase
+        .from('stride_shoes')
+        .update({ retired: nextRetired })
+        .eq('id', shoeId)
+        .eq('user_id', uid);
+      if (error) console.error('Failed to update shoe:', error);
+    } catch (e) {
+      console.error('Failed to update shoe:', e);
+    }
+  };
+
+  // Mileage is derived from runs, so it changes on save and delete rather than
+  // through its own UI action - persisted here so the total survives a reload.
+  const persistShoeMileage = async (shoeId: string, totalDistanceKm: number) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) return;
+      const { error } = await supabase
+        .from('stride_shoes')
+        .update({ total_distance_km: totalDistanceKm })
+        .eq('id', shoeId)
+        .eq('user_id', uid);
+      if (error) console.error('Failed to update shoe mileage:', error);
+    } catch (e) {
+      console.error('Failed to update shoe mileage:', e);
+    }
   };
 
   const filteredRuns = useMemo(() => {
