@@ -8,82 +8,8 @@ import { supabase } from './utils/supabaseClient';
 import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-
-interface Ingredient {
-  id: string;
-  name: string;
-  barcode?: string;
-  calories_per_100g: number;
-  carbs_per_100g: number;
-  protein_per_100g: number;
-  fat_per_100g: number;
-  portion_name?: string;
-  portion_weight_grams?: number;
-  portions_per_package?: number;
-  caffeine_mg_per_100g?: number;
-}
-
-interface Recipe {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  serving_size: string;
-  calories: number;
-  carbs: number;
-  protein: number;
-  fat: number;
-  caffeine_mg?: number;
-  ingredients: any[];
-  instructions: string[];
-}
-
-interface FoodLog {
-  id: string;
-  logged_at: string;
-  meal_type: string;
-  custom_name?: string;
-  recipe_id?: string;
-  quantity: number;
-  calories: number;
-  carbs: number;
-  protein: number;
-  fat: number;
-  caffeine_mg?: number;
-}
-
-interface DayState {
-  date: string;
-  is_complete: boolean;
-}
-
-// Date helper functions
-function getMonday(d: Date): Date {
-  const date = new Date(d);
-  const day = date.getDay();
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(date.setDate(diff));
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-function addDays(d: Date, days: number): Date {
-  const result = new Date(d);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-function formatDateString(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function toYYYYMMDD(dateTimeStr: string | undefined | null): string {
-  if (!dateTimeStr) return '';
-  return dateTimeStr.substring(0, 10);
-}
+import type { Ingredient, Recipe, FoodLog, DayState } from './types';
+import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates';
 
 function App() {
   // Auth & Session

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import type { Exercise, TemplateSet, TemplateExercise, Template, WorkoutExerciseLog, Workout, PMCPoint } from './types';
 import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import {
@@ -36,78 +37,6 @@ import {
 } from 'recharts';
 
 // Type Definitions
-interface Exercise {
-  id: string;
-  user_id: string;
-  name: string;
-  category: 'Quads' | 'Hamstrings' | 'Calves' | 'Glutes' | 'Chest' | 'Lats' | 'Upper Back' | 'Lower Back' | 'Shoulders' | 'Biceps' | 'Triceps' | 'Abs' | 'Obliques' | 'Traps' | 'Forearms';
-  primary_muscle?: string;
-  secondary_muscles?: string[];
-  notes?: string;
-  increment_weight: number;
-  increment_per_side: boolean;
-  min_weight?: number;
-  max_weight?: number;
-  is_bodyweight: boolean;
-  default_rir: number;
-  weight_unit: 'kg' | 'lbs';
-  deleted: boolean;
-}
-
-interface TemplateSet {
-  type: 'warmup' | 'working';
-  min_reps: number;
-  max_reps: number;
-  target_rir: number;
-}
-
-interface TemplateExercise {
-  exercise_id: string;
-  sets: TemplateSet[];
-}
-
-interface Template {
-  id: string;
-  user_id: string;
-  name: string;
-  exercises: TemplateExercise[];
-  created_at: string;
-}
-
-interface WorkoutLoggedSet {
-  type: 'warmup' | 'working';
-  weight: number;
-  reps: number;
-  rir: number;
-  rest_seconds?: number;
-}
-
-interface WorkoutExerciseLog {
-  exercise_id: string;
-  sets: WorkoutLoggedSet[];
-}
-
-interface Workout {
-  id: string;
-  user_id: string;
-  template_id?: string;
-  name: string;
-  started_at: string;
-  completed_at: string;
-  volume: number;
-  cardio_stress_factor: number;
-  sets: WorkoutExerciseLog[];
-  created_at: string;
-}
-
-interface PMCPoint {
-  date: number;
-  ctl: number;
-  atl: number;
-  tsb: number;
-  sleepDeficit?: number;
-}
-
 export default function App() {
   // Session & Authentication
   const [session, setSession] = useState<any>(null);

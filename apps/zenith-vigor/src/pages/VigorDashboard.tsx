@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { SleepStageDot } from '../components/SleepStageDot';
+import { getLocalDateKey } from '../utils/dates';
 import { supabase } from '../utils/supabaseClient';
 import { ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, zenithConfirm } from '@zenith/shared';
 import { 
@@ -38,7 +40,7 @@ import {
 import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
 import { ProPaywallModal } from '../components/ProPaywallModal';
-import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore, toDateKeyFromDate, localDateToISO } from '@zenith/shared';
+import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore, localDateToISO } from '@zenith/shared';
 
 interface VigorDashboardProps {
   session: any;
@@ -46,27 +48,6 @@ interface VigorDashboardProps {
 
 // Small colored "legend dot" used in place of emoji circles (🔵/🟡/etc.) next to
 // sleep-stage labels — renders consistently across platforms, unlike emoji glyphs.
-const SleepStageDot: React.FC<{ color: string }> = ({ color }) => (
-  <span
-    style={{
-      display: 'inline-block',
-      width: 8,
-      height: 8,
-      borderRadius: '50%',
-      background: color,
-      marginRight: 6,
-      flexShrink: 0
-    }}
-  />
-);
-
-const getLocalDateKey = (dateInput: string | Date | null | undefined): string => {
-  if (!dateInput) return '';
-  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-  if (isNaN(d.getTime())) return '';
-  return toDateKeyFromDate(d);
-};
-
 export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   const user = session?.user;
 
