@@ -24,7 +24,13 @@ export class ZenithFusionNet {
       12, // Inputs: [Intake, GymVol, CardioTSS, SleepQuality, SleepDuration, DeepSleepRatio, REMRatio, HRV_rMSSD, DeltaRHR, Caffeine, Creatine, TrendWeight]
       12, // Hidden size
       3,  // Outputs: [TDEE_Scaled, Recovery_Scaled, Capacity_Scaled]
-      'zenith_fusion_net_weights',
+      // Version bumped from 'zenith_fusion_net_weights'. Every set of weights
+      // stored under the old key was trained through the scale mismatch fixed
+      // in buildFeatureVector() below - the live ones had reached -270 against
+      // priors of 0.3..0.8 - so they are not salvageable by further training
+      // and must not be loaded. A new key abandons them in both Supabase and
+      // localStorage and starts from the physiological defaults.
+      'zenith_fusion_net_weights_v2',
       this.generateDefaultWeights
     );
   }
@@ -97,21 +103,11 @@ export class ZenithFusionNet {
     creatineSat: number,
     trendWeight: number
   ): FusionPrediction {
-    // Standardize input vector
-    const x = [
-      this.intakeScaler.scale(intakeCalories),
-      this.gymVolScaler.scale(gymVolume),
-      this.tssScaler.scale(cardioTSS),
-      this.sleepQualityScaler.scale(sleepQuality),
-      this.sleepDurationScaler.scale(sleepDurationHours),
-      Math.min(1.0, Math.max(0.0, deepSleepRatio)),
-      Math.min(1.0, Math.max(0.0, remSleepRatio)),
-      this.hrvScaler.scale(hrvRmssd),
-      Math.min(1.0, Math.max(-1.0, deltaRhr / 20.0)),
-      Math.min(1.5, caffeineMg / 300.0),
-      Math.min(1.0, Math.max(0.0, creatineSat)),
-      Math.min(1.5, trendWeight / 100.0)
-    ];
+    const x = this.buildFeatureVector(
+      intakeCalories, gymVolume, cardioTSS, sleepQuality, sleepDurationHours,
+      deepSleepRatio, remSleepRatio, hrvRmssd, deltaRhr, caffeineMg,
+      creatineSat, trendWeight
+    );
 
     const y = this.mlp.predict(x);
 
@@ -133,16 +129,78 @@ export class ZenithFusionNet {
   }
 
   /**
+   * The ONE place raw daily metrics become a model input vector.
+   *
+   * Both predict() and train() go through this. They previously did not:
+   * predict() scaled every input to roughly 0..1, while train() passed the raw
+   * numbers straight to backprop - intake in the thousands, gym volume in the
+   * thousands, weight in the seventies. The network was therefore trained on
+   * vectors around 3000x larger in magnitude than the ones it was later asked
+   * to predict from.
+   *
+   * The consequence was not subtle. Those huge inputs produce huge gradients,
+   * which drove the stored weights to values like -270 (this net's own priors
+   * are 0.3..0.8), and at serve time the tiny 0..1 inputs then saturated the
+   * output - so the "SOTA ML" TDEE read ~4996 kcal, essentially the ceiling of
+   * its 1000..5000 output range, next to a real estimate near 1900.
+   *
+   * Keep this function as the only construction site for the vector; a second
+   * copy is how the train/serve skew came back last time.
+   */
+  public buildFeatureVector(
+    intakeCalories: number,
+    gymVolume: number,
+    cardioTSS: number,
+    sleepQuality: number,
+    sleepDurationHours: number,
+    deepSleepRatio: number,
+    remSleepRatio: number,
+    hrvRmssd: number,
+    deltaRhr: number,
+    caffeineMg: number,
+    creatineSat: number,
+    trendWeight: number
+  ): number[] {
+    return [
+      this.intakeScaler.scale(intakeCalories),
+      this.gymVolScaler.scale(gymVolume),
+      this.tssScaler.scale(cardioTSS),
+      this.sleepQualityScaler.scale(sleepQuality),
+      this.sleepDurationScaler.scale(sleepDurationHours),
+      Math.min(1.0, Math.max(0.0, deepSleepRatio)),
+      Math.min(1.0, Math.max(0.0, remSleepRatio)),
+      this.hrvScaler.scale(hrvRmssd),
+      Math.min(1.0, Math.max(-1.0, deltaRhr / 20.0)),
+      Math.min(1.5, caffeineMg / 300.0),
+      Math.min(1.0, Math.max(0.0, creatineSat)),
+      Math.min(1.5, trendWeight / 100.0)
+    ];
+  }
+
+  /**
    * Trains the model using confirmed real-world athletic feedback.
+   *
+   * `rawInputs` are the same twelve unscaled daily metrics predict() takes, in
+   * the same order - they are scaled here through buildFeatureVector() so the
+   * training distribution matches the serving one.
    */
   public async train(
     supabase: any,
     userId: string,
-    inputs: number[],
+    rawInputs: number[],
     actualTdee: number,
     actualRecovery: number,
     actualCapacity: number
   ): Promise<void> {
+    if (rawInputs.length !== 12) {
+      throw new Error(`ZenithFusionNet.train expects 12 raw inputs, received ${rawInputs.length}`);
+    }
+
+    const x = this.buildFeatureVector(
+      rawInputs[0], rawInputs[1], rawInputs[2], rawInputs[3], rawInputs[4], rawInputs[5],
+      rawInputs[6], rawInputs[7], rawInputs[8], rawInputs[9], rawInputs[10], rawInputs[11]
+    );
+
     // Map targets to 0..1 scale
     const targets = [
       Math.min(1.0, Math.max(0.0, (actualTdee - 1000) / 4000)),
@@ -150,6 +208,57 @@ export class ZenithFusionNet {
       Math.min(1.0, Math.max(0.0, actualCapacity / 100))
     ];
 
-    await this.mlp.train(supabase, userId, inputs, targets, 0.15);
+    await this.mlp.train(supabase, userId, x, targets, 0.15);
+  }
+
+  /**
+   * Rebuilds the model from a user's full logged history in one pass.
+   *
+   * The online loop in train() sees one day at a time, only on days the
+   * dashboard is actually opened, so it converges slowly and unevenly. After
+   * the scale mismatch was fixed the stored weights had to be discarded
+   * outright (see the model key above), which left the net back at its
+   * physiological defaults - this replays real history to move it from those
+   * priors to something fitted to the athlete.
+   *
+   * Each sample carries the same twelve raw daily metrics predict() takes, so
+   * everything goes through buildFeatureVector() and the training distribution
+   * matches the serving one by construction.
+   */
+  public async retrainFromHistory(
+    supabase: any,
+    userId: string,
+    days: {
+      rawInputs: number[];
+      actualTdee: number;
+      actualRecovery: number;
+      actualCapacity: number;
+    }[],
+    epochs: number = 25
+  ): Promise<{ epochs: number; samples: number; finalMse: number }> {
+    const samples = days
+      .filter(d => d.rawInputs.length === 12 && Number.isFinite(d.actualTdee) && d.actualTdee > 0)
+      .map(d => ({
+        x: this.buildFeatureVector(
+          d.rawInputs[0], d.rawInputs[1], d.rawInputs[2], d.rawInputs[3], d.rawInputs[4],
+          d.rawInputs[5], d.rawInputs[6], d.rawInputs[7], d.rawInputs[8], d.rawInputs[9],
+          d.rawInputs[10], d.rawInputs[11]
+        ),
+        targets: [
+          Math.min(1.0, Math.max(0.0, (d.actualTdee - 1000) / 4000)),
+          Math.min(1.0, Math.max(0.0, d.actualRecovery / 100)),
+          Math.min(1.0, Math.max(0.0, d.actualCapacity / 100))
+        ]
+      }));
+
+    return this.mlp.trainBatch(supabase, userId, samples, epochs, 0.15);
+  }
+
+  /** Weight-health snapshot, for verifying a retrain landed somewhere sane. */
+  public getDiagnostics(): { maxAbsWeight: number; confidence: number } {
+    return {
+      maxAbsWeight: this.mlp.getMaxAbsWeight(),
+      confidence: this.mlp.getConfidenceScore()
+    };
   }
 }

@@ -292,6 +292,68 @@ export class SimpleMLP {
   }
 
   /**
+   * Replays a whole dataset for several epochs, then saves ONCE.
+   *
+   * train() persists to Supabase on every single call, which is right for the
+   * online one-sample-per-day loop but pathological for a backfill: replaying a
+   * month of history for 20 epochs would be several hundred round-trips and
+   * several hundred rows of write amplification for one final set of weights.
+   *
+   * Samples are shuffled deterministically each epoch. Presenting a
+   * chronological series to momentum SGD in the same order every pass lets the
+   * tail of the series dominate the final weights; a fixed-seed shuffle keeps
+   * the run reproducible while removing that ordering bias.
+   *
+   * Returns the mean squared error of the final epoch so callers can report
+   * whether the fit actually improved.
+   */
+  async trainBatch(
+    supabase: any,
+    userId: string,
+    samples: { x: number[]; targets: number[] }[],
+    epochs: number = 20,
+    lr: number = 0.15
+  ): Promise<{ epochs: number; samples: number; finalMse: number }> {
+    if (samples.length === 0) {
+      return { epochs: 0, samples: 0, finalMse: 0 };
+    }
+
+    let seed = 1337;
+    const nextRandom = () => {
+      // Mulberry32 - deterministic, so a retrain on the same history is repeatable.
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    let finalMse = 0;
+    for (let epoch = 0; epoch < epochs; epoch++) {
+      const order = samples.map((_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(nextRandom() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+
+      let epochSse = 0;
+      for (const idx of order) {
+        const { x, targets } = samples[idx];
+        this._backprop(x, targets, lr);
+        const y = this.predict(x);
+        for (let k = 0; k < targets.length; k++) {
+          const err = y[k] - targets[k];
+          epochSse += err * err;
+        }
+      }
+      finalMse = epochSse / (samples.length * samples[0].targets.length);
+    }
+
+    this._cacheToLocalStorage();
+    await this.saveToSupabase(supabase, userId);
+    return { epochs, samples: samples.length, finalMse };
+  }
+
+  /**
    * Train locally, then sync to Supabase in background (fire-and-forget).
    * Returns predictions immediately without waiting for the cloud save.
    */
@@ -302,6 +364,22 @@ export class SimpleMLP {
     return this.predict(x);
   }
 
+  /**
+   * Largest absolute weight in the network.
+   *
+   * A quick health check: these nets take features normalised to roughly 0..1,
+   * so a healthy magnitude is a few units at most. A large value means
+   * something upstream is feeding the wrong scale.
+   */
+  getMaxAbsWeight(): number {
+    let max = 0;
+    for (const row of this.W1) for (const v of row) max = Math.max(max, Math.abs(v));
+    for (const row of this.W2) for (const v of row) max = Math.max(max, Math.abs(v));
+    for (const v of this.B1) max = Math.max(max, Math.abs(v));
+    for (const v of this.B2) max = Math.max(max, Math.abs(v));
+    return max;
+  }
+
   /** Returns estimated AI Model Confidence score (0..100%) based on MSE loss history */
   getConfidenceScore(): number {
     if (this.lossHistory.length === 0) return 85; // baseline pre-trained default confidence
@@ -310,6 +388,30 @@ export class SimpleMLP {
     // Map MSE 0.0 -> 98%, MSE 0.25 -> 75%, capped at 60..99%
     const score = Math.round((1 - Math.min(0.4, avgMse)) * 100);
     return Math.max(60, Math.min(99, score));
+  }
+
+  /**
+   * Hard bound on any single weight or bias.
+   *
+   * These nets are trained on features normalised to roughly 0..1, so healthy
+   * weights sit within a few units of zero. Anything far outside that means
+   * something upstream is feeding the wrong scale, and unbounded momentum SGD
+   * turns that into runaway weights: ZenithFusionNet was found with weights at
+   * -270 after being trained on raw daily metrics (intake in the thousands)
+   * while being served normalised ones, which pinned its output to the top of
+   * its range.
+   *
+   * Clamping cannot make a mis-scaled model correct, but it stops one bad
+   * caller from silently destroying a model that other features depend on,
+   * and keeps the damage recoverable.
+   */
+  private static readonly WEIGHT_CLAMP = 12;
+
+  private static clampWeight(v: number): number {
+    if (!Number.isFinite(v)) return 0;
+    if (v > SimpleMLP.WEIGHT_CLAMP) return SimpleMLP.WEIGHT_CLAMP;
+    if (v < -SimpleMLP.WEIGHT_CLAMP) return -SimpleMLP.WEIGHT_CLAMP;
+    return v;
   }
 
   /** Core backpropagation with Momentum SGD & MSE Loss Tracking */
@@ -361,11 +463,11 @@ export class SimpleMLP {
     const alphaEma = 0.95;
     for (let k = 0; k < this.B2.length; k++) {
       this.vB2[k] = gamma * this.vB2[k] + lr * delta2[k];
-      this.B2[k] -= this.vB2[k];
+      this.B2[k] = SimpleMLP.clampWeight(this.B2[k] - this.vB2[k]);
       this.B2_EMA[k] = alphaEma * this.B2_EMA[k] + (1 - alphaEma) * this.B2[k];
       for (let j = 0; j < h.length; j++) {
         this.vW2[j][k] = gamma * this.vW2[j][k] + lr * delta2[k] * h[j];
-        this.W2[j][k] -= this.vW2[j][k];
+        this.W2[j][k] = SimpleMLP.clampWeight(this.W2[j][k] - this.vW2[j][k]);
         this.W2_EMA[j][k] = alphaEma * this.W2_EMA[j][k] + (1 - alphaEma) * this.W2[j][k];
       }
     }
@@ -373,11 +475,11 @@ export class SimpleMLP {
     // Update weights W1 & B1 with Momentum SGD & Polyak EMA
     for (let j = 0; j < this.B1.length; j++) {
       this.vB1[j] = gamma * this.vB1[j] + lr * delta1[j];
-      this.B1[j] -= this.vB1[j];
+      this.B1[j] = SimpleMLP.clampWeight(this.B1[j] - this.vB1[j]);
       this.B1_EMA[j] = alphaEma * this.B1_EMA[j] + (1 - alphaEma) * this.B1[j];
       for (let i = 0; i < x.length; i++) {
         this.vW1[i][j] = gamma * this.vW1[i][j] + lr * delta1[j] * x[i];
-        this.W1[i][j] -= this.vW1[i][j];
+        this.W1[i][j] = SimpleMLP.clampWeight(this.W1[i][j] - this.vW1[i][j]);
         this.W1_EMA[i][j] = alphaEma * this.W1_EMA[i][j] + (1 - alphaEma) * this.W1[i][j];
       }
     }

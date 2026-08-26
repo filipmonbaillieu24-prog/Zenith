@@ -10,6 +10,8 @@ import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogD
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
 import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates';
+import { toDateKey, toDateKeyFromDate } from '@zenith/shared';
+import { buildFusionTrainingSamples } from './utils/fusionRetrain';
 
 function App() {
   // Auth & Session
@@ -459,7 +461,7 @@ function App() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = toDateKeyFromDate(d);
       logsMap[dateStr] = {
         date: dateStr,
         weight: null,
@@ -523,7 +525,7 @@ function App() {
         { data: gymHist },
       ] = await Promise.all([
         supabase.from('fuel_logs').select('logged_at, calories, caffeine_mg, protein, carbs, fat').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()),
-        supabase.from('fuel_days').select('date, is_complete').eq('user_id', userId).gte('date', startOf30Days.toISOString().split('T')[0]),
+        supabase.from('fuel_days').select('date, is_complete').eq('user_id', userId).gte('date', toDateKeyFromDate(startOf30Days)),
         supabase.from('rides').select('date, metadata').eq('user_id', userId).gte('date', startOf30DaysMs),
         supabase.from('kratos_workouts').select('volume, completed_at').eq('user_id', userId).gte('completed_at', startOf30Days.toISOString()),
       ]);
@@ -548,7 +550,7 @@ function App() {
       });
 
       ridesHist?.forEach(r => {
-        const dStr = new Date(Number(r.date)).toISOString().split('T')[0];
+        const dStr = toDateKey(Number(r.date));
         if (logsMap[dStr]) {
           let witha = r.metadata;
           if (typeof witha === 'string') {
@@ -581,7 +583,7 @@ function App() {
       // Bug #7 fix: only override today's slot with live state. For historical dates the
       // DB data is authoritative — overriding it with the currently-viewed date's values
       // would corrupt that day's historical regression row.
-      const todayDateStrForOverride = new Date().toISOString().split('T')[0];
+      const todayDateStrForOverride = toDateKeyFromDate(new Date());
       if (selectedDateStr === todayDateStrForOverride && logsMap[selectedDateStr]) {
         logsMap[selectedDateStr].calories = selectedDateCaloriesIntake;
         logsMap[selectedDateStr].protein = selectedDateProtein;
@@ -653,7 +655,7 @@ function App() {
   // Save ZANE coefficients to database
   const saveLearnedState = async (offset: number, qCoeff: number, dCoeff: number, gCoeff: number, cCoeff: number, wCoeff: number) => {
     try {
-      const todayDateStr = new Date().toISOString().split('T')[0];
+      const todayDateStr = toDateKeyFromDate(new Date());
       
       // Save to ml_weights (Fase 3 persistent backup)
       await saveZaneCoefficients(supabase, userId, offset, qCoeff, dCoeff, gCoeff, cCoeff, wCoeff);
@@ -1423,7 +1425,7 @@ function App() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
-      dates30Days.push(d.toISOString().split('T')[0]);
+      dates30Days.push(toDateKeyFromDate(d));
     }
 
     const intakeMap: { [date: string]: number } = {};
@@ -1464,7 +1466,7 @@ function App() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
-      dates30Days.push(d.toISOString().split('T')[0]);
+      dates30Days.push(toDateKeyFromDate(d));
     }
 
     const intakeMap: { [date: string]: number } = {};
@@ -1510,7 +1512,10 @@ function App() {
     return {
       chartData,
       activeDateCaffeine,
-      metabolicBoost
+      metabolicBoost,
+      // Per-day totals, reused by the FusionNet retrain so it trains on the
+      // same caffeine figures the live prediction path sees.
+      byDate: intakeMap
     };
   }, [supplementsLogs, thirtyDayFoodLogs, sleepLogs, selectedDateStr, zaneResult.caffeineCoeff]);
 
@@ -1635,6 +1640,83 @@ function App() {
   const adaptationFactor = zaneResult.adaptationFactor ?? 1.0;
   const adaptationPenalty = Math.round(preAdaptationTdee * (1 - adaptationFactor));
   const totalTdee = preAdaptationTdee - adaptationPenalty;
+
+  // ── FusionNet retrain inputs ────────────────────────────────────────────
+  // dailyCaloriesMap covers the visible week only; the retrain wants the full
+  // 30-day window, so it is rebuilt here from thirtyDayFoodLogs.
+  const thirtyDayCaloriesMap = useMemo(() => {
+    const map: { [date: string]: number } = {};
+    thirtyDayFoodLogs.forEach(log => {
+      const dStr = toYYYYMMDD(log.logged_at);
+      if (!dStr) return;
+      map[dStr] = (map[dStr] || 0) + Number(log.calories || 0);
+    });
+    return map;
+  }, [thirtyDayFoodLogs]);
+
+  const creatineByDate = useMemo(() => {
+    const map: { [date: string]: boolean } = {};
+    supplementsLogs.forEach(sup => {
+      if (sup.supplement_type !== 'creatine') return;
+      const dStr = toYYYYMMDD(sup.logged_at);
+      if (dStr && Number(sup.amount) > 0) map[dStr] = true;
+    });
+    return map;
+  }, [supplementsLogs]);
+
+  const [retrainState, setRetrainState] = useState<{
+    running: boolean;
+    message: string | null;
+    error: boolean;
+  }>({ running: false, message: null, error: false });
+
+  const handleRetrainFusion = async () => {
+    if (!userId || retrainState.running) return;
+    setRetrainState({ running: true, message: 'Reading your logged history…', error: false });
+    try {
+      const samples = buildFusionTrainingSamples({
+        dailyCaloriesMap: thirtyDayCaloriesMap,
+        dailyCompletionMap,
+        gymVolumeMap,
+        activeCaloriesMap,
+        caffeineMap: caffeineStats.byDate || {},
+        creatineMap: creatineByDate,
+        trendWeightMap: zaneResult.trendWeightMap || {},
+        sleepLogs,
+        energyPerKgTissue: zaneResult.energyPerKgTissue || 7700,
+      });
+
+      if (samples.length < 5) {
+        setRetrainState({
+          running: false,
+          error: true,
+          message: `Only ${samples.length} usable day${samples.length === 1 ? '' : 's'} of history. `
+            + 'A retrain needs at least 5 fully-logged days that also have scale weight around them.',
+        });
+        return;
+      }
+
+      const net = ZenithFusionNet.getInstance();
+      await net.init(supabase, userId);
+      const before = net.getDiagnostics();
+      const result = await net.retrainFromHistory(supabase, userId, samples, 25);
+      const after = net.getDiagnostics();
+
+      setRetrainState({
+        running: false,
+        error: false,
+        message: `Retrained on ${result.samples} logged days × ${result.epochs} passes. `
+          + `Fit error ${result.finalMse.toFixed(4)}, weight scale ${before.maxAbsWeight.toFixed(2)} → ${after.maxAbsWeight.toFixed(2)}.`,
+      });
+    } catch (err) {
+      console.error('FusionNet retrain failed:', err);
+      setRetrainState({
+        running: false,
+        error: true,
+        message: 'Retrain failed. Check your connection and try again.',
+      });
+    }
+  };
 
   // SOTA ML ZenithFusionNet prediction
   const activeDateCreatine = supplementsLogs
@@ -1778,7 +1860,7 @@ function App() {
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = toDateKeyFromDate(d);
       baseLogsMap[dateStr] = {
         date: dateStr,
         weight: null,
@@ -2335,6 +2417,45 @@ function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#38bdf8', paddingTop: '6px', borderTop: '1px dashed var(--border-color)' }}>
                 <span>ZenithFusionNet prediction (SOTA ML):</span>
                 <span style={{ fontWeight: 800 }}>{fusionPredict.tdeeKcal} kcal</span>
+              </div>
+
+              <div style={{ paddingTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={handleRetrainFusion}
+                  disabled={retrainState.running}
+                  style={{
+                    width: '100%',
+                    background: retrainState.running ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.16)',
+                    border: '1px solid rgba(56,189,248,0.35)',
+                    color: '#38bdf8',
+                    padding: '7px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    borderRadius: '8px',
+                    cursor: retrainState.running ? 'default' : 'pointer',
+                    fontFamily: 'inherit'
+                  }}
+                >
+                  {retrainState.running ? 'Retraining…' : 'Retrain on my logged history'}
+                </button>
+                <p style={{ margin: '6px 0 0', fontSize: '10px', lineHeight: 1.45, color: 'var(--text-muted)' }}>
+                  Replays every fully-logged day against your measured weight trend, so the
+                  prediction is fitted to you rather than to the formula beside it.
+                </p>
+                {retrainState.message && (
+                  <p
+                    role="status"
+                    style={{
+                      margin: '6px 0 0',
+                      fontSize: '10px',
+                      lineHeight: 1.45,
+                      color: retrainState.error ? '#f87171' : '#4ade80'
+                    }}
+                  >
+                    {retrainState.message}
+                  </p>
+                )}
               </div>
             </div>
           </div>
