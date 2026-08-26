@@ -52,7 +52,7 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
             <h3>Running Shoes & Wear Tracker</h3>
             <p className="subtitle">Track distance logged per pair of shoes</p>
           </div>
-          <button className="stride-close-btn" onClick={onClose}>
+          <button className="stride-close-btn" aria-label="Close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>

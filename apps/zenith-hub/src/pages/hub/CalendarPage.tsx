@@ -556,7 +556,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                 {selectedItem.category === 'ride' ? <Bike size={16} /> : <Dumbbell size={16} />}
                 {selectedItem.category === 'ride' ? 'Completed Cycling Ride' : 'Completed Kratos Workout'}
               </h3>
-              <button className="wd-modal-close" onClick={() => setSelectedItem(null)}>✕</button>
+              <button className="wd-modal-close" aria-label="Close" onClick={() => setSelectedItem(null)}>✕</button>
             </div>
 
             <div className="wd-modal-body">
@@ -683,7 +683,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           <div className="wd-modal-card" onClick={e => e.stopPropagation()}>
             <div className="wd-modal-header">
               <h3>{editingWorkout ? 'Edit Workout' : 'Plan New Workout'}</h3>
-              <button className="wd-modal-close" onClick={() => setIsModalOpen(false)}>✕</button>
+              <button className="wd-modal-close" aria-label="Close" onClick={() => setIsModalOpen(false)}>✕</button>
             </div>
 
             <div className="wd-modal-body">

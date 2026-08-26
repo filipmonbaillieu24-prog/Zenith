@@ -114,7 +114,7 @@ export const RunModal: React.FC<RunModalProps> = ({
             <h3>{initialRun ? 'Edit Session' : 'Log New Run Session'}</h3>
             <p className="subtitle">Manual entry & Treadmill settings</p>
           </div>
-          <button className="stride-close-btn" onClick={onClose}>
+          <button className="stride-close-btn" aria-label="Close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>

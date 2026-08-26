@@ -301,6 +301,7 @@ export const IntegrationsPage: React.FC = () => {
                   <button 
                     className="btn-connect" 
                     disabled 
+                    title="This integration isn't built yet. Health data currently syncs through the Zenith Pulse companion app."
                     style={{ 
                       opacity: 0.65, 
                       cursor: 'not-allowed', 
@@ -325,7 +326,7 @@ export const IntegrationsPage: React.FC = () => {
           <div className="modal-container" style={{ width: selectedService.id === 'health_connect' ? 640 : 480 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{selectedService.name} Integration</h3>
-              <button className="close-btn" onClick={() => setSelectedService(null)}>✕</button>
+              <button className="close-btn" aria-label="Close" onClick={() => setSelectedService(null)}>✕</button>
             </div>
             <div className="modal-body">
               {selectedService.id === 'health_connect' ? (

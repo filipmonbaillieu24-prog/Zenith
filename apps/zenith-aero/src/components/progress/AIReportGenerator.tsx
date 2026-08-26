@@ -10,6 +10,25 @@ interface AIReportGeneratorProps {
   setSelectedPeriod: (period: 30 | 90 | 365 | 'all') => void;
 }
 
+/**
+ * Renders **bold** spans as real React elements.
+ *
+ * This previously went through dangerouslySetInnerHTML with a hand-rolled
+ * regex and no sanitisation. The bullet strings are internally generated
+ * today, but they interpolate user-controlled values (ride titles, gear
+ * names) and can carry LLM output when an AI provider is configured - so any
+ * "<img onerror=...>" reaching them would execute, with an OpenAI key sitting
+ * in localStorage for it to steal. React escapes text nodes, so building
+ * elements instead removes the injection path entirely.
+ */
+function renderBoldMarkdown(text: string): React.ReactNode[] {
+  return text.split(/(\*\*.*?\*\*)/g).map((part, idx) =>
+    part.startsWith('**') && part.endsWith('**') && part.length > 4
+      ? <strong key={idx}>{part.slice(2, -2)}</strong>
+      : <React.Fragment key={idx}>{part}</React.Fragment>
+  );
+}
+
 export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
   rides,
   profile,
@@ -339,7 +358,7 @@ ${reportData.actionPlanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, ''))
                 {reportActiveTab === 'progress' && (
                   <ul className="progress-ai-bullet-list">
                     {reportData.progressBullets.map((b: string, i: number) => (
-                      <li key={i} dangerouslySetInnerHTML={{ __html: b.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                      <li key={i}>{renderBoldMarkdown(b)}</li>
                     ))}
                   </ul>
                 )}
@@ -347,7 +366,7 @@ ${reportData.actionPlanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, ''))
                 {reportActiveTab === 'focus' && (
                   <ul className="progress-ai-bullet-list">
                     {reportData.focusBullets.map((b: string, i: number) => (
-                      <li key={i} dangerouslySetInnerHTML={{ __html: b.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                      <li key={i}>{renderBoldMarkdown(b)}</li>
                     ))}
                   </ul>
                 )}
@@ -355,7 +374,7 @@ ${reportData.actionPlanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, ''))
                 {reportActiveTab === 'risk' && (
                   <ul className="progress-ai-bullet-list">
                     {reportData.riskBullets.map((b: string, i: number) => (
-                      <li key={i} dangerouslySetInnerHTML={{ __html: b.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                      <li key={i}>{renderBoldMarkdown(b)}</li>
                     ))}
                   </ul>
                 )}
@@ -363,7 +382,7 @@ ${reportData.actionPlanBullets.map((b: string) => '- ' + b.replace(/\*\*/g, ''))
                 {reportActiveTab === 'actionplan' && (
                   <ul className="progress-ai-bullet-list">
                     {reportData.actionPlanBullets.map((b: string, i: number) => (
-                      <li key={i} dangerouslySetInnerHTML={{ __html: b.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                      <li key={i}>{renderBoldMarkdown(b)}</li>
                     ))}
                   </ul>
                 )}

@@ -70,7 +70,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
             <h3>Import GPX / FIT / TCX File</h3>
             <p className="subtitle">Upload a GPS file from your sports watch or app</p>
           </div>
-          <button className="stride-close-btn" onClick={onClose}>
+          <button className="stride-close-btn" aria-label="Close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>

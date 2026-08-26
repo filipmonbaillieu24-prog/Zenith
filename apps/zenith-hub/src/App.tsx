@@ -508,9 +508,9 @@ function App() {
     const imageUrl = imageUrls.length > 0 ? imageUrls.join(',') : null;
 
     // 2. Resolve environment details
-    const envOs = navigator.platform || 'Onbekend';
-    const envBrowser = navigator.userAgent || 'Onbekend';
-    const envScreen = `${window.screen.width}x${window.screen.height} (Venster: ${window.innerWidth}x${window.innerHeight})`;
+    const envOs = navigator.platform || 'Unknown';
+    const envBrowser = navigator.userAgent || 'Unknown';
+    const envScreen = `${window.screen.width}x${window.screen.height} (Window: ${window.innerWidth}x${window.innerHeight})`;
 
     // 3. Resolve GitHub credentials. The access token is intentionally never read from
     // a bundled env var (import.meta.env.VITE_-prefixed values are inlined into the
@@ -976,7 +976,7 @@ ${logsMarkdown}
                     transition: 'all 0.2s'
                   }}
                 >
-                  Nu Updaten
+                  Update Now
                 </button>
               </div>
             )}
@@ -984,7 +984,7 @@ ${logsMarkdown}
             {(updateStatus === 'downloading' || updateStatus === 'installing') && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 8, color: 'rgba(255, 255, 255, 0.6)' }}>
-                  <span>{updateStatus === 'downloading' ? 'Downloaden...' : 'Installeren...'}</span>
+                  <span>{updateStatus === 'downloading' ? 'Downloading...' : 'Installing...'}</span>
                   <span>{downloadProgress}%</span>
                 </div>
                 <div style={{ width: '100%', height: '8px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', overflow: 'hidden', marginBottom: 12 }}>
@@ -1029,7 +1029,7 @@ ${logsMarkdown}
                     cursor: 'pointer'
                   }}
                 >
-                  Sluiten
+                  Close
                 </button>
               </div>
             )}

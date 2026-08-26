@@ -28,7 +28,7 @@ export const ImportIntegrationsModal: React.FC<ImportIntegrationsModalProps> = (
             <h3>Import Sessions from Polar & Strava</h3>
             <p className="subtitle">Direct account sync isn't available yet</p>
           </div>
-          <button className="stride-close-btn" onClick={onClose}>
+          <button className="stride-close-btn" aria-label="Close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>

@@ -471,7 +471,7 @@ export function App() {
                 <h3>{selectedRunDetail.title}</h3>
                 <p className="subtitle">{selectedRunDetail.date} • Source: {selectedRunDetail.source.toUpperCase()}</p>
               </div>
-              <button className="stride-close-btn" onClick={() => setSelectedRunDetail(null)}>✕</button>
+              <button className="stride-close-btn" aria-label="Close" onClick={() => setSelectedRunDetail(null)}>✕</button>
             </div>
 
             <div className="stride-modal-body">

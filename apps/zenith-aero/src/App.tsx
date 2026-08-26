@@ -162,7 +162,11 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session?.user) {
+      // Only on an actual sign-in. This fires for TOKEN_REFRESHED and
+      // USER_UPDATED too, and reloading the profile plus re-initialising the ML
+      // models on every token refresh meant two Supabase round-trips and a model
+      // rebuild roughly every hour for an idle tab.
+      if (session?.user && (_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION')) {
         loadAeroProfile(session.user.id, session.user.user_metadata);
         initializeModels(supabase, session.user.id).catch(console.error);
       }
@@ -534,7 +538,7 @@ function App() {
     }
     
     setUploadMsg({
-      text: fail === 0 ? `✓ ${ok} ride${ok !== 1 ? 'ten' : ''} imported` : `${ok} imported, ${fail} failed`,
+      text: fail === 0 ? `✓ ${ok} ride${ok !== 1 ? 's' : ''} imported` : `${ok} imported, ${fail} failed`,
       ok: fail === 0
     });
     setUploading(false);
@@ -555,7 +559,11 @@ function App() {
     setRecalculating(true);
     try {
       const allRides = await getAllRidesFull();
-      for (const ride of allRides) {
+      // Recompute everything first, then persist with bounded concurrency.
+      // This used to await one saveRide per ride in series, so a rider with a
+      // few hundred rides paid that many sequential round-trips; the cap keeps
+      // us from opening an unbounded number of requests at once instead.
+      const recomputedRides = allRides.map(ride => {
         const rideDate = ride.date ?? Date.now();
         const weightForRide = getWeightForDate(fitnessProfile, rideDate);
         const recomputed = computeRide(ride.id, ride.name, ride.points, {
@@ -566,7 +574,14 @@ function App() {
           age: profileAge,
           weight: weightForRide,
         });
-        await saveRide({ ...recomputed, points: ride.points });
+        return { ...recomputed, points: ride.points };
+      });
+
+      const SAVE_CONCURRENCY = 5;
+      for (let i = 0; i < recomputedRides.length; i += SAVE_CONCURRENCY) {
+        await Promise.all(
+          recomputedRides.slice(i, i + SAVE_CONCURRENCY).map(r => saveRide(r))
+        );
       }
       const freshSummaries = await getAllRideSummaries();
       setRides(freshSummaries);
