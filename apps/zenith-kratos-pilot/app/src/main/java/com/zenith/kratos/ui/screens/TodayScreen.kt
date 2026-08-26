@@ -307,11 +307,11 @@ fun TodayScreen(
                                                             if (allSuccess) {
                                                                 val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
                                                                 val nextW = prevSet.weight + step
-                                                                ae.sets[i].targetWeight = snapToHardwareStep(nextW, ae.incrementWeight, ae.incrementPerSide)
+                                                                ae.sets[i].targetWeight = snapToHardwareStep(nextW, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
                                                                 ae.sets[i].targetReps = minReps
                                                             } else {
                                                                 val prevSuccessful = prevSet.rir <= targetRir
-                                                                val targetW = snapToHardwareStep(prevSet.weight, ae.incrementWeight, ae.incrementPerSide)
+                                                                val targetW = snapToHardwareStep(prevSet.weight, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
                                                                 ae.sets[i].targetWeight = targetW
                                                                 if (prevSuccessful && prevSet.reps < maxReps) {
                                                                     ae.sets[i].targetReps = prevSet.reps + 1
@@ -331,7 +331,7 @@ fun TodayScreen(
                                                 }
                                             }
                                             val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                                            recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide)
+                                            recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
                                         }
                                     } else {
                                         for (ae in active) {
@@ -339,7 +339,7 @@ fun TodayScreen(
                                                 ae.sets[i].targetWeight = 20.0
                                             }
                                             val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                                            recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide)
+                                            recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
                                         }
                                     }
 

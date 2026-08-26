@@ -484,7 +484,7 @@ fun TrackerScreen(
                                                 val nextType = if (setVal.type == "warmup") "working" else "warmup"
                                                 setVal.type = nextType
                                                 val workWeight = exState.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                                                recalculateWarmupTargets(exState.sets, workWeight, exState.incrementWeight, exState.incrementPerSide)
+                                                recalculateWarmupTargets(exState.sets, workWeight, exState.incrementWeight, exState.incrementPerSide, exState.minWeight, exState.maxWeight)
                                                 triggerSave()
                                             },
                                         contentAlignment = Alignment.Center
@@ -690,7 +690,7 @@ fun TrackerScreen(
 
                                                     // If this is the first working set, update warmup targets
                                                     if (setVal.type == "working" && exState.sets.firstOrNull { it.type == "working" } == setVal) {
-                                                        recalculateWarmupTargets(exState.sets, w, exState.incrementWeight, exState.incrementPerSide)
+                                                        recalculateWarmupTargets(exState.sets, w, exState.incrementWeight, exState.incrementPerSide, exState.minWeight, exState.maxWeight)
                                                     }
 
                                                     // Dismiss keyboard if open on this set
@@ -799,8 +799,29 @@ fun TrackerScreen(
                                                             // exists on this machine). Falls back to anchoring on w when
                                                             // no minWeight is configured, since there's no better
                                                             // reference (matches the previous behavior for that case).
-                                                            val gridAnchor = exState.minWeight ?: w
-                                                            val roundedW = gridAnchor + Math.round((predictedW - gridAnchor) / step) * step
+                                                            // Snapping rounds to the nearest notch, so it can land back
+                                                            // outside the machine's range after the coerceIn above. The
+                                                            // shared helper re-applies the limits, stepping inward to the
+                                                            // last real position. When no minWeight is configured it
+                                                            // anchors on w, as before, since there's no better reference.
+                                                            val roundedW = if (exState.minWeight != null) {
+                                                                snapToHardwareStep(
+                                                                    predictedW,
+                                                                    exState.incrementWeight,
+                                                                    exState.incrementPerSide,
+                                                                    exState.minWeight,
+                                                                    exState.maxWeight
+                                                                )
+                                                            } else {
+                                                                val gridAnchor = w
+                                                                var snapped = gridAnchor + Math.round((predictedW - gridAnchor) / step) * step
+                                                                exState.maxWeight?.let { hardMax ->
+                                                                    if (snapped > hardMax) {
+                                                                        snapped = gridAnchor + Math.floor((hardMax - gridAnchor) / step) * step
+                                                                    }
+                                                                }
+                                                                snapped
+                                                            }
                                                             val diff = Math.abs(w - roundedW)
                                                             if (diff >= 0.5 * step) {
                                                                 nextSet.targetWeight = roundedW
@@ -878,7 +899,7 @@ fun TrackerScreen(
                                                     targetRir = lastRir
                                                 )
                                             )
-                                            recalculateWarmupTargets(exState.sets, lastWeight, exState.incrementWeight, exState.incrementPerSide)
+                                            recalculateWarmupTargets(exState.sets, lastWeight, exState.incrementWeight, exState.incrementPerSide, exState.minWeight, exState.maxWeight)
                                             triggerSave()
                                         }
                                         .padding(vertical = 4.dp)
@@ -894,7 +915,7 @@ fun TrackerScreen(
                                             if (exState.sets.size > 1) {
                                                 exState.sets.removeAt(exState.sets.size - 1)
                                                 val workWeight = exState.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                                                recalculateWarmupTargets(exState.sets, workWeight, exState.incrementWeight, exState.incrementPerSide)
+                                                recalculateWarmupTargets(exState.sets, workWeight, exState.incrementWeight, exState.incrementPerSide, exState.minWeight, exState.maxWeight)
                                                 triggerSave()
                                             }
                                         }
@@ -1074,7 +1095,7 @@ fun TrackerScreen(
                                                         activeSet.weightInput = newText
                                                         val newW = newText.toDoubleOrNull()
                                                         if (newW != null && activeSet.type == "working" && activeEx.sets.firstOrNull { it.type == "working" } == activeSet) {
-                                                            recalculateWarmupTargets(activeEx.sets, newW, activeEx.incrementWeight, activeEx.incrementPerSide)
+                                                            recalculateWarmupTargets(activeEx.sets, newW, activeEx.incrementWeight, activeEx.incrementPerSide, activeEx.minWeight, activeEx.maxWeight)
                                                         }
                                                     } else {
                                                         activeSet.repsInput = newText
@@ -1145,7 +1166,7 @@ fun TrackerScreen(
 
                                                 // Update warmup sets if first working set is edited
                                                 if (activeSet.type == "working" && activeEx.sets.firstOrNull { it.type == "working" } == activeSet) {
-                                                    recalculateWarmupTargets(activeEx.sets, w, activeEx.incrementWeight, activeEx.incrementPerSide)
+                                                    recalculateWarmupTargets(activeEx.sets, w, activeEx.incrementWeight, activeEx.incrementPerSide, activeEx.minWeight, activeEx.maxWeight)
                                                 }
 
                                                 activeFocusField = null
