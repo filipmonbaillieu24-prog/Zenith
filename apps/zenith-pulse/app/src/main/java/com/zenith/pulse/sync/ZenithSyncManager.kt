@@ -110,6 +110,23 @@ object ZenithSyncManager {
                 put("avg_power_watts", data.avgPowerWatts)
                 put("avg_speed_kmh", data.avgSpeedKmh)
                 put("exercise_sessions_count", data.exerciseSessionsCount)
+                // Full exercise sessions, not just the count. The server-side
+                // ingest turns these into Stride activities - before this, the
+                // only path that ever populated stride_activities from Health
+                // Connect was the (now removed) LAN bridge, so dropping the
+                // detail here silently ended workout sync to Stride.
+                put("exercise_sessions", buildJsonArray {
+                    for (ex in data.rawExerciseList) {
+                        add(buildJsonObject {
+                            put("type", (ex["type"] as? Int)?.toString() ?: (ex["type"] as? String) ?: "workout")
+                            put("title", (ex["title"] as? String) ?: "Workout")
+                            put("start_time", (ex["start_time"] as? String) ?: "")
+                            put("end_time", (ex["end_time"] as? String) ?: "")
+                            put("duration_seconds", (ex["duration_seconds"] as? Long) ?: ((ex["duration_seconds"] as? Int)?.toLong()) ?: 0L)
+                            put("data_origin", ((ex["metadata"] as? Map<*, *>)?.get("data_origin") as? String) ?: "")
+                        })
+                    }
+                })
                 put("daily_steps", buildJsonArray {
                     for (s in data.dailyStepsList) {
                         add(buildJsonObject {

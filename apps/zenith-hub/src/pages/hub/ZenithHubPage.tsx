@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, recoveryModel, calculateZenithSleepScore, estimateKratosSessionLoad, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { predictRecoveryScore, recoveryModel, calculateZenithSleepScore, estimateKratosSessionLoad, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
@@ -16,25 +16,6 @@ import {
 } from 'recharts';
 import { AnatomicalMuscleHeatmap } from '../../components/AnatomicalMuscleHeatmap';
 import './ZenithHub.css';
-
-/** One-line context for the PMC hero card — mirrors the tone used in Aero/Kratos's
- * own hero-metric dashboards, which show this exact same TSB-derived status. */
-function tsbContext(label: string, tsb: number): string {
-  switch (label) {
-    case 'Fresh / too little stimulus':
-      return "You're well recovered but training load has been light — there's room to push harder.";
-    case 'Peak condition':
-      return 'Fitness and freshness are both high right now — a good window for your hardest efforts.';
-    case 'Optimal training period':
-      return 'A healthy, sustainable balance of fitness and fatigue across your linked extensions.';
-    case 'Build phase / fatigued':
-      return "You're carrying more fatigue than fitness right now — expected mid-build, not a warning sign.";
-    default:
-      return tsb < -25
-        ? 'Fatigue has been outpacing recovery for a while — consider prioritizing rest this week.'
-        : 'Keep an eye on recovery markers over the next few sessions.';
-  }
-}
 
 interface ZenithHubPageProps {
   fitnessProfile: any;
@@ -832,7 +813,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
               <ZenithHeroStat
                 eyebrow="Form · TSB"
                 value={tsb >= 0 ? `+${tsb}` : tsb}
-                sub={tsbContext(currentFormStatus.label, tsb)}
+                sub={tsbContext(tsb)}
                 pill={
                   <span className="zenith-pill" style={{ background: `${currentFormStatus.color}1f`, color: currentFormStatus.color }}>
                     {currentFormStatus.emoji} {currentFormStatus.label}

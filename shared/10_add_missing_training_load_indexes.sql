@@ -10,4 +10,10 @@
 create index if not exists idx_planned_workouts_user_id on public.planned_workouts (user_id);
 create index if not exists idx_rides_user_id_date on public.rides (user_id, date);
 create index if not exists idx_kratos_workouts_user_id_completed_at on public.kratos_workouts (user_id, completed_at);
-create index if not exists idx_vigor_weight_user_id_local_date on public.vigor_weight (user_id, local_date);
+-- vigor_weight is read by (user_id, logged_at) everywhere - Hub's latest-weight
+-- lookup, Fuel's 30-day trend, Kratos's bodyweight fetch and Aero's log list all
+-- order by logged_at, never local_date. An index on (user_id, local_date) would
+-- be maintained on every weigh-in write (including each Health Connect sync) for
+-- zero read benefit; the trigger's own local_date point-lookup is already served
+-- by the unique constraint on (user_id, local_date).
+create index if not exists idx_vigor_weight_user_id_logged_at on public.vigor_weight (user_id, logged_at desc);

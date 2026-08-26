@@ -1,3 +1,5 @@
+import { TSB_FATIGUED_ABOVE } from '@zenith/shared';
+
 export interface WorkoutBlock {
   name: string;
   duration: number; // in seconds
@@ -22,11 +24,12 @@ export function getRecommendedWorkoutType(
   phase?: 'base' | 'build' | 'peak' | 'race' | 'recovery'
 ): 'recovery' | 'endurance' | 'sweetspot' | 'threshold' | 'vo2max' {
   // 1. Critical overreaching override: always recovery ride/rest once TSB is in
-  // interpretTSB()'s "Overtraining risk" zone (shared/pmc.ts, tsb < -25) — this used
-  // to trip at -20, a threshold the week-plan view (useTrainingState.ts) didn't share,
-  // so a TSB around -22 could show moderate/hard days on the week grid while this
-  // single-workout recommender was already forcing recovery.
-  if (tsb < -25) {
+  // interpretTSB()'s "Overtraining risk" zone (shared/pmc.ts) — this used to trip
+  // at -20, a threshold the week-plan view (useTrainingState.ts) didn't share, so a
+  // TSB around -22 could show moderate/hard days on the week grid while this
+  // single-workout recommender was already forcing recovery. Both now read the
+  // same exported constant.
+  if (tsb < TSB_FATIGUED_ABOVE) {
     return 'recovery';
   }
 

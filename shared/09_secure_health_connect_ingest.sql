@@ -25,25 +25,25 @@
 alter table public.health_connect_logs
   add column if not exists user_id uuid references auth.users(id) on delete cascade;
 
--- One-time, per-row-safe backfill for history (skips any row whose payload
--- isn't valid JSON rather than aborting the migration). Best-effort only, for
--- continuity of existing admin/debug queries - new rows never rely on this.
-do $$
-declare
-  r record;
-  v_uid uuid;
-begin
-  for r in select id, payload from public.health_connect_logs where user_id is null and payload is not null loop
-    begin
-      v_uid := (r.payload::jsonb ->> 'user_id')::uuid;
-    exception when others then
-      v_uid := null;
-    end;
-    if v_uid is not null then
-      update public.health_connect_logs set user_id = v_uid where id = r.id;
-    end if;
-  end loop;
-end $$;
+-- One-time backfill for history. Best-effort only, for continuity of existing
+-- admin/debug queries - new rows never rely on this.
+--
+-- Done as a single set-based UPDATE rather than a per-row PL/pgSQL loop:
+-- health_connect_logs gains a row per user per sync (hourly), so this table
+-- can hold tens of thousands of rows on a live install, and a loop issuing one
+-- UPDATE each holds locks for the whole migration. The regex guard replaces
+-- the loop's per-row exception handler: `IS JSON` screens out unparseable
+-- payloads before any cast is attempted (a bare `payload::jsonb` in the WHERE
+-- clause would abort the entire statement on the first malformed row, since
+-- Postgres doesn't guarantee predicate evaluation order), and the regex screens
+-- out anything that isn't a well-formed UUID.
+update public.health_connect_logs
+set user_id = (payload::jsonb ->> 'user_id')::uuid
+where user_id is null
+  and payload is not null
+  and payload <> ''
+  and payload is json
+  and (payload::jsonb ->> 'user_id') ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 
 create index if not exists health_connect_logs_user_id_idx on public.health_connect_logs (user_id);
 

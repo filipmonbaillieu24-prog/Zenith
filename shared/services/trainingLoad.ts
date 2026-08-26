@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { toDateKey } from '../dateKey';
 
 /**
  * Same heuristic Zenith Hub's PMC uses to fold a Kratos strength session
@@ -17,7 +18,7 @@ export function estimateKratosSessionLoad(volume: number): number {
 }
 
 export interface DailyTrainingLoad {
-  date: string; // YYYY-MM-DD (UTC calendar day)
+  date: string; // YYYY-MM-DD (local calendar day, see shared/dateKey.ts)
   stepsLoad: number; // steps/100
   kratosVolume: number; // raw kg volume lifted that day (sets*reps*weight)
   kratosLoad: number; // estimateKratosSessionLoad(kratosVolume)
@@ -25,7 +26,11 @@ export interface DailyTrainingLoad {
   load: number; // blended total = stepsLoad + kratosLoad + cardioTss
 }
 
-const dateKeyOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
+// Local calendar day, matching shared/pmc.ts and every other day-bucketed
+// series in the ecosystem. This was previously a UTC key, which put a day's
+// training load in a different bucket than that same day's PMC point for any
+// user not at UTC+0 - joins between the two silently missed.
+const dateKeyOf = (ms: number): string => toDateKey(ms);
 
 /**
  * Blends daily steps, Kratos strength sessions, and Aero rides into one

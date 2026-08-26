@@ -38,7 +38,7 @@ import {
 import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
 import { ProPaywallModal } from '../components/ProPaywallModal';
-import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore } from '@zenith/shared';
+import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore, toDateKeyFromDate, localDateToISO } from '@zenith/shared';
 
 interface VigorDashboardProps {
   session: any;
@@ -64,10 +64,7 @@ const getLocalDateKey = (dateInput: string | Date | null | undefined): string =>
   if (!dateInput) return '';
   const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
   if (isNaN(d.getTime())) return '';
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return toDateKeyFromDate(d);
 };
 
 export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
@@ -383,7 +380,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     const table = `vigor_${type}`;
 
     const payload: any = {
-      logged_at: new Date(editDate).toISOString()
+      logged_at: localDateToISO(editDate)
     };
 
     if (type === 'weight') {
@@ -446,7 +443,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     try {
       const payload: any = {
         user_id: user.id,
-        logged_at: new Date(newMeasurement.logged_at).toISOString()
+        logged_at: localDateToISO(newMeasurement.logged_at)
       };
       
       const parseVal = (val: string) => val.trim() === '' ? null : parseFloat(val);
@@ -542,7 +539,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         .from('vigor_progress_photos')
         .insert({
           user_id: user.id,
-          logged_at: new Date(photoDate).toISOString(),
+          logged_at: localDateToISO(photoDate),
           image_url: publicUrl,
           angle: photoAngle,
           notes: photoNotes
@@ -768,16 +765,16 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     });
   }, [sleeps]);
 
-  // Joins the already-fetched sleep and cross-app training-load series by UTC
-  // calendar day - trainingLoads.date is explicitly UTC (see trainingLoad.ts), so
-  // this must NOT join on vigor_sleep.local_date (device-local) or it reintroduces
-  // the exact UTC-vs-local mismatch just fixed for vigor_sleep/vigor_steps.
+  // Joins the already-fetched sleep and cross-app training-load series by LOCAL
+  // calendar day. trainingLoads.date is now the shared local key (see
+  // shared/dateKey.ts), the same key vigor_sleep.local_date uses, so both sides
+  // of this join agree on which day a reading belongs to in every timezone.
   const sleepVsLoadData = useMemo(() => {
     const loadByDate = new Map(trainingLoads.map(l => [l.date, l.load]));
     return sleeps
       .map(s => {
-        const utcDateKey = new Date(s.logged_at).toISOString().slice(0, 10);
-        const load = loadByDate.get(utcDateKey);
+        const localKey = getLocalDateKey(s.logged_at);
+        const load = loadByDate.get(localKey);
         if (load === undefined) return null;
         const analysis = calculateZenithSleepScore(s, [], profile.target_sleep_hours || 8.0);
         return {
@@ -823,7 +820,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     // row or gets silently miscategorized as "today" instead of the date the
     // user actually picked. Deriving local_date from the same logged_at the
     // user chose keeps manual entries keyed the same way synced ones are.
-    const localDate = typeof payload.logged_at === 'string' ? payload.logged_at.slice(0, 10) : undefined;
+    const localDate = getLocalDateKey(payload.logged_at) || undefined;
     const { error } = await supabase.from(table).insert({
       user_id: user.id,
       ...(localDate ? { local_date: localDate } : {}),

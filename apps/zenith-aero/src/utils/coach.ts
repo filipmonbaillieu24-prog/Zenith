@@ -1,3 +1,5 @@
+import { TSB_FATIGUED_ABOVE, TSB_OPTIMAL_ABOVE, TSB_PEAK_ABOVE, TSB_FRESH_ABOVE } from '@zenith/shared';
+
 // ─── Rule-based AI Training Coach ────────────────────────────────────────────
 // Generates personalised training advice based on ride history + profile.
 // No ML needed — pure data-driven rules backed by sports science.
@@ -257,26 +259,25 @@ export function generateCoachAdvice(
   if (pmcData && pmcData.ctl > 0) {
     const { ctl, atl, tsb } = pmcData;
 
-    // TSB overtraining / recovery advice. Thresholds match shared interpretTSB()
-    // (shared/pmc.ts) — the same breakpoints driving the Form pill on the
-    // dashboard — so a given TSB reading means the same thing everywhere in Aero
-    // instead of triggering a "you're fine" pill next to an "overtraining risk"
-    // advice card.
-    if (tsb < -25) {
+    // TSB overtraining / recovery advice, keyed off the shared breakpoints
+    // (shared/pmc.ts) that also drive the Form pill on the dashboard, so a given
+    // TSB reading means the same thing everywhere in Aero instead of triggering
+    // a "you're fine" pill next to an "overtraining risk" advice card.
+    if (tsb < TSB_FATIGUED_ABOVE) {
       advice.push({
         category: 'warning', priority: 1, icon: '🔴', color: '#ff7675',
         title: `Overtraining risk (TSB: ${Math.round(tsb)})`,
         body: `Your Form (TSB) is ${Math.round(tsb)}, indicating significant fatigue accumulation. Your body can no longer handle the load. Rest is the best training now.`,
         action: '2-3 full rest days or a light recovery ride (Zone 1)',
       });
-    } else if (tsb < -10) {
+    } else if (tsb < TSB_OPTIMAL_ABOVE) {
       advice.push({
         category: 'recovery', priority: 2, icon: '⚡', color: '#fdcb6e',
         title: `High training workload (TSB: ${Math.round(tsb)})`,
         body: `Your Form is ${Math.round(tsb)} with a fatigue (ATL) of ${Math.round(atl)}. You are in a build phase - monitor how you feel and get enough sleep.`,
         action: 'Prioritize 7-8h sleep, adequate carbs and hydration',
       });
-    } else if (tsb > 5 && tsb < 25) {
+    } else if (tsb > TSB_PEAK_ABOVE && tsb < TSB_FRESH_ABOVE) {
       advice.push({
         category: 'progression', priority: 3, icon: '🏆', color: '#55efc4',
         title: `Peak condition reached (TSB: +${Math.round(tsb)})`,

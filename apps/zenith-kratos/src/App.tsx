@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, interpretTSB, tsbContext } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import {
   Dumbbell,
@@ -298,7 +298,7 @@ export default function App() {
       const sleepQualityByDay = new Map<string, number>();
       for (const s of sleepHistory) {
         if (!s.logged_at) continue;
-        const key = new Date(s.logged_at).toISOString().slice(0, 10);
+        const key = toDateKey(new Date(s.logged_at).getTime());
         sleepQualityByDay.set(key, Number(s.quality_score ?? 80));
       }
 
@@ -307,7 +307,7 @@ export default function App() {
 
       for (const w of newWorkouts) {
         if (!w.sets || !Array.isArray(w.sets)) continue;
-        const dayKey = w.completed_at ? new Date(w.completed_at).toISOString().slice(0, 10) : '';
+        const dayKey = w.completed_at ? toDateKey(new Date(w.completed_at).getTime()) : '';
         const sleepQualityForDay = sleepQualityByDay.get(dayKey) ?? 80;
 
         for (const exLog of w.sets) {
@@ -540,7 +540,7 @@ export default function App() {
     // Group Sleep logs by Day
     const sleepPerDay = new Map<string, { duration: number; quality: number }>();
     for (const s of sleepData) {
-      const key = new Date(s.logged_at).toISOString().split('T')[0];
+      const key = toDateKey(new Date(s.logged_at).getTime());
       sleepPerDay.set(key, {
         duration: Number(s.duration_minutes || 0) / 60.0,
         quality: Number(s.quality_score ?? 0)
@@ -553,7 +553,7 @@ export default function App() {
     // Sleep deficit isn't part of the shared PMC model, so it's attached
     // per-day here for the Z-score/ATL baseline calculation below.
     const points: PMCPoint[] = pmcPoints.map(p => {
-      const key = new Date(p.date).toISOString().split('T')[0];
+      const key = toDateKey(p.date);
       const sleep = sleepPerDay.get(key);
       const sleepDeficit = sleep ? Math.max(0, targetSleep - sleep.duration) : 0;
       return { date: p.date, ctl: p.ctl, atl: p.atl, tsb: p.tsb, sleepDeficit };
@@ -1281,7 +1281,7 @@ export default function App() {
     for (let i = 13; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const yyyymmdd = d.toISOString().slice(0, 10);
+      const yyyymmdd = toDateKeyFromDate(d);
       const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       // With real HRV data, days without a reading are left as gaps (null) rather
       // than filled with a fabricated baseline.
@@ -1292,7 +1292,7 @@ export default function App() {
     workouts.forEach(w => {
       if (w.completed_at) {
         try {
-          const wDate = new Date(w.completed_at).toISOString().slice(0, 10);
+          const wDate = toDateKey(new Date(w.completed_at).getTime());
           if (dateMap.has(wDate)) {
             const item = dateMap.get(wDate)!;
             item.volume += w.volume || 0;
@@ -1309,7 +1309,7 @@ export default function App() {
     sleepLogs.forEach((s: any) => {
       if (s.logged_at) {
         try {
-          const sDate = new Date(s.logged_at).toISOString().slice(0, 10);
+          const sDate = toDateKey(new Date(s.logged_at).getTime());
           if (dateMap.has(sDate)) {
             const item = dateMap.get(sDate)!;
             if (hasRealHrvData) {

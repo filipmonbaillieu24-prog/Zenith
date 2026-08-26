@@ -42,9 +42,11 @@ export const IntegrationsPage: React.FC = () => {
   const [services, setServices] = useState<IntegrationService[]>(() => {
     // Health Connect (via Zenith Pulse) is the one integration that's actually built:
     // Pulse authenticates with Supabase and pushes data to it directly in the
-    // background — there's no local server or manual pull step on Hub's side. It's
-    // re-seeded fresh on every load (rather than trusted from saved config) so an
-    // out-of-date cached shape can never hide or misrepresent it.
+    // background — there's no local server or manual pull step on Hub's side.
+    // Its *descriptive* fields (name, copy, feature list, icon) are re-seeded
+    // fresh on every load so an out-of-date cached shape can never misrepresent
+    // what the integration does, but the user's own toggles are preserved -
+    // blanket-replacing the saved entry silently reverted autoSync every reload.
     const defaultHealthConnect: IntegrationService = {
       id: 'health_connect',
       name: 'Google Health Connect & Zenith Pulse',
@@ -62,8 +64,16 @@ export const IntegrationsPage: React.FC = () => {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
+          const savedHealthConnect = parsed.find((s: IntegrationService) => s.id === 'health_connect');
           const withoutHealthConnect = parsed.filter((s: IntegrationService) => s.id !== 'health_connect');
-          return [defaultHealthConnect, ...withoutHealthConnect];
+          // Fresh descriptive fields, saved user preferences.
+          const mergedHealthConnect: IntegrationService = {
+            ...defaultHealthConnect,
+            ...(savedHealthConnect
+              ? { autoSync: savedHealthConnect.autoSync ?? defaultHealthConnect.autoSync }
+              : {})
+          };
+          return [mergedHealthConnect, ...withoutHealthConnect];
         }
       } catch (e) {
         console.error("Error loading integrations config:", e);
@@ -330,7 +340,7 @@ export const IntegrationsPage: React.FC = () => {
                       Official Companion App: Zenith Pulse
                     </div>
                     <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0' }}>
-                      Zenith Pulse comes pre-configured with direct Zenith Supabase Webhook integration &amp; local Wi-Fi sync (`:8787`).
+                      Zenith Pulse comes pre-configured with authenticated background sync straight to Zenith&apos;s Supabase backend.
                     </p>
                   </div>
 

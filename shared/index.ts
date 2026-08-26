@@ -16,6 +16,7 @@ export * from './ml/RecoveryScore';
 export * from './ml/HrvAnsTracker';
 export * from './ml/AcwrForecaster';
 export * from './ml/ZenithFusionNet';
+export * from './dateKey';
 export * from './pmc';
 export * from './trustedOrigins';
 export * from './gpxParser';

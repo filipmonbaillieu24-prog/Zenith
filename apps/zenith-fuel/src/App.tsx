@@ -1639,7 +1639,8 @@ function App() {
   const todaySleepDuration = todaySleep ? Number(todaySleep.duration_minutes) / 60 : null;
 
   // Bug fix: deep/REM sleep ratios are real data from vigor_sleep (synced from the
-  // wearable via healthConnectSync.ts, which already persists deep_minutes/rem_minutes).
+  // wearable by Pulse's authenticated Health Connect ingest, whose Supabase trigger
+  // persists deep_minutes/rem_minutes - see shared/09_secure_health_connect_ingest.sql).
   // Previously these were hardcoded constants (0.25 / 0.18) fed into ZenithFusionNet
   // forever, even though the real per-day values were sitting in the same table.
   // Fall back to the population-average defaults only when today's log lacks the fields
