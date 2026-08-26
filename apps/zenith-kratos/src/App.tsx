@@ -117,6 +117,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'routines' | 'exercises' | 'logs' | 'download' | 'hypertrophy'>('dashboard');
 
   // Database State
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
@@ -380,7 +381,7 @@ export default function App() {
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id,model_name' });
 
-      console.log("Kratos Autoreg model retrained with", trainingPairs.length, "new samples since", new Date(lastTrainedAtMs).toISOString());
+      if (import.meta.env.DEV) console.log("Kratos Autoreg model retrained with", trainingPairs.length, "new samples since", new Date(lastTrainedAtMs).toISOString());
     } catch (err) {
       console.error("Retrain error:", err);
     }
@@ -392,6 +393,13 @@ export default function App() {
 
     const twentyEightDaysAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    // Workout and ride history were fetched in full on every mount. Everything
+    // downstream (PMC's 42-day CTL window, ACWR, the 14-day CNS chart, "previous
+    // set" lookups) only reaches back months at most, so a long-tenured user was
+    // paying to download years of rows on each load. A year covers every consumer
+    // with room to spare.
+    const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+    const oneYearAgoMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
 
     // All of these reads are independent of each other. The separate "latest sleep
     // log" query that used to run here (for todaySleepQuality) was a pure duplicate
@@ -407,12 +415,12 @@ export default function App() {
     const queries = [
       () => supabase.from('kratos_exercises').select('*').eq('user_id', uid).eq('deleted', false),
       () => supabase.from('kratos_templates').select('*').eq('user_id', uid),
-      () => supabase.from('kratos_workouts').select('*').eq('user_id', uid).order('completed_at', { ascending: false }),
+      () => supabase.from('kratos_workouts').select('*').eq('user_id', uid).gte('completed_at', oneYearAgo).order('completed_at', { ascending: false }),
       () => supabase.from('vigor_weight').select('weight').eq('user_id', uid).order('logged_at', { ascending: false }).limit(1),
       () => supabase.from('vigor_body_measurements').select('*').eq('user_id', uid).order('logged_at', { ascending: true }),
       () => supabase.from('profiles').select('*').eq('id', uid).maybeSingle(),
       () => supabase.from('vigor_steps').select('step_count, logged_at').eq('user_id', uid).gte('logged_at', twentyEightDaysAgo).order('logged_at', { ascending: true }),
-      () => supabase.from('rides').select('date, metadata').eq('user_id', uid).order('date', { ascending: true }),
+      () => supabase.from('rides').select('date, metadata').eq('user_id', uid).gte('date', oneYearAgoMs).order('date', { ascending: true }),
       () => supabase.from('vigor_sleep').select('logged_at, duration_minutes, quality_score, hrv_ms').eq('user_id', uid).gte('logged_at', ninetyDaysAgo).order('logged_at', { ascending: true }),
       () => supabase.from('vigor_profile').select('target_sleep_hours').eq('user_id', uid).maybeSingle(),
     ];
@@ -420,6 +428,31 @@ export default function App() {
     const results: any[] = [];
     for (const batch of chunk(queries, 3)) {
       results.push(...await Promise.all(batch.map(q => q())));
+    }
+
+    // Every one of these used to destructure `data` only. A failing query (RLS
+    // denial, timeout, network blip) then looked exactly like "this user has no
+    // data": the UI silently rendered stale or empty state with nothing logged
+    // and no way for the user to tell the difference.
+    const queryNames = [
+      'kratos_exercises', 'kratos_templates', 'kratos_workouts', 'vigor_weight',
+      'vigor_body_measurements', 'profiles', 'vigor_steps', 'rides',
+      'vigor_sleep', 'vigor_profile',
+    ];
+    const failed = results
+      .map((r, i) => (r?.error ? queryNames[i] : null))
+      .filter((n): n is string => n !== null);
+    if (failed.length > 0) {
+      results.forEach((r, i) => {
+        if (r?.error) console.error(`Kratos fetchData: ${queryNames[i]} query failed:`, r.error);
+      });
+      setLoadError(
+        failed.length === queryNames.length
+          ? "Couldn't load your training data. Check your connection and try again."
+          : `Some data couldn't be loaded (${failed.join(', ')}). What you see may be incomplete.`
+      );
+    } else {
+      setLoadError(null);
     }
 
     const [
@@ -462,7 +495,7 @@ export default function App() {
       if (latestSteps) {
         setTodaySteps(Number(latestSteps.step_count));
       }
-      console.log("[ZenithKratos] SOTA ML ACWR Workload calculated:", workloadInsight.acwr);
+      if (import.meta.env.DEV) console.log("[ZenithKratos] SOTA ML ACWR Workload calculated:", workloadInsight.acwr);
     }
 
     const targetSleep = Number(vigorProfile?.target_sleep_hours ?? 8.0);
@@ -484,7 +517,7 @@ export default function App() {
         const ansState = HrvAnsTracker.calculateAnsState(hrvHistory, todayHrvVal);
         setAnsIntensityMultiplier(ansState.intensityMultiplier);
         setAnsToneInsight(ansState.insight);
-        console.log("[ZenithKratos] HRV ANS Tone Multiplier loaded from real wearable data:", ansState.intensityMultiplier);
+        if (import.meta.env.DEV) console.log("[ZenithKratos] HRV ANS Tone Multiplier loaded from real wearable data:", ansState.intensityMultiplier);
       } else {
         setAnsIntensityMultiplier(1.0);
         setAnsToneInsight('');
@@ -644,17 +677,37 @@ export default function App() {
     // rather than to prevWeight, which may itself be an off-grid warmup weight - see
     // the matching comment in predictAutoregWeight for why that matters.
     const validStep = Math.max(0.25, stepWeight);
+
+    // Snapping rounds to the NEAREST step, so it can round back up past
+    // hardMaxWeight (by up to half a step) after the clamp above - enough to
+    // recommend a weight beyond a machine's physical stack. Re-apply the
+    // equipment limits to the final snapped total, stepping inward to the last
+    // legal notch rather than just truncating to the raw limit (which would
+    // itself usually be off-grid).
+    const applyHardLimits = (total: number): number => {
+      let result = total;
+      if (hardMaxWeight != null && result > hardMaxWeight) {
+        const anchor = hardMinWeight ?? 0;
+        const stepTotal = isPerSide ? validStep * 2.0 : validStep;
+        const stepsDown = Math.floor((hardMaxWeight - anchor) / stepTotal);
+        const snappedMax = anchor + stepsDown * stepTotal;
+        result = snappedMax >= (hardMinWeight ?? 0) ? snappedMax : hardMaxWeight;
+      }
+      if (hardMinWeight != null && result < hardMinWeight) result = hardMinWeight;
+      return result;
+    };
+
     if (isPerSide) {
       const perSideRaw = scaledRec / 2.0;
       const gridAnchor = hardMinWeight != null ? hardMinWeight / 2.0 : (prevWeight > 0 ? prevWeight / 2.0 : 0);
       const diff = perSideRaw - gridAnchor;
       const snappedPerSide = gridAnchor + Math.round(diff / validStep) * validStep;
-      return Math.max(validStep * 2.0, snappedPerSide * 2.0);
+      return applyHardLimits(Math.max(validStep * 2.0, snappedPerSide * 2.0));
     } else {
       const gridAnchor = hardMinWeight ?? (prevWeight > 0 ? prevWeight : 0);
       const diff = scaledRec - gridAnchor;
       const snapped = gridAnchor + Math.round(diff / validStep) * validStep;
-      return Math.max(validStep, snapped);
+      return applyHardLimits(Math.max(validStep, snapped));
     }
   };
 
@@ -1577,6 +1630,26 @@ export default function App() {
 
       {/* Content */}
       <main className="kratos-content animate-fade-in">
+        {loadError && (
+          <div
+            role="alert"
+            style={{
+              background: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.30)',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              color: '#fca5a5',
+              fontSize: '13px'
+            }}
+          >
+            <span aria-hidden="true">⚠️</span>
+            <span>{loadError}</span>
+          </div>
+        )}
         {/* ----------------- DASHBOARD TAB ----------------- */}
         {activeTab === 'dashboard' && (
           <div className="animate-slide-up">

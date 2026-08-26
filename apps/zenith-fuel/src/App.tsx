@@ -933,9 +933,19 @@ function App() {
         
         if (prod.serving_size) {
           setIngPortionName("Portion");
-          const sizeGramss = parseFloat(prod.serving_size);
-          if (!isNaN(sizeGramss)) {
-            setIngPortionWeight(sizeGramss.toString());
+          // Open Food Facts serving_size is free text: "30 g", "2 biscuits (18g)",
+          // "1 cup (240 ml)". A bare parseFloat grabs the FIRST number, which for
+          // "2 biscuits (18g)" is the biscuit count (2), not the 18g weight - the
+          // portion weight then silently corrupts every per-portion macro below.
+          // Prefer an explicit gram/millilitre quantity anywhere in the string,
+          // and only fall back to a leading number if it is itself a g/ml value.
+          const servingText = String(prod.serving_size);
+          const gramMatch = servingText.match(/(\d+(?:[.,]\d+)?)\s*(?:grams|gram|ml|g)(?![a-z])/i);
+          const parsedWeight = gramMatch
+            ? parseFloat(gramMatch[1].replace(',', '.'))
+            : NaN;
+          if (Number.isFinite(parsedWeight) && parsedWeight > 0) {
+            setIngPortionWeight(parsedWeight.toString());
           }
         }
         triggerNotification("Product found and loaded!");
