@@ -624,7 +624,11 @@ export default function App() {
           zScore += 0.5 * latest.sleepDeficit;
         }
 
-        const factor = zScore > 1.0 ? 1.0 + 0.15 * zScore : 1.0;
+        // Capped at 2.0 to match the Android app's calculateCardioStressFactor
+        // (WorkoutRepository.kt) — uncapped here, an extreme z-score could
+        // roughly double or more the recommended rest time on web while the
+        // Android app's own factor levels off at 2x.
+        const factor = zScore > 1.0 ? Math.min(2.0, 1.0 + 0.15 * zScore) : 1.0;
 
         setAiStressConfig({
           zScore: Math.round(zScore * 100) / 100,

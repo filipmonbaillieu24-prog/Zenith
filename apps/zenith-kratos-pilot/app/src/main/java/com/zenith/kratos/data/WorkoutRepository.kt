@@ -21,8 +21,10 @@ class WorkoutRepository(
     // 1. Fetch & Cache Exercises
     suspend fun fetchAndCacheExercises() = withContext(Dispatchers.IO) {
         try {
+            val uId = client.auth.currentUserOrNull()?.id ?: return@withContext false
             val response = client.postgrest["kratos_exercises"].select {
                 filter {
+                    eq("user_id", uId)
                     eq("deleted", false)
                 }
             }
@@ -54,7 +56,12 @@ class WorkoutRepository(
     // 2. Fetch & Cache Templates
     suspend fun fetchAndCacheTemplates() = withContext(Dispatchers.IO) {
         try {
-            val response = client.postgrest["kratos_templates"].select()
+            val uId = client.auth.currentUserOrNull()?.id ?: return@withContext false
+            val response = client.postgrest["kratos_templates"].select {
+                filter {
+                    eq("user_id", uId)
+                }
+            }
             val remoteList = response.decodeList<Template>()
             val localList = remoteList.map {
                 LocalTemplate(
@@ -156,9 +163,11 @@ class WorkoutRepository(
     // 5. Fetch previous workout logs of a template for Double Progression start values
     suspend fun getPreviousWorkoutForTemplate(templateId: String): Workout? = withContext(Dispatchers.IO) {
         try {
+            val uId = client.auth.currentUserOrNull()?.id ?: return@withContext null
             val response = client.postgrest["kratos_workouts"].select {
                 filter {
                     eq("template_id", templateId)
+                    eq("user_id", uId)
                 }
                 order("completed_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
                 limit(1)
@@ -210,7 +219,12 @@ class WorkoutRepository(
     // 6. Calculate PMC Z-score scaling factor based on ride history
     suspend fun calculateCardioStressFactor(): Double = withContext(Dispatchers.IO) {
         try {
-            val response = client.postgrest["rides"].select()
+            val uId = client.auth.currentUserOrNull()?.id ?: return@withContext 1.0
+            val response = client.postgrest["rides"].select {
+                filter {
+                    eq("user_id", uId)
+                }
+            }
             val list = response.decodeList<RideTSSLocal>()
             if (list.isEmpty()) return@withContext 1.0
 
@@ -230,7 +244,7 @@ class WorkoutRepository(
 
             // Group by day key
             val tssPerDay = mutableMapOf<String, Double>()
-            val sdf = SimpleDateFormat("yyyy-MM-DD", Locale.getDefault())
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             for (r in parsedRides) {
                 val key = sdf.format(Date(r.date))
                 tssPerDay[key] = (tssPerDay[key] ?: 0.0) + r.tss

@@ -76,16 +76,42 @@ object KratosAutoregModel {
         targetReps: Int,
         targetRir: Int
     ): Double {
+        // This feature vector must exactly match shared/ml/SharedModels.ts's
+        // buildAutoregFeatureVector() (6 inputs, same scales) - the persisted
+        // weights this model loads are trained there and shared via the
+        // ml_weights table, so a different shape/scale here silently turns
+        // every on-device prediction into noise regardless of how good the
+        // trained weights are. Previously this built a 5-element vector using
+        // raw prevRir instead of rirDelta and different scale divisors, and
+        // predict()'s forward pass only ever read the first 5 of W1's 6 rows -
+        // it "worked" only because the safety-band clamp downstream (see
+        // TrackerScreen.kt) bounds the final output regardless.
+        val rirDelta = (prevRir - targetRir).toDouble()
+        // Same ratio shape as computeAutoregRestRatio() in SharedModels.ts,
+        // with recommendedRestSeconds defaulted to its own 120s default:
+        // restSeconds here (TrackerScreen's `totalRest`) is already the app's
+        // computed recommended rest for the next set (base rest scaled by
+        // cardio stress factor), not an observed "actual rest taken" reading -
+        // this call fires right when a set completes, before any rest
+        // countdown starts, so there's no real elapsed-rest figure to compare
+        // it against yet.
+        val restRatio = Math.min(1.5, Math.max(0.2, restSeconds / Math.max(45.0, 120.0)))
+        // Sleep quality isn't tracked in this app (unlike Kratos web, which
+        // reads vigor_sleep) - 80.0 matches predictAutoregWeight's own default
+        // in SharedModels.ts for the same "no reading available" case.
+        val sleepQuality = 80.0
+
         val x = doubleArrayOf(
-            Math.min(1.0, setIndex / 5.0),
-            Math.min(1.5, prevWeight / 200.0),
-            Math.min(1.5, prevReps / 20.0),
-            Math.min(1.0, prevRir / 10.0),
-            Math.min(1.5, restSeconds / 300.0)
+            Math.min(1.0, setIndex / 10.0),
+            Math.min(1.5, prevWeight / 400.0),
+            Math.min(1.5, prevReps / 30.0),
+            Math.max(-1.5, Math.min(1.5, rirDelta / 5.0)),
+            restRatio,
+            Math.min(1.0, sleepQuality / 100.0)
         )
 
         val y = predict(x)
-        val predictedE1RM = y * 200.0
+        val predictedE1RM = y * 400.0
         val repsToFailure = targetReps + targetRir
         val predictedWeight = predictedE1RM / (1.0 + repsToFailure / 30.0)
         return Math.max(0.0, predictedWeight)
