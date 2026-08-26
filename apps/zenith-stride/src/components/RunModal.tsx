@@ -60,9 +60,23 @@ export const RunModal: React.FC<RunModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const distNum = parseFloat(distanceKm) || 5.0;
-    const durSec = (parseInt(minutes, 10) || 25) * 60 + (parseInt(seconds, 10) || 0);
-    const paceDecimal = distNum > 0 ? (durSec / 60) / distNum : 5.0;
+    // Parse without `||` fallbacks: a legitimately-entered 0 is falsy, so the
+    // old `parseFloat(distanceKm) || 5.0` silently logged a 5km run for someone
+    // who entered 0 (e.g. a treadmill session with distance left blank), and
+    // `|| 25` invented a 25-minute duration the same way.
+    const parsedDist = parseFloat(distanceKm);
+    const parsedMins = parseInt(minutes, 10);
+    const parsedSecs = parseInt(seconds, 10);
+    const distNum = Number.isFinite(parsedDist) && parsedDist >= 0 ? parsedDist : 0;
+    const durSec = (Number.isFinite(parsedMins) ? parsedMins : 0) * 60
+                 + (Number.isFinite(parsedSecs) ? parsedSecs : 0);
+
+    if (durSec <= 0) {
+      window.alert('Enter how long the run took before saving.');
+      return;
+    }
+
+    const paceDecimal = distNum > 0 ? (durSec / 60) / distNum : 0;
     const selectedShoe = shoes.find(s => s.id === shoeId);
 
     const newRun: RunActivity = {

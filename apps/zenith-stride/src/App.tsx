@@ -34,30 +34,29 @@ import {
 } from 'lucide-react';
 import './index.css';
 
-export function App() {
-  const [runs, setRuns] = useState<RunActivity[]>(() => {
-    const saved = localStorage.getItem('zenith_stride_runs');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Error loading stride runs:", e);
-      }
-    }
-    return [];
-  });
+// The offline cache is keyed per user. It used to live under a single global
+// key, so on a shared browser - or in the desktop app after switching accounts -
+// the previous user's runs and shoes rendered immediately on load, before (or
+// instead of) the signed-in user's own data arrived from Supabase.
+const runsCacheKey = (userId: string) => `zenith_stride_runs::${userId}`;
+const shoesCacheKey = (userId: string) => `zenith_stride_shoes::${userId}`;
 
-  const [shoes, setShoes] = useState<RunningShoe[]>(() => {
-    const saved = localStorage.getItem('zenith_stride_shoes');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Error loading stride shoes:", e);
-      }
-    }
+const readCache = <T,>(key: string): T[] => {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? (JSON.parse(saved) as T[]) : [];
+  } catch (e) {
+    console.error(`Error reading cache ${key}:`, e);
     return [];
-  });
+  }
+};
+
+export function App() {
+  // Starts empty and is populated only once we know who is signed in - never
+  // seeded synchronously from an unscoped key.
+  const [userId, setUserId] = useState<string | null>(null);
+  const [runs, setRuns] = useState<RunActivity[]>([]);
+  const [shoes, setShoes] = useState<RunningShoe[]>([]);
 
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
   const [isGpxModalOpen, setIsGpxModalOpen] = useState(false);
@@ -73,20 +72,34 @@ export function App() {
     async function loadActivitiesFromDb() {
       try {
         const { data: userData } = await supabase.auth.getUser();
-        const userId = userData?.user?.id;
-        if (!userId) {
+        const uid = userData?.user?.id;
+        if (!uid) {
           console.warn('Cannot load stride activities: User is not authenticated.');
           return;
         }
+        setUserId(uid);
+        // Show this user's own cached data straight away, then reconcile with
+        // the server below.
+        setRuns(readCache<RunActivity>(runsCacheKey(uid)));
+        setShoes(readCache<RunningShoe>(shoesCacheKey(uid)));
 
         const { data, error } = await supabase
           .from('stride_activities')
           .select('*')
-          .eq('user_id', userId)
+          .eq('user_id', uid)
           .order('date', { ascending: false });
 
-        if (data && data.length > 0) {
-          const dbRuns: RunActivity[] = data.map(act => ({
+        if (error) {
+          console.error('Failed to load stride_activities:', error);
+          return;
+        }
+
+        // Assigns unconditionally, including the empty case. Guarding on
+        // `data.length > 0` meant a user who had deleted every run (or signed
+        // in on a fresh device) kept seeing stale cached runs forever, with no
+        // way to clear them.
+        {
+          const dbRuns: RunActivity[] = (data ?? []).map(act => ({
             id: act.id,
             title: act.title,
             date: act.date,
@@ -117,14 +130,16 @@ export function App() {
     loadActivitiesFromDb();
   }, []);
 
-  // Persist to localStorage
+  // Persist to this user's own cache slot only.
   useEffect(() => {
-    localStorage.setItem('zenith_stride_runs', JSON.stringify(runs));
-  }, [runs]);
+    if (!userId) return;
+    localStorage.setItem(runsCacheKey(userId), JSON.stringify(runs));
+  }, [runs, userId]);
 
   useEffect(() => {
-    localStorage.setItem('zenith_stride_shoes', JSON.stringify(shoes));
-  }, [shoes]);
+    if (!userId) return;
+    localStorage.setItem(shoesCacheKey(userId), JSON.stringify(shoes));
+  }, [shoes, userId]);
 
   // Aggregate stats
   const totalKm = useMemo(() => runs.reduce((acc, r) => acc + r.distanceKm, 0), [runs]);
@@ -146,14 +161,14 @@ export function App() {
     // Persist to Supabase stride_activities
     try {
       const { data: userData } = await supabase.auth.getUser();
-      const userId = userData?.user?.id;
-      if (!userId) {
+      const uid = userData?.user?.id;
+      if (!uid) {
         console.warn('Cannot persist stride activity: User is not authenticated.');
         return;
       }
 
-      await supabase.from('stride_activities').insert({
-        user_id: userId,
+      const { data: inserted, error: insertError } = await supabase.from('stride_activities').insert({
+        user_id: uid,
         title: newRun.title,
         date: newRun.date,
         time_of_day: newRun.timeOfDay,
@@ -172,9 +187,57 @@ export function App() {
         shoe_name: newRun.shoeName,
         source: newRun.source || 'manual',
         notes: newRun.notes
-      });
+      }).select('id').single();
+
+      if (insertError) {
+        console.error('Failed to persist new run to Supabase:', insertError);
+        return;
+      }
+
+      // Adopt the database's own id. The optimistic row above carries a local
+      // `run-<timestamp>` id; without this the local and server ids diverge
+      // permanently and a later delete/edit can't address the right row.
+      if (inserted?.id) {
+        setRuns(prev => prev.map(r => (r.id === newRun.id ? { ...r, id: inserted.id } : r)));
+      }
     } catch (e) {
       console.warn("Failed to persist new run to Supabase:", e);
+    }
+  };
+
+  const handleDeleteRun = async (runId: string) => {
+    const target = runs.find(r => r.id === runId);
+    if (!target) return;
+    if (!window.confirm(`Delete "${target.title}"? This can't be undone.`)) return;
+
+    const previous = runs;
+    setRuns(prev => prev.filter(r => r.id !== runId));
+
+    // Give back the mileage this run contributed, so deleting a run doesn't
+    // leave a shoe permanently over-counted.
+    if (target.shoeId) {
+      setShoes(prev => prev.map(sh => sh.id === target.shoeId
+        ? { ...sh, totalDistanceKm: parseFloat(Math.max(0, sh.totalDistanceKm - target.distanceKm).toFixed(1)) }
+        : sh));
+    }
+
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) return;
+      const { error } = await supabase
+        .from('stride_activities')
+        .delete()
+        .eq('id', runId)
+        .eq('user_id', uid);
+      if (error) {
+        console.error('Failed to delete run:', error);
+        setRuns(previous);
+        window.alert('Could not delete that run. Please try again.');
+      }
+    } catch (e) {
+      console.error('Failed to delete run:', e);
+      setRuns(previous);
     }
   };
 
@@ -532,7 +595,18 @@ export function App() {
               )}
             </div>
 
-            <div className="stride-modal-footer">
+            <div className="stride-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <button
+                className="btn-cancel"
+                style={{ color: '#ef4444', borderColor: '#ef4444' }}
+                onClick={() => {
+                  const id = selectedRunDetail.id;
+                  setSelectedRunDetail(null);
+                  handleDeleteRun(id);
+                }}
+              >
+                Delete run
+              </button>
               <button className="btn-cancel" onClick={() => setSelectedRunDetail(null)}>Close</button>
             </div>
           </div>

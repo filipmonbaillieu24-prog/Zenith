@@ -13,3 +13,20 @@ export async function activateProTrial(supabase: SupabaseClient): Promise<void> 
   const { error } = await supabase.rpc('activate_pro_trial');
   if (error) throw error;
 }
+
+/**
+ * The founder account's email address.
+ *
+ * Single source of truth: this check was previously retyped as a string
+ * literal in four places across Hub (App.tsx x3, ProfilePage.tsx), so editing
+ * one and missing another would silently desync founder privileges between
+ * pages. Note this is a convenience/UI gate only - it is not a security
+ * boundary, since a client can claim any email in its own copy of the app.
+ * Anything that must actually be restricted belongs behind RLS or an RPC.
+ */
+export const FOUNDER_EMAIL = 'filip.monbaillieu.24@gmail.com';
+
+/** True when the given email is the founder account. Case-insensitive. */
+export function isFounderEmail(email: string | null | undefined): boolean {
+  return !!email && email.toLowerCase() === FOUNDER_EMAIL;
+}

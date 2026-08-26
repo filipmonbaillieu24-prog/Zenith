@@ -15,7 +15,7 @@ const FeatureRequestsPage = lazy(() => import('./pages/community/FeatureRequests
 import { loggerService } from './utils/loggerService';
 import { Sidebar, TabKey } from './components/Sidebar';
 import { computePMC } from './utils/pmc';
-import { recoveryModel, isTrustedZenithOrigin, activateProTrial } from '@zenith/shared';
+import { recoveryModel, isTrustedZenithOrigin, activateProTrial, isFounderEmail } from '@zenith/shared';
 import './App.css';
 import { AppTitlebar } from './components/AppTitlebar';
 import { BugReportModal, BugReportSubmitData } from './components/BugReportModal';
@@ -292,7 +292,7 @@ function App() {
       if (session?.user) {
         loadFitnessProfile(session.user.id, session.user.user_metadata);
         const isCompleted = session.user.user_metadata?.onboarding_completed === true;
-        const isFounder = session.user.email?.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
+        const isFounder = isFounderEmail(session.user.email);
         if (!isCompleted && !isFounder) {
           setShowOnboarding(true);
         }
@@ -304,7 +304,7 @@ function App() {
       if (session?.user) {
         loadFitnessProfile(session.user.id, session.user.user_metadata);
         const isCompleted = session.user.user_metadata?.onboarding_completed === true;
-        const isFounder = session.user.email?.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
+        const isFounder = isFounderEmail(session.user.email);
         if (!isCompleted && !isFounder) {
           setShowOnboarding(true);
         }
@@ -557,7 +557,7 @@ ${data.description}
 - **Operating system:** ${envOs}
 - **Browser:** ${envBrowser}
 - **Screen resolution:** ${envScreen}
-- **Application Version:** 0.1.0 (Tauri)
+- **Application Version:** ${__APP_VERSION__} (Tauri)
 
 ${imagesMarkdown}
 
@@ -589,6 +589,7 @@ ${logsMarkdown}
     const githubNumber = issueData.number;
 
     // 6. Save to Supabase public.bug_reports table
+    let dbPersisted = true;
     try {
       const { error: dbError } = await supabase
         .from('bug_reports')
@@ -610,12 +611,17 @@ ${logsMarkdown}
 
       if (dbError) {
         console.warn("Could not save bug report to Supabase database:", dbError);
+        dbPersisted = false;
       }
     } catch (dbErr) {
       console.warn("Error saving to database:", dbErr);
+      dbPersisted = false;
     }
 
-    return { success: true, githubUrl };
+    // The GitHub issue is already filed at this point, so this is not a failure
+    // of the report itself - but silently swallowing it let the issue tracker
+    // and our own bug_reports table drift apart with nothing to indicate it.
+    return { success: true, githubUrl, dbPersisted };
   };
 
   const handleMinimize = async () => {
@@ -715,7 +721,7 @@ ${logsMarkdown}
   }
 
   const userName = fitnessProfile?.name || session?.user?.user_metadata?.name || 'Athlete';
-  const isFounder = session?.user?.email?.toLowerCase() === 'filip.monbaillieu.24@gmail.com';
+  const isFounder = isFounderEmail(session?.user?.email);
   const isTauri = typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window || !!(window as any).__TAURI_METADATA__);
 
   return (

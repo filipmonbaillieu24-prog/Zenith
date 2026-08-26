@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import pkg from "./package.json" with { type: "json" };
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
@@ -9,6 +10,11 @@ const host = process.env.TAURI_DEV_HOST;
 export default defineConfig(async () => ({
   base: "./",
   plugins: [react()],
+  // Surfaces the real package version in-app (bug reports used to hardcode
+  // "0.1.0" and so mislabelled every report submitted from a newer build).
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   resolve: {
     alias: {
       "@zenith/shared": path.resolve(__dirname, "../../shared/index.ts"),
