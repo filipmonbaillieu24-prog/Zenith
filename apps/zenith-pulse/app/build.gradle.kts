@@ -46,6 +46,8 @@ dependencies {
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.work.runtime.ktx)
+  // Keystore-backed SharedPreferences for the session token.
+  implementation(libs.androidx.security.crypto)
 
   // Arch & Compose
   implementation(libs.androidx.lifecycle.runtime.compose)

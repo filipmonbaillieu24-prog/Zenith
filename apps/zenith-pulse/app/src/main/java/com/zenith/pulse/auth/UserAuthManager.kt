@@ -3,6 +3,8 @@ package com.zenith.pulse.auth
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.headers
@@ -19,7 +21,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 object UserAuthManager {
 
-    private const val PREFS_NAME = "zenith_pulse_auth_prefs"
+    private const val TAG = "UserAuthManager"
     private const val KEY_USER_EMAIL = "key_user_email"
     private const val KEY_USER_ID = "key_user_id"
     private const val KEY_ACCESS_TOKEN = "key_access_token"
@@ -32,8 +34,79 @@ object UserAuthManager {
         HttpClient(OkHttp)
     }
 
+    private const val LEGACY_PREFS_NAME = "zenith_pulse_auth_prefs"
+    private const val ENCRYPTED_PREFS_NAME = "zenith_pulse_auth_prefs_enc"
+
+    @Volatile
+    private var cachedPrefs: SharedPreferences? = null
+
+    /**
+     * Keystore-backed preferences holding the Supabase session.
+     *
+     * The access and refresh tokens used to sit in plain SharedPreferences. With
+     * android:allowBackup="false" they are no longer reachable via `adb backup`,
+     * but on a rooted device the file was still readable as plaintext. Backing
+     * it with a Keystore-derived key means the file itself is useless without
+     * the device's hardware-held key.
+     *
+     * Falls back to plain preferences if the Keystore is unavailable - some
+     * devices ship with a broken or wiped keystore, and failing closed here
+     * would lock the user out of their own session with no way back.
+     */
     private fun getPrefs(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        cachedPrefs?.let { return it }
+        synchronized(this) {
+            cachedPrefs?.let { return it }
+            val prefs = try {
+                val masterKey = MasterKey.Builder(context.applicationContext)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+                val encrypted = EncryptedSharedPreferences.create(
+                    context.applicationContext,
+                    ENCRYPTED_PREFS_NAME,
+                    masterKey,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+                migrateLegacyPrefs(context, encrypted)
+                encrypted
+            } catch (e: Exception) {
+                Log.w(TAG, "Encrypted preferences unavailable; using plain storage.", e)
+                context.applicationContext.getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+            }
+            cachedPrefs = prefs
+            return prefs
+        }
+    }
+
+    /**
+     * One-time move of an existing session out of the plaintext file.
+     *
+     * Without this an upgrading user would appear signed out (their session
+     * would still be sitting in the old file) and, worse, the plaintext copy
+     * would be left behind on disk.
+     */
+    private fun migrateLegacyPrefs(context: Context, target: SharedPreferences) {
+        val legacy = context.applicationContext
+            .getSharedPreferences(LEGACY_PREFS_NAME, Context.MODE_PRIVATE)
+        if (legacy.all.isEmpty()) return
+        if (target.contains(KEY_USER_EMAIL)) {
+            legacy.edit().clear().apply()
+            return
+        }
+        val editor = target.edit()
+        for ((key, value) in legacy.all) {
+            when (value) {
+                is String -> editor.putString(key, value)
+                is Boolean -> editor.putBoolean(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+                is Float -> editor.putFloat(key, value)
+            }
+        }
+        editor.apply()
+        legacy.edit().clear().apply()
+        Log.i(TAG, "Migrated session to encrypted storage.")
     }
 
     /**

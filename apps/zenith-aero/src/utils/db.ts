@@ -1,4 +1,5 @@
 import { PlannedWorkoutItem } from './pmc';
+import type { RoutePoint } from '../types/route';
 import { supabase } from './supabaseClient';
 import { Ride, Gear } from '../types/workout';
 
@@ -22,7 +23,46 @@ async function getUserId(): Promise<string> {
 
 // ─── Mapper Helpers ────────────────────────────────────────────────────────────
 
-function mapSupabaseRide(row: any): Ride {
+/**
+ * Shapes of the database rows this module reads.
+ *
+ * These mappers took `row: any`, which meant a column being renamed, dropped or
+ * changing type produced `undefined` silently at runtime instead of a compile
+ * error - the exact drift between the Supabase schema and the TS types that is
+ * hardest to notice, because every downstream value just quietly becomes NaN or
+ * empty. Naming the row shape makes a mismatch visible here, at the boundary.
+ */
+interface RideRow {
+  id: string;
+  name: string;
+  date: number | string;
+  distance: number | string;
+  duration: number;
+  elev_gain: number;
+  avg_speed: number | string;
+  avg_power: number | null;
+  avg_hr: number | null;
+  has_power: boolean;
+  has_hr: boolean;
+  has_gps: boolean;
+  points?: Ride['points'] | null;
+  best_efforts?: Ride['bestEfforts'] | null;
+  best_speed_efforts?: Ride['bestSpeedEfforts'] | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+interface GearRow {
+  id: string;
+  name: string;
+  type: Gear['type'];
+  brand?: string | null;
+  model?: string | null;
+  weight?: number | string | null;
+  active: boolean;
+  components?: Gear['components'] | null;
+}
+
+function mapSupabaseRide(row: RideRow): Ride {
   return {
     id: row.id,
     name: row.name,
@@ -31,8 +71,11 @@ function mapSupabaseRide(row: any): Ride {
     duration: row.duration,
     elevGain: row.elev_gain,
     avgSpeed: Number(row.avg_speed),
-    avgPower: row.avg_power,
-    avgHR: row.avg_hr,
+    // Nullable in the database, optional in the Ride type: converted here so a
+    // null never reaches code that only guards for undefined. Typing the row
+    // shape is what surfaced this - it was flowing straight through before.
+    avgPower: row.avg_power ?? undefined,
+    avgHR: row.avg_hr ?? undefined,
     hasPower: row.has_power,
     hasHR: row.has_hr,
     hasGPS: row.has_gps,
@@ -73,11 +116,11 @@ async function rideToRow(ride: Ride) {
   };
 }
 
-function mapSupabaseGear(row: any): Gear {
+function mapSupabaseGear(row: GearRow): Gear {
   return {
     id: row.id,
     name: row.name,
-    type: row.type as any,
+    type: row.type,
     brand: row.brand || undefined,
     model: row.model || undefined,
     weight: row.weight ? Number(row.weight) : undefined,
@@ -349,7 +392,7 @@ export async function getAllPlannedWorkouts(): Promise<(PlannedWorkoutItem & { f
     id: row.id,
     date: row.date,
     title: row.title,
-    type: row.type as any,
+    type: row.type as PlannedWorkoutItem['type'],
     durationMinutes: row.duration_minutes,
     plannedTSS: row.planned_tss,
     notes: row.notes,
@@ -374,7 +417,7 @@ export async function saveRoute(route: {
   distance: number;
   duration: number;
   elevGain: number;
-  points: any[];
+  points: RoutePoint[];
 }): Promise<void> {
   const userId = await getUserId();
   const row = {
