@@ -909,7 +909,12 @@ function App() {
         const prod = data.product;
         setIngName(prod.product_name || '');
         
-        const kcal = prod.nutriments?.['energy-kcal_100g'] || prod.nutriments?.energy_100g || '';
+        // Open Food Facts' energy-kcal_100g is already kcal, but its energy_100g
+        // fallback is in kJ, not kcal — using it directly (as this used to) inflated
+        // the calorie count by ~4.18x for any product missing the kcal field.
+        const kcalDirect = prod.nutriments?.['energy-kcal_100g'];
+        const kjFallback = prod.nutriments?.energy_100g;
+        const kcal = kcalDirect != null ? kcalDirect : (kjFallback != null ? Math.round(kjFallback / 4.184) : '');
         setIngKcal(kcal.toString());
         setIngCarbs((prod.nutriments?.carbohydrates_100g || 0).toString());
         setIngProtein((prod.nutriments?.proteins_100g || 0).toString());

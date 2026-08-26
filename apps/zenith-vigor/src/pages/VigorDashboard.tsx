@@ -817,8 +817,16 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   // Handles saving manual entries (Steps, Sleep, Weight)
   const handleManualSave = async (type: 'weight' | 'sleep' | 'steps', payload: any) => {
     const table = `vigor_${type}`;
+    // vigor_steps/vigor_sleep dedupe on (user_id, local_date) — a row inserted
+    // without local_date falls back to today's UTC date (the column's DB
+    // default), so a backdated entry either collides with today's real synced
+    // row or gets silently miscategorized as "today" instead of the date the
+    // user actually picked. Deriving local_date from the same logged_at the
+    // user chose keeps manual entries keyed the same way synced ones are.
+    const localDate = typeof payload.logged_at === 'string' ? payload.logged_at.slice(0, 10) : undefined;
     const { error } = await supabase.from(table).insert({
       user_id: user.id,
+      ...(localDate ? { local_date: localDate } : {}),
       ...payload
     });
 

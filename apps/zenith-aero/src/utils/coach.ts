@@ -257,22 +257,26 @@ export function generateCoachAdvice(
   if (pmcData && pmcData.ctl > 0) {
     const { ctl, atl, tsb } = pmcData;
 
-    // TSB overtraining / recovery advice
-    if (tsb < -30) {
+    // TSB overtraining / recovery advice. Thresholds match shared interpretTSB()
+    // (shared/pmc.ts) — the same breakpoints driving the Form pill on the
+    // dashboard — so a given TSB reading means the same thing everywhere in Aero
+    // instead of triggering a "you're fine" pill next to an "overtraining risk"
+    // advice card.
+    if (tsb < -25) {
       advice.push({
         category: 'warning', priority: 1, icon: '🔴', color: '#ff7675',
         title: `Overtraining risk (TSB: ${Math.round(tsb)})`,
         body: `Your Form (TSB) is ${Math.round(tsb)}, indicating significant fatigue accumulation. Your body can no longer handle the load. Rest is the best training now.`,
         action: '2-3 full rest days or a light recovery ride (Zone 1)',
       });
-    } else if (tsb < -20) {
+    } else if (tsb < -10) {
       advice.push({
         category: 'recovery', priority: 2, icon: '⚡', color: '#fdcb6e',
         title: `High training workload (TSB: ${Math.round(tsb)})`,
         body: `Your Form is ${Math.round(tsb)} with a fatigue (ATL) of ${Math.round(atl)}. You are in a build phase - monitor how you feel and get enough sleep.`,
         action: 'Prioritize 7-8h sleep, adequate carbs and hydration',
       });
-    } else if (tsb > 10 && tsb < 25) {
+    } else if (tsb > 5 && tsb < 25) {
       advice.push({
         category: 'progression', priority: 3, icon: '🏆', color: '#55efc4',
         title: `Peak condition reached (TSB: +${Math.round(tsb)})`,
