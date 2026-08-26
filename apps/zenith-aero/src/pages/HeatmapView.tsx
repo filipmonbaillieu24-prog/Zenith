@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
 import { Map as MapIcon, Lock } from 'lucide-react';
 import { ZenithEmptyState } from '@zenith/shared';
-import { getAllRidesFull } from '../utils/db';
+import { getRideTracks } from '../utils/db';
 import type { LatLngBoundsLiteral } from 'leaflet';
 import './HeatmapView.css';
 
@@ -53,10 +53,13 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ isPro = false, onRequestProMo
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
-    getAllRidesFull().then(rides => {
-      const cutoff = isPro ? 0 : Date.now() - 30 * 24 * 3600 * 1000;
+    // The date window and the has_gps filter are pushed into the query, so a
+    // non-Pro user viewing 30 days no longer downloads every track ever
+    // recorded just to discard it here.
+    const cutoff = isPro ? undefined : Date.now() - 30 * 24 * 3600 * 1000;
+    getRideTracks(cutoff).then(rides => {
       const t = rides
-        .filter(r => r.points?.some(p => p.lat != null) && (isPro || r.date >= cutoff))
+        .filter(r => r.points?.some(p => p.lat != null))
         .sort((a, b) => b.date - a.date)
         .map(r => ({
           id:    r.id,

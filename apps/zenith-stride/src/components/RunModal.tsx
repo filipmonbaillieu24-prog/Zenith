@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { zenithAlert } from '@zenith/shared';
 import { RunActivity, RunType, RunningShoe } from '../types/stride';
 import { 
   X, 
@@ -57,7 +58,7 @@ export const RunModal: React.FC<RunModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Parse without `||` fallbacks: a legitimately-entered 0 is falsy, so the
@@ -72,7 +73,7 @@ export const RunModal: React.FC<RunModalProps> = ({
                  + (Number.isFinite(parsedSecs) ? parsedSecs : 0);
 
     if (durSec <= 0) {
-      window.alert('Enter how long the run took before saving.');
+      await zenithAlert('Enter how long the run took before saving.');
       return;
     }
 

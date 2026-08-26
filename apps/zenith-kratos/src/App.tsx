@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import {
   Dumbbell,
@@ -870,7 +870,7 @@ export default function App() {
   };
 
   const handleDeleteExercise = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this exercise?")) return;
+    if (!await zenithConfirm("Are you sure you want to delete this exercise?")) return;
     const { error } = await supabase
       .from('kratos_exercises')
       .update({ deleted: true })
@@ -881,7 +881,7 @@ export default function App() {
   };
 
   const handleDeleteWorkout = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this workout from the logbook?")) return;
+    if (!await zenithConfirm("Are you sure you want to delete this workout from the logbook?")) return;
     const { error } = await supabase
       .from('kratos_workouts')
       .delete()
@@ -1029,8 +1029,8 @@ export default function App() {
     });
   };
 
-  const handleRemoveExerciseFromLog = (exIdx: number) => {
-    if (!window.confirm("Are you sure you want to delete this exercise from the workout?")) return;
+  const handleRemoveExerciseFromLog = async (exIdx: number) => {
+    if (!await zenithConfirm("Are you sure you want to delete this exercise from the workout?")) return;
     const updated = [...workoutForm.sets];
     updated.splice(exIdx, 1);
     setWorkoutForm({ ...workoutForm, sets: updated });
@@ -1100,7 +1100,7 @@ export default function App() {
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this template?")) return;
+    if (!await zenithConfirm("Are you sure you want to delete this template?")) return;
     const { error } = await supabase
       .from('kratos_templates')
       .delete()

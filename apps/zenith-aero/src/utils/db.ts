@@ -153,8 +153,90 @@ export async function deleteRide(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Page size for ride reads that carry `points`.
+ *
+ * PostgREST caps rows per response (1000 by default), so a single unpaged
+ * select silently TRUNCATES for a long-tenured rider - the heatmap and the
+ * recalculation would just quietly skip the oldest rides. Paging also avoids
+ * building one enormous response body, since `points` holds the full GPS track.
+ */
+const RIDE_PAGE_SIZE = 200;
+
+/**
+ * Every ride including its GPS track, fetched in pages.
+ *
+ * Prefer {@link getRideTracks} when only the track is needed - this returns
+ * every column, which is a lot of payload per row.
+ */
 export async function getAllRidesFull(): Promise<Ride[]> {
-  return getAllRides();
+  const userId = await getUserId();
+  const all: Ride[] = [];
+
+  for (let from = 0; ; from += RIDE_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('rides')
+      .select('*')
+      .eq('user_id', userId)
+      .order('date', { ascending: false })
+      .range(from, from + RIDE_PAGE_SIZE - 1);
+
+    if (error) throw error;
+    const rows = data || [];
+    all.push(...rows.map(mapSupabaseRide));
+    if (rows.length < RIDE_PAGE_SIZE) break;
+  }
+
+  return all;
+}
+
+/** Minimal shape the heatmap needs: identity plus the GPS track. */
+export interface RideTrack {
+  id: string;
+  name: string;
+  date: number;
+  points: { lat?: number | null; lng?: number | null }[];
+}
+
+/**
+ * Rides that have GPS, carrying only the columns a map needs.
+ *
+ * The heatmap used to call getAllRidesFull() and throw away almost all of it,
+ * pulling every column of every ride ever recorded just to read coordinates.
+ * `sinceMs` pushes the date window into the query instead of filtering client
+ * side, so a non-Pro user viewing 30 days doesn't download years of tracks.
+ */
+export async function getRideTracks(sinceMs?: number): Promise<RideTrack[]> {
+  const userId = await getUserId();
+  const all: RideTrack[] = [];
+
+  for (let from = 0; ; from += RIDE_PAGE_SIZE) {
+    let query = supabase
+      .from('rides')
+      .select('id, name, date, points')
+      .eq('user_id', userId)
+      .eq('has_gps', true);
+
+    if (sinceMs != null) query = query.gte('date', sinceMs);
+
+    const { data, error } = await query
+      .order('date', { ascending: false })
+      .range(from, from + RIDE_PAGE_SIZE - 1);
+
+    if (error) throw error;
+    const rows = data || [];
+    for (const row of rows) {
+      all.push({
+        id: row.id,
+        name: row.name,
+        date: Number(row.date),
+        points: Array.isArray(row.points) ? row.points : [],
+      });
+    }
+    if (rows.length < RIDE_PAGE_SIZE) break;
+  }
+
+  return all;
 }
 
 export async function rideExists(id: string): Promise<boolean> {

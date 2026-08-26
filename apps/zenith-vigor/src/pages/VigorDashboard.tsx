@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState } from '@zenith/shared';
+import { ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, zenithConfirm } from '@zenith/shared';
 import { 
   Scale, 
   Moon, 
@@ -420,7 +420,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
   const handleDeleteLog = async (type: 'weight' | 'sleep' | 'steps', id: string) => {
     const typeNames = { weight: 'weight', sleep: 'sleep', steps: 'steps' };
-    if (window.confirm(`Are you sure you want to delete this ${typeNames[type]} measurement?`)) {
+    if (await zenithConfirm(`Are you sure you want to delete this ${typeNames[type]} measurement?`)) {
       const table = `vigor_${type}`;
       try {
         const { error } = await supabase

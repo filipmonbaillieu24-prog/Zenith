@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { zenithConfirm } from '@zenith/shared';
 import { loggerService, LogEntry } from '../../utils/loggerService';
 import { 
   Terminal, 
@@ -79,8 +80,8 @@ export const SystemConsolePage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleClearLogs = () => {
-    if (window.confirm('Are you sure you want to clear the system log?')) {
+  const handleClearLogs = async () => {
+    if (await zenithConfirm('Are you sure you want to clear the system log?')) {
       loggerService.clearLogs();
     }
   };

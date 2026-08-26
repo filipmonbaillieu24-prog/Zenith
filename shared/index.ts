@@ -29,4 +29,5 @@ export * from './components/ZenithStatusPill';
 export * from './components/ZenithHeroStat';
 export * from './components/ZenithPageHeader';
 export * from './components/ZenithEmptyState';
+export * from './components/ZenithDialog';
 export * from './chartTheme';

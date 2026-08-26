@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from './utils/supabaseClient';
-import { ZenithHeroStat, ZenithEmptyState, ZenithPageHeader, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { ZenithHeroStat, ZenithEmptyState, ZenithPageHeader, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, zenithConfirm, zenithAlert } from '@zenith/shared';
 import { RunActivity, RunningShoe } from './types/stride';
 import { RunModal } from './components/RunModal';
 import { GpxImportModal } from './components/GpxImportModal';
@@ -237,7 +237,7 @@ export function App() {
   const handleDeleteRun = async (runId: string) => {
     const target = runs.find(r => r.id === runId);
     if (!target) return;
-    if (!window.confirm(`Delete "${target.title}"? This can't be undone.`)) return;
+    if (!await zenithConfirm(`Delete "${target.title}"? This can't be undone.`)) return;
 
     const previous = runs;
     setRuns(prev => prev.filter(r => r.id !== runId));
@@ -265,7 +265,7 @@ export function App() {
       if (error) {
         console.error('Failed to delete run:', error);
         setRuns(previous);
-        window.alert('Could not delete that run. Please try again.');
+        await zenithAlert('Could not delete that run. Please try again.');
       }
     } catch (e) {
       console.error('Failed to delete run:', e);
