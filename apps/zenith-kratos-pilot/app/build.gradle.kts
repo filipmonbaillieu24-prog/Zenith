@@ -3,7 +3,7 @@ plugins {
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
   id("org.jetbrains.kotlin.android")
-  id("org.jetbrains.kotlin.kapt")
+  alias(libs.plugins.ksp)
 }
 
 android {
@@ -89,5 +89,7 @@ dependencies {
   // Room Database
   implementation(libs.room.runtime)
   implementation(libs.room.ktx)
-  add("kapt", libs.room.compiler)
+  // KSP rather than kapt: kapt is in maintenance mode and runs a full
+  // Java-stub generation pass, which is the slowest step in this build.
+  add("ksp", libs.room.compiler)
 }

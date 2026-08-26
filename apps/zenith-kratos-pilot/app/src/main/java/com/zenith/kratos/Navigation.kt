@@ -31,6 +31,8 @@ enum class KratosScreen {
     COMPLETION
 }
 
+private const val DEFAULT_BODYWEIGHT_KG = 80.0
+
 @Composable
 fun MainNavigation() {
     val context = LocalContext.current
@@ -93,7 +95,10 @@ fun MainNavigation() {
         when (sessionStatus) {
             is SessionStatus.Authenticated -> {
                 scope.launch {
-                    val w = repository?.getLatestBodyweight() ?: 80.0
+                    // Explicit, visible fallback: getLatestBodyweight() returns
+                    // null both when nothing is logged yet and when the fetch
+                    // failed, rather than silently passing off 80kg as measured.
+                    val w = repository?.getLatestBodyweight() ?: DEFAULT_BODYWEIGHT_KG
                     bodyWeight = w
 
                     val persisted = repository?.getPersistedActiveWorkout()

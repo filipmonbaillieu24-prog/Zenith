@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAISettings, saveAISettings, sendAIChat, AISettings } from '../../utils/ai';
+import { getAISettings, saveAISettings, sendAIChat, hasOpenAIKey, clearOpenAIKey, AISettings } from '../../utils/ai';
 
 export const AISettingsPanel: React.FC = () => {
   const [settings, setSettings] = useState<AISettings>({
@@ -12,15 +12,37 @@ export const AISettingsPanel: React.FC = () => {
 
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [keyStored, setKeyStored] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     setSettings(getAISettings());
+    void hasOpenAIKey().then(setKeyStored);
   }, []);
 
   const handleChange = (key: keyof AISettings, value: string) => {
     const updated = { ...settings, [key]: value };
     setSettings(updated);
-    saveAISettings(updated);
+    setSaveError(null);
+    saveAISettings(updated)
+      .then(() => {
+        if (key === 'openaiKey' && value.trim()) setKeyStored(true);
+      })
+      .catch(err => {
+        console.error('Failed to save AI settings:', err);
+        setSaveError('Could not save your AI settings. Check your connection and try again.');
+      });
+  };
+
+  const handleClearKey = async () => {
+    try {
+      await clearOpenAIKey();
+      setKeyStored(false);
+      setSettings(prev => ({ ...prev, openaiKey: '' }));
+    } catch (err) {
+      console.error('Failed to clear key:', err);
+      setSaveError('Could not remove the stored key.');
+    }
   };
 
   const handleTestConnection = async () => {
@@ -125,12 +147,19 @@ export const AISettingsPanel: React.FC = () => {
       {settings.provider === 'openai' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeIn 0.2s' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>OpenAI API Key</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>
+              OpenAI API Key
+              {keyStored && (
+                <span style={{ marginLeft: 8, color: '#4ade80', fontWeight: 600, textTransform: 'none' }}>
+                  ✓ saved
+                </span>
+              )}
+            </label>
             <input
               type="password"
               value={settings.openaiKey}
               onChange={e => handleChange('openaiKey', e.target.value)}
-              placeholder="sk-..."
+              placeholder={keyStored ? 'Saved — type a new key to replace it' : 'sk-...'}
               style={{
                 background: 'rgba(255,255,255,0.03)',
                 border: '1px solid rgba(255,255,255,0.08)',
@@ -142,6 +171,35 @@ export const AISettingsPanel: React.FC = () => {
                 outline: 'none',
               }}
             />
+            <p style={{ margin: '2px 0 0', fontSize: 10, color: '#64748b', lineHeight: 1.4 }}>
+              Stored on Zenith's server, not in this browser, and never sent back to
+              this page. Requests go through Zenith rather than straight to OpenAI.
+            </p>
+            {keyStored && (
+              <button
+                type="button"
+                onClick={handleClearKey}
+                style={{
+                  alignSelf: 'flex-start',
+                  marginTop: 2,
+                  background: 'transparent',
+                  border: '1px solid rgba(248,113,113,0.4)',
+                  color: '#f87171',
+                  padding: '4px 10px',
+                  fontSize: 11,
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Remove saved key
+              </button>
+            )}
+            {saveError && (
+              <p role="alert" style={{ margin: '4px 0 0', fontSize: 11, color: '#f87171' }}>
+                {saveError}
+              </p>
+            )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase' }}>Model</label>

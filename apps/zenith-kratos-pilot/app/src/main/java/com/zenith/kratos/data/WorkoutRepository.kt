@@ -1,5 +1,6 @@
 package com.zenith.kratos.data
 
+import android.util.Log
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,7 @@ class WorkoutRepository(
     private val activeWorkoutDao: ActiveWorkoutDao
 ) {
     private val client = SupabaseClient.client
+    private val TAG = "WorkoutRepository"
     private val json = Json { ignoreUnknownKeys = true }
 
     // 1. Fetch & Cache Exercises
@@ -80,9 +82,21 @@ class WorkoutRepository(
     }
 
     // 2b. Fetch Latest Bodyweight
-    suspend fun getLatestBodyweight(): Double = withContext(Dispatchers.IO) {
+    /**
+     * Latest logged bodyweight in kg, or null when it genuinely isn't known.
+     *
+     * This used to swallow every failure and return a hardcoded 80.0, which is
+     * indistinguishable from "this user actually weighs 80kg". Bodyweight feeds
+     * the load calculation for bodyweight exercises (see TrackerScreen), so for
+     * a 60kg or 100kg lifter a silent 80.0 quietly corrupts their logged volume
+     * and e1RM on every such set - with nothing at all to indicate it happened.
+     *
+     * Returning null lets the caller apply an explicit, visible default and
+     * keeps a network failure from masquerading as real data.
+     */
+    suspend fun getLatestBodyweight(): Double? = withContext(Dispatchers.IO) {
         try {
-            val uId = client.auth.currentUserOrNull()?.id ?: return@withContext 80.0
+            val uId = client.auth.currentUserOrNull()?.id ?: return@withContext null
             val response = client.postgrest["vigor_weight"].select {
                 filter {
                     eq("user_id", uId)
@@ -91,10 +105,14 @@ class WorkoutRepository(
                 limit(1)
             }
             val entries = json.decodeFromString<List<BodyweightEntry>>(response.data)
-            entries.firstOrNull()?.weight ?: 80.0
+            val weight = entries.firstOrNull()?.weight
+            if (weight == null) {
+                Log.i(TAG, "No bodyweight logged yet for this user.")
+            }
+            weight
         } catch (e: Exception) {
-            e.printStackTrace()
-            80.0
+            Log.w(TAG, "Bodyweight fetch failed; caller will fall back to a default.", e)
+            null
         }
     }
 
