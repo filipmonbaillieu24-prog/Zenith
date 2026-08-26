@@ -21,8 +21,12 @@ export function getRecommendedWorkoutType(
   activeFocus?: 'ftp' | 'endurance' | 'recovery' | 'vo2max',
   phase?: 'base' | 'build' | 'peak' | 'race' | 'recovery'
 ): 'recovery' | 'endurance' | 'sweetspot' | 'threshold' | 'vo2max' {
-  // 1. Critical overreaching override: always recovery ride/rest if TSB drops below -20!
-  if (tsb < -20) {
+  // 1. Critical overreaching override: always recovery ride/rest once TSB is in
+  // interpretTSB()'s "Overtraining risk" zone (shared/pmc.ts, tsb < -25) — this used
+  // to trip at -20, a threshold the week-plan view (useTrainingState.ts) didn't share,
+  // so a TSB around -22 could show moderate/hard days on the week grid while this
+  // single-workout recommender was already forcing recovery.
+  if (tsb < -25) {
     return 'recovery';
   }
 

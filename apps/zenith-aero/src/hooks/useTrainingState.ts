@@ -397,11 +397,13 @@ export function useTrainingState(
   const weekPlan = useMemo(() => {
     const tsb = latestTSB;
     type RW = WorkoutType | 'rest';
+    // Breakpoints match shared interpretTSB() (-25/-10/5/25) — this bucketing
+    // already agreed with three of the four; only the top one (20) didn't.
     const tsbRow: RW[] = (() => {
       if      (tsb < -25) return ['rest','recovery','recovery','rest','endurance','recovery','rest'] as RW[];
       else if (tsb < -10) return ['recovery','endurance','recovery','sweetspot','rest','endurance','rest'] as RW[];
       else if (tsb <   5) return ['endurance','sweetspot','rest','sweetspot','endurance','threshold','rest'] as RW[];
-      else if (tsb <  20) return ['sweetspot','threshold','rest','sweetspot','threshold','endurance','rest'] as RW[];
+      else if (tsb <  25) return ['sweetspot','threshold','rest','sweetspot','threshold','endurance','rest'] as RW[];
       else                return ['threshold','sweetspot','threshold','rest','sweetspot','threshold','rest'] as RW[];
     })();
 

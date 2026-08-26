@@ -113,15 +113,18 @@ export async function saveRide(ride: Ride): Promise<void> {
 }
 
 export async function getRide(id: string): Promise<Ride | undefined> {
-  const { data, error } = await supabase.from('rides').select('*').eq('id', id).maybeSingle();
+  const userId = await getUserId();
+  const { data, error } = await supabase.from('rides').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
   if (error) throw error;
   return data ? mapSupabaseRide(data) : undefined;
 }
 
 export async function getAllRideSummaries(): Promise<(Omit<Ride, 'points'>)[]> {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('rides')
     .select('id, name, date, distance, duration, elev_gain, avg_speed, avg_power, avg_hr, has_power, has_hr, has_gps, best_efforts, best_speed_efforts, metadata')
+    .eq('user_id', userId)
     .order('date', { ascending: false });
 
   if (error) throw error;
@@ -133,9 +136,11 @@ export async function getAllRideSummaries(): Promise<(Omit<Ride, 'points'>)[]> {
 }
 
 export async function getAllRides(): Promise<Ride[]> {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('rides')
     .select('*')
+    .eq('user_id', userId)
     .order('date', { ascending: false });
 
   if (error) throw error;
@@ -143,7 +148,8 @@ export async function getAllRides(): Promise<Ride[]> {
 }
 
 export async function deleteRide(id: string): Promise<void> {
-  const { error } = await supabase.from('rides').delete().eq('id', id);
+  const userId = await getUserId();
+  const { error } = await supabase.from('rides').delete().eq('id', id).eq('user_id', userId);
   if (error) throw error;
 }
 
@@ -152,7 +158,8 @@ export async function getAllRidesFull(): Promise<Ride[]> {
 }
 
 export async function rideExists(id: string): Promise<boolean> {
-  const { data, error } = await supabase.from('rides').select('id').eq('id', id).maybeSingle();
+  const userId = await getUserId();
+  const { data, error } = await supabase.from('rides').select('id').eq('id', id).eq('user_id', userId).maybeSingle();
   if (error) throw error;
   return data !== null;
 }
@@ -161,10 +168,11 @@ export async function updateRideMeta(
   id: string,
   patch: Partial<Pick<import('../types/workout').Ride, 'notes' | 'label' | 'weather' | 'gearId' | 'rpe' | 'aiAnalysis'>>
 ): Promise<void> {
-  const { data, error: getErr } = await supabase.from('rides').select('metadata').eq('id', id).maybeSingle();
+  const userId = await getUserId();
+  const { data, error: getErr } = await supabase.from('rides').select('metadata').eq('id', id).eq('user_id', userId).maybeSingle();
   if (getErr || !data) return;
   const newMetadata = { ...(data.metadata || {}), ...patch };
-  const { error } = await supabase.from('rides').update({ metadata: newMetadata }).eq('id', id);
+  const { error } = await supabase.from('rides').update({ metadata: newMetadata }).eq('id', id).eq('user_id', userId);
   if (error) throw error;
 }
 
@@ -177,16 +185,18 @@ export async function saveGear(gear: Gear): Promise<void> {
 }
 
 export async function getGear(id: string): Promise<Gear | undefined> {
-  const { data, error } = await supabase.from('gear').select('*').eq('id', id).maybeSingle();
+  const userId = await getUserId();
+  const { data, error } = await supabase.from('gear').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
   if (error) throw error;
   return data ? mapSupabaseGear(data) : undefined;
 }
 
 export async function getAllGear(): Promise<Gear[]> {
-  const { data: gearsData, error: gearsErr } = await supabase.from('gear').select('*');
+  const userId = await getUserId();
+  const { data: gearsData, error: gearsErr } = await supabase.from('gear').select('*').eq('user_id', userId);
   if (gearsErr) throw gearsErr;
 
-  const { data: ridesData, error: ridesErr } = await supabase.from('rides').select('date, distance, metadata');
+  const { data: ridesData, error: ridesErr } = await supabase.from('rides').select('date, distance, metadata').eq('user_id', userId);
   if (ridesErr) throw ridesErr;
 
   const gears = (gearsData || []).map(mapSupabaseGear);
@@ -216,7 +226,8 @@ export async function getAllGear(): Promise<Gear[]> {
 }
 
 export async function deleteGear(id: string): Promise<void> {
-  const { error } = await supabase.from('gear').delete().eq('id', id);
+  const userId = await getUserId();
+  const { error } = await supabase.from('gear').delete().eq('id', id).eq('user_id', userId);
   if (error) throw error;
 }
 
@@ -243,11 +254,13 @@ export async function savePlannedWorkout(workout: PlannedWorkoutItem & { ftp?: n
 }
 
 export async function getAllPlannedWorkouts(): Promise<(PlannedWorkoutItem & { ftp?: number; lthr?: number })[]> {
+  const userId = await getUserId();
   const { data, error } = await supabase
     .from('planned_workouts')
     .select('*')
+    .eq('user_id', userId)
     .order('date', { ascending: true });
-    
+
   if (error) throw error;
   
   return (data || []).map(row => ({
@@ -266,7 +279,8 @@ export async function getAllPlannedWorkouts(): Promise<(PlannedWorkoutItem & { f
 }
 
 export async function deletePlannedWorkout(id: string): Promise<void> {
-  const { error } = await supabase.from('planned_workouts').delete().eq('id', id);
+  const userId = await getUserId();
+  const { error } = await supabase.from('planned_workouts').delete().eq('id', id).eq('user_id', userId);
   if (error) throw error;
 }
 
@@ -295,7 +309,8 @@ export async function saveRoute(route: {
 }
 
 export async function getRoute(id: string): Promise<any | undefined> {
-  const { data, error } = await supabase.from('routes').select('*').eq('id', id).maybeSingle();
+  const userId = await getUserId();
+  const { data, error } = await supabase.from('routes').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
   if (error) throw error;
   if (!data) return undefined;
   return {

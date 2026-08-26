@@ -323,6 +323,7 @@ function App() {
       const { data } = await supabase
         .from('rides')
         .select('date, metadata')
+        .eq('user_id', session.user.id)
         .order('date', { ascending: true });
       
       if (data) {
