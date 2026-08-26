@@ -83,11 +83,18 @@ if (Test-Path $ApkSrcPath) {
     Copy-Item -Path $ApkSrcPath -Destination $ApkDestPath -Force
     Write-Host "Copied APK to $ApkDestPath." -ForegroundColor Green
 
+    # SHA-256 of the exact APK being published. The updater refuses any manifest
+    # without a valid digest and aborts install on mismatch, so a tampered or
+    # truncated download can never reach the package installer.
+    $ApkHash = (Get-FileHash -Path $ApkDestPath -Algorithm SHA256).Hash.ToLower()
+    Write-Host "APK SHA-256: $ApkHash" -ForegroundColor Gray
+
     # Update pulse-version.json
     $VersionJson = @{
         versionCode = $NewVersionCode
         versionName = $NewVersionName
         apkUrl = "https://github.com/filipmonbaillieu24-prog/Zenith/raw/main/apk/pulse-debug.apk"
+        sha256 = $ApkHash
     } | ConvertTo-Json
 
     Set-Content -Path $VersionJsonPath -Value $VersionJson

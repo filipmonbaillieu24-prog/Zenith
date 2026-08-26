@@ -8,8 +8,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Backup disabled: these apps store a Supabase session token (and, in
+         Kratos Pilot, the local workout database) in app-private storage. With
+         allowBackup="true" those are extractable via `adb backup` on a
+         debuggable or rooted device, and are copied to cloud backup. -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

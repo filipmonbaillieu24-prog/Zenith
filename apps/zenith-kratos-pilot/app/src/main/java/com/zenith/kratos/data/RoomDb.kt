@@ -150,7 +150,15 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "kratos_database"
-                ).addMigrations(MIGRATION_3_4).fallbackToDestructiveMigration().build()
+                ).addMigrations(MIGRATION_3_4)
+                    // Deliberately NO fallbackToDestructiveMigration(): it silently
+                    // dropped and recreated every table on any un-migrated version
+                    // bump, which is exactly how local workout history was wiped
+                    // once before. Without it, a missing migration fails loudly at
+                    // open time - during development, where it belongs - instead of
+                    // destroying user data in the field. Add an explicit Migration
+                    // for every future schema change.
+                    .build()
                 INSTANCE = instance
                 instance
             }

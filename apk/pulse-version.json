@@ -1,5 +1,6 @@
 {
-    "apkUrl":  "https://github.com/filipmonbaillieu24-prog/Zenith/raw/main/apk/pulse-debug.apk",
-    "versionCode":  34,
-    "versionName":  "1.0.33"
+    "apkUrl": "https://github.com/filipmonbaillieu24-prog/Zenith/raw/main/apk/pulse-debug.apk",
+    "versionCode": 34,
+    "versionName": "1.0.33",
+    "sha256": "f3f18fe9cca03cecff9f837bbf76f0c499d893cbc3bb8198059d5f47e3bfcc7a"
 }

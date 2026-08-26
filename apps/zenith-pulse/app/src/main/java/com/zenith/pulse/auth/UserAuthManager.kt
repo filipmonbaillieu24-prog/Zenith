@@ -36,9 +36,20 @@ object UserAuthManager {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    /**
+     * A session is only usable if we can still obtain a fresh access token for it.
+     *
+     * This used to check the stored email alone. Sessions created before refresh
+     * tokens were captured have an email but no refresh token, so after the ingest
+     * RPC began requiring an authenticated caller they reported "logged in"
+     * forever while every sync was rejected - a silent, permanent failure with no
+     * prompt to sign in again. Treating a session with no refresh token as logged
+     * out surfaces the re-login instead.
+     */
     fun isLoggedIn(context: Context): Boolean {
         val email = getUserEmail(context)
-        return !email.isNullOrEmpty()
+        if (email.isNullOrEmpty()) return false
+        return !getRefreshToken(context).isNullOrEmpty()
     }
 
     fun getUserEmail(context: Context): String? {

@@ -173,6 +173,7 @@ fun ZenithPulseScreen(
                                 com.zenith.pulse.update.UpdateManager.downloadAndInstallApk(
                                     context = context,
                                     downloadUrl = info.downloadUrl,
+                                    expectedSha256 = info.sha256,
                                     onProgress = { p -> downloadProgress = p },
                                     onError = { err ->
                                         isDownloadingUpdate = false

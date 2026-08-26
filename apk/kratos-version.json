@@ -1,5 +1,6 @@
 {
-    "apkUrl":  "https://github.com/filipmonbaillieu24-prog/Zenith/raw/main/apk/kratos.apk",
-    "versionCode":  44,
-    "versionName":  "1.43"
+    "apkUrl": "https://github.com/filipmonbaillieu24-prog/Zenith/raw/main/apk/kratos.apk",
+    "versionCode": 44,
+    "versionName": "1.43",
+    "sha256": "1dd22cc90b8effcc7f32ba0a930030633c5ef1ea20521c121aee57013216a14c"
 }

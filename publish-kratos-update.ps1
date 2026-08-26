@@ -99,10 +99,17 @@ if (Test-Path "apps/zenith-hub/public") {
 }
 
 # 4. Update version.json
+# SHA-256 of the exact APK being published. The updater refuses any
+# manifest without a valid digest and aborts install on mismatch, so a
+# tampered or truncated download can never reach the package installer.
+$ApkHash = (Get-FileHash -Path $ApkDestPath -Algorithm SHA256).Hash.ToLower()
+Write-Host "APK SHA-256: $ApkHash" -ForegroundColor Gray
+
 $VersionJson = @{
     versionCode = $NewVersionCode
     versionName = $NewVersionName
     apkUrl = "https://github.com/filipmonbaillieu24-prog/Zenith/raw/main/apk/kratos.apk"
+    sha256 = $ApkHash
 } | ConvertTo-Json
 
 Set-Content -Path $VersionJsonPath -Value $VersionJson

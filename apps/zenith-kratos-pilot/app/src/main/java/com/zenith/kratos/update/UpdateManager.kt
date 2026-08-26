@@ -1,6 +1,7 @@
 package com.zenith.kratos.update
 
 import android.content.Context
+import android.util.Log
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
@@ -12,8 +13,10 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 
 object UpdateManager {
+    private const val TAG = "KratosUpdateManager"
     private const val VERSION_URL = "https://raw.githubusercontent.com/filipmonbaillieu24-prog/Zenith/main/apk/kratos-version.json"
 
     suspend fun checkForUpdates(currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
@@ -39,9 +42,16 @@ object UpdateManager {
                 val remoteVersionCode = json.getInt("versionCode")
                 val remoteVersionName = json.getString("versionName")
                 val downloadUrl = json.getString("apkUrl")
+                // Required, not optional: an update manifest without a digest is
+                // treated as unusable rather than installed unverified.
+                val expectedSha256 = json.optString("sha256", "").trim().lowercase()
 
                 if (remoteVersionCode > currentVersionCode) {
-                    return@withContext UpdateInfo(remoteVersionName, downloadUrl)
+                    if (expectedSha256.length != 64) {
+                        Log.w(TAG, "Update $remoteVersionName has no usable sha256 digest; refusing to offer it.")
+                        return@withContext null
+                    }
+                    return@withContext UpdateInfo(remoteVersionName, downloadUrl, expectedSha256)
                 }
             }
         } catch (e: Exception) {
@@ -55,6 +65,7 @@ object UpdateManager {
     suspend fun downloadAndInstallApk(
         context: Context,
         downloadUrl: String,
+        expectedSha256: String,
         onProgress: (Float) -> Unit,
         onError: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
@@ -92,6 +103,21 @@ object UpdateManager {
                 }
             }
 
+            // Verify before handing anything to the package installer. The APK is
+            // fetched over HTTPS from a public repo and installed via
+            // REQUEST_INSTALL_PACKAGES; without this check, anyone able to serve a
+            // different file at that URL (a compromised repo/account, a proxy that
+            // strips TLS) gets arbitrary code execution on the device.
+            val actualSha256 = sha256Of(cacheFile)
+            if (!actualSha256.equals(expectedSha256, ignoreCase = true)) {
+                cacheFile.delete()
+                Log.e(TAG, "APK digest mismatch: expected $expectedSha256, got $actualSha256")
+                withContext(Dispatchers.Main) {
+                    onError("This update failed its integrity check and was not installed.")
+                }
+                return@withContext
+            }
+
             withContext(Dispatchers.Main) {
                 triggerInstallation(context, cacheFile)
             }
@@ -101,6 +127,19 @@ object UpdateManager {
         } finally {
             connection?.disconnect()
         }
+    }
+
+    private fun sha256Of(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(8192)
+            while (true) {
+                val read = input.read(buffer)
+                if (read <= 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun triggerInstallation(context: Context, apkFile: File) {
@@ -125,5 +164,7 @@ object UpdateManager {
 
 data class UpdateInfo(
     val versionName: String,
-    val downloadUrl: String
+    val downloadUrl: String,
+    /** Lowercase hex SHA-256 of the APK named by [downloadUrl]. */
+    val sha256: String
 )

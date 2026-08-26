@@ -297,9 +297,15 @@ fun MainNavigation() {
                 androidx.compose.material3.Button(
                     onClick = {
                         scope.launch {
+                            val info = updateInfo
+                            if (info == null) {
+                                updateError = "Update details are no longer available. Please check again."
+                                return@launch
+                            }
                             com.zenith.kratos.update.UpdateManager.downloadAndInstallApk(
                                 context = context,
-                                downloadUrl = updateInfo!!.downloadUrl,
+                                downloadUrl = info.downloadUrl,
+                                expectedSha256 = info.sha256,
                                 onProgress = { progress ->
                                     downloadProgress = progress
                                 },
