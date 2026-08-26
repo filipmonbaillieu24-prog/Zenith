@@ -1671,7 +1671,17 @@ function App() {
   }>({ running: false, message: null, error: false });
 
   const handleRetrainFusion = async () => {
-    if (!userId || retrainState.running) return;
+    if (retrainState.running) return;
+    // Fuel renders this dashboard before a session exists, so the button is
+    // reachable while signed out - say so rather than silently doing nothing.
+    if (!userId) {
+      setRetrainState({
+        running: false,
+        error: true,
+        message: 'Sign in through Zenith Hub first — the retrain reads your own logged history.',
+      });
+      return;
+    }
     setRetrainState({ running: true, message: 'Reading your logged history…', error: false });
     try {
       const samples = buildFusionTrainingSamples({
