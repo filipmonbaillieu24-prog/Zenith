@@ -230,7 +230,7 @@ class WorkoutRepository(
 
             // Group by day key
             val tssPerDay = mutableMapOf<String, Double>()
-            val sdf = SimpleDateFormat("yyyy-MM-DD", Locale.getDefault())
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             for (r in parsedRides) {
                 val key = sdf.format(Date(r.date))
                 tssPerDay[key] = (tssPerDay[key] ?: 0.0) + r.tss
