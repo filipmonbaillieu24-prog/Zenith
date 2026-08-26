@@ -1,5 +1,5 @@
 import React from 'react';
-import { ZenithHeroStat } from '@zenith/shared';
+import { ZenithHeroStat, tsbContext } from '@zenith/shared';
 
 interface DashboardStatsHeaderProps {
   profileName?: string;
@@ -7,25 +7,6 @@ interface DashboardStatsHeaderProps {
   setTimeRange: (val: 30 | 90 | 365 | 'all') => void;
   latestPMC: { ctl: number; atl: number; tsb: number };
   tsbStatus: { label: string; emoji: string; color: string };
-}
-
-/** One-line context for the hero card — matches the tone of interpretTSB's
- * five states without repeating the pill label verbatim. */
-function tsbContext(label: string, tsb: number): string {
-  switch (label) {
-    case 'Fresh / too little stimulus':
-      return "You're well recovered but training load has been light — there's room to push harder.";
-    case 'Peak condition':
-      return "Fitness and freshness are both high right now — this is a good window for your hardest efforts.";
-    case 'Optimal training period':
-      return 'A healthy, sustainable balance of fitness and fatigue for consistent training.';
-    case 'Build phase / fatigued':
-      return "You're carrying more fatigue than fitness right now — expected mid-build, not a warning sign.";
-    default:
-      return tsb < -25
-        ? 'Fatigue has been outpacing recovery for a while — consider prioritizing rest this week.'
-        : 'Keep an eye on recovery markers over the next few sessions.';
-  }
 }
 
 export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
@@ -77,7 +58,7 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
           <ZenithHeroStat
             eyebrow="Form · TSB"
             value={latestPMC.tsb >= 0 ? `+${Math.round(latestPMC.tsb)}` : Math.round(latestPMC.tsb)}
-            sub={tsbContext(tsbStatus.label, latestPMC.tsb)}
+            sub={tsbContext(latestPMC.tsb)}
             pill={
               <span
                 className="zenith-pill"

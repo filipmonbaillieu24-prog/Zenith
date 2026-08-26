@@ -210,6 +210,30 @@ export function interpretTSB(tsb: number): { label: string; color: string; emoji
   return                  { label: 'Overtraining risk',     color: '#d63031', emoji: '⚠️' };
 }
 
+/**
+ * One-line, human-readable context sentence for a TSB value — matches the
+ * tone of interpretTSB's five states without repeating the pill label
+ * verbatim. Single source of truth for the "Form · TSB" hero card copy so
+ * every app (Aero, Kratos, Hub) says the same thing for the same TSB.
+ */
+export function tsbContext(tsb: number): string {
+  const { label } = interpretTSB(tsb);
+  switch (label) {
+    case 'Fresh / too little stimulus':
+      return "You're well recovered but training load has been light — there's room to push harder.";
+    case 'Peak condition':
+      return "Fitness and freshness are both high right now — this is a good window for your hardest efforts.";
+    case 'Optimal training period':
+      return 'A healthy, sustainable balance of fitness and fatigue for consistent training.';
+    case 'Build phase / fatigued':
+      return "You're carrying more fatigue than fitness right now — expected mid-build, not a warning sign.";
+    default:
+      return tsb < -25
+        ? 'Fatigue has been outpacing recovery for a while — consider prioritizing rest this week.'
+        : 'Keep an eye on recovery markers over the next few sessions.';
+  }
+}
+
 function toDateKey(ms: number): string {
   const date = new Date(ms);
   const y = date.getFullYear();
