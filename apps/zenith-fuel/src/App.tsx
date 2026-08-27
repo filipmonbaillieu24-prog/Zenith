@@ -7,7 +7,7 @@ import {
 import { supabase } from './utils/supabaseClient';
 import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep } from './utils/zane';
-import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
 import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates';
 import { toDateKey, toDateKeyFromDate } from '@zenith/shared';
@@ -2383,123 +2383,171 @@ function App() {
             </div>
           )}
 
-          {/* Zenith Calibration Card */}
+          {/* What Zenith has learned */}
           <div className="fuel-card col-5">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Zenith Status & Insights
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> What Zenith Has Learned About You
             </h3>
-            <div className="zane-insights-wrap">
-              <div className="zane-stat-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                <div className="zane-stat-item">
-                  <span className="zenith-label">Metabolic Adjustment</span>
-                  <div className="zenith-stat-value" style={{ color: zaneResult.bmrOffset >= 0 ? '#55efc4' : '#ff7675' }}>
-                    {zaneResult.bmrOffset >= 0 ? `+${zaneResult.bmrOffset}` : zaneResult.bmrOffset} kcal
+            <div className="zane-insights-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {zaneResult.isCalibrated ? (
+                <>
+                  {/* These were previously shown as raw regression coefficients -
+                      "-6.6 kcal/%", "0.064", labelled "Coefficient" and "Learned".
+                      Each is now stated as the effect it actually has, at a size a
+                      person can picture. */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Your metabolism runs</span>
+                    <span style={{ fontWeight: 700, color: zaneResult.bmrOffset >= 0 ? '#55efc4' : '#ff7675', textAlign: 'right' }}>
+                      {Math.abs(Math.round(zaneResult.bmrOffset))} kcal/day{' '}
+                      {zaneResult.bmrOffset >= 0 ? 'faster' : 'slower'}
+                      <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                        than the textbook estimate
+                      </span>
+                    </span>
                   </div>
-                </div>
-                <div className="zane-stat-item">
-                  <span className="zenith-label">Sleep Quality</span>
-                  <div className="zenith-stat-value" style={{ color: '#a855f7' }}>
-                    {zaneResult.isCalibrated 
-                      ? `${zaneResult.sleepQualityCoeff >= 0 ? '+' : ''}${zaneResult.sleepQualityCoeff} kcal/%` 
-                      : (todaySleepQuality !== null ? `${todaySleepQuality}%` : `${Math.round(sleepQualityAvg)}%`)}
-                  </div>
-                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Coefficient' : (todaySleepQuality !== null ? 'Current measurement' : 'Baseline average')}
-                  </span>
-                </div>
-                <div className="zane-stat-item">
-                  <span className="zenith-label">Sleep Duration</span>
-                  <div className="zenith-stat-value" style={{ color: '#a855f7' }}>
-                    {zaneResult.isCalibrated 
-                      ? `${zaneResult.sleepDurationCoeff >= 0 ? '+' : ''}${zaneResult.sleepDurationCoeff} kcal/hr`
-                      : (todaySleepDuration !== null ? `${Math.floor(todaySleepDuration)}h ${Math.round((todaySleepDuration % 1) * 60)}m` : `${Math.floor(sleepDurationAvg)}h`)}
-                  </div>
-                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Coefficient' : 'Current measurement'}
-                  </span>
-                </div>
-                <div className="zane-stat-item">
-                  <span className="zenith-label">Strength Training Effect</span>
-                  <div className="zenith-stat-value" style={{ color: 'var(--color-protein)' }}>
-                    {zaneResult.isCalibrated ? `${zaneResult.gymVolumeCoeff.toFixed(3)}` : '0.150'}
-                  </div>
-                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Learned' : 'Prior baseline'}
-                  </span>
-                </div>
-                <div className="zane-stat-item">
-                  <span className="zenith-label">Caffeine Effect</span>
-                  <div className="zenith-stat-value" style={{ color: 'var(--color-carb)' }}>
-                    {zaneResult.isCalibrated ? `${zaneResult.caffeineCoeff.toFixed(3)}` : '0.150'}
-                  </div>
-                  <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-                    {zaneResult.isCalibrated ? 'Learned' : 'Prior baseline'}
-                  </span>
-                </div>
-              </div>
 
-              <div className="zane-feedback-text">
-                {zaneResult.isCalibrated ? (
-                  <>
-                    Zenith is fully calibrated from <strong>{zaneResult.calibrationDays} days</strong> of your data.
-                    It now adjusts your calorie target using your own metabolism, training, and sleep patterns instead of generic estimates.
-                  </>
-                ) : (
-                  <>
-                    Calibration progress: <strong>{zaneResult.calibrationDays}/14 days</strong> fully logged.
-                    Keep logging your meals and sleep — once you reach 14 complete days, Zenith switches from generic estimates to a calorie target personalized to you.
-                  </>
-                )}
-              </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Every 1,000 kg you lift</span>
+                    <span style={{ fontWeight: 700, color: 'var(--color-protein)' }}>
+                      burns ~{Math.round(zaneResult.gymVolumeCoeff * 1000)} kcal
+                    </span>
+                  </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Every 100 mg of caffeine</span>
+                    <span style={{ fontWeight: 700, color: 'var(--color-carb)' }}>
+                      burns ~{Math.round(zaneResult.caffeineCoeff * 100)} kcal
+                    </span>
+                  </div>
+
+                  {/* Stated as an observed association, not a causal claim: the
+                      regression finds the pattern, it does not explain it. */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      An hour {zaneResult.sleepDurationCoeff <= 0 ? 'less' : 'more'} sleep than your usual
+                    </span>
+                    <span style={{ fontWeight: 700, color: '#a855f7' }}>
+                      goes with ~{Math.abs(Math.round(zaneResult.sleepDurationCoeff))} kcal more
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      Sleep 10 points {zaneResult.sleepQualityCoeff <= 0 ? 'worse' : 'better'} than usual
+                    </span>
+                    <span style={{ fontWeight: 700, color: '#a855f7' }}>
+                      goes with ~{Math.abs(Math.round(zaneResult.sleepQualityCoeff * 10))} kcal more
+                    </span>
+                  </div>
+
+                  <p style={{ margin: '6px 0 0', fontSize: '11px', lineHeight: 1.5, color: 'var(--text-muted)' }}>
+                    Measured from <strong>{zaneResult.calibrationDays} days</strong> of your own logs, so your
+                    calorie target follows your body rather than a generic formula.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p style={{ margin: 0, fontSize: '12px', lineHeight: 1.55 }}>
+                    Zenith is still working out how your body responds. It needs about 14 fully-logged
+                    days; you have <strong>{zaneResult.calibrationDays}</strong> so far.
+                  </p>
+                  <p style={{ margin: 0, fontSize: '11px', lineHeight: 1.5, color: 'var(--text-muted)' }}>
+                    Until then your targets come from a standard formula. Once it has enough days it
+                    will show what it has learned about your metabolism, your training and your sleep.
+                  </p>
+                </>
+              )}
+
+              <label
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
+                  borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '2px',
+                  fontSize: '11px', color: 'var(--text-muted)'
+                }}
+              >
                 <input
                   type="checkbox"
-                  id="dayIncompleteCheck"
                   checked={!selectedDateComplete}
                   onChange={handleToggleDayIncomplete}
-                  style={{ width: 18, height: 18, accentColor: 'var(--color-primary)', cursor: 'pointer' }}
+                  style={{ cursor: 'pointer' }}
                 />
-                <label htmlFor="dayIncompleteCheck" style={{ fontSize: 12, fontWeight: 700, cursor: 'pointer', color: !selectedDateComplete ? '#ff9f43' : 'var(--text-muted)' }}>
-                  Mark this day as incomplete (won't be used for calibration)
-                </label>
-              </div>
+                <span>
+                  I didn&apos;t log everything today
+                  <span style={{ display: 'block', fontSize: '10px' }}>
+                    Leaves today out, so a half-logged day can&apos;t skew what Zenith learns.
+                  </span>
+                </span>
+              </label>
             </div>
           </div>
 
-          {/* Zenith Evolution Chart Card */}
+          {/* How well Zenith knows you */}
           <div className="fuel-card col-7">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Zenith Calibration Trend
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> How Well Zenith Knows You
             </h3>
             {zaneHistory.length === 0 ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 12, minHeight: 180, textAlign: 'center' }}>
-                Start logging meals to display the Zenith evolution chart.
+                Log a few days of meals and this will show Zenith learning your metabolism.
               </div>
             ) : (
-              <div style={{ width: '100%', height: 210 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={zaneHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                    <CartesianGrid {...ZENITH_CHART_GRID} />
-                    <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
-                    <YAxis stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
-                    <Tooltip
-                      contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
-                      labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
-                      formatter={(value: any, name: any) => {
-                        if (name && typeof name === 'string' && name.includes("Margin of Error") && Array.isArray(value)) {
-                          return [`${value[0]} to ${value[1]} kcal`, "Metabolic Adjustment Range"];
-                        }
-                        return [value, name];
-                      }}
-                    />
-                    <Area name="Metabolic Adjustment Margin of Error" type="monotone" dataKey="offsetRange" stroke="none" fill="rgba(255, 159, 67, 0.08)" />
-                    <Line name="Metabolic Adjustment (kcal)" type="monotone" dataKey="offset" stroke="var(--color-primary)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                    <Line name="Sleep Quality Effect" type="monotone" dataKey="quality" stroke="var(--color-protein)" strokeWidth={2} dot={false} />
-                    <Line name="Sleep Duration Effect" type="monotone" dataKey="duration" stroke="var(--color-fat)" strokeWidth={2} dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
+              <>
+                <p style={{ margin: '0 0 6px', fontSize: '11px', lineHeight: 1.5, color: 'var(--text-muted)' }}>
+                  How far your metabolism sits from the textbook estimate, and how sure Zenith is.
+                  The shaded band is its margin of error &mdash; it narrows as you log more days.
+                </p>
+                {/* Previously this plotted three coefficients together: the metabolic
+                    offset in kcal alongside sleep-quality (~-7) and sleep-duration
+                    (~-36) coefficients, which share no unit or scale. With the error
+                    band forcing a +/-600 axis, all three rendered as flat lines on
+                    zero, with no legend to tell them apart. Only the offset and its
+                    band are plotted now - that is the series the band belongs to. */}
+                <div style={{ width: '100%', height: 200 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={zaneHistory} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                      <CartesianGrid {...ZENITH_CHART_GRID} />
+                      <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                      <YAxis
+                        stroke="var(--text-muted)"
+                        tick={ZENITH_CHART_AXIS_TICK}
+                        tickLine={false}
+                        label={{ value: 'kcal/day', angle: -90, position: 'insideLeft', style: { fill: 'var(--text-muted)', fontSize: 10 } }}
+                      />
+                      <Tooltip
+                        contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
+                        labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
+                        formatter={(value: any) => {
+                          if (Array.isArray(value)) {
+                            return [`${value[0]} to ${value[1]} kcal/day`, 'Still could be anywhere in'];
+                          }
+                          const n = Number(value);
+                          return [
+                            `${Math.abs(n)} kcal/day ${n >= 0 ? 'faster' : 'slower'} than textbook`,
+                            'Zenith\u2019s estimate'
+                          ];
+                        }}
+                      />
+                      <ReferenceLine y={0} stroke="var(--text-muted)" strokeDasharray="3 3" />
+                      <Area name="Margin of error" type="monotone" dataKey="offsetRange" stroke="none" fill="rgba(255, 159, 67, 0.10)" />
+                      <Line name="Zenith&rsquo;s estimate" type="monotone" dataKey="offset" stroke="var(--color-primary)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '6px', fontSize: '10px', color: 'var(--text-muted)' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: 14, height: 2, background: 'var(--color-primary)', display: 'inline-block' }} />
+                    Zenith&rsquo;s estimate of your metabolism
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: 14, height: 9, background: 'rgba(255, 159, 67, 0.25)', display: 'inline-block', borderRadius: 2 }} />
+                    How unsure it still is
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: 14, height: 0, borderTop: '2px dashed var(--text-muted)', display: 'inline-block' }} />
+                    Textbook estimate
+                  </span>
+                </div>
+              </>
             )}
           </div>
 
