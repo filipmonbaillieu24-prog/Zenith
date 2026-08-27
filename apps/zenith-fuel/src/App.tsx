@@ -1558,17 +1558,6 @@ function App() {
   const intakeProtein = useMemo(() => filteredFoodLogs.reduce((sum, f) => sum + f.protein, 0), [filteredFoodLogs]);
   const intakeFat = useMemo(() => filteredFoodLogs.reduce((sum, f) => sum + f.fat, 0), [filteredFoodLogs]);
 
-  const caloriesPercentage = Math.min(100, Math.round((intakeCalories / zaneResult.dailyCalorieTarget) * 100)) || 0;
-  const carbsPercentage = Math.min(100, Math.round((intakeCarbs / zaneResult.dailyCarbTarget) * 100)) || 0;
-  const proteinPercentage = Math.min(100, Math.round((intakeProtein / zaneResult.dailyProteinTarget) * 100)) || 0;
-  const fatPercentage = Math.min(100, Math.round((intakeFat / zaneResult.dailyFatTarget) * 100)) || 0;
-
-  const radius = 60;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (caloriesPercentage / 100) * circumference;
-
-  const remainingCalories = zaneResult.dailyCalorieTarget - intakeCalories;
-  const calorieRingColor = remainingCalories < 0 ? '#ff7675' : 'var(--color-primary)';
 
   const latestWeight = weightLogs[weightLogs.length - 1]?.weight || 75;
 
@@ -2093,6 +2082,67 @@ function App() {
   const burnIsBlended = blendedBurnToday !== goalDerivedFromTdee;
   const displayedBurnToday = blendedBurnToday;
 
+  /**
+   * Targets re-derived from the blended burn, using ZANE's own generateTargets.
+   *
+   * Blending the model into the displayed burn was not enough on its own: the
+   * calorie goal is produced inside ZANE from ZANE's TDEE, so the goal - and
+   * the macros under it - still came from the formula alone. The card ended up
+   * showing "today's total 2384" beside "what you burn today 2289", and the
+   * model still moved nothing that mattered.
+   *
+   * generateTargets is exported and pure, so it is called a second time with
+   * the blended figure rather than reimplementing the deficit caps and the
+   * safety floor here. One implementation, two inputs.
+   */
+  const blendedTargets = useMemo(() => {
+    if (!burnIsBlended || !zaneResult.isCalibrated) return null;
+    return generateTargets(
+      blendedBurnToday,
+      burnParts.bmr,
+      latestWeight,
+      profile,
+      zaneResult.bmrOffset,
+      zaneResult.sleepQualityCoeff,
+      zaneResult.sleepDurationCoeff,
+      zaneResult.gymVolumeCoeff,
+      zaneResult.caffeineCoeff,
+      zaneResult.weekendCoeff,
+      zaneResult.adaptationFactor,
+      zaneResult.sustainedCutDays,
+      zaneResult.calibrationDays,
+      zaneResult.isCalibrated,
+      zaneResult.trendWeightMap,
+      zaneResult.currentTrendWeight,
+      zaneResult.sleepQualityAvg,
+      zaneResult.sleepDurationAvg,
+      zaneResult.energyPerKgTissue,
+      burnParts
+    );
+  }, [burnIsBlended, blendedBurnToday, burnParts, latestWeight, profile, zaneResult]);
+
+  /**
+   * The targets actually shown. Falls back to ZANE's own when the model is not
+   * fitted, so nothing changes until the blend is trustworthy.
+   */
+  const effectiveTargets = blendedTargets ?? zaneResult;
+
+  // Progress rings and remaining amounts, all measured against the targets that
+  // are actually displayed - which means the blended ones when the learning
+  // model is trusted. Placed after effectiveTargets for that reason.
+  const caloriesPercentage = Math.min(100, Math.round((intakeCalories / effectiveTargets.dailyCalorieTarget) * 100)) || 0;
+  const carbsPercentage = Math.min(100, Math.round((intakeCarbs / effectiveTargets.dailyCarbTarget) * 100)) || 0;
+  const proteinPercentage = Math.min(100, Math.round((intakeProtein / effectiveTargets.dailyProteinTarget) * 100)) || 0;
+  const fatPercentage = Math.min(100, Math.round((intakeFat / effectiveTargets.dailyFatTarget) * 100)) || 0;
+
+  const radius = 60;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (caloriesPercentage / 100) * circumference;
+
+  const remainingCalories = effectiveTargets.dailyCalorieTarget - intakeCalories;
+  const calorieRingColor = remainingCalories < 0 ? '#ff7675' : 'var(--color-primary)';
+
+
   const rateForHealthJudgement = measuredWeeklyRate ?? weeklyWeightRate;
   const weeklyRatePercent = startingWeightForProjection > 0
     ? Math.abs(rateForHealthJudgement) / startingWeightForProjection * 100
@@ -2419,7 +2469,7 @@ function App() {
                       </span>
                     )}
                   </span>
-                  <span className="cal-detail-val">{zaneResult.dailyCalorieTarget} kcal</span>
+                  <span className="cal-detail-val">{effectiveTargets.dailyCalorieTarget} kcal</span>
                 </div>
                 <div className="cal-detail-row">
                   <span style={{ color: 'var(--text-muted)' }}>Eaten so far</span>
@@ -2443,7 +2493,7 @@ function App() {
                   <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: 'var(--text-muted)' }}>What you burn today</span>
-                      <span style={{ fontWeight: 700, color: '#fff' }}>{goalDerivedFromTdee} kcal</span>
+                      <span style={{ fontWeight: 700, color: '#fff' }}>{displayedBurnToday} kcal</span>
                     </div>
                     {goalPhase === 'cut' && (
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -2451,7 +2501,7 @@ function App() {
                           Eat less, to lose {goalRateKgPerWeek} kg a week
                         </span>
                         <span style={{ fontWeight: 700, color: '#55efc4' }}>
-                          &minus;{Math.max(0, goalDerivedFromTdee - zaneResult.dailyCalorieTarget)} kcal
+                          &minus;{Math.max(0, displayedBurnToday - effectiveTargets.dailyCalorieTarget)} kcal
                         </span>
                       </div>
                     )}
@@ -2461,13 +2511,13 @@ function App() {
                           Eat more, to gain {goalRateKgPerWeek} kg a week
                         </span>
                         <span style={{ fontWeight: 700, color: '#ff7675' }}>
-                          +{Math.max(0, zaneResult.dailyCalorieTarget - goalDerivedFromTdee)} kcal
+                          +{Math.max(0, effectiveTargets.dailyCalorieTarget - displayedBurnToday)} kcal
                         </span>
                       </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '6px', fontWeight: 800 }}>
                       <span style={{ color: 'var(--color-primary)' }}>Your goal</span>
-                      <span style={{ color: 'var(--color-primary)' }}>{zaneResult.dailyCalorieTarget} kcal</span>
+                      <span style={{ color: 'var(--color-primary)' }}>{effectiveTargets.dailyCalorieTarget} kcal</span>
                     </div>
                     <p style={{ margin: '2px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                       {goalPhase === 'cut' ? (
@@ -2501,9 +2551,9 @@ function App() {
                 <div className="macro-header">
                   <span className="macro-name" style={{ color: 'var(--color-carb)' }}>Carbohydrates</span>
                   <span className="macro-amounts">
-                    {intakeCarbs}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {zaneResult.dailyCarbTarget}g</span>
+                    {intakeCarbs}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {effectiveTargets.dailyCarbTarget}g</span>
                     <span style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', fontWeight: 500, textAlign: 'right' }}>
-                      {Math.max(0, zaneResult.dailyCarbTarget - Math.round(intakeCarbs))}g to go
+                      {Math.max(0, effectiveTargets.dailyCarbTarget - Math.round(intakeCarbs))}g to go
                     </span>
                   </span>
                 </div>
@@ -2519,9 +2569,9 @@ function App() {
                 <div className="macro-header">
                   <span className="macro-name" style={{ color: 'var(--color-protein)' }}>Protein</span>
                   <span className="macro-amounts">
-                    {intakeProtein}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {zaneResult.dailyProteinTarget}g</span>
+                    {intakeProtein}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {effectiveTargets.dailyProteinTarget}g</span>
                     <span style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', fontWeight: 500, textAlign: 'right' }}>
-                      {Math.max(0, zaneResult.dailyProteinTarget - Math.round(intakeProtein))}g to go
+                      {Math.max(0, effectiveTargets.dailyProteinTarget - Math.round(intakeProtein))}g to go
                     </span>
                   </span>
                 </div>
@@ -2537,9 +2587,9 @@ function App() {
                 <div className="macro-header">
                   <span className="macro-name" style={{ color: 'var(--color-fat)' }}>Fats</span>
                   <span className="macro-amounts">
-                    {intakeFat}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {zaneResult.dailyFatTarget}g</span>
+                    {intakeFat}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {effectiveTargets.dailyFatTarget}g</span>
                     <span style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', fontWeight: 500, textAlign: 'right' }}>
-                      {Math.max(0, zaneResult.dailyFatTarget - Math.round(intakeFat))}g to go
+                      {Math.max(0, effectiveTargets.dailyFatTarget - Math.round(intakeFat))}g to go
                     </span>
                   </span>
                 </div>
