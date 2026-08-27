@@ -70,6 +70,7 @@ export class SimpleMLP {
   lossHistory: number[] = [];
   modelName: string;
   private _loaded = false;
+  private _defaultWeightsGenerator: () => { W1: number[][]; B1: number[]; W2: number[][]; B2: number[] };
 
   constructor(
     _inputSize: number,
@@ -79,6 +80,8 @@ export class SimpleMLP {
     defaultWeightsGenerator: () => { W1: number[][]; B1: number[]; W2: number[][]; B2: number[] }
   ) {
     this.modelName = modelName;
+    // Kept, not just called: retrainFromScratch needs to get back here.
+    this._defaultWeightsGenerator = defaultWeightsGenerator;
     const def = defaultWeightsGenerator();
     this.W1 = def.W1;
     this.B1 = def.B1;
@@ -289,6 +292,61 @@ export class SimpleMLP {
     this._cacheToLocalStorage();
     await this.saveToSupabase(supabase, userId);
     return this.predict(x);
+  }
+
+  /**
+   * Return the weights - and the momentum - to the model's starting point.
+   *
+   * Needed because backfill training was never idempotent. Replaying a month of
+   * history applies its gradient updates ON TOP of whatever the last replay left
+   * behind, so running it twice does not produce the weights the data implies -
+   * it produces those weights hammered twice. Since Hub replays history on every
+   * page load and again on every realtime insert, the displayed score kept
+   * walking a few points at a time with no input having changed.
+   */
+  resetToDefaults(): void {
+    const def = this._defaultWeightsGenerator();
+    this.W1 = def.W1;
+    this.B1 = def.B1;
+    this.W2 = def.W2;
+    this.B2 = def.B2;
+    this.W1_EMA = JSON.parse(JSON.stringify(def.W1));
+    this.B1_EMA = JSON.parse(JSON.stringify(def.B1));
+    this.W2_EMA = JSON.parse(JSON.stringify(def.W2));
+    this.B2_EMA = JSON.parse(JSON.stringify(def.B2));
+    // Momentum has to go too. Leaving it would carry velocity from the previous
+    // run straight into the first step of the next one.
+    this.vW1 = Array.from({ length: this.W1.length }, () => new Array(this.B1.length).fill(0));
+    this.vB1 = new Array(this.B1.length).fill(0);
+    this.vW2 = Array.from({ length: this.B1.length }, () => new Array(this.B2.length).fill(0));
+    this.vB2 = new Array(this.B2.length).fill(0);
+    this.lossHistory = [];
+  }
+
+  /**
+   * Fit the model to a full history from a clean slate.
+   *
+   * This is the ONLY correct way to replay a backfill. Because it resets first
+   * and trainBatch's shuffle is deterministic, the resulting weights are a pure
+   * function of the samples: the same history always gives the same weights, so
+   * the same day always gives the same score. Re-running it is free of side
+   * effects rather than being another nudge.
+   *
+   * Use train()/trainLocal() only for genuinely new observations arriving one at
+   * a time, never for replaying days the model has already seen.
+   */
+  async retrainFromScratch(
+    supabase: any,
+    userId: string,
+    samples: { x: number[]; targets: number[] }[],
+    epochs: number = 20,
+    lr: number = 0.15
+  ): Promise<{ epochs: number; samples: number; finalMse: number }> {
+    if (samples.length === 0) {
+      return { epochs: 0, samples: 0, finalMse: 0 };
+    }
+    this.resetToDefaults();
+    return this.trainBatch(supabase, userId, samples, epochs, lr);
   }
 
   /**

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { predictRecoveryScore, cardioFreshness, RecoveryInput } from '../RecoveryScore';
+import { predictRecoveryScore, cardioFreshness, recoveryHeuristic, buildRecoveryFeatureVector, recoveryModel, RecoveryInput } from '../RecoveryScore';
 import { kratosSessionEffortRatio, rirEffortFactor } from '../../services/trainingLoad';
 
 const rested: RecoveryInput = {
@@ -54,9 +54,38 @@ describe('cardioFreshness', () => {
     expect(cardioFreshness(1, 1)).toBeGreaterThan(cardioFreshness(60, 60));
   });
 
+  it('treats a small absolute cardio load as fresh, whatever the ratio', () => {
+    // Real case: CTL 7.3 / ATL 6.3, eleven days after the last ride. The ratio is
+    // 0.86 of their base, but their base is ~7 TSS/day - roughly one easy hour a
+    // week - so there is no meaningful fatigue here to carry. An earlier version
+    // of this function scored it 58% and the dashboard called it "a fair amount".
+    expect(cardioFreshness(7.3, 6.3)).toBe(1);
+  });
+
+  it('still penalises an unaccustomed big effort on a small base', () => {
+    expect(cardioFreshness(5, 30)).toBe(0);
+  });
+
   it('falls as acute load climbs above chronic load', () => {
     expect(cardioFreshness(60, 36)).toBeGreaterThan(cardioFreshness(60, 60));
     expect(cardioFreshness(60, 60)).toBeGreaterThan(cardioFreshness(60, 84));
+  });
+});
+
+describe('training is idempotent', () => {
+  it('a retrain on the same history always gives the same weights', async () => {
+    // The bug: Hub replays the full history on every page load and every realtime
+    // insert, and each replay used to apply its updates on top of the last one.
+    // The displayed score walked a few points every refresh with nothing logged.
+    const noDb: any = { from: () => ({ upsert: async () => ({ error: null }) }) };
+    const samples = [
+      { x: buildRecoveryFeatureVector(rested), targets: [recoveryHeuristic(rested)] },
+      { x: buildRecoveryFeatureVector(fatigued), targets: [recoveryHeuristic(fatigued)] }
+    ];
+    await recoveryModel.retrainFromScratch(noDb, 'u', samples);
+    const first = predictRecoveryScore(rested);
+    await recoveryModel.retrainFromScratch(noDb, 'u', samples);
+    expect(predictRecoveryScore(rested)).toBe(first);
   });
 });
 

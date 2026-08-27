@@ -111,8 +111,9 @@ function generateRecoveryDefaultWeights() {
 }
 
 /**
- * Below this CTL, cardio is not a meaningful source of fatigue for this athlete
- * and should not be scored as though it were.
+ * Acute cardio load below this, in TSS/day, is small in absolute terms whatever
+ * it looks like relative to the athlete's base. Used as a floor on the
+ * denominator so a low-volume athlete is not measured against almost nothing.
  */
 export const MEANINGFUL_CTL = 15;
 
@@ -135,13 +136,16 @@ export function cardioFreshness(cardioCTL: number, cardioATL: number): number {
   const ctl = Number.isFinite(cardioCTL) ? Math.max(0, cardioCTL) : 0;
   const atl = Number.isFinite(cardioATL) ? Math.max(0, cardioATL) : 0;
 
-  // Little to no cardio base: judge the small absolute load on its own terms.
-  // Someone who has not ridden in a fortnight IS fresh, and should read as fresh.
-  if (ctl < MEANINGFUL_CTL && atl < MEANINGFUL_CTL) {
-    return Math.max(0, Math.min(1, 1 - atl / MEANINGFUL_CTL));
-  }
-
+  // The floor is what makes this safe at low volume. Without it, an athlete with
+  // a CTL of 2 who does one ordinary ride divides by almost nothing and reads as
+  // destroyed. With it, an acute load below ~15 TSS/day is treated as small in
+  // absolute terms no matter how it compares to their base - which is right, as
+  // that is roughly one easy hour a week.
+  //
+  // It also still catches the case that genuinely does hurt: an unaccustomed big
+  // effort. CTL 5 with ATL 30 gives a ratio of 2.0 and scores 0, correctly.
   const ratio = atl / Math.max(ctl, MEANINGFUL_CTL);
+
   // 0.6 and below = rested; 1.4 and above = deep in a block carrying real fatigue.
   return Math.max(0, Math.min(1, (1.4 - ratio) / 0.8));
 }

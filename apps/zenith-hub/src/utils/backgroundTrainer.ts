@@ -190,12 +190,19 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     };
 
     // 3. Train Kratos Progressive Overload Model
-    // Each iteration only updates weights in memory (trainLocal) — the network upsert
-    // happens once after the whole loop, not once per iteration. With 8 models each
-    // persisting up to 31 times per run, unbatched saves were the single largest
-    // contributor to Supabase API usage (thousands of upserts/day from realtime-
-    // triggered re-runs alone).
+    // Every model in this file is fitted with retrainFromScratch: samples are
+    // collected first, then the model is reset to its priors and fitted to all of
+    // them in one deterministic pass. Each of these used to apply its gradient
+    // updates on top of whatever the previous run had left behind. Since this whole
+    // routine re-runs on every page load AND on every realtime insert, replaying the
+    // same history over and over kept nudging the weights further with no new
+    // information - which is what made the dashboard's scores drift on their own
+    // between refreshes, with nothing having been logged.
+    //
+    // Batching also collapses the network writes: 8 models persisting up to 31
+    // times per run was the single largest contributor to Supabase API usage.
     if (workouts && workouts.length > 1) {
+      const overloadSamples: { x: number[]; targets: number[] }[] = [];
       // Find successive workouts of the same routine/exercises and train the overload MLP
       for (let i = 0; i < workouts.length - 1; i++) {
         const currentW = workouts[i];
@@ -223,9 +230,9 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         ];
 
         const target = Math.max(0, Math.min(1, increment / 10));
-        kratosOverloadModel.trainLocal(x, [target], 0.15);
+        overloadSamples.push({ x, targets: [target] });
       }
-      await kratosOverloadModel.saveToSupabase(supabase, userId);
+      await kratosOverloadModel.retrainFromScratch(supabase, userId, overloadSamples);
     }
 
     // 4. Train Smart Coach Model
@@ -267,8 +274,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       const targets = new Array(6).fill(0.05);
       targets[targetIdx] = 0.95;
 
-      coachModel.trainLocal(x, targets, 0.2);
-      await coachModel.saveToSupabase(supabase, userId);
+      await coachModel.retrainFromScratch(supabase, userId, [{ x, targets }], 20, 0.2);
     }
 
     if (rides && rides.length > 0) {
@@ -289,13 +295,13 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         ];
 
         const target = Math.max(0, Math.min(1, (actualVO2max - 20) / 70));
-        vo2maxModel.trainLocal(x, [target], 0.15);
-        await vo2maxModel.saveToSupabase(supabase, userId);
+        await vo2maxModel.retrainFromScratch(supabase, userId, [{ x, targets: [target] }]);
       }
     }
 
     // 5. Train Dual-Sport Fatigue Model (CR14)
     // Train on a 30-day daily stats window
+    const fatigueSamples: { x: number[]; targets: number[] }[] = [];
     for (let dayOffset = 30; dayOffset >= 0; dayOffset--) {
       const d = new Date();
       d.setDate(d.getDate() - dayOffset);
@@ -344,11 +350,12 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       ];
 
       const fatigueTarget = Math.max(0, Math.min(1.0, (cATL / 80 + (100 - sleepQuality) / 100 + gymEffort7d / GYM_VOLUME_HARD_WEEK_KG) / 3));
-      dualSportFatigueModel.trainLocal(x, [fatigueTarget], 0.15);
+      fatigueSamples.push({ x, targets: [fatigueTarget] });
     }
-    await dualSportFatigueModel.saveToSupabase(supabase, userId);
+    await dualSportFatigueModel.retrainFromScratch(supabase, userId, fatigueSamples);
 
     // 6. Train Unified Recovery Score Model (CR11)
+    const recoverySamples: { x: number[]; targets: number[] }[] = [];
     for (let dayOffset = 30; dayOffset >= 0; dayOffset--) {
       const d = new Date();
       d.setDate(d.getDate() - dayOffset);
@@ -412,9 +419,9 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       // as though it had been a hard one.
       const recoveryTarget = recoveryHeuristic(recoveryInput);
 
-      recoveryModel.trainLocal(x, [recoveryTarget], 0.15);
+      recoverySamples.push({ x, targets: [recoveryTarget] });
     }
-    await recoveryModel.saveToSupabase(supabase, userId);
+    await recoveryModel.retrainFromScratch(supabase, userId, recoverySamples);
 
     console.log(`Background training successfully completed for all models of user: ${userId}`);
     return true;
