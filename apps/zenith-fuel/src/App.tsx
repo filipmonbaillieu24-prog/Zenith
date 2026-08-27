@@ -53,6 +53,10 @@ function App() {
   const [zaneResult, setZaneResult] = useState<ZaneOutput>({
     bmrOffset: 0,
     todayTdee: 0,
+    todayBreakdown: {
+      bmr: 0, neat: 0, activeCalories: 0, gymCalories: 0, caffeineCalories: 0,
+      sleepAdjustment: 0, weekendAdjustment: 0, metabolicOffset: 0, adaptationPenalty: 0
+    },
     sleepQualityCoeff: 0,
     sleepDurationCoeff: 0,
     gymVolumeCoeff: 0.025, // matches the engine's own baseline prior in zane.ts
@@ -1670,6 +1674,20 @@ function App() {
   // own figure before ZANE has run, so this never renders as "0 kcal burned".
   const goalDerivedFromTdee = zaneResult.todayTdee > 0 ? zaneResult.todayTdee : totalTdee;
 
+  /**
+   * Today's burn, as one number, taken from the model that also sets the goal.
+   *
+   * The burn card used to render App.tsx's own totalTdee while the calorie goal
+   * was derived from ZANE's - two independent forward passes over the same
+   * inputs, which drifted apart (2206 vs 2475) and left two figures on screen
+   * both labelled "what you burn today". zaneResult.todayBreakdown carries the
+   * parts, so the rows below are displayed rather than recomputed and always
+   * sum to this total.
+   */
+  const displayedBurnToday = goalDerivedFromTdee;
+  const burnParts = zaneResult.todayBreakdown;
+  const hasBurnBreakdown = zaneResult.todayTdee > 0;
+
 
   // ── FusionNet retrain inputs ────────────────────────────────────────────
   // dailyCaloriesMap covers the visible week only; the retrain wants the full
@@ -2354,6 +2372,7 @@ function App() {
                 {/* Where the goal comes from, on demand. It is the number the whole
                     card is built around and nothing previously said how it was
                     arrived at, which made it look arbitrary. */}
+                {hasBurnBreakdown && (
                 <details style={{ marginTop: '4px' }}>
                   <summary style={{ cursor: 'pointer', fontSize: '11px', color: 'var(--text-muted)' }}>
                     How is this goal worked out?
@@ -2404,6 +2423,7 @@ function App() {
                     </p>
                   </div>
                 </details>
+                )}
               </div>
             </div>
           </div>
@@ -2680,7 +2700,7 @@ function App() {
                     renders 1903 as "1.903", which reads as one-point-nine. A plain
                     integer is unambiguous everywhere and matches the rest of the app. */}
                 <div style={{ fontSize: '30px', fontWeight: 800, color: '#38bdf8', lineHeight: 1.05 }}>
-                  {impliedActualTdee ?? totalTdee}{' '}
+                  {impliedActualTdee ?? displayedBurnToday}{' '}
                   <span style={{ fontSize: '15px', fontWeight: 700 }}>kcal a day</span>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', lineHeight: 1.45 }}>
@@ -2692,14 +2712,15 @@ function App() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Today specifically:</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>{totalTdee} kcal</span>
+                <span style={{ fontWeight: 700, color: '#fff' }}>{displayedBurnToday} kcal</span>
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '-6px', lineHeight: 1.45 }}>
-                {activeCalories + gymCalories > 0
+                {burnParts.activeCalories + burnParts.gymCalories > 0
                   ? 'Higher than usual because of the training you logged today.'
                   : 'Lower than your average because no training is logged today, which is normal on a rest day.'}
               </div>
 
+              {hasBurnBreakdown && (
               <details style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
                 <summary style={{ cursor: 'pointer', fontSize: '11px', color: 'var(--text-muted)' }}>
                   Where today&apos;s number comes from
@@ -2707,39 +2728,53 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Just being alive</span>
-                    <span style={{ fontWeight: 700, color: '#fff' }}>{baseBmr} kcal</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>{burnParts.bmr} kcal</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Everyday moving about</span>
-                    <span style={{ fontWeight: 700, color: '#fff' }}>+{baseTdee - baseBmr} kcal</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>+{burnParts.neat} kcal</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Cardio &amp; running</span>
-                    <span style={{ fontWeight: 700, color: '#fff' }}>+{activeCalories} kcal</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>+{burnParts.activeCalories} kcal</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Strength training</span>
-                    <span style={{ fontWeight: 700, color: '#fff' }}>+{gymCalories} kcal</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>+{burnParts.gymCalories} kcal</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Caffeine</span>
-                    <span style={{ fontWeight: 700, color: '#ff9f43' }}>+{caffeineCalories} kcal</span>
+                    <span style={{ fontWeight: 700, color: '#ff9f43' }}>+{burnParts.caffeineCalories} kcal</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Sleep</span>
-                    <span style={{ fontWeight: 700, color: sleepAdjustment < 0 ? '#ff7675' : '#55efc4' }}>
-                      {sleepAdjustment >= 0 ? '+' : ''}{sleepAdjustment} kcal
+                    <span style={{ fontWeight: 700, color: burnParts.sleepAdjustment < 0 ? '#ff7675' : '#55efc4' }}>
+                      {burnParts.sleepAdjustment >= 0 ? '+' : ''}{burnParts.sleepAdjustment} kcal
                     </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Learned from your own data</span>
-                    <span style={{ fontWeight: 700, color: (zaneResult.bmrOffset || 0) < 0 ? '#ff7675' : '#55efc4' }}>
-                      {(zaneResult.bmrOffset || 0) >= 0 ? '+' : ''}{Math.round(zaneResult.bmrOffset || 0)} kcal
+                    <span style={{ fontWeight: 700, color: burnParts.metabolicOffset < 0 ? '#ff7675' : '#55efc4' }}>
+                      {burnParts.metabolicOffset >= 0 ? '+' : ''}{burnParts.metabolicOffset} kcal
                     </span>
                   </div>
+                  {burnParts.weekendAdjustment !== 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Weekend pattern</span>
+                      <span style={{ fontWeight: 700, color: burnParts.weekendAdjustment < 0 ? '#ff7675' : '#55efc4' }}>
+                        {burnParts.weekendAdjustment >= 0 ? '+' : ''}{burnParts.weekendAdjustment} kcal
+                      </span>
+                    </div>
+                  )}
+                  {burnParts.adaptationPenalty !== 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Long diet slowdown</span>
+                      <span style={{ fontWeight: 700, color: '#ff7675' }}>{burnParts.adaptationPenalty} kcal</span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', fontWeight: 800 }}>
                     <span style={{ color: 'var(--color-primary)' }}>Today&apos;s total</span>
-                    <span style={{ color: 'var(--color-primary)' }}>{totalTdee} kcal</span>
+                    <span style={{ color: 'var(--color-primary)' }}>{displayedBurnToday} kcal</span>
                   </div>
                   <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
                     Digesting food burns energy too, but that is already built into your calorie
@@ -2753,6 +2788,7 @@ function App() {
                   )}
                 </div>
               </details>
+              )}
 
               <div style={{ paddingTop: '4px' }}>
                 <button

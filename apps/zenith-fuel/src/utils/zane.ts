@@ -47,14 +47,30 @@ export interface ZaneOutput {
   calibrationDays: number;
   dailyCalorieTarget: number;
   /**
-   * The expenditure this target was derived from.
+   * Today's estimated expenditure, and the parts it is made of.
    *
-   * Exposed so the UI can explain the goal as "burn minus deficit" and have the
-   * arithmetic tie out. App.tsx builds its own TDEE for the burn card, and the
-   * two can differ slightly; showing that one next to a goal derived from this
-   * one made the explanation look wrong.
+   * App.tsx used to re-implement this forward pass to render its burn card,
+   * which meant two independent computations of the same quantity that could
+   * (and did) disagree - the burn card showed one figure while the calorie goal
+   * was derived from another, differing by a couple of hundred kcal with both
+   * labelled "what you burn today".
+   *
+   * The model owns this calculation; the UI displays it. The components are
+   * exposed so a breakdown can be rendered without recomputing anything, and
+   * they always sum to todayTdee.
    */
   todayTdee: number;
+  todayBreakdown: {
+    bmr: number;              // resting
+    neat: number;             // everyday movement (PAL uplift over BMR)
+    activeCalories: number;   // cardio / running, from wearable
+    gymCalories: number;      // strength training
+    caffeineCalories: number;
+    sleepAdjustment: number;  // relative to this athlete's own average
+    weekendAdjustment: number;
+    metabolicOffset: number;  // learned bmrOffset
+    adaptationPenalty: number; // negative when a long deficit has down-regulated TDEE
+  };
   dailyCarbTarget: number;
   dailyProteinTarget: number;
   dailyFatTarget: number;
@@ -404,13 +420,19 @@ export function runZaneCalibration(
   }
 
   let todayTdee;
+  let todaySleepAdjustment = 0;
+  let todayWeekendAdjustment = 0;
+  let todayMetabolicOffset = 0;
 
   if (isCalibrated) {
-    todayTdee = todayBmr * palFactor + targetActiveCalories + gymCalories + caffeineCalories + bmrOffset;
+    todayMetabolicOffset = bmrOffset;
     const sleepQualityDiff = (todaySleepQuality ?? sleepQualityAvg) - sleepQualityAvg;
     const sleepDurationDiff = (todaySleepDuration ?? sleepDurationAvg) - sleepDurationAvg;
     const isTargetWeekend = [0, 6].includes(new Date(targetDate + 'T12:00:00').getDay()) ? 1 : 0;
-    todayTdee += (sleepQualityCoeff * sleepQualityDiff) + (sleepDurationCoeff * sleepDurationDiff) + (weekendCoeff * isTargetWeekend);
+    todaySleepAdjustment = (sleepQualityCoeff * sleepQualityDiff) + (sleepDurationCoeff * sleepDurationDiff);
+    todayWeekendAdjustment = weekendCoeff * isTargetWeekend;
+    todayTdee = todayBmr * palFactor + targetActiveCalories + gymCalories + caffeineCalories
+              + todayMetabolicOffset + todaySleepAdjustment + todayWeekendAdjustment;
   } else {
     // FIX 8: In uncalibrated mode, do not apply a sleep penalty/bonus.
     todayTdee = todayBmr * palFactor + targetActiveCalories + gymCalories + caffeineCalories;
@@ -438,7 +460,9 @@ export function runZaneCalibration(
     }
   }
 
+  const preAdaptationTdee = todayTdee;
   todayTdee = Math.round(todayTdee * adaptationFactor);
+  const todayAdaptationPenalty = Math.round(todayTdee - preAdaptationTdee);
 
   const trendWeightMap: { [date: string]: number } = {};
   logsWithWeight.forEach((l, idx) => {
@@ -458,7 +482,23 @@ export function runZaneCalibration(
 
   // FIX 7: Pass todayBmr so the safety floor uses the same formula (Katch-McArdle
   // or Mifflin) as the TDEE calculation — no more inconsistency.
-  return generateTargets(todayTdee, todayBmr, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, weekendCoeff, adaptationFactor, sustainedCutDays, calibrationDays, isCalibrated, trendWeightMap, currentTrendWeight, sleepQualityAvg, sleepDurationAvg, energyPerKgTissue);
+  // Rounded so the displayed parts sum exactly to the displayed total: the
+  // breakdown is rendered directly from these, and un-rounded components would
+  // visibly fail to add up.
+  const roundedNeat = Math.round(todayBmr * palFactor) - Math.round(todayBmr);
+  const todayBreakdown = {
+    bmr: Math.round(todayBmr),
+    neat: roundedNeat,
+    activeCalories: Math.round(targetActiveCalories),
+    gymCalories: Math.round(gymCalories),
+    caffeineCalories: Math.round(caffeineCalories),
+    sleepAdjustment: Math.round(todaySleepAdjustment),
+    weekendAdjustment: Math.round(todayWeekendAdjustment),
+    metabolicOffset: Math.round(todayMetabolicOffset),
+    adaptationPenalty: todayAdaptationPenalty,
+  };
+
+  return generateTargets(todayTdee, todayBmr, currentWeight, profile, bmrOffset, sleepQualityCoeff, sleepDurationCoeff, gymVolumeCoeff, caffeineCoeff, weekendCoeff, adaptationFactor, sustainedCutDays, calibrationDays, isCalibrated, trendWeightMap, currentTrendWeight, sleepQualityAvg, sleepDurationAvg, energyPerKgTissue, todayBreakdown);
 }
 
 /**
@@ -636,7 +676,12 @@ export function generateTargets(
   currentTrendWeight: number = weight,
   sleepQualityAvg: number = 75,
   sleepDurationAvg: number = 8,
-  energyPerKgTissue: number = 7700
+  energyPerKgTissue: number = 7700,
+  todayBreakdown: ZaneOutput['todayBreakdown'] = {
+    bmr: Math.round(todayBmr), neat: 0, activeCalories: 0, gymCalories: 0,
+    caffeineCalories: 0, sleepAdjustment: 0, weekendAdjustment: 0,
+    metabolicOffset: 0, adaptationPenalty: 0
+  }
 ): ZaneOutput {
   // Apply calorie surplus or deficit to reach target weight
   let dailyCalorieTarget = tdee;
@@ -751,6 +796,7 @@ export function generateTargets(
     calibrationDays,
     dailyCalorieTarget,
     todayTdee: Math.round(tdee),
+    todayBreakdown,
     dailyCarbTarget,
     dailyProteinTarget,
     dailyFatTarget,
