@@ -857,6 +857,8 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     // 7-day effort-weighted Kratos load, sleep, steps, and bodyweight. Calorie balance
     // isn't available to Vigor (that lives in Fuel's ZANE model), so it's
     // passed as a neutral 0 rather than fabricated.
+    // Cardio only, matching Hub's scope for the same model - gym work reaches the
+    // recovery model once, through gymEffort7d, and must not also arrive here.
     const cardioSeries = trainingLoads
       .filter(d => d.cardioTss > 0)
       .map(d => ({ date: new Date(d.date).getTime(), tss: d.cardioTss }));

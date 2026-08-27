@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, cardioFreshness, recoveryModel, calculateZenithSleepScore, estimateKratosSessionLoadFromSets, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { predictRecoveryScore, cardioFreshness, recoveryModel, calculateZenithSleepScore, buildTrainingLoadPool, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
@@ -229,96 +229,42 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   }, [userId]);
 
   // ── Cross-app load pool calibration ──
-  // Aero supplies real, device-measured tss/hrTSS. Kratos and Stride do not have an
-  // equivalent measured "TSS" at all, so the two scalars below are rough heuristic
-  // conversions into a TSS-like unit — NOT a statistically calibrated equivalence
-  // between running/lifting stress and cycling TSS. Treat any Kratos/Stride figure
-  // in this pool as an ESTIMATE. A proper fix would calibrate these per-athlete
-  // against real physiological cost (HR, power, RPE-based session load, etc.) — out
-  // of scope for this pass; for now we at least name and document the constants so
-  // future work can find and replace them.
-  // Kratos's own scalar/floor/ceiling live in shared/services/trainingLoad.ts
-  // (estimateKratosSessionLoad) — imported below instead of redefined here, so this
-  // pool and Vigor's ACWR forecaster can never drift onto different conversion
-  // numbers for the same Kratos volume.
-  const STRIDE_RSS_HR_REFERENCE_BPM = 150; // "threshold-ish" reference HR used to scale a session's average HR into an intensity ratio
-  const STRIDE_RSS_SCALAR = 1.1; // duration(min) * intensity-ratio -> "RSS" (estimated running TSS-equivalent), rough heuristic
+  // Aero supplies real, device-measured tss/hrTSS. Kratos and Stride have no
+  // equivalent measured "TSS", so their conversions are rough heuristics - NOT a
+  // statistically calibrated equivalence between lifting or running stress and
+  // cycling TSS. Treat any Kratos or Stride figure in this pool as an ESTIMATE.
+  // A proper fix would calibrate them per-athlete against real physiological cost.
+  //
+  // Every one of those constants now lives in shared/services/trainingLoad.ts and
+  // is applied by buildTrainingLoadPool. They used to be redefined per app, which
+  // is exactly how Aero, Kratos and Hub ended up showing three different Form
+  // numbers for the same athlete on the same day.
 
   // ── PMC Simulation Logic ──
   const simPMC = useMemo(() => {
-    const tssList: { date: number; tss: number; source: 'aero' | 'kratos' | 'stride'; isEstimated: boolean }[] = [];
-
-    allRides.forEach(r => {
-      if (r.tss > 0) {
-        tssList.push({ date: r.date, tss: r.tss, source: 'aero', isEstimated: false });
-      }
-    });
-
-    allStride.forEach(s => {
-      // Do NOT fabricate a default HR/duration for incomplete records (previously
-      // defaulted to HR 147 / 20min, inventing a plausible-looking data point out of
-      // thin air). If a session is missing the real HR or duration it needs for the
-      // RSS estimate, exclude it from the shared load pool rather than guessing.
-      if (!s.duration_sec || !s.avg_heart_rate) {
-        return;
-      }
-      const dateMs = new Date(s.date).getTime();
-      const durMins = s.duration_sec / 60;
-      const hrRatio = s.avg_heart_rate / STRIDE_RSS_HR_REFERENCE_BPM;
-      const rss = Math.round(durMins * hrRatio * STRIDE_RSS_SCALAR);
-      if (rss > 0) {
-        tssList.push({ date: dateMs, tss: rss, source: 'stride', isEstimated: true });
-      }
-    });
-
-    allKratos.forEach(k => {
-      if (k.completed_at && k.volume) {
-        const ts = new Date(k.completed_at).getTime();
-        // Effort-weighted, not raw tonnage - an easy high-tonnage session was
-        // previously charged to fitness and fatigue as though it were hard.
-        const sTSS = estimateKratosSessionLoadFromSets(k.volume, k.sets);
-        if (sTSS > 0) tssList.push({ date: ts, tss: sTSS, source: 'kratos', isEstimated: true });
-      }
-    });
-
+    // Whole-athlete load. Built by the shared pool so Aero, Kratos and Hub cannot
+    // disagree - each used to assemble this itself and the three of them showed
+    // TSB -12, -8 and -9 on the same day from the same data.
+    const tssList = buildTrainingLoadPool(
+      { rides: allRides, kratosWorkouts: allKratos, strideRuns: allStride },
+      'all'
+    );
     return computeSimulatedPMC(tssList, plannedWorkouts, 35);
   }, [allRides, allKratos, allStride, plannedWorkouts]);
 
   // ── Cardio-only load pool (Aero + Stride), used ONLY to feed the Recovery Score
-  // model's cardioTSB/cardioATL inputs ──
+  // model's cardioCTL/cardioATL inputs ──
   // The model (shared/ml/RecoveryScore.ts) also independently receives gymEffort7d
-  // as its own "gymVolume7d" input. If we fed it the blended atl/tsb above (which now
-  // includes Kratos's estimated sTSS via bug-1's shared pool) AND gymEffort7d, the
-  // same Kratos training would be counted twice toward the same recovery estimate. So
-  // for the recovery model specifically we compute a cardio-only ATL/TSB (Aero real TSS
-  // + Stride estimated RSS) that deliberately excludes Kratos — Kratos's contribution
-  // is represented exactly once, via gymEffort7d. The blended (Aero+Kratos+Stride)
-  // simPMC above is still used for the dashboard's PMC/Periodization chart, where an
-  // "overall training stress" view is what's intended.
-  const cardioOnlyPMC = useMemo(() => {
-    const cardioTssList: { date: number; tss: number }[] = [];
-
-    allRides.forEach(r => {
-      if (r.tss > 0) {
-        cardioTssList.push({ date: r.date, tss: r.tss });
-      }
-    });
-
-    allStride.forEach(s => {
-      if (!s.duration_sec || !s.avg_heart_rate) {
-        return;
-      }
-      const dateMs = new Date(s.date).getTime();
-      const durMins = s.duration_sec / 60;
-      const hrRatio = s.avg_heart_rate / STRIDE_RSS_HR_REFERENCE_BPM;
-      const rss = Math.round(durMins * hrRatio * STRIDE_RSS_SCALAR);
-      if (rss > 0) {
-        cardioTssList.push({ date: dateMs, tss: rss });
-      }
-    });
-
-    return computePMC(cardioTssList);
-  }, [allRides, allStride]);
+  // as its own input. If we fed it the blended atl/tsb above (which includes
+  // Kratos) AND gymEffort7d, the same Kratos training would be counted twice
+  // toward the same recovery estimate. So for the recovery model specifically the
+  // scope is 'cardio', which excludes Kratos - its contribution is represented
+  // exactly once, via gymEffort7d. The blended simPMC above is still what the
+  // dashboard's PMC chart shows, where an overall training-stress view is intended.
+  const cardioOnlyPMC = useMemo(
+    () => computePMC(buildTrainingLoadPool({ rides: allRides, strideRuns: allStride }, 'cardio')),
+    [allRides, allStride]
+  );
 
   const cardioToday = useMemo(() => {
     // ctl is carried alongside atl/tsb because the recovery model now scales

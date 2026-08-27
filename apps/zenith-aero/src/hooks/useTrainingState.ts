@@ -1,4 +1,4 @@
-import { TSB_FATIGUED_ABOVE, TSB_OPTIMAL_ABOVE, TSB_PEAK_ABOVE, TSB_FRESH_ABOVE } from '@zenith/shared';
+import { TSB_FATIGUED_ABOVE, TSB_OPTIMAL_ABOVE, TSB_PEAK_ABOVE, TSB_FRESH_ABOVE, buildTrainingLoadPool } from '@zenith/shared';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { FitnessProfile, RideSummaryWithBests } from '../types/workout';
 import {
@@ -197,18 +197,12 @@ export function useTrainingState(
 
   // ── PMC ──
   const pmcStatus = useMemo(() => {
-    const tssList: { date: number; tss: number }[] = rides
-      .filter(r => (r.tss ?? r.hrTSS) != null)
-      .map(r => ({ date: r.date, tss: (r.tss ?? r.hrTSS)! }));
-
-    kratosWorkouts.forEach((k: any) => {
-      if (k.completed_at && k.volume) {
-        const ts = new Date(k.completed_at).getTime();
-        const volume = Number(k.volume);
-        const sTSS = Math.min(80, Math.max(15, Math.round(volume * 0.012)));
-        tssList.push({ date: ts, tss: sTSS });
-      }
-    });
+    // Built by the shared pool, not assembled here. This block had its own copy
+    // of the Kratos conversion, on raw tonnage, and never received the
+    // reps-in-reserve weighting - so four of nine sessions saturated its 80-point
+    // ceiling and Aero showed CTL 19 / ATL 31 / TSB -12 where Hub showed
+    // 15 / 25 / -9 from the same data on the same day.
+    const tssList = buildTrainingLoadPool({ rides, kratosWorkouts }, 'all');
 
     if (tssList.length === 0) return { ctl: 0, atl: 0, tsb: 0 };
     const points = computePMC(tssList);

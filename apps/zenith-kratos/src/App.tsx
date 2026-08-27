@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Exercise, TemplateSet, TemplateExercise, Template, WorkoutExerciseLog, Workout, PMCPoint } from './types';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, buildTrainingLoadPool, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import {
   Dumbbell,
@@ -143,57 +143,6 @@ export default function App() {
   }, []);
 
   // 2. Load data from Supabase
-  const calculateWorkoutTSS = (workout: any, listEx: Exercise[], historyWorkouts: Workout[]) => {
-    if (!workout.sets || !Array.isArray(workout.sets)) return 0;
-    const localMap = new Map(listEx.map(e => [e.id, e]));
-    let totalTSS = 0;
-    
-    for (const exLog of workout.sets) {
-      const exerciseId = exLog.exercise_id;
-      const ex = localMap.get(exerciseId);
-      if (!ex) continue;
-      
-      let e1RM = ex.is_bodyweight ? 80.0 : 60.0;
-      let maxAchieved = 0;
-      
-      for (const w of historyWorkouts) {
-        if (!w.sets || w.id === workout.id) continue;
-        // Only consider PRs achieved before this workout, so a workout's TSS
-        // isn't normalized against a 1RM the athlete hadn't hit yet (look-ahead bias).
-        if (new Date(w.completed_at).getTime() >= new Date(workout.completed_at).getTime()) continue;
-        const matchingEx = w.sets.find((s: any) => s.exercise_id === exerciseId);
-        if (matchingEx && matchingEx.sets) {
-          for (const s of matchingEx.sets) {
-            if (s.weight > 0 && s.reps > 0) {
-              const est = s.weight * (1.0 + s.reps / 30.0);
-              if (est > maxAchieved) maxAchieved = est;
-            }
-          }
-        }
-      }
-      
-      if (maxAchieved > 0) {
-        e1RM = maxAchieved;
-      }
-      
-      for (const s of exLog.sets) {
-        if (s.type === 'warmup') continue;
-        let load = Number(s.weight || 0);
-        if (ex.is_bodyweight) {
-          load += latestBodyweight > 0 ? latestBodyweight : 75.0;
-        }
-        if (load === 0 || s.reps === 0) continue;
-        
-        const reps = Number(s.reps);
-        const rir = Math.max(0, Math.min(10, Number(s.rir ?? 2)));
-        const intensity = load / e1RM;
-        const setStress = intensity * reps * (1.0 - 0.05 * rir) * 0.5;
-        totalTSS += setStress;
-      }
-    }
-    
-    return Math.round(totalTSS * 10) / 10;
-  };
 
   const retrainAutoregModel = async (
     uid: string,
@@ -454,7 +403,7 @@ export default function App() {
     }
 
     if (rideData) {
-      computeCombinedStress(rideData, localWorkouts, exData || [], sleepDataAll || [], targetSleep);
+      computeCombinedStress(rideData, localWorkouts, sleepDataAll || [], targetSleep);
     }
 
     if (localWorkouts.length > 0) {
@@ -472,7 +421,6 @@ export default function App() {
   const computeCombinedStress = (
     rideData: any[],
     woData: Workout[],
-    exData: Exercise[],
     sleepData: any[],
     targetSleep: number
   ) => {
@@ -490,14 +438,24 @@ export default function App() {
       };
     });
 
-    // Combined cycling + strength TSS list, fed straight into the shared PMC
-    // calculator (the same CTL/ATL/TSB Banister model Aero and Hub use) so
-    // Kratos's Form numbers can never drift from theirs.
-    const combinedTssList: { date: number; tss: number }[] = parsedRides.map(r => ({ date: r.date, tss: r.tss }));
-    for (const w of woData) {
-      if (!w.completed_at) continue;
-      combinedTssList.push({ date: new Date(w.completed_at).getTime(), tss: calculateWorkoutTSS(w, exData, woData) });
-    }
+    // Built by the shared pool, so Kratos's Form numbers genuinely cannot drift
+    // from Aero's and Hub's. Using the same PMC calculator was never enough on its
+    // own - the three apps agreed on the Banister model and then fed it three
+    // different conversions from a gym session to a load number, so on the same
+    // day they showed TSB -8, -12 and -9.
+    //
+    // What is given up here is calculateWorkoutTSS, now removed. It scaled each
+    // set against the athlete's estimated 1RM for that exercise and applied its
+    // own small RIR discount - so it was the one conversion of the three that
+    // already knew effort existed, though at 5% per rep in reserve it barely
+    // moved the number. Relative intensity is a better idea than kilos moved, but
+    // it needs the exercise catalogue, which Aero and Hub do not load, so it
+    // cannot be the shared definition today. Folding relative intensity together
+    // with the RIR weighting is the obvious next improvement.
+    const combinedTssList = buildTrainingLoadPool(
+      { rides: parsedRides, kratosWorkouts: woData },
+      'all'
+    );
 
     // Group Sleep logs by Day
     const sleepPerDay = new Map<string, { duration: number; quality: number }>();

@@ -240,3 +240,106 @@ export async function fetchRecentDailyTrainingLoads(
   }
   return result;
 }
+
+// ── The one training-load pool ───────────────────────────────────────────────
+//
+// Every app that shows Fitness / Fatigue / Form used to build this list itself,
+// and the four of them disagreed on every term. On the same day and the same
+// data they showed:
+//
+//   Aero    CTL 19  ATL 31  TSB -12   "BUILD PHASE / FATIGUED"
+//   Hub     CTL 15  ATL 25  TSB  -9   "OPTIMAL TRAINING PERIOD"
+//   Kratos  CTL 15  ATL 23  TSB  -8   "OPTIMAL TRAINING PERIOD"
+//   Vigor   ACWR 0.41                 "UNDERPREPARED"
+//
+// The differences were not scope choices, they were three separate conversions
+// from a gym session to a load number:
+//
+//  - Aero had a hardcoded copy of estimateKratosSessionLoad reading raw tonnage,
+//    which never got the reps-in-reserve fix. Four of nine sessions saturated its
+//    80-point ceiling, so it charged 80 for a session the effort-weighted figure
+//    puts at 41. It also left out runs entirely.
+//  - Kratos used a third model again, scaling each set against the athlete's
+//    estimated 1RM for that exercise. Better in principle - relative intensity is
+//    more meaningful than kilos moved - but it needs the exercise catalogue,
+//    which Aero and Hub do not load, so it cannot be the shared one today.
+//    Folding relative intensity together with RIR is the obvious improvement.
+//  - Only Hub read the effort weighting.
+//
+// This function is now the single definition. Scope stays a real choice - a
+// cardio-only pool is what the recovery model needs, so that Kratos work is not
+// counted twice - but two callers asking for the same scope now get the same
+// numbers.
+
+/** "Threshold-ish" reference HR used to scale a run's average HR into an intensity ratio. */
+export const STRIDE_RSS_HR_REFERENCE_BPM = 150;
+/** duration(min) * intensity-ratio -> estimated running TSS-equivalent. A rough heuristic. */
+export const STRIDE_RSS_SCALAR = 1.1;
+
+export type TrainingLoadSource = 'aero' | 'kratos' | 'stride';
+
+export interface TrainingLoadEntry {
+  date: number;
+  tss: number;
+  source: TrainingLoadSource;
+  /** False only for Aero, which has real device-measured TSS. */
+  isEstimated: boolean;
+}
+
+export interface TrainingLoadPoolInput {
+  /** rides rows: numeric `date` plus `metadata.tss` / `metadata.hrTSS`. */
+  rides?: any[] | null;
+  /** kratos_workouts rows: `completed_at`, `volume`, `sets`. */
+  kratosWorkouts?: any[] | null;
+  /** stride_activities rows: `date`, `duration_sec`, `avg_heart_rate`. */
+  strideRuns?: any[] | null;
+}
+
+/**
+ * 'cardio' = rides and runs only. Use this for anything that ALSO receives gym
+ * volume as its own separate signal, so the same session is not charged twice.
+ * 'all' = whole-athlete load, for a Fitness/Fatigue/Form display.
+ */
+export type TrainingLoadScope = 'cardio' | 'all';
+
+export function buildTrainingLoadPool(
+  input: TrainingLoadPoolInput,
+  scope: TrainingLoadScope = 'all'
+): TrainingLoadEntry[] {
+  const pool: TrainingLoadEntry[] = [];
+
+  for (const r of input.rides ?? []) {
+    let meta = r?.metadata;
+    if (typeof meta === 'string') {
+      try { meta = JSON.parse(meta); } catch { meta = {}; }
+    }
+    // r.tss covers callers that flattened the row already.
+    const tss = Number(meta?.tss ?? meta?.hrTSS ?? r?.tss ?? r?.hrTSS ?? 0);
+    const date = Number(r?.date);
+    if (tss > 0 && Number.isFinite(date)) {
+      pool.push({ date, tss, source: 'aero', isEstimated: false });
+    }
+  }
+
+  for (const s of input.strideRuns ?? []) {
+    // Never fabricate a default HR or duration for an incomplete record. A run
+    // missing either is left out of the pool rather than guessed at.
+    if (!s?.duration_sec || !s?.avg_heart_rate) continue;
+    const date = new Date(s.date ?? s.created_at).getTime();
+    if (!Number.isFinite(date)) continue;
+    const rss = Math.round((s.duration_sec / 60) * (s.avg_heart_rate / STRIDE_RSS_HR_REFERENCE_BPM) * STRIDE_RSS_SCALAR);
+    if (rss > 0) pool.push({ date, tss: rss, source: 'stride', isEstimated: true });
+  }
+
+  if (scope === 'all') {
+    for (const w of input.kratosWorkouts ?? []) {
+      if (!w?.completed_at || !w?.volume) continue;
+      const date = new Date(w.completed_at).getTime();
+      if (!Number.isFinite(date)) continue;
+      const sTSS = estimateKratosSessionLoadFromSets(w.volume, w.sets);
+      if (sTSS > 0) pool.push({ date, tss: sTSS, source: 'kratos', isEstimated: true });
+    }
+  }
+
+  return pool;
+}
