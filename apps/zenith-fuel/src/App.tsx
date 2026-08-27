@@ -52,6 +52,7 @@ function App() {
   // ZANE Output
   const [zaneResult, setZaneResult] = useState<ZaneOutput>({
     bmrOffset: 0,
+    todayTdee: 0,
     sleepQualityCoeff: 0,
     sleepDurationCoeff: 0,
     gymVolumeCoeff: 0.025, // matches the engine's own baseline prior in zane.ts
@@ -1532,10 +1533,29 @@ function App() {
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (caloriesPercentage / 100) * circumference;
+
   const remainingCalories = zaneResult.dailyCalorieTarget - intakeCalories;
   const calorieRingColor = remainingCalories < 0 ? '#ff7675' : 'var(--color-primary)';
 
   const latestWeight = weightLogs[weightLogs.length - 1]?.weight || 75;
+
+  /**
+   * Whether the goal is a deficit, a surplus, or maintenance.
+   *
+   * Mirrors the phase logic in generateTargets(): a 200 g margin around the
+   * target weight counts as "there already", so the card doesn't tell someone
+   * essentially at goal that they are cutting.
+   */
+  const goalRateKgPerWeek = profile.targetRateKgPerWeek ?? 0.5;
+
+  const goalPhase: 'cut' | 'bulk' | 'maintain' = (() => {
+    const target = profile.targetWeight;
+    if (!target || !latestWeight) return 'maintain';
+    if (latestWeight - target > 0.2) return 'cut';
+    if (latestWeight - target < -0.2) return 'bulk';
+    return 'maintain';
+  })();
+
   const height = profile.height || 175;
   const age = calculateAge(profile.birthDate);
   const gender = profile.gender || 'other';
@@ -1556,6 +1576,12 @@ function App() {
   // FIX 3: PAL 1.2 (NEAT-only baseline) — matches zane.ts. Exercise calories come from wearable.
   const palFactor = 1.2;
   const baseTdee = Math.round(baseBmr * palFactor);
+  // Same floor generateTargets() applies: clinical minimum, or 95% of BMR.
+  const calorieSafetyFloor = Math.max(
+    profile.gender === 'female' ? 1200 : 1500,
+    Math.round(baseBmr * 0.95)
+  );
+
   const bmrOffset = zaneResult.isCalibrated ? (zaneResult.bmrOffset || 0) : 0;
   // FIX 5: Cap active calories at 1,500 kcal to guard against wearable sensor spikes
   const activeCalories = Math.min(1500, selectedDateActiveCalories);
@@ -1640,6 +1666,10 @@ function App() {
   const adaptationFactor = zaneResult.adaptationFactor ?? 1.0;
   const adaptationPenalty = Math.round(preAdaptationTdee * (1 - adaptationFactor));
   const totalTdee = preAdaptationTdee - adaptationPenalty;
+  // The expenditure the goal was actually derived from. Falls back to the card's
+  // own figure before ZANE has run, so this never renders as "0 kcal burned".
+  const goalDerivedFromTdee = zaneResult.todayTdee > 0 ? zaneResult.todayTdee : totalTdee;
+
 
   // ── FusionNet retrain inputs ────────────────────────────────────────────
   // dailyCaloriesMap covers the visible week only; the retrain wants the full
@@ -2299,19 +2329,81 @@ function App() {
 
               <div className="cal-details">
                 <div className="cal-detail-row">
-                  <span style={{ color: 'var(--text-muted)' }}>Zenith Calorie Goal</span>
+                  <span style={{ color: 'var(--text-muted)' }}>
+                    Today&apos;s goal
+                    {goalPhase !== 'maintain' && (
+                      <span style={{ display: 'block', fontSize: '10px' }}>
+                        to {goalPhase === 'cut' ? 'lose' : 'gain'} {goalRateKgPerWeek} kg a week,
+                        heading for {profile.targetWeight} kg
+                      </span>
+                    )}
+                  </span>
                   <span className="cal-detail-val">{zaneResult.dailyCalorieTarget} kcal</span>
                 </div>
                 <div className="cal-detail-row">
-                  <span style={{ color: 'var(--text-muted)' }}>Total Intake</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Eaten so far</span>
                   <span className="cal-detail-val">{intakeCalories} kcal</span>
                 </div>
                 <div className="cal-detail-row">
-                  <span style={{ color: 'var(--text-muted)' }}>{remainingCalories < 0 ? 'Over Goal' : 'Remaining'}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{remainingCalories < 0 ? 'Over your goal by' : 'Still to eat'}</span>
                   <span className="cal-detail-val" style={{ color: calorieRingColor }}>
-                    {remainingCalories < 0 ? `+${Math.abs(remainingCalories)}` : remainingCalories} kcal
+                    {remainingCalories < 0 ? Math.abs(remainingCalories) : remainingCalories} kcal
                   </span>
                 </div>
+
+                {/* Where the goal comes from, on demand. It is the number the whole
+                    card is built around and nothing previously said how it was
+                    arrived at, which made it look arbitrary. */}
+                <details style={{ marginTop: '4px' }}>
+                  <summary style={{ cursor: 'pointer', fontSize: '11px', color: 'var(--text-muted)' }}>
+                    How is this goal worked out?
+                  </summary>
+                  <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>What you burn today</span>
+                      <span style={{ fontWeight: 700, color: '#fff' }}>{goalDerivedFromTdee} kcal</span>
+                    </div>
+                    {goalPhase === 'cut' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          Eat less, to lose {goalRateKgPerWeek} kg a week
+                        </span>
+                        <span style={{ fontWeight: 700, color: '#55efc4' }}>
+                          &minus;{Math.max(0, goalDerivedFromTdee - zaneResult.dailyCalorieTarget)} kcal
+                        </span>
+                      </div>
+                    )}
+                    {goalPhase === 'bulk' && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          Eat more, to gain {goalRateKgPerWeek} kg a week
+                        </span>
+                        <span style={{ fontWeight: 700, color: '#ff7675' }}>
+                          +{Math.max(0, zaneResult.dailyCalorieTarget - goalDerivedFromTdee)} kcal
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '6px', fontWeight: 800 }}>
+                      <span style={{ color: 'var(--color-primary)' }}>Your goal</span>
+                      <span style={{ color: 'var(--color-primary)' }}>{zaneResult.dailyCalorieTarget} kcal</span>
+                    </div>
+                    <p style={{ margin: '2px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                      {goalPhase === 'cut' ? (
+                        <>A kilo of body fat is roughly 7,700 kcal, so losing {goalRateKgPerWeek} kg a
+                        week means eating about {Math.round((goalRateKgPerWeek * 7700) / 7)} kcal a day
+                        less than you burn. Zenith caps that gap at 600 kcal and never sets a goal below{' '}
+                        {calorieSafetyFloor} kcal for you, because bigger gaps cost muscle rather than fat.</>
+                      ) : goalPhase === 'bulk' ? (
+                        <>Gaining {goalRateKgPerWeek} kg a week means eating above what you burn.
+                        Zenith caps the surplus at 500 kcal a day, since beyond that you mostly add fat
+                        rather than muscle.</>
+                      ) : (
+                        <>You are at your target weight, so your goal simply matches what you burn.
+                        Change your target weight to switch to losing or gaining.</>
+                      )}
+                    </p>
+                  </div>
+                </details>
               </div>
             </div>
           </div>
@@ -2327,6 +2419,9 @@ function App() {
                   <span className="macro-name" style={{ color: 'var(--color-carb)' }}>Carbohydrates</span>
                   <span className="macro-amounts">
                     {intakeCarbs}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {zaneResult.dailyCarbTarget}g</span>
+                    <span style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', fontWeight: 500, textAlign: 'right' }}>
+                      {Math.max(0, zaneResult.dailyCarbTarget - Math.round(intakeCarbs))}g to go
+                    </span>
                   </span>
                 </div>
                 <div className="macro-track">
@@ -2342,6 +2437,9 @@ function App() {
                   <span className="macro-name" style={{ color: 'var(--color-protein)' }}>Protein</span>
                   <span className="macro-amounts">
                     {intakeProtein}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {zaneResult.dailyProteinTarget}g</span>
+                    <span style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', fontWeight: 500, textAlign: 'right' }}>
+                      {Math.max(0, zaneResult.dailyProteinTarget - Math.round(intakeProtein))}g to go
+                    </span>
                   </span>
                 </div>
                 <div className="macro-track">
@@ -2357,6 +2455,9 @@ function App() {
                   <span className="macro-name" style={{ color: 'var(--color-fat)' }}>Fats</span>
                   <span className="macro-amounts">
                     {intakeFat}g <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>/ {zaneResult.dailyFatTarget}g</span>
+                    <span style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', fontWeight: 500, textAlign: 'right' }}>
+                      {Math.max(0, zaneResult.dailyFatTarget - Math.round(intakeFat))}g to go
+                    </span>
                   </span>
                 </div>
                 <div className="macro-track">
@@ -2367,6 +2468,11 @@ function App() {
                 </div>
               </div>
             </div>
+            <p style={{ margin: '10px 0 0', fontSize: '10px', lineHeight: 1.45, color: 'var(--text-muted)' }}>
+              Protein is set from your bodyweight{goalPhase === 'cut' ? ', kept high while you are losing weight to protect muscle' : ''}.
+              The rest of your calories are split between carbs and fat, leaning toward carbs on
+              training days and fat on rest days.
+            </p>
           </div>
           </div>
 

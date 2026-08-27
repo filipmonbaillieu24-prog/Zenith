@@ -46,6 +46,15 @@ export interface ZaneOutput {
   isCalibrated: boolean;
   calibrationDays: number;
   dailyCalorieTarget: number;
+  /**
+   * The expenditure this target was derived from.
+   *
+   * Exposed so the UI can explain the goal as "burn minus deficit" and have the
+   * arithmetic tie out. App.tsx builds its own TDEE for the burn card, and the
+   * two can differ slightly; showing that one next to a goal derived from this
+   * one made the explanation look wrong.
+   */
+  todayTdee: number;
   dailyCarbTarget: number;
   dailyProteinTarget: number;
   dailyFatTarget: number;
@@ -741,6 +750,7 @@ export function generateTargets(
     isCalibrated,
     calibrationDays,
     dailyCalorieTarget,
+    todayTdee: Math.round(tdee),
     dailyCarbTarget,
     dailyProteinTarget,
     dailyFatTarget,
