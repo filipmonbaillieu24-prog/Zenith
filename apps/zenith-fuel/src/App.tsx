@@ -1894,7 +1894,6 @@ function App() {
   const impliedActualTdee = measuredDailyBalance !== null
     ? balanceAvgIntake - measuredDailyBalance
     : null;
-  const estimatedTdeeForComparison = balanceAvgIntake - netDailyBalance;
 
   // Percent of bodyweight per week. ~1%/week is the usual upper bound for a
   // rate that preserves lean mass; beyond that the copy shouldn't call it
@@ -2433,109 +2432,104 @@ function App() {
             )}
           </div>
 
-          {/* Card 1: TDEE Energy Breakdown */}
+          {/* Card 1: Daily burn */}
           <div className="fuel-card col-4 animate-fade-in">
             <h3 className="fuel-card-title">
-              <Activity size={14} style={{ color: 'var(--color-primary)' }} /> TDEE Energy Expenditure
+              <Activity size={14} style={{ color: 'var(--color-primary)' }} /> Your Daily Burn
             </h3>
             <div className="zane-insights-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Mifflin-St Jeor BMR:</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>{baseBmr} kcal</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>PAL Activity (x1.2):</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>+{baseTdee - baseBmr} kcal</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Cardio & Running (Aero & Stride):</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>
-                  +{activeCalories} kcal
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Strength Training (Kratos):</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>
-                  +{gymCalories} kcal <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                    ({selectedDateGymVolume} kg{zaneResult.isCalibrated ? ` @ ${zaneResult.gymVolumeCoeff.toFixed(3)}/kg` : ''})
-                  </span>
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Caffeine Thermogenesis:</span>
-                <span style={{ fontWeight: 700, color: '#ff9f43' }}>
-                  +{caffeineCalories} kcal <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                    ({caffeineStats.activeDateCaffeine} mg{zaneResult.isCalibrated ? ` @ ${zaneResult.caffeineCoeff.toFixed(3)}/mg` : ''})
-                  </span>
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Zenith Metabolic Adjustment:</span>
-                <span style={{ fontWeight: 700, color: bmrOffset >= 0 ? '#55efc4' : '#ff7675' }}>
-                  {bmrOffset >= 0 ? `+${bmrOffset}` : bmrOffset} kcal
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Sleep Influence:</span>
-                <span style={{ fontWeight: 700, color: sleepAdjustment >= 0 ? '#55efc4' : '#ff7675' }}>
-                  {sleepAdjustment >= 0 ? `+${sleepAdjustment}` : sleepAdjustment} kcal
-                </span>
-              </div>
-              {zaneResult.isCalibrated && isTargetWeekend === 1 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Weekend Influence:</span>
-                  <span style={{ fontWeight: 700, color: (zaneResult.weekendCoeff || 0) >= 0 ? '#55efc4' : '#ff7675' }}>
-                    {(zaneResult.weekendCoeff || 0) >= 0 ? `+${zaneResult.weekendCoeff}` : zaneResult.weekendCoeff} kcal
-                  </span>
-                </div>
-              )}
-              {zaneResult.adaptationFactor < 0.99 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Metabolic Adaptation ({zaneResult.sustainedCutDays}d cut):</span>
-                  <span style={{ fontWeight: 700, color: '#ff7675' }}>
-                    -{adaptationPenalty} kcal
-                  </span>
-                </div>
-              )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Thermic Effect of Food (TEF):</span>
-                <span style={{ fontWeight: 700, color: 'var(--text-muted)', fontSize: '11px' }}>~{Math.round(intakeProtein * 4 * 0.25 + intakeCarbs * 4 * 0.08 + intakeFat * 9 * 0.03)} kcal (implicit in net balance)</span>
-              </div>
-              {/* Labelled "for this day" because the Weight Predictor works from
-                  the WEEKLY AVERAGE expenditure, which differs whenever the week
-                  contains training days. Both were previously called "TDEE",
-                  so the two cards appeared to contradict each other. */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 900, paddingBottom: '4px' }}>
-                <span style={{ color: 'var(--color-primary)' }}>Estimated burn today:</span>
-                <span style={{ color: 'var(--color-primary)' }}>{totalTdee} kcal</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: fusionLooksUnfitted ? 'var(--text-muted)' : '#38bdf8', paddingTop: '6px', borderTop: '1px dashed var(--border-color)' }}>
-                <span>Zenith ML estimate:</span>
-                <span style={{ fontWeight: 800 }}>
-                  {fusionLooksUnfitted ? 'not fitted yet' : `${fusionPredict.tdeeKcal} kcal`}
-                </span>
-              </div>
-              {fusionLooksUnfitted && (
-                <p style={{ margin: '2px 0 0', fontSize: '10px', lineHeight: 1.45, color: 'var(--text-muted)' }}>
-                  The model hasn&apos;t been trained on your data yet, so its estimate isn&apos;t
-                  meaningful. Retrain below once you have a week or so of logged days.
-                </p>
-              )}
-              {impliedActualTdee !== null && impliedActualTdee > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#4ade80' }}>
-                  <span>Daily average, from your scale:</span>
-                  <span style={{ fontWeight: 800 }}>~{impliedActualTdee} kcal</span>
-                </div>
-              )}
-              {impliedActualTdee !== null && impliedActualTdee > 0 && (
-                <p style={{ margin: '2px 0 0', fontSize: '10px', lineHeight: 1.45, color: 'var(--text-muted)' }}>
-                  The first two are estimates for today; the last is a daily average your measured
-                  weight change actually supports, so a rest day sitting below it is normal.
-                  Retraining pulls the ML estimate toward your real numbers.
-                </p>
-              )}
 
-              <div style={{ paddingTop: '8px' }}>
+              {/* One headline number. Three internal estimates of daily expenditure
+                  shown side by side just asked the user to adjudicate between them,
+                  so show the most trustworthy and put the rest behind a disclosure. */}
+              <div style={{
+                background: 'rgba(56,189,248,0.07)',
+                border: '1px solid rgba(56,189,248,0.22)',
+                borderRadius: '10px',
+                padding: '14px'
+              }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  You burn about
+                </div>
+                {/* Deliberately NOT toLocaleString(): on a Dutch or German locale it
+                    renders 1903 as "1.903", which reads as one-point-nine. A plain
+                    integer is unambiguous everywhere and matches the rest of the app. */}
+                <div style={{ fontSize: '30px', fontWeight: 800, color: '#38bdf8', lineHeight: 1.05 }}>
+                  {impliedActualTdee ?? totalTdee}{' '}
+                  <span style={{ fontSize: '15px', fontWeight: 700 }}>kcal a day</span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', lineHeight: 1.45 }}>
+                  {impliedActualTdee !== null
+                    ? 'Worked out from how your weight has actually changed, so this is the most reliable number we have for you.'
+                    : 'Estimated from your body and activity. It gets more accurate once you have a few weigh-ins.'}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Today specifically:</span>
+                <span style={{ fontWeight: 700, color: '#fff' }}>{totalTdee} kcal</span>
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '-6px', lineHeight: 1.45 }}>
+                {activeCalories + gymCalories > 0
+                  ? 'Higher than usual because of the training you logged today.'
+                  : 'Lower than your average because no training is logged today, which is normal on a rest day.'}
+              </div>
+
+              <details style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                <summary style={{ cursor: 'pointer', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Where today&apos;s number comes from
+                </summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Just being alive</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>{baseBmr} kcal</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Everyday moving about</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>+{baseTdee - baseBmr} kcal</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Cardio &amp; running</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>+{activeCalories} kcal</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Strength training</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>+{gymCalories} kcal</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Caffeine</span>
+                    <span style={{ fontWeight: 700, color: '#ff9f43' }}>+{caffeineCalories} kcal</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Sleep</span>
+                    <span style={{ fontWeight: 700, color: sleepAdjustment < 0 ? '#ff7675' : '#55efc4' }}>
+                      {sleepAdjustment >= 0 ? '+' : ''}{sleepAdjustment} kcal
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Learned from your own data</span>
+                    <span style={{ fontWeight: 700, color: (zaneResult.bmrOffset || 0) < 0 ? '#ff7675' : '#55efc4' }}>
+                      {(zaneResult.bmrOffset || 0) >= 0 ? '+' : ''}{Math.round(zaneResult.bmrOffset || 0)} kcal
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', fontWeight: 800 }}>
+                    <span style={{ color: 'var(--color-primary)' }}>Today&apos;s total</span>
+                    <span style={{ color: 'var(--color-primary)' }}>{totalTdee} kcal</span>
+                  </div>
+                  <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                    Digesting food burns energy too, but that is already built into your calorie
+                    targets, so it is not counted twice here.
+                  </p>
+                  {!fusionLooksUnfitted && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#38bdf8', paddingTop: '4px' }}>
+                      <span>Zenith&apos;s learning model says</span>
+                      <span style={{ fontWeight: 800 }}>{fusionPredict.tdeeKcal} kcal</span>
+                    </div>
+                  )}
+                </div>
+              </details>
+
+              <div style={{ paddingTop: '4px' }}>
                 <button
                   type="button"
                   onClick={handleRetrainFusion}
@@ -2545,7 +2539,7 @@ function App() {
                     background: retrainState.running ? 'rgba(56,189,248,0.10)' : 'rgba(56,189,248,0.16)',
                     border: '1px solid rgba(56,189,248,0.35)',
                     color: '#38bdf8',
-                    padding: '7px 10px',
+                    padding: '8px 10px',
                     fontSize: '11px',
                     fontWeight: 700,
                     borderRadius: '8px',
@@ -2553,11 +2547,11 @@ function App() {
                     fontFamily: 'inherit'
                   }}
                 >
-                  {retrainState.running ? 'Retraining…' : 'Retrain on my logged history'}
+                  {retrainState.running ? 'Learning\u2026' : 'Learn from my history'}
                 </button>
                 <p style={{ margin: '6px 0 0', fontSize: '10px', lineHeight: 1.45, color: 'var(--text-muted)' }}>
-                  Replays every fully-logged day against your measured weight trend, so the
-                  prediction is fitted to you rather than to the formula beside it.
+                  Goes back over every day you logged fully and compares it with what your weight
+                  actually did, so these numbers fit you.
                 </p>
                 {retrainState.message && (
                   <p
@@ -2576,100 +2570,125 @@ function App() {
             </div>
           </div>
 
-          {/* Card 2: Weight Prediction Forecaster */}
+          {/* Card 2: Weight forecast */}
           <div className="fuel-card col-4 animate-fade-in">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Weight Predictor (4 weeks)
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Weight Forecast
             </h3>
             <div className="zane-insights-wrap" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-              {/* Headline. When the scale has enough history it is the source of
-                  truth, because it measures the outcome directly instead of
-                  inferring it from an intake log and an expenditure estimate. */}
+              {/* Now -> then, as one sentence in numbers. Previously this card showed
+                  two current weights and two forecasts and left the reader to work
+                  out which pair to believe. */}
               <div style={{
                 background: 'rgba(56,189,248,0.07)',
                 border: '1px solid rgba(56,189,248,0.22)',
                 borderRadius: '10px',
-                padding: '12px 14px'
+                padding: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px'
               }}>
-                <div style={{ fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  {measuredWeeklyRate !== null ? 'On your current trend, in 4 weeks' : 'Projected in 4 weeks'}
+                <div>
+                  <div style={{ fontSize: '10px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Now</div>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>{latestWeight} kg</div>
                 </div>
-                <div style={{ fontSize: '26px', fontWeight: 800, color: '#38bdf8', lineHeight: 1.1 }}>
-                  {headlineProjectedWeight.toFixed(1)} kg
+                <div style={{ color: 'var(--text-muted)', fontSize: '18px' }}>&rarr;</div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '10px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>In 4 weeks</div>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#38bdf8', lineHeight: 1.1 }}>
+                    {headlineProjectedWeight.toFixed(1)} kg
+                  </div>
                 </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                  {measuredWeeklyRate !== null ? (
-                    <>from {measuredWeeklyRate > 0 ? '+' : ''}{measuredWeeklyRate.toFixed(2)} kg/week measured on your scale</>
+              </div>
+
+              <div style={{ fontSize: '12px', lineHeight: 1.55, color: 'var(--text-primary)' }}>
+                {measuredWeeklyRate !== null ? (
+                  Math.abs(measuredWeeklyRate) < 0.1 ? (
+                    <>Your weight is holding steady at the moment.</>
                   ) : (
-                    <>from your logged intake — no measured trend yet</>
-                  )}
-                </div>
+                    <>
+                      You are {measuredWeeklyRate < 0 ? 'losing' : 'gaining'}{' '}
+                      <strong style={{ color: '#38bdf8' }}>{Math.abs(measuredWeeklyRate).toFixed(2)} kg a week</strong>{' '}
+                      based on your actual weigh-ins.
+                    </>
+                  )
+                ) : (
+                  <>Keep weighing in for a couple of weeks and we can forecast from your real trend
+                  instead of from your food log.</>
+                )}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Today&apos;s scale weight:</span>
-                <span style={{ fontWeight: 700, color: '#fff' }}>{latestWeight} kg</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Fat trend weight (smoothed):</span>
-                <span style={{ fontWeight: 800, color: '#38bdf8' }}>{startingWeightForProjection} kg</span>
-              </div>
-
-              {/* Secondary: what the food log alone predicts. Kept visible so the
-                  number is auditable, but clearly subordinate to the measurement. */}
-              <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '10px' }}>
-                <div style={{ fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                  What your food log alone predicts
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Daily energy balance:</span>
-                  <span style={{ fontWeight: 700, color: netDailyBalance <= 0 ? '#55efc4' : '#ff7675' }}>
-                    {netDailyBalance > 0 ? `+${netDailyBalance}` : netDailyBalance} kcal/day
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Which would give:</span>
-                  <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>
-                    {weeklyWeightRate > 0 ? '+' : ''}{weeklyWeightRate.toFixed(2)} kg/week → {projectedWeight.toFixed(1)} kg
-                  </span>
-                </div>
-              </div>
-
-              {/* Exactly one explanatory line, chosen by situation, rather than a
-                  stack of caveats competing for attention. */}
-              {projectionDisagreesWithScale && measuredWeeklyRate !== null ? (
-                <div style={{ fontSize: '11px', lineHeight: 1.5, color: '#e8bf6b' }}>
-                  Your log predicts faster change than your scale is showing.
-                  {impliedActualTdee !== null && impliedActualTdee > 0 && (
-                    <> That usually means the expenditure estimate is high: your measurements point to
-                    about <strong>{impliedActualTdee} kcal/day</strong>, while the estimate averages{' '}
-                    {estimatedTdeeForComparison}. Retraining on your history corrects it.</>
-                  )}
-                </div>
-              ) : lossRateIsAggressive ? (
-                <div style={{ fontSize: '11px', lineHeight: 1.5, color: '#e8bf6b' }}>
-                  That is about {weeklyRatePercent.toFixed(1)}% of bodyweight per week — faster than the
-                  ~1%/week usually advised for holding on to muscle. Consider eating a little more.
-                </div>
-              ) : (
-                <div className="zane-feedback-text" style={{ fontSize: '11px', lineHeight: 1.5 }}>
-                  {netDailyBalance <= -100 ? (
-                    <>You are eating {Math.abs(netDailyBalance)} kcal below your estimated needs — a steady rate for losing fat.</>
-                  ) : netDailyBalance >= 100 ? (
-                    <>You are eating {netDailyBalance} kcal above your estimated needs, which supports muscle growth and recovery.</>
-                  ) : (
-                    <>You are eating close to maintenance. Weight should stay roughly stable.</>
-                  )}
+              {/* Only surfaced when it disagrees, and phrased as something to do
+                  rather than a discrepancy to reconcile. */}
+              {projectionDisagreesWithScale && measuredWeeklyRate !== null && (
+                <div style={{
+                  background: 'rgba(232,191,107,0.08)',
+                  border: '1px solid rgba(232,191,107,0.25)',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  fontSize: '11px',
+                  lineHeight: 1.5,
+                  color: '#e8bf6b'
+                }}>
+                  Your food log suggests you should be {Math.abs(weeklyWeightRate).toFixed(2)} kg a week
+                  {weeklyWeightRate < 0 ? ' lighter' : ' heavier'}, but the scale says{' '}
+                  {Math.abs(measuredWeeklyRate).toFixed(2)}. That gap usually means we are
+                  over-estimating how much you burn. Tap{' '}
+                  <strong>Learn from my history</strong> and it should settle down.
                 </div>
               )}
 
-              <div style={{ fontSize: '10px', lineHeight: 1.45, color: 'var(--text-muted)' }}>
-                {balanceSampleDays > 0 && balanceSampleDays < 4
-                  ? `Based on ${balanceSampleDays} day${balanceSampleDays === 1 ? '' : 's'} logged this week, so it will move as more come in. `
-                  : ''}
-                Assumes the current rate holds; real loss usually slows as you get lighter.
-              </div>
+              {lossRateIsAggressive && !projectionDisagreesWithScale && (
+                <div style={{
+                  background: 'rgba(232,191,107,0.08)',
+                  border: '1px solid rgba(232,191,107,0.25)',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  fontSize: '11px',
+                  lineHeight: 1.5,
+                  color: '#e8bf6b'
+                }}>
+                  That is quite fast for your size. Losing more than about 1% of your bodyweight a
+                  week tends to cost muscle as well as fat, so consider eating a little more.
+                </div>
+              )}
+
+              <details style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                <summary style={{ cursor: 'pointer', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  The detail behind this
+                </summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Smoothed weight</span>
+                    <span style={{ fontWeight: 700, color: '#fff' }}>{startingWeightForProjection} kg</span>
+                  </div>
+                  <p style={{ margin: '-2px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                    Day-to-day weight swings with water and food, so we forecast from a smoothed
+                    version rather than a single morning&apos;s reading.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Eating vs burning</span>
+                    <span style={{ fontWeight: 700, color: netDailyBalance <= 0 ? '#55efc4' : '#ff7675' }}>
+                      {netDailyBalance > 0 ? `+${netDailyBalance}` : netDailyBalance} kcal a day
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Which alone would give</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>
+                      {projectedWeight.toFixed(1)} kg
+                    </span>
+                  </div>
+                  <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                    {balanceSampleDays > 0 && balanceSampleDays < 4
+                      ? `Based on ${balanceSampleDays} day${balanceSampleDays === 1 ? '' : 's'} logged this week, so it will move as more come in. `
+                      : ''}
+                    Real weight loss usually slows as you get lighter, so treat the forecast as a
+                    direction rather than a promise.
+                  </p>
+                </div>
+              </details>
             </div>
           </div>
 
