@@ -124,7 +124,22 @@ export interface DailyTrainingLoad {
   kratosEffortVolume: number; // kratosVolume discounted by reps in reserve - what recovery/fatigue models read
   kratosLoad: number; // estimateKratosSessionLoad(kratosEffortVolume)
   cardioTss: number; // Aero rides.metadata.tss/hrTSS that day
-  load: number; // blended total = stepsLoad + kratosLoad + cardioTss
+  /**
+   * Deliberate training only: kratosLoad + cardioTss. This is what a training
+   * ratio like ACWR must read.
+   *
+   * Vigor's ACWR used `load` below, which includes steps at step_count/100 - and
+   * on real data that made walking the dominant term. 22,842 steps on one day
+   * scored 228 against a 77 km ride's 156, so a big walk counted as more training
+   * stress than the athlete's hardest ride of the month. Across a 28-day window
+   * steps supplied 1,554 of 2,364 total load: two thirds of it. The resulting
+   * ratio read 0.41 and told the athlete they were UNDERPREPARED while every
+   * other app called the same day optimal - and what had actually changed was
+   * their step count, partly because recent days synced only 50 and 217 steps on
+   * days they went to the gym.
+   */
+  trainingLoad: number;
+  load: number; // total movement = stepsLoad + kratosLoad + cardioTss (steps included)
 }
 
 // Local calendar day, matching shared/pmc.ts and every other day-bucketed
@@ -234,6 +249,7 @@ export async function fetchRecentDailyTrainingLoads(
       kratosEffortVolume: kratosEffort,
       kratosLoad,
       cardioTss,
+      trainingLoad: Math.round((kratosLoad + cardioTss) * 10) / 10,
       load: Math.round((stepsLoad + kratosLoad + cardioTss) * 10) / 10
     });
     cursor.setDate(cursor.getDate() + 1);

@@ -5,6 +5,8 @@
 
 export interface WorkloadInsight {
   acwr: number;
+  /** True when fewer than 28 days of history exist, so the ratio is not yet stable. */
+  provisional: boolean;
   riskZone: 'underprepared' | 'optimal' | 'high' | 'danger';
   insight: string;
   recommendation: string;
@@ -16,23 +18,28 @@ export class AcwrForecaster {
    * Computes the ACWR and predicts the injury risk window.
    */
   public static calculateWorkloadInsight(
-    dailyLoads: number[] // historical workload loads (e.g. daily TSS or gymVolume, last 28 days)
+    // Daily DELIBERATE TRAINING load - DailyTrainingLoad.trainingLoad, not .load.
+    // Passing the steps-inclusive figure makes this a step-count ratio: on real
+    // data steps supplied two thirds of the total, so the number tracked how much
+    // the athlete had walked rather than how much they had trained.
+    dailyLoads: number[]
   ): WorkloadInsight {
-    if (dailyLoads.length < 28) {
-      // Pad with baseline value (e.g. 50 TSS) if not enough history
-      const padding = Array(28 - dailyLoads.length).fill(40);
-      dailyLoads = [...padding, ...dailyLoads];
-    }
-
-    // Acute load: average of the last 7 days
+    // A short history is NOT padded with invented training. This used to fill the
+    // missing days with 40 TSS each, which manufactures a chronic load the athlete
+    // never built - and since the padding lands at the START of the window it
+    // inflates chronic while leaving acute alone, pushing every new user's ratio
+    // down toward a false "underprepared" verdict on their first four weeks.
+    // Average over the days that actually exist instead, and say the ratio is
+    // provisional.
+    const provisional = dailyLoads.length < 28;
+    const chronicDays = dailyLoads.slice(-28);
     const acuteDays = dailyLoads.slice(-7);
-    const acuteLoad = acuteDays.reduce((sum, val) => sum + val, 0) / 7;
 
-    // Chronic load: average of the last 28 days
-    const chronicLoad = dailyLoads.reduce((sum, val) => sum + val, 0) / 28;
+    const mean = (xs: number[]) => (xs.length > 0 ? xs.reduce((sum, v) => sum + v, 0) / xs.length : 0);
+    const acuteLoad = mean(acuteDays);
+    const chronicLoad = mean(chronicDays);
 
-    // Calculate ACWR
-    const acwr = chronicLoad > 0 
+    const acwr = chronicLoad > 0
       ? parseFloat((acuteLoad / chronicLoad).toFixed(2))
       : 1.0;
 
@@ -60,8 +67,13 @@ export class AcwrForecaster {
       shouldDeload = true;
     }
 
+    if (provisional) {
+      insight += ' (Based on less than four weeks of history, so this will move as more days are logged.)';
+    }
+
     return {
       acwr,
+      provisional,
       riskZone,
       insight,
       recommendation,

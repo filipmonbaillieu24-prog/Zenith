@@ -847,7 +847,11 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     // Real cross-app training load — steps + Kratos strength sessions +
     // Aero rides (see shared/services/trainingLoad.ts) — instead of a
     // steps-only proxy.
-    const dailyLoads = trainingLoads.slice(-28).map(d => d.load);
+    // .trainingLoad, not .load: the latter includes steps at step_count/100, which
+    // made this a walking ratio rather than a training one - two thirds of the
+    // 28-day total came from steps, so a drop in step count read as UNDERPREPARED
+    // on a day every other app called optimal.
+    const dailyLoads = trainingLoads.slice(-28).map(d => d.trainingLoad);
     const workloadInsight = AcwrForecaster.calculateWorkloadInsight(dailyLoads);
 
     // Real cross-app Recovery Score (the shared CR11 model Zenith Hub
@@ -950,9 +954,16 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         <div className="zenith-grid-12">
           <div className="zenith-span-8">
             <ZenithHeroStat
-              eyebrow="Workload · ACWR"
+              eyebrow="Workload trend · last week vs last month"
               value={workloadInsight.acwr.toFixed(2)}
-              sub={workloadInsight.recommendation}
+              // This and the Form/TSB number elsewhere answer different questions
+              // over different timescales, and reading them as one verdict is what
+              // makes them look contradictory. This compares the last 7 days of
+              // training against the last 28 - a volume trend. Form compares a
+              // 7-day weighting against a 42-day one, so it reacts to the last
+              // session or two. You can genuinely be tired from yesterday AND be
+              // training less than you were a month ago.
+              sub={`${workloadInsight.recommendation} Compares how much you trained this week against your last four weeks — not how tired you are today.`}
               pill={
                 <span
                   className="zenith-pill"
