@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, recoveryModel, calculateZenithSleepScore, estimateKratosSessionLoad, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { predictRecoveryScore, cardioFreshness, recoveryModel, calculateZenithSleepScore, estimateKratosSessionLoadFromSets, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
@@ -49,7 +49,6 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   const [weeklyStrideCount, setWeeklyStrideCount] = useState<number>(0);
   const [weeklyStrideDistance, setWeeklyStrideDistance] = useState<number>(0);
   const [weeklyKratosCount, setWeeklyKratosCount] = useState<number>(0);
-  const [weeklyGymVolume, setWeeklyGymVolume] = useState<number>(0);
   // Starts true (not false) so the dashboard never flashes zero-state PMC/Recovery
   // numbers on first paint before fetchDashboardData's effect has had a chance to run.
   const [loadingDashboard, setLoadingDashboard] = useState(true);
@@ -201,10 +200,8 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
 
         const thisWeekWorkouts = allKData.filter((w: any) => w.completed_at && new Date(w.completed_at).getTime() >= startOfWeekMs);
         setWeeklyKratosCount(thisWeekWorkouts.length);
-        setWeeklyGymVolume(thisWeekWorkouts.reduce((sum: number, w: any) => sum + Number(w.volume || 0), 0));
       } else {
         setWeeklyKratosCount(0);
-        setWeeklyGymVolume(0);
       }
 
       if (exCatalog) {
@@ -277,8 +274,10 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     allKratos.forEach(k => {
       if (k.completed_at && k.volume) {
         const ts = new Date(k.completed_at).getTime();
-        const sTSS = estimateKratosSessionLoad(Number(k.volume));
-        tssList.push({ date: ts, tss: sTSS, source: 'kratos', isEstimated: true });
+        // Effort-weighted, not raw tonnage - an easy high-tonnage session was
+        // previously charged to fitness and fatigue as though it were hard.
+        const sTSS = estimateKratosSessionLoadFromSets(k.volume, k.sets);
+        if (sTSS > 0) tssList.push({ date: ts, tss: sTSS, source: 'kratos', isEstimated: true });
       }
     });
 
@@ -287,13 +286,13 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
 
   // ── Cardio-only load pool (Aero + Stride), used ONLY to feed the Recovery Score
   // model's cardioTSB/cardioATL inputs ──
-  // The model (shared/ml/RecoveryScore.ts) also independently receives weeklyGymVolume
+  // The model (shared/ml/RecoveryScore.ts) also independently receives gymEffort7d
   // as its own "gymVolume7d" input. If we fed it the blended atl/tsb above (which now
-  // includes Kratos's estimated sTSS via bug-1's shared pool) AND weeklyGymVolume, the
+  // includes Kratos's estimated sTSS via bug-1's shared pool) AND gymEffort7d, the
   // same Kratos training would be counted twice toward the same recovery estimate. So
   // for the recovery model specifically we compute a cardio-only ATL/TSB (Aero real TSS
   // + Stride estimated RSS) that deliberately excludes Kratos — Kratos's contribution
-  // is represented exactly once, via weeklyGymVolume. The blended (Aero+Kratos+Stride)
+  // is represented exactly once, via gymEffort7d. The blended (Aero+Kratos+Stride)
   // simPMC above is still used for the dashboard's PMC/Periodization chart, where an
   // "overall training stress" view is what's intended.
   const cardioOnlyPMC = useMemo(() => {
@@ -322,15 +321,59 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   }, [allRides, allStride]);
 
   const cardioToday = useMemo(() => {
-    if (cardioOnlyPMC.length === 0) return { atl: 0, tsb: 0 };
+    // ctl is carried alongside atl/tsb because the recovery model now scales
+    // freshness against the athlete's own cardio base rather than reading raw
+    // TSB - see cardioFreshness. TSB alone cannot tell "rested" from "does no
+    // cardio at all", since both give a TSB near zero.
+    if (cardioOnlyPMC.length === 0) return { ctl: 0, atl: 0, tsb: 0 };
     const todayKey = new Date().setHours(0, 0, 0, 0);
     const pt = cardioOnlyPMC.find(p => {
       const d = new Date(p.date);
       d.setHours(0, 0, 0, 0);
       return d.getTime() === todayKey;
     });
-    return pt ? { atl: pt.atl, tsb: pt.tsb } : { atl: 0, tsb: 0 };
+    return pt ? { ctl: pt.ctl, atl: pt.atl, tsb: pt.tsb } : { ctl: 0, atl: 0, tsb: 0 };
   }, [cardioOnlyPMC]);
+
+  // The exact freshness figure the model reads, as a percentage, so the card
+  // describes what actually went in rather than a raw TSB the model no longer uses.
+  const cardioFreshnessPct = useMemo(
+    () => Math.round(cardioFreshness(cardioToday.ctl, cardioToday.atl) * 100),
+    [cardioToday]
+  );
+
+  // ── Gym load over a rolling 7 days, weighted by how close to failure the work
+  // actually was ──
+  //
+  // Two things were wrong with the figure this replaces. It summed since MONDAY
+  // while the model input it fed is a 7-day window, so the same athlete scored
+  // differently purely because of what day of the week it was - highest on a
+  // Sunday, resetting every Monday morning. And it was raw tonnage, which
+  // measures kilos moved rather than effort: this athlete's single
+  // highest-tonnage session on record was also one of their easiest, one working
+  // set out of twelve taken near failure. Kratos records reps-in-reserve on
+  // every set and nothing downstream had ever read it.
+  const gymEffort7d = useMemo(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return allKratos.reduce((sum: number, w: any) => {
+      if (!w.completed_at) return sum;
+      const ts = new Date(w.completed_at).getTime();
+      if (!Number.isFinite(ts) || ts < cutoff) return sum;
+      return sum + kratosEffortVolume(w.volume, w.sets);
+    }, 0);
+  }, [allKratos]);
+
+  // Same window, undiscounted - shown next to the effort figure so the card can
+  // explain the difference instead of quietly presenting one as the other.
+  const gymTonnage7d = useMemo(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return allKratos.reduce((sum: number, w: any) => {
+      if (!w.completed_at) return sum;
+      const ts = new Date(w.completed_at).getTime();
+      if (!Number.isFinite(ts) || ts < cutoff) return sum;
+      return sum + (Number(w.volume) || 0);
+    }, 0);
+  }, [allKratos]);
 
   // Find today's point in the simulation to show unified metrics (Aero + Kratos)
   const todayPoint = useMemo(() => {
@@ -682,21 +725,21 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
 
     // Feed the model cardio-only TSB/ATL (Aero + Stride) rather than the blended
     // Aero+Kratos+Stride tsb/atl used for the dashboard's PMC chart above. Kratos's
-    // contribution is supplied via weeklyGymVolume immediately below; passing the
+    // contribution is supplied via gymEffort7d immediately below; passing the
     // blended atl (which now includes Kratos's estimated load, per the shared pool
-    // built above) AND weeklyGymVolume together would double-count the same Kratos
+    // built above) AND gymEffort7d together would double-count the same Kratos
     // sessions toward the same recovery estimate. See cardioOnlyPMC/cardioToday above.
-    return predictRecoveryScore(
-      cardioToday.tsb,
-      sQual,
-      sDur,
-      weeklyGymVolume,
-      todaySteps,
+    return predictRecoveryScore({
+      cardioCTL: cardioToday.ctl,
+      cardioATL: cardioToday.atl,
+      sleepQuality: sQual,
+      sleepDurationHours: sDur,
+      gymEffort7d,
+      dailySteps: todaySteps,
       calorieBalance,
-      weightVal,
-      cardioToday.atl
-    );
-  }, [cardioToday, sleepAnalysis, latestWeight, fitnessProfile.weight, weeklyGymVolume, todaySteps, calorieBalance, mlModelsLoaded]);
+      bodyWeight: weightVal
+    });
+  }, [cardioToday, sleepAnalysis, latestWeight, fitnessProfile.weight, gymEffort7d, todaySteps, calorieBalance, mlModelsLoaded]);
 
   const recoveryCardStyle = useMemo(() => {
     if (recoveryScore === null) {
@@ -955,16 +998,21 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                    <span style={{ color: '#94a3b8' }}>Freshness from cardio</span>
-                    <span style={{ fontWeight: 700, color: cardioToday.tsb < 0 ? '#f5a623' : '#4ade80' }}>
-                      {cardioToday.tsb >= 0 ? `+${cardioToday.tsb}` : cardioToday.tsb}
+                    <span style={{ color: '#94a3b8' }}>Leftover cardio fatigue</span>
+                    <span style={{ fontWeight: 700, color: cardioFreshnessPct >= 70 ? '#4ade80' : cardioFreshnessPct >= 40 ? '#f5a623' : '#ff7675' }}>
+                      {cardioFreshnessPct >= 85 ? 'none — fully fresh'
+                        : cardioFreshnessPct >= 60 ? 'a little'
+                        : cardioFreshnessPct >= 35 ? 'a fair amount'
+                        : 'a lot'}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                    <span style={{ color: '#94a3b8' }}>Lifted this week</span>
+                    <span style={{ color: '#94a3b8' }}>Hard lifting, last 7 days</span>
                     <span style={{ fontWeight: 700, color: '#e2e8f0' }}>
-                      {weeklyGymVolume > 0 ? `${Math.round(weeklyGymVolume).toLocaleString('en-US')} kg` : 'nothing yet'}
+                      {gymTonnage7d > 0
+                        ? `${Math.round(gymEffort7d).toLocaleString('en-US')} of ${Math.round(gymTonnage7d).toLocaleString('en-US')} kg`
+                        : 'nothing yet'}
                     </span>
                   </div>
 
@@ -987,8 +1035,20 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                       </p>
                       <p style={{ margin: 0 }}>
                         Sleep carries the most weight, then how much fatigue you&apos;re still carrying
-                        from cardio. Gym volume is counted separately from the cardio figure so the same
+                        from cardio. Gym work is counted separately from the cardio figure so the same
                         session isn&apos;t charged to you twice.
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        The two lifting numbers are <strong style={{ color: '#cbd5e1' }}>hard kilos</strong>{' '}
+                        out of <strong style={{ color: '#cbd5e1' }}>total kilos</strong>. Sets you take to
+                        failure count in full; sets you leave 3&ndash;4 reps in reserve on count for much
+                        less, because they cost you much less to recover from. Only the first number
+                        reaches the score, so a big but easy week no longer reads as a hard one.
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        Cardio fatigue is judged against the cardio you actually do, not a fixed scale.
+                        If you barely ride or run, cardio simply isn&apos;t what&apos;s holding you back,
+                        and it won&apos;t be counted as though it were.
                       </p>
                       <p style={{ margin: 0 }}>
                         Treat it as a nudge rather than an instruction &mdash; a low score on a day you

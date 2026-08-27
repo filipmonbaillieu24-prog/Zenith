@@ -1,4 +1,4 @@
-import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector, scaleRecoveryTsb, GYM_VOLUME_HARD_WEEK_KG } from '@zenith/shared';
+import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector, recoveryHeuristic, cardioFreshness, kratosEffortVolume, GYM_VOLUME_HARD_WEEK_KG } from '@zenith/shared';
 import { computePMC } from './pmc';
 
 // ==========================================================
@@ -307,7 +307,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         pDate.setHours(0,0,0,0);
         return pDate.getTime() === dTime;
       });
-      const cTSB = pmcOnDay?.tsb ?? 0;
+      const cCTL = pmcOnDay?.ctl ?? 0;
       const cATL = pmcOnDay?.atl ?? 0;
 
       const start7d = new Date(d);
@@ -317,7 +317,10 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         const wDate = new Date(w.started_at);
         return wDate >= start7d && wDate <= end7d;
       }) || [];
-      const gymVolume7d = recentWorkouts.reduce((sum: number, w: any) => sum + Number(w.volume || 0), 0);
+      // Effort kg, not raw tonnage - the same discount the prediction path applies
+      // (see kratosEffortVolume). Training on tonnage while serving on effort would
+      // be a train/serve mismatch of exactly the kind this file has already had.
+      const gymEffort7d = recentWorkouts.reduce((sum: number, w: any) => sum + kratosEffortVolume(w.volume, w.sets), 0);
 
       const daySleep = sleep?.find((s: any) => new Date(s.logged_at).toISOString().slice(0, 10) === dStr);
       const sleepQuality = daySleep?.quality_score || daySleep?.quality || 75;
@@ -332,15 +335,15 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       const dailySteps = getStepsForDate(dStr); // real logged steps for this day, 0 if unlogged (no fabricated baseline)
 
       const x = [
-        Math.max(0, Math.min(1, (cTSB + 50) / 100)),
+        cardioFreshness(cCTL, cATL),
         Math.min(1.5, cATL / 100),
-        Math.min(1.5, gymVolume7d / 10000),
+        Math.min(1.5, gymEffort7d / GYM_VOLUME_HARD_WEEK_KG),
         Math.min(1.0, sleepQuality / 100),
         Math.min(1.0, (dailySteps * 7) / 100000),
         Math.min(1.5, activeCalories / 5000)
       ];
 
-      const fatigueTarget = Math.max(0, Math.min(1.0, (cATL / 80 + (100 - sleepQuality) / 100 + gymVolume7d / GYM_VOLUME_HARD_WEEK_KG) / 3));
+      const fatigueTarget = Math.max(0, Math.min(1.0, (cATL / 80 + (100 - sleepQuality) / 100 + gymEffort7d / GYM_VOLUME_HARD_WEEK_KG) / 3));
       dualSportFatigueModel.trainLocal(x, [fatigueTarget], 0.15);
     }
     await dualSportFatigueModel.saveToSupabase(supabase, userId);
@@ -357,7 +360,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         pDate.setHours(0,0,0,0);
         return pDate.getTime() === dTime;
       });
-      const cTSB = pmcOnDay?.tsb ?? 0;
+      const cCTL = pmcOnDay?.ctl ?? 0;
       const cATL = pmcOnDay?.atl ?? 0;
 
       const start7d = new Date(d);
@@ -367,7 +370,10 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         const wDate = new Date(w.started_at);
         return wDate >= start7d && wDate <= end7d;
       }) || [];
-      const gymVolume7d = recentWorkouts.reduce((sum: number, w: any) => sum + Number(w.volume || 0), 0);
+      // Effort kg, not raw tonnage - the same discount the prediction path applies
+      // (see kratosEffortVolume). Training on tonnage while serving on effort would
+      // be a train/serve mismatch of exactly the kind this file has already had.
+      const gymEffort7d = recentWorkouts.reduce((sum: number, w: any) => sum + kratosEffortVolume(w.volume, w.sets), 0);
 
       const daySleep = sleep?.find((s: any) => new Date(s.logged_at).toISOString().slice(0, 10) === dStr);
       const sleepQuality = daySleep?.quality_score || daySleep?.quality || 75;
@@ -379,23 +385,32 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       // Built by the model's own function, not a copy of its scaling here - see
       // buildRecoveryFeatureVector. This block previously hardcoded the divisors
       // and had already drifted from the predictor on gym volume.
-      const x = buildRecoveryFeatureVector(
-        cTSB, sleepQuality, sleepDuration, gymVolume7d,
-        dailySteps, calorieBalance, weight, cATL
-      );
+      const recoveryInput = {
+        cardioCTL: cCTL,
+        cardioATL: cATL,
+        sleepQuality,
+        sleepDurationHours: sleepDuration,
+        gymEffort7d,
+        dailySteps,
+        calorieBalance,
+        bodyWeight: weight
+      };
+      const x = buildRecoveryFeatureVector(recoveryInput);
 
-      // The target the model is trained to reproduce. Two things were wrong with
-      // it, and between them they capped this athlete's achievable score at ~62%
-      // however well they slept - which is why the dashboard kept reading low
-      // even after the model's own weights were corrected.
+      // The target is recoveryHeuristic itself - the SAME formula the model's
+      // starting weights reproduce. It used to be a separate hand-written
+      // expression here, and it disagreed with those priors about both the
+      // ranking and the scaling of every signal, so each training pass dragged
+      // the displayed score away from where the defaults put it. That tug-of-war
+      // is why the number kept reading low and kept coming back after each fix.
       //
-      // The freshness term used to divide by 80 from a -30 base, so it only
-      // reached full value at a TSB of +50, a level reached by not training at
-      // all. And the gym term capped at 15,000 kg a week, so anyone lifting more
-      // than that forfeited its entire 0.2 permanently.
-      const tsbScaled = scaleRecoveryTsb(cTSB);
-      const gymScaled = Math.max(0, Math.min(1, gymVolume7d / GYM_VOLUME_HARD_WEEK_KG));
-      const recoveryTarget = Math.max(0.05, Math.min(0.95, (sleepQuality / 100 * 0.5 + tsbScaled * 0.3 + (1 - gymScaled) * 0.2)));
+      // Three concrete faults it also had, each of which capped the achievable
+      // score on its own: freshness scaled raw TSB onto a fixed band topping out
+      // at TSB +50, unreachable for anyone without a big cardio base; the gym term
+      // capped at 15,000 kg a week, so a serious lifter forfeited it permanently;
+      // and the gym term counted raw tonnage, teaching an easy high-tonnage week
+      // as though it had been a hard one.
+      const recoveryTarget = recoveryHeuristic(recoveryInput);
 
       recoveryModel.trainLocal(x, [recoveryTarget], 0.15);
     }

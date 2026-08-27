@@ -854,27 +854,29 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     // trains from actual next-day performance feedback). Fed with cardio-only
     // TSB/ATL from Aero rides (not the blended ACWR load above, which also
     // includes Kratos — feeding both would double-count Kratos sessions) plus
-    // 7-day raw Kratos volume, sleep, steps, and bodyweight. Calorie balance
+    // 7-day effort-weighted Kratos load, sleep, steps, and bodyweight. Calorie balance
     // isn't available to Vigor (that lives in Fuel's ZANE model), so it's
     // passed as a neutral 0 rather than fabricated.
     const cardioSeries = trainingLoads
       .filter(d => d.cardioTss > 0)
       .map(d => ({ date: new Date(d.date).getTime(), tss: d.cardioTss }));
     const cardioPMC = computePMC(cardioSeries);
-    const cardioToday = cardioPMC.length > 0 ? cardioPMC[cardioPMC.length - 1] : { tsb: 0, atl: 0 };
-    const gymVolume7d = trainingLoads.slice(-7).reduce((sum, d) => sum + d.kratosVolume, 0);
+    const cardioToday = cardioPMC.length > 0 ? cardioPMC[cardioPMC.length - 1] : { ctl: 0, tsb: 0, atl: 0 };
+    // Effort kg, not raw tonnage - see kratosEffortVolume. fetchRecentDailyTrainingLoads
+    // supplies both; the model is served the effort figure on every path.
+    const gymEffort7d = trainingLoads.slice(-7).reduce((sum, d) => sum + d.kratosEffortVolume, 0);
     const homeSleepAnalysis = calculateZenithSleepScore(latestSleep, sleeps, profile.target_sleep_hours || 8.0);
     const recoveryScore = mlModelLoaded
-      ? predictRecoveryScore(
-          cardioToday.tsb,
-          homeSleepAnalysis.score,
-          homeSleepAnalysis.metrics.totalHours,
-          gymVolume7d,
-          currentDailySteps,
-          0,
-          latestWeight ? latestWeight.weight : (profile.target_weight || 75),
-          cardioToday.atl
-        )
+      ? predictRecoveryScore({
+          cardioCTL: cardioToday.ctl,
+          cardioATL: cardioToday.atl,
+          sleepQuality: homeSleepAnalysis.score,
+          sleepDurationHours: homeSleepAnalysis.metrics.totalHours,
+          gymEffort7d,
+          dailySteps: currentDailySteps,
+          calorieBalance: 0,
+          bodyWeight: latestWeight ? latestWeight.weight : (profile.target_weight || 75)
+        })
       : null;
 
     // Weight Fluctuation Telemetry Explainer Analysis
