@@ -68,6 +68,31 @@ object ZenithSyncManager {
 
             val manager = HealthConnectManager(context)
             val data = manager.fetchLatestHealthData()
+
+            // Do NOT post a read that failed. Every readRecords() call sits in its own
+            // try/catch, so a permission or availability failure used to fall through
+            // as a payload of zeros - steps 0, sleep 0, empty history arrays - which is
+            // indistinguishable from a genuine rest day once it reaches the server. 157
+            // of 185 background syncs posted exactly that, and each returned success, so
+            // nothing ever retried and nothing ever surfaced.
+            //
+            // The server's ingest happens to guard every write on `> 0`, so no real data
+            // was overwritten. That is the ingest being defensive, not this being safe:
+            // the sync should not be sending it.
+            if (!data.readSucceeded) {
+                val background = manager.hasBackgroundReadPermission()
+                lastSyncStatus = if (!background) {
+                    "⛔ Health Connect background access not granted — open Zenith Pulse and allow it, or sync manually"
+                } else {
+                    "⛔ Could not read Health Connect (${data.readErrors} record types failed)"
+                }
+                Log.w("ZenithSyncManager", "Sync aborted: unusable Health Connect read (errors=${data.readErrors}, backgroundPermission=$background). Nothing posted.")
+                // Returning false so WorkManager retries rather than recording a success.
+                return@withContext false
+            }
+
+            // Only cache a read that actually worked - overwriting this with zeros also
+            // blanked the app's own display.
             cachedPayload = data
 
             val userEmail = UserAuthManager.getUserEmail(context) ?: ""

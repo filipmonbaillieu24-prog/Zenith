@@ -109,16 +109,24 @@ fun ZenithPulseScreen(
     var isDownloadingUpdate by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableStateOf(0f) }
 
+    // Tracked separately from hasPermissions. Health Connect will not grant background
+    // access in the same dialog as the read permissions, and without it every read made
+    // from the sync worker throws - which is why background syncs were posting empty
+    // payloads while manual syncs, run with this Activity in the foreground, worked.
+    var hasBackgroundAccess by remember { mutableStateOf(true) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
         coroutineScope.launch {
             hasPermissions = healthConnectManager.hasAllPermissions()
+            hasBackgroundAccess = healthConnectManager.hasBackgroundReadPermission()
         }
     }
 
     LaunchedEffect(Unit) {
         hasPermissions = healthConnectManager.hasAllPermissions()
+        hasBackgroundAccess = healthConnectManager.hasBackgroundReadPermission()
         
         // Auto update check using dynamic versionCode
         val currentCode = com.zenith.pulse.BuildConfig.VERSION_CODE
@@ -520,6 +528,52 @@ fun ZenithPulseScreen(
                         fontSize = 12.sp,
                         color = ZenithTextMuted
                     )
+                }
+
+                // Background access is a separate grant, and its absence is silent:
+                // everything looks fine while the app is open and nothing syncs once it
+                // is closed. Only shown once the read permissions themselves are in
+                // place, so the two prompts do not compete.
+                if (hasPermissions && !hasBackgroundAccess) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2D2416)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF5A623))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Background Sync Is Off",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF5A623),
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Zenith Pulse can only read Health Connect while it is open. Allow background access so your data keeps syncing on its own.",
+                                fontSize = 12.sp,
+                                color = ZenithTextMain,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = {
+                                    permissionLauncher.launch(setOf(healthConnectManager.backgroundReadPermission))
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5A623)),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("ALLOW BACKGROUND SYNC", color = Color.Black, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
                 }
 
                 // Bottom permissions alert (if missing)

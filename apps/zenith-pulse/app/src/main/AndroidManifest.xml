@@ -14,6 +14,17 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Comprehensive Health Connect Permissions -->
+    <!--
+        Required for reading Health Connect from the background sync worker. Without
+        it every readRecords() call made outside a foreground Activity throws
+        SecurityException on Android 14+ (this app targets 36), and because each read
+        sits in its own try/catch the result was a payload of zeros that then got
+        posted to the server as though it were a real reading. 157 of 185 background
+        syncs were empty for this reason; only manual syncs, run with the Activity in
+        the foreground, ever carried data.
+    -->
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
     <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED" />

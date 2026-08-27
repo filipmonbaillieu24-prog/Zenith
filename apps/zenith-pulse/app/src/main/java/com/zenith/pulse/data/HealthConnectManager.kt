@@ -49,7 +49,18 @@ data class HealthDataPayload(
     val dailyStepsList: List<Map<String, Any>> = emptyList(),
     val dailySleepList: List<Map<String, Any>> = emptyList(),
     val dailyWeightList: List<Map<String, Any>> = emptyList(),
-    val timestamp: String = Instant.now().toString()
+    val timestamp: String = Instant.now().toString(),
+    /**
+     * Whether Health Connect was actually readable. Defaults to FALSE so that every
+     * bare HealthDataPayload() - including the early return when the client is null -
+     * is marked unusable rather than passing for a real reading of all zeros.
+     *
+     * Zero steps and zero sleep are indistinguishable from a failed read in the
+     * payload itself, and the sync posted them either way.
+     */
+    val readSucceeded: Boolean = false,
+    /** Number of record types whose read threw. Diagnostic only. */
+    val readErrors: Int = 0
 )
 
 class HealthConnectManager(private val context: Context) {
@@ -60,6 +71,23 @@ class HealthConnectManager(private val context: Context) {
             HealthConnectClient.getOrCreate(context)
         } else {
             null
+        }
+    }
+
+    /**
+     * Requested separately from requiredPermissions: Health Connect will not grant it
+     * in the same dialog as the read permissions, and the app is still useful in the
+     * foreground without it - it is background sync specifically that fails.
+     */
+    val backgroundReadPermission = "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
+
+    suspend fun hasBackgroundReadPermission(): Boolean {
+        val client = healthConnectClient ?: return false
+        return try {
+            client.permissionController.getGrantedPermissions().contains(backgroundReadPermission)
+        } catch (e: Exception) {
+            Log.w("HealthConnectManager", "Background permission check failed: ${e.message}")
+            false
         }
     }
 
@@ -95,7 +123,18 @@ class HealthConnectManager(private val context: Context) {
     }
 
     suspend fun fetchLatestHealthData(): HealthDataPayload {
-        val client = healthConnectClient ?: return HealthDataPayload()
+        // Marked unusable (readSucceeded defaults to false) rather than returning a
+        // plausible-looking payload of zeros.
+        val client = healthConnectClient ?: run {
+            Log.w("HealthConnectManager", "Health Connect SDK unavailable - no read attempted.")
+            return HealthDataPayload()
+        }
+
+        // A read that throws must not be silently indistinguishable from a genuine
+        // zero. Every catch below increments readErrors; the payload is only treated
+        // as a real reading if at least one record type came back without throwing.
+        var readOk = 0
+        var readErr = 0
 
         val now = Instant.now()
         val systemZone = ZoneId.systemDefault()
@@ -194,7 +233,9 @@ class HealthConnectManager(private val context: Context) {
             } else if (stepsByOrigin.isNotEmpty()) {
                 totalSteps = stepsByOrigin.values.maxOrNull() ?: 0L
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Steps fetch error: ${e.message}")
         }
 
@@ -212,7 +253,9 @@ class HealthConnectManager(private val context: Context) {
             if (totalDistMeters == 0.0 && totalSteps > 0) {
                 totalDistMeters = totalSteps * 0.763
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Distance fetch error: ${e.message}")
         }
 
@@ -227,7 +270,9 @@ class HealthConnectManager(private val context: Context) {
             for (record in elevRes.records) {
                 totalElevMeters += record.elevation.inMeters
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Elevation fetch error: ${e.message}")
         }
 
@@ -242,7 +287,9 @@ class HealthConnectManager(private val context: Context) {
             for (record in activeCalsRes.records) {
                 activeCals += record.energy.inKilocalories
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Active calories error: ${e.message}")
         }
 
@@ -256,7 +303,9 @@ class HealthConnectManager(private val context: Context) {
             for (record in totalCalsRes.records) {
                 totalCals += record.energy.inKilocalories
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Total calories error: ${e.message}")
         }
 
@@ -274,7 +323,9 @@ class HealthConnectManager(private val context: Context) {
             if (bmrRes.records.isNotEmpty()) {
                 bmrCals = bmrRes.records.last().basalMetabolicRate.inKilocaloriesPerDay
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "BMR error: ${e.message}")
         }
 
@@ -293,7 +344,9 @@ class HealthConnectManager(private val context: Context) {
             if (allHrSamples.isNotEmpty()) {
                 latestHr = allHrSamples.maxByOrNull { it.time }?.beatsPerMinute?.toInt() ?: 0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Heart Rate error: ${e.message}")
         }
 
@@ -307,7 +360,9 @@ class HealthConnectManager(private val context: Context) {
             if (rhrRes.records.isNotEmpty()) {
                 restingHr = rhrRes.records.maxByOrNull { it.time }?.beatsPerMinute?.toInt() ?: 0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Resting HR error: ${e.message}")
         }
 
@@ -330,7 +385,9 @@ class HealthConnectManager(private val context: Context) {
             if (hrvRes.records.isNotEmpty()) {
                 latestHrv = hrvRes.records.maxByOrNull { it.time }?.heartRateVariabilityMillis ?: 0.0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "HRV error: ${e.message}")
         }
 
@@ -452,7 +509,9 @@ class HealthConnectManager(private val context: Context) {
                     )
                 )
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Sleep error: ${e.message}")
         }
 
@@ -477,7 +536,9 @@ class HealthConnectManager(private val context: Context) {
                     )
                 )
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Exercise error: ${e.message}")
         }
 
@@ -508,7 +569,9 @@ class HealthConnectManager(private val context: Context) {
             if (weightRes.records.isNotEmpty()) {
                 latestWeight = weightRes.records.maxByOrNull { it.time }?.weight?.inKilograms ?: 0.0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Weight error: ${e.message}")
         }
 
@@ -522,7 +585,9 @@ class HealthConnectManager(private val context: Context) {
             if (heightRes.records.isNotEmpty()) {
                 heightValueCm = (heightRes.records.maxByOrNull { it.time }?.height?.inMeters ?: 0.0) * 100.0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Height error: ${e.message}")
         }
 
@@ -536,7 +601,9 @@ class HealthConnectManager(private val context: Context) {
             if (fatRes.records.isNotEmpty()) {
                 bodyFatPct = fatRes.records.maxByOrNull { it.time }?.percentage?.value ?: 0.0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Body Fat error: ${e.message}")
         }
 
@@ -550,7 +617,9 @@ class HealthConnectManager(private val context: Context) {
             if (leanRes.records.isNotEmpty()) {
                 leanMassKg = leanRes.records.maxByOrNull { it.time }?.mass?.inKilograms ?: 0.0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Lean Mass error: ${e.message}")
         }
 
@@ -565,7 +634,9 @@ class HealthConnectManager(private val context: Context) {
             if (spo2Res.records.isNotEmpty()) {
                 latestSpO2Val = spo2Res.records.maxByOrNull { it.time }?.percentage?.value ?: 0.0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "SpO2 error: ${e.message}")
         }
 
@@ -579,7 +650,9 @@ class HealthConnectManager(private val context: Context) {
             if (respRes.records.isNotEmpty()) {
                 respRate = respRes.records.maxByOrNull { it.time }?.rate ?: 0.0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Respiratory error: ${e.message}")
         }
 
@@ -598,7 +671,9 @@ class HealthConnectManager(private val context: Context) {
                     diaBp = lastBp.diastolic.inMillimetersOfMercury
                 }
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Blood Pressure error: ${e.message}")
         }
 
@@ -612,7 +687,9 @@ class HealthConnectManager(private val context: Context) {
             if (tempRes.records.isNotEmpty()) {
                 tempCelsius = tempRes.records.maxByOrNull { it.time }?.temperature?.inCelsius ?: 0.0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Body Temp error: ${e.message}")
         }
 
@@ -627,11 +704,19 @@ class HealthConnectManager(private val context: Context) {
             for (h in hydRes.records) {
                 totalHydrationMl += h.volume.inLiters * 1000.0
             }
+            readOk++
         } catch (e: Exception) {
+            readErr++
             Log.w("HealthConnectManager", "Hydration error: ${e.message}")
         }
 
+        if (readErr > 0 && readOk == 0) {
+            Log.w("HealthConnectManager", "All $readErr Health Connect reads failed - reporting an unusable read rather than zeros. Missing READ_HEALTH_DATA_IN_BACKGROUND?")
+        }
+
         return HealthDataPayload(
+            readSucceeded = readOk > 0,
+            readErrors = readErr,
             localDate = todayLocalDate.toString(),
             stepsCount = totalSteps,
             distanceMeters = totalDistMeters,
