@@ -92,7 +92,7 @@ const MIN_PLAUSIBLE_TDEE = 1200;
 const MAX_PLAUSIBLE_TDEE = 5000;
 
 /** kg/day slope of a set of (dayOffset, kg) points; null when undefined. */
-function leastSquaresSlope(points: [number, number][]): number | null {
+export function leastSquaresSlope(points: [number, number][]): number | null {
   const n = points.length;
   if (n < MIN_TREND_POINTS) return null;
   const meanX = points.reduce((s, p) => s + p[0], 0) / n;
@@ -217,4 +217,37 @@ export function buildFusionTrainingSamples(args: BuildSamplesArgs): FusionDaySam
   }
 
   return samples;
+}
+
+
+/**
+ * The athlete's actually-measured rate of weight change, in kg per week.
+ *
+ * The Weight Predictor extrapolates a *formula-derived* energy balance 28 days
+ * forward. That formula can drift from reality - under-logged days understate
+ * intake, and the TDEE estimate carries its own error - so this gives the
+ * measured counterpart to compare against: a least-squares fit over the weight
+ * EMA the scale actually produced.
+ *
+ * Returns null when there isn't enough spread to fit a line.
+ */
+export function measuredWeeklyRateKg(
+  trendWeightMap: Record<string, number>,
+  lookbackDays: number = 28
+): number | null {
+  const dates = Object.keys(trendWeightMap).sort();
+  if (dates.length < MIN_TREND_POINTS) return null;
+
+  const last = dates[dates.length - 1];
+  const windowDates = dates.filter(d => dayDiff(d, last) <= lookbackDays);
+  if (windowDates.length < MIN_TREND_POINTS) return null;
+
+  const span = dayDiff(windowDates[0], windowDates[windowDates.length - 1]);
+  // A few days of spread can't distinguish a trend from a hydration swing.
+  if (span < 7) return null;
+
+  const slope = leastSquaresSlope(
+    windowDates.map(d => [dayDiff(windowDates[0], d), trendWeightMap[d]] as [number, number])
+  );
+  return slope === null ? null : slope * 7;
 }

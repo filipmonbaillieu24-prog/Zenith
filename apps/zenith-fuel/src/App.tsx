@@ -11,7 +11,7 @@ import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, 
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
 import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates';
 import { toDateKey, toDateKeyFromDate } from '@zenith/shared';
-import { buildFusionTrainingSamples } from './utils/fusionRetrain';
+import { buildFusionTrainingSamples, measuredWeeklyRateKg } from './utils/fusionRetrain';
 
 function App() {
   // Auth & Session
@@ -1789,7 +1789,15 @@ function App() {
       const dayLogs = weeklyFoodLogs.filter(log => log.logged_at.split('T')[0] === dateStr);
       const dayCalories = dayLogs.reduce((sum, f) => sum + f.calories, 0);
 
-      if (dayCalories > 0) {
+      // Skip days the user marked incomplete. This calculation used to count
+      // any day with a single logged item as a full day of eating, ignoring the
+      // same "mark this day as incomplete" flag that ZANE's calibration and the
+      // FusionNet training loop both respect. A partially-logged day looks like
+      // a huge deficit, and since this figure is extrapolated 28 days forward
+      // it turns one unlogged dinner into roughly a kilo of predicted loss.
+      const dayIsComplete = dailyCompletionMap[dateStr] ?? true;
+
+      if (dayCalories > 0 && dayIsComplete) {
         loggedDays++;
         totalIntake += dayCalories;
 
@@ -1830,21 +1838,47 @@ function App() {
     });
 
     if (loggedDays > 0) {
-      return Math.round((totalIntake / loggedDays) - (totalTdeeVal / loggedDays));
+      return {
+        balance: Math.round((totalIntake / loggedDays) - (totalTdeeVal / loggedDays)),
+        loggedDays
+      };
     }
 
     // Fallback to today's balance if no data logged this week
-    return intakeCalories - totalTdee;
-  }, [weekDays, weeklyFoodLogs, activeCaloriesMap, sleepLogs, gymVolumeMap, supplementsLogs, zaneResult, baseTdee, intakeCalories, totalTdee, zSleepQualityAvg, zSleepDurationAvg]);
+    return { balance: intakeCalories - totalTdee, loggedDays: 0 };
+  }, [weekDays, weeklyFoodLogs, dailyCompletionMap, activeCaloriesMap, sleepLogs, gymVolumeMap, supplementsLogs, zaneResult, baseTdee, intakeCalories, totalTdee, zSleepQualityAvg, zSleepDurationAvg]);
 
   // Weight Projection (Using average weekly balance for stability)
   // Bug #6 fix: use body-composition-aware energy density from ZANE instead of flat 7700
   const projectionEnergyPerKg = zaneResult.energyPerKgTissue ?? 7700;
-  const netDailyBalance = averageWeeklyNetBalance;
+  const netDailyBalance = averageWeeklyNetBalance.balance;
+  const balanceSampleDays = averageWeeklyNetBalance.loggedDays;
   const projectedWeightChange = (netDailyBalance * 28) / projectionEnergyPerKg;
   const weeklyWeightRate = (netDailyBalance * 7) / projectionEnergyPerKg;
   const startingWeightForProjection = zaneResult.currentTrendWeight || latestWeight;
   const projectedWeight = Math.round((startingWeightForProjection + projectedWeightChange) * 100) / 100;
+
+  // What the scale actually did over the last four weeks, for comparison with
+  // the formula-derived projection above. When the two disagree materially the
+  // formula's inputs are usually at fault - typically under-logged days, which
+  // understate intake and so overstate the deficit.
+  const measuredWeeklyRate = useMemo(
+    () => measuredWeeklyRateKg(zaneResult.trendWeightMap || {}, 28),
+    [zaneResult.trendWeightMap]
+  );
+
+  // Flag a projection the measured trend doesn't support: more than 0.25 kg/week
+  // apart, which over 28 days is a full kilo of difference in the headline number.
+  const projectionDisagreesWithScale =
+    measuredWeeklyRate !== null && Math.abs(weeklyWeightRate - measuredWeeklyRate) > 0.25;
+
+  // Percent of bodyweight per week. ~1%/week is the usual upper bound for a
+  // rate that preserves lean mass; beyond that the copy shouldn't call it
+  // "healthy, sustainable".
+  const weeklyRatePercent = startingWeightForProjection > 0
+    ? Math.abs(weeklyWeightRate) / startingWeightForProjection * 100
+    : 0;
+  const lossRateIsAggressive = weeklyWeightRate < 0 && weeklyRatePercent > 1.0;
 
   const weeklyStats = useMemo(() => {
     let totalIntakeCalories = 0;
@@ -2500,14 +2534,51 @@ function App() {
                 <span style={{ color: 'var(--text-muted)' }}>Projected Weight (28d):</span>
                 <span style={{ fontWeight: 700, color: 'var(--color-primary)' }}>{projectedWeight} kg</span>
               </div>
+              {measuredWeeklyRate !== null && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Measured (last 4 weeks):</span>
+                  <span style={{ fontWeight: 700, color: '#94a3b8' }}>
+                    {measuredWeeklyRate > 0 ? '+' : ''}{measuredWeeklyRate.toFixed(2)} kg/week
+                  </span>
+                </div>
+              )}
+
               <div className="zane-feedback-text" style={{ fontSize: '11px', marginTop: '4px', lineHeight: '1.4' }}>
                 {netDailyBalance <= -100 ? (
-                  <>You are in an energy deficit of {Math.abs(netDailyBalance)} kcal. This stimulates fat oxidation at a healthy, sustainable rate.</>
+                  <>
+                    You are in an energy deficit of {Math.abs(netDailyBalance)} kcal.
+                    {lossRateIsAggressive ? (
+                      <> That is about {weeklyRatePercent.toFixed(1)}% of bodyweight per week — faster than the
+                      ~1%/week usually recommended for holding on to muscle. Consider eating a little more.</>
+                    ) : (
+                      <> This stimulates fat oxidation at a healthy, sustainable rate.</>
+                    )}
+                  </>
                 ) : netDailyBalance >= 100 ? (
                   <>You are in an energy surplus of {netDailyBalance} kcal. This supports muscle growth and recovery after heavy training.</>
                 ) : (
                   <>Your energy balance is stable. Weight is expected to fluctuate near maintenance.</>
                 )}
+              </div>
+
+              {balanceSampleDays > 0 && balanceSampleDays < 4 && (
+                <div style={{ fontSize: '10px', lineHeight: 1.45, color: '#e8bf6b' }}>
+                  Based on {balanceSampleDays} fully-logged day{balanceSampleDays === 1 ? '' : 's'} this week —
+                  too few to project a month from with any confidence.
+                </div>
+              )}
+
+              {projectionDisagreesWithScale && measuredWeeklyRate !== null && (
+                <div style={{ fontSize: '10px', lineHeight: 1.45, color: '#e8bf6b' }}>
+                  Your scale shows {measuredWeeklyRate.toFixed(2)} kg/week, not {weeklyWeightRate.toFixed(2)}.
+                  The projection is derived from logged intake, so unlogged food is the usual cause —
+                  trust the measured trend.
+                </div>
+              )}
+
+              <div style={{ fontSize: '10px', lineHeight: 1.45, color: 'var(--text-muted)' }}>
+                Projection assumes today's balance holds for 28 days. It does not model the way
+                expenditure falls as you get lighter, so real loss is typically slower.
               </div>
             </div>
           </div>
