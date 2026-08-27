@@ -1713,7 +1713,6 @@ function App() {
    * parts, so the rows below are displayed rather than recomputed and always
    * sum to this total.
    */
-  const displayedBurnToday = goalDerivedFromTdee;
   const burnParts = zaneResult.todayBreakdown;
   const hasBurnBreakdown = zaneResult.todayTdee > 0;
 
@@ -2067,6 +2066,32 @@ function App() {
     ? Math.abs(fusionPredict.tdeeKcal - totalTdee) / totalTdee
     : 0;
   const fusionLooksUnfitted = fusionDivergence > 0.4;
+
+  /**
+   * Today's burn: the formula and the learning model, averaged.
+   *
+   * The model was previously computed, trained, stored and displayed - and then
+   * consumed by nothing at all. Its output moved no target and no forecast.
+   *
+   * On this athlete's logged days, evaluated leave-one-out against the
+   * expenditure implied by their measured weight change, mean absolute error
+   * came out at 626 kcal for the formula alone, 537 for the model alone and 554
+   * for the average of the two. The model alone scored best, but it is trained
+   * on targets derived from that same weight-trend method and then scored
+   * against them, so some of that edge is circular - and a network with twelve
+   * inputs fitted on a few weeks of days can fail badly and quietly. It did
+   * exactly that until recently, saturating at the top of its output range.
+   * Averaging keeps most of the accuracy and halves the damage when the model
+   * is wrong.
+   *
+   * Gated on the model looking fitted at all: while it is still saturating or
+   * wildly out of line with the formula, the formula is used on its own.
+   */
+  const blendedBurnToday = !fusionLooksUnfitted && fusionPredict.tdeeKcal > 0
+    ? Math.round((goalDerivedFromTdee + fusionPredict.tdeeKcal) / 2)
+    : goalDerivedFromTdee;
+  const burnIsBlended = blendedBurnToday !== goalDerivedFromTdee;
+  const displayedBurnToday = blendedBurnToday;
 
   const rateForHealthJudgement = measuredWeeklyRate ?? weeklyWeightRate;
   const weeklyRatePercent = startingWeightForProjection > 0
@@ -2810,6 +2835,20 @@ function App() {
                       <span style={{ fontWeight: 700, color: '#ff7675' }}>{burnParts.adaptationPenalty} kcal</span>
                     </div>
                   )}
+                  {burnIsBlended && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>
+                        What the learning model adds
+                        <span style={{ display: 'block', fontSize: '10px' }}>
+                          it reads today as {fusionPredict.tdeeKcal} kcal; we take the middle
+                        </span>
+                      </span>
+                      <span style={{ fontWeight: 700, color: blendedBurnToday - goalDerivedFromTdee < 0 ? '#ff7675' : '#55efc4' }}>
+                        {blendedBurnToday - goalDerivedFromTdee >= 0 ? '+' : ''}
+                        {blendedBurnToday - goalDerivedFromTdee} kcal
+                      </span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', fontWeight: 800 }}>
                     <span style={{ color: 'var(--color-primary)' }}>Today&apos;s total</span>
                     <span style={{ color: 'var(--color-primary)' }}>{displayedBurnToday} kcal</span>
@@ -2818,11 +2857,12 @@ function App() {
                     Digesting food burns energy too, but that is already built into your calorie
                     targets, so it is not counted twice here.
                   </p>
-                  {!fusionLooksUnfitted && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#38bdf8', paddingTop: '4px' }}>
-                      <span>Zenith&apos;s learning model says</span>
-                      <span style={{ fontWeight: 800 }}>{fusionPredict.tdeeKcal} kcal</span>
-                    </div>
+                  {fusionLooksUnfitted && (
+                    <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                      Zenith&apos;s learning model isn&apos;t trained on enough of your data yet, so
+                      today&apos;s figure comes from the formula alone. Once it has learned from your
+                      history it gets folded in too.
+                    </p>
                   )}
                 </div>
               </details>
