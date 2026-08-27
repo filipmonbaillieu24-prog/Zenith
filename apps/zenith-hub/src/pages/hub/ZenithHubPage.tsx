@@ -807,8 +807,8 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                 </h3>
               </div>
               <p style={{ margin: '0 0 16px', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-                Calculated from your logged training workload across linked Aero, Kratos & Stride extensions.
-                Aero figures come from measured ride TSS; Kratos & Stride figures are estimated from workout volume and duration/HR.
+                How hard you&apos;ve been training lately, and whether you&apos;ve recovered from it.
+                Built from your rides, gym sessions and runs together.
               </p>
               <ZenithHeroStat
                 eyebrow="Form · TSB"
@@ -822,12 +822,18 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
               />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
                 <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '14px 16px' }}>
-                  <div className="zenith-label">Fitness · CTL</div>
+                  <div className="zenith-label">Fitness</div>
                   <div className="zenith-stat-value" style={{ marginTop: 4 }}>{ctl}</div>
+                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                    your training over the last 6 weeks
+                  </div>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '14px 16px' }}>
-                  <div className="zenith-label">Fatigue · ATL</div>
+                  <div className="zenith-label">Tiredness</div>
                   <div className="zenith-stat-value" style={{ marginTop: 4, color: '#f5a623' }}>{atl}</div>
+                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 4, lineHeight: 1.4 }}>
+                    your training over the last week
+                  </div>
                 </div>
               </div>
               
@@ -835,7 +841,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
               <div className="wd-calendar-chart-wrapper" style={{ marginTop: 20, borderTop: '1px solid rgba(255, 255, 255, 0.05)', paddingTop: 16 }}>
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    Periodization & Forecast (+35 days)
+                    The last few weeks, and the next five
                   </span>
                 </div>
                 <ResponsiveContainer width="100%" height={160}>
@@ -854,6 +860,51 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                     <Line type="monotone" dataKey="tsb" stroke="#fdcb6e" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Form (TSB)" />
                   </ComposedChart>
                 </ResponsiveContainer>
+
+                {/* Four series were being drawn with no key of any kind. */}
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 8, fontSize: 10, color: '#94a3b8' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 12, height: 2, background: '#cbd5e1', display: 'inline-block' }} /> Fitness
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 12, height: 2, background: '#ff7675', display: 'inline-block' }} /> Tiredness
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 12, height: 0, borderTop: '2px dashed #fdcb6e', display: 'inline-block' }} /> Freshness
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ width: 9, height: 9, background: 'rgba(255,255,255,0.18)', display: 'inline-block', borderRadius: 2 }} /> A day&apos;s training
+                  </span>
+                </div>
+
+                <details style={{ marginTop: 12 }}>
+                  <summary style={{ cursor: 'pointer', fontSize: 11, color: '#94a3b8' }}>
+                    How is this worked out?
+                  </summary>
+                  <div style={{ marginTop: 8, fontSize: 11, color: '#94a3b8', lineHeight: 1.55, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <p style={{ margin: 0 }}>
+                      Every session becomes a single &ldquo;how hard was that&rdquo; number. Rides use the
+                      power and heart-rate data Aero measures; gym and running sessions are estimated
+                      from how much you lifted and how long you went.
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      <strong style={{ color: '#cbd5e1' }}>Fitness</strong> is a rolling average of those
+                      over about six weeks, so it moves slowly.{' '}
+                      <strong style={{ color: '#ff7675' }}>Tiredness</strong> is the same thing over about
+                      one week, so it spikes after hard days and falls back quickly.
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      <strong style={{ color: '#fdcb6e' }}>Freshness</strong> is simply fitness minus
+                      tiredness ({ctl} &minus; {atl} = {tsb >= 0 ? `+${tsb}` : tsb}). Below zero you are
+                      carrying fatigue, which is where you want to be while building. Well above zero you
+                      are rested but losing fitness.
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      The dotted section past today assumes you keep training as you have been. It is a
+                      direction, not a promise.
+                    </p>
+                  </div>
+                </details>
               </div>
             </div>
 
@@ -865,7 +916,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                     <Heart size={14} style={{ color: recoveryCardStyle.color }} /> AI Recovery Score
                   </h3>
                   <p style={{ margin: '6px 0 0', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
-                    Real-time recovery score calculated from sleep, cardio load, and strength workouts.
+                    How ready your body is for hard work today.
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: recoveryCardStyle.circleBg, border: `1px solid ${recoveryCardStyle.circleBorder}`, width: 56, height: 56, borderRadius: '50%', transition: 'all 0.3s ease' }}>
@@ -883,6 +934,70 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                   {recoveryNote.text}
                 </span>
               </div>
+
+              {/* This card sits in a grid row sized by the PMC card beside it, so it
+                  was mostly empty space below a single sentence. Showing what the
+                  score was actually built from fills it with something real rather
+                  than padding - and answers the obvious question the number raises. */}
+              {recoveryScore !== null && (
+                <div style={{ marginTop: 18, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    What went into it
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                    <span style={{ color: '#94a3b8' }}>Last night&apos;s sleep</span>
+                    <span style={{ fontWeight: 700, color: '#e2e8f0' }}>
+                      {sleepAnalysis.metrics.totalHours > 0
+                        ? `${sleepAnalysis.metrics.totalHours.toFixed(1)}h, scored ${sleepAnalysis.score}`
+                        : 'not recorded'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                    <span style={{ color: '#94a3b8' }}>Freshness from cardio</span>
+                    <span style={{ fontWeight: 700, color: cardioToday.tsb < 0 ? '#f5a623' : '#4ade80' }}>
+                      {cardioToday.tsb >= 0 ? `+${cardioToday.tsb}` : cardioToday.tsb}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                    <span style={{ color: '#94a3b8' }}>Lifted this week</span>
+                    <span style={{ fontWeight: 700, color: '#e2e8f0' }}>
+                      {weeklyGymVolume > 0 ? `${Math.round(weeklyGymVolume).toLocaleString('en-US')} kg` : 'nothing yet'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                    <span style={{ color: '#94a3b8' }}>Steps today</span>
+                    <span style={{ fontWeight: 700, color: '#e2e8f0' }}>
+                      {todaySteps > 0 ? todaySteps.toLocaleString('en-US') : 'none logged'}
+                    </span>
+                  </div>
+
+                  <details style={{ marginTop: 2 }}>
+                    <summary style={{ cursor: 'pointer', fontSize: 11, color: '#94a3b8' }}>
+                      How is this worked out?
+                    </summary>
+                    <div style={{ marginTop: 8, fontSize: 11, color: '#94a3b8', lineHeight: 1.55, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <p style={{ margin: 0 }}>
+                        A model trained on your own history weighs those four things together, plus your
+                        bodyweight and how much you&apos;ve eaten, and returns a single readiness
+                        percentage.
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        Sleep carries the most weight, then how much fatigue you&apos;re still carrying
+                        from cardio. Gym volume is counted separately from the cardio figure so the same
+                        session isn&apos;t charged to you twice.
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        Treat it as a nudge rather than an instruction &mdash; a low score on a day you
+                        feel good is worth ignoring, and vice versa.
+                      </p>
+                    </div>
+                  </details>
+                </div>
+              )}
             </div>
           </div>
 
