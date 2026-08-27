@@ -1,4 +1,4 @@
-import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel } from '@zenith/shared';
+import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector } from '@zenith/shared';
 import { computePMC } from './pmc';
 
 // ==========================================================
@@ -376,16 +376,13 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       const dailySteps = getStepsForDate(dStr); // real logged steps for this day, 0 if unlogged (no fabricated baseline)
       const calorieBalance = getCalorieBalanceForDate(dStr, weight); // real logged intake vs rough TDEE, 0 if no food logged that day
 
-      const x = [
-        Math.max(0, Math.min(1, (cTSB + 50) / 100)),
-        Math.min(1, sleepQuality / 100),
-        Math.min(1, sleepDuration / 12),
-        Math.min(1.5, gymVolume7d / 10000),
-        Math.min(1, dailySteps / 20000),
-        Math.max(-1, Math.min(1, calorieBalance / 1000)),
-        Math.min(1.5, weight / 150),
-        Math.min(1.5, cATL / 100)
-      ];
+      // Built by the model's own function, not a copy of its scaling here - see
+      // buildRecoveryFeatureVector. This block previously hardcoded the divisors
+      // and had already drifted from the predictor on gym volume.
+      const x = buildRecoveryFeatureVector(
+        cTSB, sleepQuality, sleepDuration, gymVolume7d,
+        dailySteps, calorieBalance, weight, cATL
+      );
 
       const tsbScaled = (cTSB + 30) / 80;
       const gymScaled = Math.max(0, Math.min(1, gymVolume7d / 15000));

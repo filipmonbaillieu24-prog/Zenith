@@ -32,19 +32,43 @@ function generateRecoveryDefaultWeights() {
   // Each hidden neuron gets a small deterministic per-neuron perturbation on top of
   // the shared prior so hidden units aren't identical (symmetry breaking) — without
   // this, ReLU units with identical weights/bias would stay identical forever.
-  const { W1, B1 } = buildSymmetryBrokenHiddenLayer(priorWeightsByInput, 8, 0.05);
+  //
+  // The hidden bias is +2.5, not ~0, and this matters. Weighting the eight scaled
+  // inputs by the priors above gives roughly -2.1 for a completely depleted athlete
+  // and +1.7 for a fully fresh one. With a bias near zero every hidden unit sat
+  // below the ReLU threshold for ANY below-average day, so it output exactly 0 -
+  // and a merely poor day and a catastrophic one both produced the same number.
+  // The model could not tell them apart. Offsetting by 2.5 keeps the units in
+  // their responsive range across the whole realistic span.
+  const HIDDEN_BIAS = 2.5;
+  const { W1, B1 } = buildSymmetryBrokenHiddenLayer(priorWeightsByInput, 8, HIDDEN_BIAS);
+
+  // Output layer, chosen so the realistic input range spans the real 0..100 scale.
+  //
+  // Previously every output weight was +0.4 with a bias of +0.1. Hidden activations
+  // after a ReLU are never negative, so the pre-activation could never drop below
+  // that +0.1 bias, and the score could never drop below sigmoid(0.1) = 52.5%.
+  // The bottom half of the scale was unreachable: a completely depleted athlete
+  // scored 52%, which the dashboard then labelled "well recovered".
+  //
+  // With HIDDEN_BIAS the eight units carry roughly 0.4 (worst) to 4.2 (best), so
+  // these map that span onto about 8%..95%.
+  const OUTPUT_WEIGHT = 0.177;
   const W2: number[][] = Array.from({ length: 8 }, () => new Array(1).fill(0));
-  const B2: number[] = [0.1];
+  const B2: number[] = [-3.006];
 
   for (let j = 0; j < 8; j++) {
-    W2[j][0] = 0.4;
+    W2[j][0] = OUTPUT_WEIGHT;
   }
 
   return { W1, B1, W2, B2 };
 }
 
 export const recoveryModel = new SimpleMLP(
-  8, 8, 1, 'unified_recovery_score', generateRecoveryDefaultWeights
+  // Key bumped from 'unified_recovery_score'. Anything stored under the old key
+  // was trained on top of defaults whose output could not go below 52.5%, so it
+  // learned around a floor that no longer exists.
+  8, 8, 1, 'unified_recovery_score_v2', generateRecoveryDefaultWeights
 );
 
 /**
@@ -53,6 +77,43 @@ export const recoveryModel = new SimpleMLP(
  *
  * Consumed by: Hub Dashboard, Kratos (rest time), Aero Coach (intensity cap), Vigor (display).
  */
+/**
+ * The ONE place raw recovery signals become a model input vector.
+ *
+ * Both the prediction path and Hub's background trainer go through this. They
+ * previously each had their own copy of the scaling, so changing a divisor in
+ * one silently created a train/serve mismatch - the model would be taught on
+ * one scale and asked to predict on another. That is the same failure that had
+ * to be fixed in the Kratos autoregulation model and again in ZenithFusionNet;
+ * a second copy of a feature vector is how it keeps coming back.
+ */
+export function buildRecoveryFeatureVector(
+  cardioTSB: number,
+  sleepQuality: number,
+  sleepDuration: number,
+  gymVolume7d: number,
+  dailySteps: number,
+  calorieBalance: number,
+  bodyWeight: number,
+  cardioATL: number
+): number[] {
+  return [
+    Math.max(0, Math.min(1, (cardioTSB + 50) / 100)),
+    Math.min(1, sleepQuality / 100),
+    Math.min(1, sleepDuration / 12),
+    // Divisor raised from 10,000. At the old scale this hit its 1.5 cap at
+    // 15,000 kg a week, which anyone training seriously exceeds routinely - an
+    // athlete lifting ~16,500 kg in a normal week sat pinned at the maximum gym
+    // penalty permanently, so the input told the model nothing about them. Caps
+    // at 37,500 kg now, which a hard week approaches rather than saturates.
+    Math.min(1.5, gymVolume7d / 25000),
+    Math.min(1, dailySteps / 20000),
+    Math.max(-1, Math.min(1, calorieBalance / 1000)),
+    Math.min(1.5, bodyWeight / 150),
+    Math.min(1.5, cardioATL / 100)
+  ];
+}
+
 export function predictRecoveryScore(
   cardioTSB: number,
   sleepQuality: number,
@@ -63,16 +124,10 @@ export function predictRecoveryScore(
   bodyWeight: number,
   cardioATL: number
 ): number {
-  const x = [
-    Math.max(0, Math.min(1, (cardioTSB + 50) / 100)),
-    Math.min(1, sleepQuality / 100),
-    Math.min(1, sleepDuration / 12),
-    Math.min(1.5, gymVolume7d / 10000),
-    Math.min(1, dailySteps / 20000),
-    Math.max(-1, Math.min(1, calorieBalance / 1000)),
-    Math.min(1.5, bodyWeight / 150),
-    Math.min(1.5, cardioATL / 100)
-  ];
+  const x = buildRecoveryFeatureVector(
+    cardioTSB, sleepQuality, sleepDuration, gymVolume7d,
+    dailySteps, calorieBalance, bodyWeight, cardioATL
+  );
   const y = recoveryModel.predict(x);
   return Math.round(y[0] * 100); // 0..100 score
 }
