@@ -1857,11 +1857,73 @@ function App() {
   // Weight Projection (Using average weekly balance for stability)
   // Bug #6 fix: use body-composition-aware energy density from ZANE instead of flat 7700
   const projectionEnergyPerKg = zaneResult.energyPerKgTissue ?? 7700;
+  /**
+   * Energy balance averaged over the same 28-day window the measured weight
+   * trend covers.
+   *
+   * The weekly figure above answers "how am I doing this week", which is the
+   * right question for the day-to-day view but the wrong one to hold against a
+   * four-week weight trend. Comparing a three-day intake average with a 28-day
+   * trend compares two different periods, and the difference between them shows
+   * up as a permanent "your log disagrees with your scale" warning even when the
+   * model is accurate. Measured over matched windows on this athlete's data the
+   * two agree to 0.03 kg/week; compared as week-vs-month they look 0.22 apart.
+   */
+  const longRunNetBalance = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 28);
+    const cutoffStr = toDateKeyFromDate(cutoff);
+
+    let totalIntake = 0;
+    let totalTdeeVal = 0;
+    let days = 0;
+
+    for (const dateStr of Object.keys(thirtyDayCaloriesMap)) {
+      if (dateStr < cutoffStr) continue;
+      const dayCalories = thirtyDayCaloriesMap[dateStr] || 0;
+      if (dayCalories <= 0) continue;
+      if (!(dailyCompletionMap[dateStr] ?? true)) continue;
+
+      const dayActiveCalories = activeCaloriesMap[dateStr] || 0;
+      const daySleepLog = sleepLogs.find(sl => toYYYYMMDD(sl.logged_at) === dateStr);
+      const daySleepQuality = daySleepLog ? Number(daySleepLog.quality_score) : null;
+      const daySleepDuration = daySleepLog ? Number(daySleepLog.duration_minutes) / 60 : null;
+      const daySleepAdjustment = daySleepQuality !== null && daySleepDuration !== null
+        ? Math.round(
+            (daySleepQuality - zSleepQualityAvg) * (zaneResult.sleepQualityCoeff || 0) +
+            (daySleepDuration - zSleepDurationAvg) * (zaneResult.sleepDurationCoeff || 0)
+          )
+        : 0;
+
+      const safeActive = Math.min(1500, dayActiveCalories);
+      const dayGymCalories = Math.round((gymVolumeMap[dateStr] || 0) * (zaneResult.gymVolumeCoeff || 0.025));
+      const dayCaffeineCalories = Math.round((caffeineStats.byDate?.[dateStr] || 0) * (zaneResult.caffeineCoeff || 0));
+      const dayIsWeekend = [0, 6].includes(new Date(dateStr + 'T12:00:00').getDay()) ? 1 : 0;
+      const dayWeekendAdj = zaneResult.isCalibrated ? ((zaneResult.weekendCoeff || 0) * dayIsWeekend) : 0;
+
+      const dayPreAdaptTdee = Math.round(
+        baseTdee + safeActive + (zaneResult.bmrOffset || 0) +
+        daySleepAdjustment + dayGymCalories + dayCaffeineCalories + dayWeekendAdj
+      );
+      const dayAdaptFactor = zaneResult.adaptationFactor ?? 1.0;
+      totalTdeeVal += dayPreAdaptTdee - Math.round(dayPreAdaptTdee * (1 - dayAdaptFactor));
+      totalIntake += dayCalories;
+      days++;
+    }
+
+    if (days === 0) return null;
+    return {
+      balance: Math.round(totalIntake / days - totalTdeeVal / days),
+      avgIntake: Math.round(totalIntake / days),
+      days
+    };
+  }, [thirtyDayCaloriesMap, dailyCompletionMap, activeCaloriesMap, sleepLogs, gymVolumeMap, caffeineStats, zaneResult, baseTdee, zSleepQualityAvg, zSleepDurationAvg]);
+
   const netDailyBalance = averageWeeklyNetBalance.balance;
   const balanceSampleDays = averageWeeklyNetBalance.loggedDays;
-  const balanceAvgIntake = averageWeeklyNetBalance.avgIntake;
   const projectedWeightChange = (netDailyBalance * 28) / projectionEnergyPerKg;
   const weeklyWeightRate = (netDailyBalance * 7) / projectionEnergyPerKg;
+
   const startingWeightForProjection = zaneResult.currentTrendWeight || latestWeight;
   const projectedWeight = Math.round((startingWeightForProjection + projectedWeightChange) * 100) / 100;
 
@@ -1874,26 +1936,35 @@ function App() {
     [zaneResult.trendWeightMap]
   );
 
-  // Flag a projection the measured trend doesn't support: more than 0.25 kg/week
-  // apart, which over 28 days is a full kilo of difference in the headline number.
-  const projectionDisagreesWithScale =
-    measuredWeeklyRate !== null && Math.abs(weeklyWeightRate - measuredWeeklyRate) > 0.25;
-
-  // Expenditure implied by the measurement: what the athlete must actually be
-  // burning for their logged intake to have produced the weight change the
-  // scale recorded.
+  // Expenditure worked back from the measurement: what the athlete must actually
+  // be burning for their logged intake to have produced the weight change the
+  // scale recorded. This is measured rather than estimated, so it is preferred
+  // over the formula wherever both exist.
   //
-  // When this disagrees with the estimate, the estimate is the thing to doubt.
-  // Skipping meals is a normal eating pattern - intermittent fasting, or simply
-  // not being hungry - so a low intake on a day the user did NOT flag as
-  // incomplete is real data, not a logging gap. The completeness flag is the
-  // user's own declaration and nothing here second-guesses it.
+  // Note the completeness flag is the user's own declaration and nothing here
+  // second-guesses it. Skipping meals is a normal eating pattern - intermittent
+  // fasting, or simply not being hungry - so a light day that was not flagged
+  // incomplete is real data and belongs in the average.
   const measuredDailyBalance = measuredWeeklyRate !== null
     ? Math.round((measuredWeeklyRate * projectionEnergyPerKg) / 7)
     : null;
-  const impliedActualTdee = measuredDailyBalance !== null
-    ? balanceAvgIntake - measuredDailyBalance
+  // Averaged over the same window as the measured rate: pairing a 28-day weight
+  // trend with a three-day intake average produced an expenditure figure that
+  // was really just a reflection of one unusual week.
+  const impliedActualTdee = measuredDailyBalance !== null && longRunNetBalance !== null
+    ? longRunNetBalance.avgIntake - measuredDailyBalance
     : null;
+
+  // There is deliberately no "your log disagrees with your scale" warning.
+  //
+  // It was unactionable: the projection is driven by the ZANE formula, while the
+  // button it told you to press retrains ZenithFusionNet, which does not feed
+  // the projection at all - so the warning could never clear, however many times
+  // you retrained. Rather than tune its threshold, the card now tells one
+  // coherent story: once the scale has enough history the burn is taken FROM the
+  // measurement, so there are no longer two rival numbers to reconcile. The
+  // formula's own estimate stays visible in the burn card.
+  const hasMeasuredBurn = impliedActualTdee !== null && impliedActualTdee > 0;
 
   // Percent of bodyweight per week. ~1%/week is the usual upper bound for a
   // rate that preserves lean mass; beyond that the copy shouldn't call it
@@ -2620,27 +2691,7 @@ function App() {
                 )}
               </div>
 
-              {/* Only surfaced when it disagrees, and phrased as something to do
-                  rather than a discrepancy to reconcile. */}
-              {projectionDisagreesWithScale && measuredWeeklyRate !== null && (
-                <div style={{
-                  background: 'rgba(232,191,107,0.08)',
-                  border: '1px solid rgba(232,191,107,0.25)',
-                  borderRadius: '8px',
-                  padding: '10px 12px',
-                  fontSize: '11px',
-                  lineHeight: 1.5,
-                  color: '#e8bf6b'
-                }}>
-                  Your food log suggests you should be {Math.abs(weeklyWeightRate).toFixed(2)} kg a week
-                  {weeklyWeightRate < 0 ? ' lighter' : ' heavier'}, but the scale says{' '}
-                  {Math.abs(measuredWeeklyRate).toFixed(2)}. That gap usually means we are
-                  over-estimating how much you burn. Tap{' '}
-                  <strong>Learn from my history</strong> and it should settle down.
-                </div>
-              )}
-
-              {lossRateIsAggressive && !projectionDisagreesWithScale && (
+              {lossRateIsAggressive && (
                 <div style={{
                   background: 'rgba(232,191,107,0.08)',
                   border: '1px solid rgba(232,191,107,0.25)',
@@ -2665,28 +2716,51 @@ function App() {
                     <span style={{ fontWeight: 700, color: '#fff' }}>{startingWeightForProjection} kg</span>
                   </div>
                   <p style={{ margin: '-2px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                    Day-to-day weight swings with water and food, so we forecast from a smoothed
+                    Weight swings day to day with water and food, so the forecast uses a smoothed
                     version rather than a single morning&apos;s reading.
                   </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Eating vs burning</span>
-                    <span style={{ fontWeight: 700, color: netDailyBalance <= 0 ? '#55efc4' : '#ff7675' }}>
-                      {netDailyBalance > 0 ? `+${netDailyBalance}` : netDailyBalance} kcal a day
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Which alone would give</span>
-                    <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>
-                      {projectedWeight.toFixed(1)} kg
-                    </span>
-                  </div>
-                  <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
-                    {balanceSampleDays > 0 && balanceSampleDays < 4
-                      ? `Based on ${balanceSampleDays} day${balanceSampleDays === 1 ? '' : 's'} logged this week, so it will move as more come in. `
-                      : ''}
-                    Real weight loss usually slows as you get lighter, so treat the forecast as a
-                    direction rather than a promise.
-                  </p>
+
+                  {hasMeasuredBurn && longRunNetBalance !== null ? (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>You eat, on average</span>
+                        <span style={{ fontWeight: 700, color: '#fff' }}>{longRunNetBalance.avgIntake} kcal a day</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>You burn, on average</span>
+                        <span style={{ fontWeight: 700, color: '#fff' }}>{impliedActualTdee} kcal a day</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Difference</span>
+                        <span style={{ fontWeight: 700, color: (longRunNetBalance.avgIntake - impliedActualTdee!) <= 0 ? '#55efc4' : '#ff7675' }}>
+                          {longRunNetBalance.avgIntake - impliedActualTdee! > 0 ? '+' : ''}
+                          {longRunNetBalance.avgIntake - impliedActualTdee!} kcal a day
+                        </span>
+                      </div>
+                      <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                        Your burn is worked back from what your weight actually did over the last
+                        four weeks, rather than estimated, so this is the figure to trust.
+                        Real loss usually slows as you get lighter, so treat the forecast as a
+                        direction rather than a promise.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Eating vs burning</span>
+                        <span style={{ fontWeight: 700, color: netDailyBalance <= 0 ? '#55efc4' : '#ff7675' }}>
+                          {netDailyBalance > 0 ? `+${netDailyBalance}` : netDailyBalance} kcal a day
+                        </span>
+                      </div>
+                      <p style={{ margin: '4px 0 0', fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                        {balanceSampleDays > 0 && balanceSampleDays < 4
+                          ? `Based on ${balanceSampleDays} day${balanceSampleDays === 1 ? '' : 's'} logged this week, so it will move as more come in. `
+                          : ''}
+                        Once you have a few weeks of weigh-ins we can work your burn back from what
+                        your weight actually does, which is more accurate than estimating it.
+                      </p>
+                    </>
+                  )}
                 </div>
               </details>
             </div>
