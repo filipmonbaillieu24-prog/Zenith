@@ -64,6 +64,34 @@ function generateRecoveryDefaultWeights() {
   return { W1, B1, W2, B2 };
 }
 
+/**
+ * Weekly lifting volume treated as a "hard week", in kg.
+ *
+ * Exported because the model's input vector AND Hub's background-training
+ * target both need it, and they previously each hardcoded 15,000 - low enough
+ * that any serious lifter sat permanently at the cap in both places.
+ */
+export const GYM_VOLUME_HARD_WEEK_KG = 25000;
+
+/**
+ * Cardio freshness (TSB) range used when scoring recovery, from clearly
+ * fatigued to clearly rested.
+ *
+ * The training target previously mapped -30..+50 onto 0..1, so the freshness
+ * term only reached full value at a TSB of +50 - a level you reach by not
+ * training. An athlete sitting at a healthy TSB near zero scored barely a third
+ * of it, which held their achievable recovery score down to about 62% no matter
+ * how well they slept.
+ */
+export const RECOVERY_TSB_MIN = -30;
+export const RECOVERY_TSB_MAX = 15;
+
+/** Maps a cardio TSB onto 0..1 for recovery scoring. */
+export function scaleRecoveryTsb(tsb: number): number {
+  const span = RECOVERY_TSB_MAX - RECOVERY_TSB_MIN;
+  return Math.max(0, Math.min(1, (tsb - RECOVERY_TSB_MIN) / span));
+}
+
 export const recoveryModel = new SimpleMLP(
   // Key bumped from 'unified_recovery_score'. Anything stored under the old key
   // was trained on top of defaults whose output could not go below 52.5%, so it
@@ -106,7 +134,7 @@ export function buildRecoveryFeatureVector(
     // athlete lifting ~16,500 kg in a normal week sat pinned at the maximum gym
     // penalty permanently, so the input told the model nothing about them. Caps
     // at 37,500 kg now, which a hard week approaches rather than saturates.
-    Math.min(1.5, gymVolume7d / 25000),
+    Math.min(1.5, gymVolume7d / GYM_VOLUME_HARD_WEEK_KG),
     Math.min(1, dailySteps / 20000),
     Math.max(-1, Math.min(1, calorieBalance / 1000)),
     Math.min(1.5, bodyWeight / 150),
@@ -149,16 +177,13 @@ export async function trainRecoveryModel(
   cardioATL: number,
   actualRecoveryTarget: number // 0..1
 ): Promise<number> {
-  const x = [
-    Math.max(0, Math.min(1, (cardioTSB + 50) / 100)),
-    Math.min(1, sleepQuality / 100),
-    Math.min(1, sleepDuration / 12),
-    Math.min(1.5, gymVolume7d / 10000),
-    Math.min(1, dailySteps / 20000),
-    Math.max(-1, Math.min(1, calorieBalance / 1000)),
-    Math.min(1.5, bodyWeight / 150),
-    Math.min(1.5, cardioATL / 100)
-  ];
+  // Third copy of this vector, found still on the old gym divisor after the
+  // other two were updated - training here would have used a different scale
+  // from the one predictions are served on, in the same file.
+  const x = buildRecoveryFeatureVector(
+    cardioTSB, sleepQuality, sleepDuration, gymVolume7d,
+    dailySteps, calorieBalance, bodyWeight, cardioATL
+  );
   const target = Math.max(0, Math.min(1, actualRecoveryTarget));
   const y = await recoveryModel.train(supabase, userId, x, [target], 0.15);
   return Math.round(y[0] * 100);

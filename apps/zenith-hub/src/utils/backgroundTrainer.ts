@@ -1,4 +1,4 @@
-import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector } from '@zenith/shared';
+import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector, scaleRecoveryTsb, GYM_VOLUME_HARD_WEEK_KG } from '@zenith/shared';
 import { computePMC } from './pmc';
 
 // ==========================================================
@@ -340,7 +340,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         Math.min(1.5, activeCalories / 5000)
       ];
 
-      const fatigueTarget = Math.max(0, Math.min(1.0, (cATL / 80 + (100 - sleepQuality) / 100 + gymVolume7d / 15000) / 3));
+      const fatigueTarget = Math.max(0, Math.min(1.0, (cATL / 80 + (100 - sleepQuality) / 100 + gymVolume7d / GYM_VOLUME_HARD_WEEK_KG) / 3));
       dualSportFatigueModel.trainLocal(x, [fatigueTarget], 0.15);
     }
     await dualSportFatigueModel.saveToSupabase(supabase, userId);
@@ -384,8 +384,17 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         dailySteps, calorieBalance, weight, cATL
       );
 
-      const tsbScaled = (cTSB + 30) / 80;
-      const gymScaled = Math.max(0, Math.min(1, gymVolume7d / 15000));
+      // The target the model is trained to reproduce. Two things were wrong with
+      // it, and between them they capped this athlete's achievable score at ~62%
+      // however well they slept - which is why the dashboard kept reading low
+      // even after the model's own weights were corrected.
+      //
+      // The freshness term used to divide by 80 from a -30 base, so it only
+      // reached full value at a TSB of +50, a level reached by not training at
+      // all. And the gym term capped at 15,000 kg a week, so anyone lifting more
+      // than that forfeited its entire 0.2 permanently.
+      const tsbScaled = scaleRecoveryTsb(cTSB);
+      const gymScaled = Math.max(0, Math.min(1, gymVolume7d / GYM_VOLUME_HARD_WEEK_KG));
       const recoveryTarget = Math.max(0.05, Math.min(0.95, (sleepQuality / 100 * 0.5 + tsbScaled * 0.3 + (1 - gymScaled) * 0.2)));
 
       recoveryModel.trainLocal(x, [recoveryTarget], 0.15);
