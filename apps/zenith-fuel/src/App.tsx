@@ -511,7 +511,36 @@ function App() {
     sleepLogs.forEach(s => {
       const dStr = s.logged_at.split('T')[0];
       if (logsMap[dStr]) {
-        logsMap[dStr].sleepQuality = Number(s.quality_score);
+        // Two bugs lived on this line.
+        //
+        // Number(null) is 0, not null - so every night the wearable didn't
+        // supply a quality score was handed to the regression as a score of
+        // ZERO. ZANE only falls back to the athlete's average when the value is
+        // strictly null, so a real-looking 0 sailed through: on this athlete,
+        // 12 of 17 nights, each an ~85-point negative deviation from their own
+        // average. That is what the learned sleep-quality coefficient was
+        // mostly fitting.
+        //
+        // And Zenith computes its own sleep score from the stage data
+        // (calculateZenithSleepScore) - the same fallback used for today's
+        // figure a few hundred lines below - but the calibration path ignored
+        // it and read the raw column only. Use the score when the wearable
+        // gives one, fall back to Zenith's own, and only then admit we don't
+        // know.
+        // Only score a night we can actually score. Without stage data the
+        // engine has nothing to judge but duration and returns 98-100 for
+        // almost anything, so filling those in would swap one fake signal
+        // (a literal 0) for another (a near-constant 99). Left null, ZANE
+        // falls back to this athlete's own average, which is what it is
+        // designed to do for a night it doesn't know about.
+        const rawScore = Number(s.quality_score);
+        const hasStageData = s.deep_minutes != null || s.rem_minutes != null;
+        const derived = rawScore > 0
+          ? rawScore
+          : (hasStageData && Number(s.duration_minutes) > 0
+              ? calculateZenithSleepScore(s, sleepLogs).score
+              : 0);
+        logsMap[dStr].sleepQuality = derived > 0 ? derived : null;
         logsMap[dStr].sleepDurationHours = Number(s.duration_minutes) / 60;
       }
     });
@@ -2095,7 +2124,16 @@ function App() {
     sleepLogs.forEach(s => {
       const dStr = s.logged_at.split('T')[0];
       if (baseLogsMap[dStr]) {
-        baseLogsMap[dStr].sleepQuality = Number(s.quality_score);
+        // Same fallback as the calibration path above: a missing wearable score
+        // becomes Zenith's own computed score, never a literal 0.
+        const rawScore = Number(s.quality_score);
+        const hasStageData = s.deep_minutes != null || s.rem_minutes != null;
+        const derived = rawScore > 0
+          ? rawScore
+          : (hasStageData && Number(s.duration_minutes) > 0
+              ? calculateZenithSleepScore(s, sleepLogs).score
+              : 0);
+        baseLogsMap[dStr].sleepQuality = derived > 0 ? derived : null;
         baseLogsMap[dStr].sleepDurationHours = Number(s.duration_minutes) / 60;
       }
     });
