@@ -1789,12 +1789,17 @@ function App() {
       const dayLogs = weeklyFoodLogs.filter(log => log.logged_at.split('T')[0] === dateStr);
       const dayCalories = dayLogs.reduce((sum, f) => sum + f.calories, 0);
 
-      // Skip days the user marked incomplete. This calculation used to count
-      // any day with a single logged item as a full day of eating, ignoring the
-      // same "mark this day as incomplete" flag that ZANE's calibration and the
-      // FusionNet training loop both respect. A partially-logged day looks like
-      // a huge deficit, and since this figure is extrapolated 28 days forward
-      // it turns one unlogged dinner into roughly a kilo of predicted loss.
+      // Skip only days the user themselves marked incomplete. This used to count
+      // every day with a logged item, ignoring the same flag that ZANE's
+      // calibration and the FusionNet training loop both respect; a day the user
+      // knows is half-logged then looks like a huge deficit, and since this
+      // figure is extrapolated 28 days forward it becomes roughly a kilo of
+      // predicted loss.
+      //
+      // The flag is the ONLY signal used. A low-intake day is not treated as
+      // suspect: skipping meals is a normal pattern - intermittent fasting, or
+      // simply not being hungry - so unless the user says otherwise, a light day
+      // is real data and belongs in the average.
       const dayIsComplete = dailyCompletionMap[dateStr] ?? true;
 
       if (dayCalories > 0 && dayIsComplete) {
@@ -1840,12 +1845,13 @@ function App() {
     if (loggedDays > 0) {
       return {
         balance: Math.round((totalIntake / loggedDays) - (totalTdeeVal / loggedDays)),
+        avgIntake: Math.round(totalIntake / loggedDays),
         loggedDays
       };
     }
 
     // Fallback to today's balance if no data logged this week
-    return { balance: intakeCalories - totalTdee, loggedDays: 0 };
+    return { balance: intakeCalories - totalTdee, avgIntake: intakeCalories, loggedDays: 0 };
   }, [weekDays, weeklyFoodLogs, dailyCompletionMap, activeCaloriesMap, sleepLogs, gymVolumeMap, supplementsLogs, zaneResult, baseTdee, intakeCalories, totalTdee, zSleepQualityAvg, zSleepDurationAvg]);
 
   // Weight Projection (Using average weekly balance for stability)
@@ -1853,6 +1859,7 @@ function App() {
   const projectionEnergyPerKg = zaneResult.energyPerKgTissue ?? 7700;
   const netDailyBalance = averageWeeklyNetBalance.balance;
   const balanceSampleDays = averageWeeklyNetBalance.loggedDays;
+  const balanceAvgIntake = averageWeeklyNetBalance.avgIntake;
   const projectedWeightChange = (netDailyBalance * 28) / projectionEnergyPerKg;
   const weeklyWeightRate = (netDailyBalance * 7) / projectionEnergyPerKg;
   const startingWeightForProjection = zaneResult.currentTrendWeight || latestWeight;
@@ -1872,13 +1879,37 @@ function App() {
   const projectionDisagreesWithScale =
     measuredWeeklyRate !== null && Math.abs(weeklyWeightRate - measuredWeeklyRate) > 0.25;
 
+  // Expenditure implied by the measurement: what the athlete must actually be
+  // burning for their logged intake to have produced the weight change the
+  // scale recorded.
+  //
+  // When this disagrees with the estimate, the estimate is the thing to doubt.
+  // Skipping meals is a normal eating pattern - intermittent fasting, or simply
+  // not being hungry - so a low intake on a day the user did NOT flag as
+  // incomplete is real data, not a logging gap. The completeness flag is the
+  // user's own declaration and nothing here second-guesses it.
+  const measuredDailyBalance = measuredWeeklyRate !== null
+    ? Math.round((measuredWeeklyRate * projectionEnergyPerKg) / 7)
+    : null;
+  const impliedActualTdee = measuredDailyBalance !== null
+    ? balanceAvgIntake - measuredDailyBalance
+    : null;
+  const estimatedTdeeForComparison = balanceAvgIntake - netDailyBalance;
+
   // Percent of bodyweight per week. ~1%/week is the usual upper bound for a
   // rate that preserves lean mass; beyond that the copy shouldn't call it
   // "healthy, sustainable".
+  //
+  // Judged on the MEASURED rate whenever the scale provides one, falling back
+  // to the projection only when it doesn't. Telling someone to eat more should
+  // rest on what their body is actually doing, not on an estimate that can be
+  // several hundred kcal off - on this athlete's data the projection implied
+  // 1.1%/week while the scale showed 0.5%.
+  const rateForHealthJudgement = measuredWeeklyRate ?? weeklyWeightRate;
   const weeklyRatePercent = startingWeightForProjection > 0
-    ? Math.abs(weeklyWeightRate) / startingWeightForProjection * 100
+    ? Math.abs(rateForHealthJudgement) / startingWeightForProjection * 100
     : 0;
-  const lossRateIsAggressive = weeklyWeightRate < 0 && weeklyRatePercent > 1.0;
+  const lossRateIsAggressive = rateForHealthJudgement < 0 && weeklyRatePercent > 1.0;
 
   const weeklyStats = useMemo(() => {
     let totalIntakeCalories = 0;
@@ -2562,17 +2593,22 @@ function App() {
               </div>
 
               {balanceSampleDays > 0 && balanceSampleDays < 4 && (
-                <div style={{ fontSize: '10px', lineHeight: 1.45, color: '#e8bf6b' }}>
-                  Based on {balanceSampleDays} fully-logged day{balanceSampleDays === 1 ? '' : 's'} this week —
-                  too few to project a month from with any confidence.
+                <div style={{ fontSize: '10px', lineHeight: 1.45, color: 'var(--text-muted)' }}>
+                  Averaged over {balanceSampleDays} day{balanceSampleDays === 1 ? '' : 's'} logged this week.
+                  A month projected from a few days moves a lot as more days come in.
                 </div>
               )}
 
               {projectionDisagreesWithScale && measuredWeeklyRate !== null && (
                 <div style={{ fontSize: '10px', lineHeight: 1.45, color: '#e8bf6b' }}>
                   Your scale shows {measuredWeeklyRate.toFixed(2)} kg/week, not {weeklyWeightRate.toFixed(2)}.
-                  The projection is derived from logged intake, so unlogged food is the usual cause —
-                  trust the measured trend.
+                  {impliedActualTdee !== null && impliedActualTdee > 0 ? (
+                    <> Against your logged intake that puts your real expenditure nearer{' '}
+                    <strong>{impliedActualTdee} kcal/day</strong>, not the {estimatedTdeeForComparison} estimated
+                    here — so the expenditure estimate is what's off. Retraining on your history corrects it.</>
+                  ) : (
+                    <> The measured trend is the reliable one.</>
+                  )}
                 </div>
               )}
 
