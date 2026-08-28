@@ -1,5 +1,6 @@
 package com.zenith.pulse
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.PermissionController
 import com.zenith.pulse.data.HealthConnectManager
+import com.zenith.pulse.data.ScaleBleManager
 import com.zenith.pulse.sync.ZenithSyncManager
 import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.graphicsLayer
@@ -34,6 +36,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import java.time.LocalDate
@@ -128,6 +135,78 @@ fun ZenithPulseScreen(
     var bodyStatsMessage by remember { mutableStateOf<String?>(null) }
     var bodyStatsSaving by remember { mutableStateOf(false) }
     var bodyStatsSavedOk by remember { mutableStateOf(false) }
+
+    // Reading the scale over Bluetooth. A NEO Health Onyx SE is an OEM device with no
+    // published protocol, so this both decodes the standard formats and captures what
+    // it actually sends - see ScaleBleManager.
+    val scaleManager = remember { ScaleBleManager(context) }
+    var scaleScanning by remember { mutableStateOf(false) }
+    var showScalePanel by remember { mutableStateOf(false) }
+    val scaleDevices by scaleManager.devices.collectAsState()
+    val scaleReading by scaleManager.reading.collectAsState()
+    val scaleStatus by scaleManager.status.collectAsState()
+    val scaleFrames by scaleManager.capturedFrames.collectAsState()
+
+    val bluetoothPermissions = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+        } else {
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+    var pendingScaleScan by remember { mutableStateOf(false) }
+    var savedScaleName by remember { mutableStateOf(scaleManager.savedScaleName) }
+    var savedScaleAddress by remember { mutableStateOf(scaleManager.savedScaleAddress) }
+    // True once a reading has arrived and is sitting in the fields waiting to be
+    // confirmed, so the card can say so rather than silently changing two numbers.
+    var awaitingConfirm by remember { mutableStateOf(false) }
+    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        if (result.values.all { it }) {
+            if (pendingScaleScan) {
+                pendingScaleScan = false
+                // Resume whichever action needed the permission. With a scale already
+                // chosen that is a read, not a rescan - otherwise granting permission
+                // from the READ button would drop the user back into device discovery.
+                val saved = scaleManager.savedScaleAddress
+                if (saved != null && !showScalePanel) {
+                    scaleManager.clearReading()
+                    awaitingConfirm = false
+                    scaleManager.connect(saved)
+                } else {
+                    scaleManager.startScan()?.let { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+                    scaleScanning = true
+                }
+            }
+        } else {
+            Toast.makeText(context, "Bluetooth permission is needed to read the scale", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // A decoded reading fills the entry fields rather than saving on its own: a scale
+    // can report mid-step, and a number that writes itself into your history without
+    // you seeing it first is worse than one you confirm.
+    LaunchedEffect(scaleReading) {
+        scaleReading?.let { r ->
+            r.weightKg?.let { weightInput = String.format(java.util.Locale.US, "%.1f", it) }
+            r.bodyFatPercent?.let { bodyFatInput = String.format(java.util.Locale.US, "%.1f", it) }
+            if (r.hasAnything) {
+                bodyStatsSavedOk = false
+                // Filled in, not saved. A scale reports mid-step and settles a second
+                // later, and a number that writes itself into your history without you
+                // seeing it is worse than one you confirm.
+                awaitingConfirm = true
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            scaleManager.stopScan()
+            scaleManager.disconnect()
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
@@ -633,6 +712,189 @@ fun ZenithPulseScreen(
                                 )
                             }
 
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // ── Reading the scale ───────────────────────────────
+                            // Picking the scale is a setup step, done once. After that
+                            // the daily flow is: open, step on, confirm.
+                            if (savedScaleAddress != null && !showScalePanel) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFF1A1F27), RoundedCornerShape(8.dp))
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = savedScaleName ?: "Your scale",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ZenithTextMain
+                                        )
+                                        Text(
+                                            text = if (scaleStatus.isNotEmpty()) scaleStatus else "Tap to read, then step on",
+                                            fontSize = 10.sp,
+                                            color = ZenithTextMuted
+                                        )
+                                    }
+                                    Text(
+                                        text = "READ",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ZenithAccent,
+                                        modifier = Modifier.clickable {
+                                            val missing = bluetoothPermissions.any {
+                                                androidx.core.content.ContextCompat.checkSelfPermission(context, it) !=
+                                                    android.content.pm.PackageManager.PERMISSION_GRANTED
+                                            }
+                                            if (missing) {
+                                                pendingScaleScan = true
+                                                bluetoothPermissionLauncher.launch(bluetoothPermissions)
+                                            } else {
+                                                // Clear first: a leftover reading would
+                                                // make a failed connection look like a
+                                                // fresh measurement.
+                                                scaleManager.clearReading()
+                                                awaitingConfirm = false
+                                                savedScaleAddress?.let { scaleManager.connect(it) }
+                                            }
+                                        }
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+
+                            Text(
+                                text = when {
+                                    showScalePanel -> "Hide scale setup"
+                                    savedScaleAddress != null -> "Use a different scale"
+                                    else -> "Set up my Bluetooth scale"
+                                },
+                                fontSize = 12.sp,
+                                color = ZenithAccent,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.clickable {
+                                    showScalePanel = !showScalePanel
+                                    if (!showScalePanel) {
+                                        scaleManager.stopScan()
+                                        scaleScanning = false
+                                    }
+                                }
+                            )
+
+                            if (showScalePanel) {
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Text(
+                                    text = "Step on the scale so it powers up, then scan. Pick it from the list once and Zenith will remember it.",
+                                    fontSize = 11.sp,
+                                    color = ZenithTextMuted
+                                )
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Button(
+                                    onClick = {
+                                        val missing = bluetoothPermissions.any {
+                                            androidx.core.content.ContextCompat.checkSelfPermission(context, it) !=
+                                                android.content.pm.PackageManager.PERMISSION_GRANTED
+                                        }
+                                        if (missing) {
+                                            pendingScaleScan = true
+                                            bluetoothPermissionLauncher.launch(bluetoothPermissions)
+                                        } else if (scaleScanning) {
+                                            scaleManager.stopScan()
+                                            scaleScanning = false
+                                        } else {
+                                            scaleManager.startScan()?.let {
+                                                Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+                                            }
+                                            scaleScanning = true
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = if (scaleScanning) "STOP SCANNING" else "SCAN FOR SCALE",
+                                        color = ZenithTextMain,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+
+                                if (scaleStatus.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(text = scaleStatus, fontSize = 11.sp, color = ZenithTextMuted)
+                                }
+
+                                scaleDevices.forEach { dev ->
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                scaleManager.stopScan()
+                                                scaleScanning = false
+                                                scaleManager.rememberScale(dev.address, dev.name)
+                                                savedScaleAddress = dev.address
+                                                savedScaleName = dev.name
+                                                scaleManager.clearReading()
+                                                awaitingConfirm = false
+                                                scaleManager.connect(dev.address)
+                                                showScalePanel = false
+                                            }
+                                            .background(Color(0xFF1A1F27), RoundedCornerShape(8.dp))
+                                            .padding(10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = dev.name,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (dev.looksLikeAScale) ZenithAccent else ZenithTextMain
+                                            )
+                                            Text(
+                                                text = if (dev.looksLikeAScale) "Looks like a scale · tap to use it" else "tap to use it",
+                                                fontSize = 10.sp,
+                                                color = ZenithTextMuted
+                                            )
+                                        }
+                                        Text(text = "${dev.rssi} dBm", fontSize = 10.sp, color = ZenithTextMuted)
+                                    }
+                                }
+
+                                if (scaleFrames.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        text = "COPY DIAGNOSTICS (${scaleFrames.size} frames)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ZenithAccent,
+                                        modifier = Modifier.clickable {
+                                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                            cm.setPrimaryClip(ClipData.newPlainText("Zenith scale diagnostics", scaleManager.diagnosticsText()))
+                                            Toast.makeText(context, "Diagnostics copied", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                }
+                            }
+
+                            if (awaitingConfirm) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "Read from your scale — check the numbers above, then save.",
+                                    fontSize = 11.sp,
+                                    color = ZenithAccent,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
                             Spacer(modifier = Modifier.height(14.dp))
 
                             Button(
@@ -674,6 +936,7 @@ fun ZenithPulseScreen(
                                         val synced = ZenithSyncManager.performSync(context, "MANUAL")
                                         bodyStatsSaving = false
                                         bodyStatsSavedOk = true
+                                        awaitingConfirm = false
                                         bodyStatsMessage = if (synced) {
                                             "Saved and sent to Zenith."
                                         } else {
@@ -691,6 +954,7 @@ fun ZenithPulseScreen(
                                     text = when {
                                         bodyStatsSaving -> "SAVING..."
                                         !hasWriteAccess -> "ALLOW ACCESS & SAVE"
+                                        awaitingConfirm -> "CONFIRM & SAVE"
                                         else -> "SAVE"
                                     },
                                     color = Color.Black,

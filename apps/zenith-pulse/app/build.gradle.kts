@@ -11,8 +11,8 @@ android {
         applicationId = "com.zenith.pulse"
         minSdk = 26
         targetSdk = 36
-        versionCode = 38
-        versionName = "1.0.37"
+        versionCode = 39
+        versionName = "1.0.38"
     }
 
     buildTypes {
@@ -64,4 +64,9 @@ dependencies {
   implementation(libs.ktor.client.okhttp)
   implementation(libs.kotlinx.serialization.json)
   implementation(libs.supabase.postgrest)
+
+  // The BLE scale decoders are pure functions over a byte array, so they are unit
+  // testable without a device or an emulator - and worth testing, because a decoding
+  // error there does not crash, it writes a plausible but wrong weight into history.
+  testImplementation(libs.junit)
 }

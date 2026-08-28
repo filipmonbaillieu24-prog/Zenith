@@ -32,6 +32,27 @@
         puts them into Health Connect once, where the normal read path and every other
         app pick them up.
     -->
+    <!--
+        Bluetooth, for reading the body-composition scale directly instead of copying
+        its numbers out of the manufacturer's app by hand.
+
+        neverForLocation is set because this genuinely does not derive location from
+        the scan - without it Android requires ACCESS_FINE_LOCATION, which would be an
+        absurd thing to ask for in order to read a bathroom scale. The legacy
+        permissions below are maxSdkVersion-capped for devices before the API 31 split.
+    -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+
     <uses-permission android:name="android.permission.health.WRITE_WEIGHT" />
     <uses-permission android:name="android.permission.health.WRITE_BODY_FAT" />
 
