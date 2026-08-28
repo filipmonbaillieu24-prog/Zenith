@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
 import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
-import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep } from './utils/zane';
-import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine } from 'recharts';
+import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep, creatineWaterRetentionKg, CREATINE_BASELINE_SATURATION, CAFFEINE_KCAL_PER_MG_PRIOR } from './utils/zane';
+import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
 import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates';
 import { toDateKey, toDateKeyFromDate } from '@zenith/shared';
@@ -1471,7 +1471,35 @@ function App() {
       }
     });
 
-    let currentSat = 0;
+    // Wind the model forward over everything logged BEFORE the visible window, so
+    // the chart starts where the athlete actually is rather than at the dietary
+    // baseline. Without this the 30-day view re-ran loading from scratch every day,
+    // so someone six months into a protocol still saw a ramp - and the figure on the
+    // dial disagreed with the one ZANE uses to adjust scale weight, because ZANE
+    // walks the full history.
+    const windowStart = dates30Days[0];
+    let currentSat = CREATINE_BASELINE_SATURATION;
+    const priorIntakeByDate: { [date: string]: number } = {};
+    sortedLogs.forEach(supp => {
+      if (supp.supplement_type !== 'creatine') return;
+      const dStr = toYYYYMMDD(supp.logged_at);
+      if (dStr < windowStart) {
+        priorIntakeByDate[dStr] = (priorIntakeByDate[dStr] || 0) + Number(supp.amount);
+      }
+    });
+    const priorDates = Object.keys(priorIntakeByDate).sort();
+    if (priorDates.length > 0) {
+      // Step every calendar day from the first log, not only the days with an entry:
+      // the washout between doses is part of the model.
+      const cursor = new Date(priorDates[0] + 'T12:00:00');
+      const stopAt = new Date(windowStart + 'T12:00:00');
+      while (cursor < stopAt) {
+        const key = toDateKeyFromDate(cursor);
+        currentSat = creatineSaturationStep(currentSat, priorIntakeByDate[key] || 0);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+
     const chartData: any[] = [];
     dates30Days.forEach(date => {
       const intake = intakeMap[date] || 0;
@@ -1480,7 +1508,7 @@ function App() {
         dateStr: new Date(date + 'T12:00:00').toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
         intake: intake,
         saturation: Math.round(currentSat * 100),
-        waterWeight: Math.round(currentSat * 1.2 * 100) / 100
+        waterWeight: Math.round(creatineWaterRetentionKg(currentSat) * 100) / 100
       });
     });
 
@@ -1541,7 +1569,7 @@ function App() {
     });
 
     const activeDateCaffeine = intakeMap[selectedDateStr] || 0;
-    const metabolicBoost = Math.round(activeDateCaffeine * (zaneResult.caffeineCoeff || 0.15));
+    const metabolicBoost = Math.round(activeDateCaffeine * (zaneResult.caffeineCoeff || CAFFEINE_KCAL_PER_MG_PRIOR));
 
     return {
       chartData,
@@ -3634,17 +3662,29 @@ function App() {
                 </svg>
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
                   <div style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{creatineStats.latestSaturation}%</div>
-                  <div style={{ fontSize: 8, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Status</div>
+                  <div style={{ fontSize: 8, color: 'var(--text-muted)', textTransform: 'uppercase' }}>of full</div>
                 </div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Estimated water retention:</div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--color-carb)', margin: '4px 0' }}>
-                  +{creatineStats.latestWaterWeight.toFixed(2)} kg
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>
+                  {creatineStats.latestSaturation >= 95 ? 'Topped up'
+                    : creatineStats.latestSaturation >= 85 ? 'Nearly there'
+                    : creatineStats.latestSaturation > Math.round(CREATINE_BASELINE_SATURATION * 100) + 2 ? 'Still filling'
+                    : 'At your normal dietary level'}
                 </div>
-                <p style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: '14px', margin: '8px 0 0 0' }}>
-                  Zenith automatically adjusts your scale weight to compensate for water retention fluctuations.
+                <p style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: '14px', margin: '6px 0 0 0' }}>
+                  Everyone starts around {Math.round(CREATINE_BASELINE_SATURATION * 100)}% from food alone. Supplementing fills the rest.
                 </p>
+
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Extra water your muscles are holding:</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--color-carb)', margin: '4px 0' }}>
+                    +{creatineStats.latestWaterWeight.toFixed(2)} kg
+                  </div>
+                  <p style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: '14px', margin: '4px 0 0 0' }}>
+                    Subtracted from your scale weight before the fat-loss trend is worked out, so filling up doesn&apos;t read as gaining fat.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -3669,8 +3709,25 @@ function App() {
                 </div>
               </div>
 
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: '14px', textAlign: 'center' }}>
-                Learned effect: <strong>{zaneResult.caffeineCoeff || 0.15} kcal</strong> per mg of caffeine.
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', lineHeight: '15px' }}>
+                Worked out at about <strong style={{ color: '#cbd5e1' }}>
+                  {Math.round((zaneResult.caffeineCoeff || CAFFEINE_KCAL_PER_MG_PRIOR) * 100)} kcal per 100 mg
+                </strong>{' '}
+                &mdash; roughly a cup of coffee.
+                <details style={{ marginTop: 8 }}>
+                  <summary style={{ cursor: 'pointer' }}>Why so small?</summary>
+                  <div style={{ marginTop: 6, lineHeight: '15px' }}>
+                    Caffeine does raise how much you burn, but only by a few percent for a
+                    couple of hours, and less once you are used to it. It is a real effect
+                    and a minor one.
+                    <br /><br />
+                    Zenith learns the size of it from your own data, within limits. The
+                    limits are there because you tend to take caffeine on days you train,
+                    and without them the maths credits caffeine for calories your training
+                    burned &mdash; which would quietly raise the amount you are told you
+                    can eat.
+                  </div>
+                </details>
               </div>
             </div>
           </div>
@@ -3694,6 +3751,10 @@ function App() {
                   />
                   <Area yAxisId="right" type="monotone" dataKey="saturation" fill="rgba(255, 159, 67, 0.15)" stroke="var(--color-primary)" strokeWidth={2} name="Saturation (%)" />
                   <Line yAxisId="left" type="monotone" dataKey="intake" stroke="var(--color-carb)" strokeWidth={1.5} dot={{ r: 2 }} name="Intake (g)" />
+                  <Legend wrapperStyle={{ fontSize: 10, color: 'var(--text-muted)' }} />
+                  <ReferenceLine yAxisId="right" y={Math.round(CREATINE_BASELINE_SATURATION * 100)}
+                    stroke="rgba(255,255,255,0.25)" strokeDasharray="3 3"
+                    label={{ value: 'diet alone', position: 'insideBottomRight', fill: 'var(--text-muted)', fontSize: 9 }} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -3718,6 +3779,7 @@ function App() {
                   />
                   <Area yAxisId="left" type="monotone" dataKey="caffeine" fill="rgba(84, 160, 255, 0.1)" stroke="var(--color-carb)" strokeWidth={1} name="Caffeine (mg)" />
                   <Line yAxisId="right" type="monotone" dataKey="heartRate" stroke="rgba(255, 107, 107, 1)" strokeWidth={2} dot={{ r: 2 }} name="Resting Heart Rate (bpm)" />
+                  <Legend wrapperStyle={{ fontSize: 10, color: 'var(--text-muted)' }} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>

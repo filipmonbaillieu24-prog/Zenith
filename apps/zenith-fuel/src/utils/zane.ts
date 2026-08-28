@@ -113,15 +113,87 @@ export function calculateAge(birthDateStr?: string): number {
   return age;
 }
 
-// Creatine loading model: slower, physiologically accurate rate.
-// Full saturation takes ~28 days at 5g/day; daily washout ~3% (half-life ~23 days).
-// Single source of truth - both the calorie/water-retention model below and any
-// UI chart of creatine saturation must use this, not a separately hand-tuned copy.
-const CREATINE_DAILY_DECAY = 0.97;
-const CREATINE_SATURATION_DIVISOR = 140;
+// ── Creatine ────────────────────────────────────────────────────────────────
+//
+// Muscle creatine is NOT zero before you supplement. A habitual omnivorous diet
+// holds muscle stores at roughly 120 mmol/kg dry mass against a ceiling near 160,
+// so the starting point is about 70% of capacity, not 0%. The previous model
+// started every athlete at zero and so described someone with no creatine in
+// their muscles at all - which is not a state a living person is in. It also made
+// the dial read like a loading bar that never filled.
+//
+// Uptake is not symmetric with washout, which is why one decay constant could not
+// describe both. Transport into muscle saturates as stores fill, so the rate
+// depends on the headroom left; clearance is a slow first-order decay of the
+// excess back toward the dietary baseline, not toward zero. Modelled separately,
+// the constants below reproduce the loading protocols in the literature:
+//
+//   20 g/day  ->  ~96% of the achievable increase in about 5 days
+//    5 g/day  ->  ~86% in about 14 days
+//    3 g/day  ->  ~79% in about 21 days
+//
+// and a washout half-life of roughly 23 days once supplementation stops.
+export const CREATINE_BASELINE_SATURATION = 0.70;
+/** Fraction of the baseline-to-full span taken up per gram, before headroom scaling. */
+const CREATINE_UPTAKE_PER_GRAM = 0.011;
+/** Daily first-order clearance of the excess above dietary baseline. */
+const CREATINE_DAILY_WASHOUT = 0.03;
+/** Intracellular water gained going from dietary baseline to fully saturated. */
+export const CREATINE_WATER_KG_AT_FULL = 1.2;
+
+/**
+ * One day of the creatine model. Saturation is on 0..1 where
+ * CREATINE_BASELINE_SATURATION is an unsupplemented diet and 1.0 is full.
+ *
+ * Single source of truth: the water-retention adjustment below and every UI chart
+ * must call this rather than keeping a separately tuned copy.
+ */
+/**
+ * Caffeine thermogenesis, kcal per mg, and the range the fit is allowed to reach.
+ *
+ * The ceiling matters more than the prior. It used to be 0.50 kcal/mg, and the fit
+ * ran to 0.451 - which credited 230 mg of caffeine with 104 kcal a day. Nothing in
+ * the literature supports a figure near that; it is four to five times the plausible
+ * effect, and it is what a ridge fit produces when caffeine is confounded with
+ * training days, because the regression has no way to tell whose calories those are.
+ *
+ * That number is not cosmetic. caffeineCalories feeds the displayed daily burn and
+ * therefore the calorie target, so an inflated coefficient hands back around 80 kcal
+ * a day of deficit that was never actually earned.
+ */
+export const CAFFEINE_KCAL_PER_MG_PRIOR = 0.10;
+export const CAFFEINE_KCAL_PER_MG_MIN = 0.02;
+export const CAFFEINE_KCAL_PER_MG_MAX = 0.18;
 
 export function creatineSaturationStep(previousSaturation: number, intakeGrams: number): number {
-  return Math.min(1.0, (previousSaturation * CREATINE_DAILY_DECAY) + (intakeGrams / CREATINE_SATURATION_DIVISOR));
+  const span = 1 - CREATINE_BASELINE_SATURATION;
+  // Work in "fraction of the achievable increase", which is the quantity that
+  // actually behaves exponentially - raw saturation does not, because it starts
+  // from a non-zero floor.
+  const prior = Number.isFinite(previousSaturation) ? previousSaturation : CREATINE_BASELINE_SATURATION;
+  const x = Math.max(0, Math.min(1, (prior - CREATINE_BASELINE_SATURATION) / span));
+  const grams = Math.max(0, intakeGrams || 0);
+
+  const uptake = (grams * CREATINE_UPTAKE_PER_GRAM / span) * (1 - x);
+  const washout = CREATINE_DAILY_WASHOUT * x;
+  const next = Math.max(0, Math.min(1, x + uptake - washout));
+
+  return CREATINE_BASELINE_SATURATION + next * span;
+}
+
+/**
+ * Water held because of supplementation, in kg.
+ *
+ * Driven by the increase ABOVE dietary baseline, not by total saturation. The
+ * water that comes with normal dietary creatine is already part of an
+ * unsupplemented bodyweight, so counting it would subtract nearly a kilogram from
+ * the scale reading of someone who has never taken a gram - and that adjusted
+ * weight is what the fat-loss trend is measured on.
+ */
+export function creatineWaterRetentionKg(saturation: number): number {
+  const span = 1 - CREATINE_BASELINE_SATURATION;
+  const x = Math.max(0, Math.min(1, (saturation - CREATINE_BASELINE_SATURATION) / span));
+  return x * CREATINE_WATER_KG_AT_FULL;
 }
 
 /**
@@ -139,7 +211,8 @@ export function runZaneCalibration(
   const sortedLogs = [...logs].sort((a, b) => a.date.localeCompare(b.date));
 
   // 1. Calculate Creatine Saturation (0.0 to 1.0) based on intake history.
-  let currentSaturation = 0;
+  // Seeded at the dietary baseline, not zero - see CREATINE_BASELINE_SATURATION.
+  let currentSaturation = CREATINE_BASELINE_SATURATION;
   const saturationMap: { [date: string]: number } = {};
   sortedLogs.forEach(log => {
     currentSaturation = creatineSaturationStep(currentSaturation, log.creatine || 0);
@@ -153,10 +226,15 @@ export function runZaneCalibration(
   const logsWithWeight = sortedLogs.map((log, idx) => {
     const rawWeight = weightsWithInterpolation[idx];
     const saturation = saturationMap[log.date] || 0;
-    // Creatine water retention estimate: 1.2kg at 100% saturation
-    // Post-workout gym fluid retention: up to 0.8kg on heavy gym volume days
+    // Water from creatine SUPPLEMENTATION only - the water that comes with a normal
+    // dietary intake is already in an unsupplemented bodyweight. This previously
+    // multiplied total saturation by 1.2 kg, which now that saturation starts at a
+    // realistic 0.70 would have silently docked 0.84 kg from every reading.
+    // Post-workout gym fluid retention: up to 0.8 kg on heavy gym volume days.
     const gymFluidOffset = Math.min(0.8, (log.gymVolume || 0) * 0.00004);
-    const adjustedWeight = rawWeight !== null ? rawWeight - (1.2 * saturation) - gymFluidOffset : null;
+    const adjustedWeight = rawWeight !== null
+      ? rawWeight - creatineWaterRetentionKg(saturation) - gymFluidOffset
+      : null;
     return {
       ...log,
       weight: adjustedWeight
@@ -184,7 +262,10 @@ export function runZaneCalibration(
   let sleepQualityCoeff = 0;
   let sleepDurationCoeff = 0;
   let gymVolumeCoeff = 0.025; // baseline prior (0.025 kcal per kg moved in strength training)
-  let caffeineCoeff = 0.15; // baseline prior (0.15 kcal per mg)
+  // Caffeine's thermogenic effect, in kcal per mg. The literature puts a 100 mg dose
+  // at roughly a 3-4% rise in energy expenditure for a couple of hours, which works
+  // out near 0.10 kcal/mg across the day, with tolerance reducing it on repeated use.
+  let caffeineCoeff = CAFFEINE_KCAL_PER_MG_PRIOR;
   let weekendCoeff = 0; // baseline weekend coefficient (0 kcal)
 
   // BMR / profile params
@@ -285,7 +366,7 @@ export function runZaneCalibration(
       const todayBaseTdee = todayBaselineBmr * palFactor + safeActiveCalories;
       const baseGymCalories = todayLog.gymVolume * 0.025;
       const todayCaffeine = todayLog.caffeine || 0;
-      const baseCaffeineCalories = todayCaffeine * 0.15;
+      const baseCaffeineCalories = todayCaffeine * CAFFEINE_KCAL_PER_MG_PRIOR;
 
       // Improvement 1: Macro-specific TEF instead of flat 10%
       const macroTef = ((todayLog.protein || 0) * 4 * 0.25)
@@ -354,7 +435,7 @@ export function runZaneCalibration(
 
     // Anchor for caffeineCoeff (Feature 4: normalized delta prior)
     if (profile.priorCaffeineCoeff !== undefined) {
-      const priorNormC = (profile.priorCaffeineCoeff - 0.15) * CAFFEINE_SCALE;
+      const priorNormC = (profile.priorCaffeineCoeff - CAFFEINE_KCAL_PER_MG_PRIOR) * CAFFEINE_SCALE;
       X.push([0, 0, 0, 0, anchorWeight, 0]);
       Y.push(priorNormC * anchorWeight);
     }
@@ -381,7 +462,7 @@ export function runZaneCalibration(
     gymVolumeCoeff  = Math.min(0.10, Math.max(0.01, 0.025 + deltaGymCoeff));
 
     const deltaCaffeineCoeff = (coefficients[4] || 0) / CAFFEINE_SCALE;
-    caffeineCoeff   = Math.min(0.50, Math.max(0.02, 0.15 + deltaCaffeineCoeff));
+    caffeineCoeff   = Math.min(CAFFEINE_KCAL_PER_MG_MAX, Math.max(CAFFEINE_KCAL_PER_MG_MIN, CAFFEINE_KCAL_PER_MG_PRIOR + deltaCaffeineCoeff));
 
     // DOW Weekend coefficient retrieval
     weekendCoeff       = Math.min(400,  Math.max(-400, Math.round(coefficients[5] || 0)));
@@ -416,7 +497,7 @@ export function runZaneCalibration(
   } else {
     gymCalories = Math.min(400, Math.max(100, targetGymVolume * 0.15));
     if (targetGymVolume === 0) gymCalories = 0;
-    caffeineCalories = targetCaffeine * 0.15;
+    caffeineCalories = targetCaffeine * CAFFEINE_KCAL_PER_MG_PRIOR;
   }
 
   let todayTdee;
