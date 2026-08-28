@@ -34,6 +34,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import java.time.LocalDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -115,18 +118,41 @@ fun ZenithPulseScreen(
     // payloads while manual syncs, run with this Activity in the foreground, worked.
     var hasBackgroundAccess by remember { mutableStateOf(true) }
 
+    // Body stats entry. A Virtuagym-branded scale reports only into Virtuagym, and
+    // Virtuagym does not write to Health Connect, so these two numbers were being read
+    // off one app and retyped into another every day. Entered here they go into Health
+    // Connect once and the normal sync carries them the rest of the way.
+    var hasWriteAccess by remember { mutableStateOf(false) }
+    var weightInput by remember { mutableStateOf("") }
+    var bodyFatInput by remember { mutableStateOf("") }
+    var bodyStatsMessage by remember { mutableStateOf<String?>(null) }
+    var bodyStatsSaving by remember { mutableStateOf(false) }
+    var bodyStatsSavedOk by remember { mutableStateOf(false) }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = PermissionController.createRequestPermissionResultContract()
     ) { granted ->
         coroutineScope.launch {
             hasPermissions = healthConnectManager.hasAllPermissions()
             hasBackgroundAccess = healthConnectManager.hasBackgroundReadPermission()
+            hasWriteAccess = healthConnectManager.hasWritePermissions()
         }
     }
 
     LaunchedEffect(Unit) {
         hasPermissions = healthConnectManager.hasAllPermissions()
         hasBackgroundAccess = healthConnectManager.hasBackgroundReadPermission()
+        hasWriteAccess = healthConnectManager.hasWritePermissions()
+
+        // Prefilled with the last reading so a daily entry is a small correction to an
+        // existing number rather than typing two figures from scratch.
+        val (lastWeight, lastFat) = healthConnectManager.latestBodyStats()
+        if (weightInput.isBlank() && lastWeight != null) {
+            weightInput = String.format(java.util.Locale.US, "%.1f", lastWeight)
+        }
+        if (bodyFatInput.isBlank() && lastFat != null) {
+            bodyFatInput = String.format(java.util.Locale.US, "%.1f", lastFat)
+        }
         
         // Auto update check using dynamic versionCode
         val currentCode = com.zenith.pulse.BuildConfig.VERSION_CODE
@@ -528,6 +554,151 @@ fun ZenithPulseScreen(
                         fontSize = 12.sp,
                         color = ZenithTextMuted
                     )
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // -- Body stats -------------------------------------------------
+                    // The one thing Health Connect cannot get on its own here: a
+                    // Virtuagym-branded scale reports only into Virtuagym, and
+                    // Virtuagym does not write to Health Connect. Entered once here it
+                    // reaches Health Connect, then Zenith, then anything else reading
+                    // Health Connect - instead of being read off one app and retyped
+                    // into another every day.
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF12161C)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x22FFFFFF))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "BODY STATS FROM YOUR SCALE",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ZenithTextMuted,
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Saved to Health Connect, so Zenith picks it up automatically.",
+                                fontSize = 11.sp,
+                                color = ZenithTextMuted
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = weightInput,
+                                    onValueChange = { weightInput = it; bodyStatsSavedOk = false },
+                                    label = { Text("Weight (kg)") },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = ZenithAccent,
+                                        unfocusedBorderColor = Color(0x33FFFFFF),
+                                        focusedLabelColor = ZenithAccent,
+                                        unfocusedLabelColor = ZenithTextMuted,
+                                        focusedTextColor = ZenithTextMain,
+                                        unfocusedTextColor = ZenithTextMain
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = bodyFatInput,
+                                    onValueChange = { bodyFatInput = it; bodyStatsSavedOk = false },
+                                    label = { Text("Body fat (%)") },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = ZenithAccent,
+                                        unfocusedBorderColor = Color(0x33FFFFFF),
+                                        focusedLabelColor = ZenithAccent,
+                                        unfocusedLabelColor = ZenithTextMuted,
+                                        focusedTextColor = ZenithTextMain,
+                                        unfocusedTextColor = ZenithTextMain
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                            bodyStatsMessage?.let { msg ->
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = msg,
+                                    fontSize = 12.sp,
+                                    color = if (bodyStatsSavedOk) ZenithAccent else ZenithRed
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Button(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        bodyStatsSaving = true
+                                        bodyStatsSavedOk = false
+                                        bodyStatsMessage = null
+
+                                        if (!healthConnectManager.hasWritePermissions()) {
+                                            // Ask rather than fail: write access is a
+                                            // separate grant from the read permissions.
+                                            bodyStatsSaving = false
+                                            permissionLauncher.launch(healthConnectManager.writePermissions)
+                                            return@launch
+                                        }
+
+                                        val weight = weightInput.trim().replace(",", ".").toDoubleOrNull()
+                                        // Body fat is optional - a scale that only reports
+                                        // weight should not block the entry.
+                                        val fat = bodyFatInput.trim().replace(",", ".").toDoubleOrNull()
+
+                                        if (weight == null) {
+                                            bodyStatsMessage = "Enter a weight first"
+                                            bodyStatsSaving = false
+                                            return@launch
+                                        }
+
+                                        val error = healthConnectManager.writeBodyStats(weight, fat, LocalDate.now())
+                                        if (error != null) {
+                                            bodyStatsMessage = error
+                                            bodyStatsSaving = false
+                                            return@launch
+                                        }
+
+                                        // Push it straight through rather than waiting for
+                                        // the next periodic sync - the whole point is that
+                                        // it lands in Zenith without a second step.
+                                        val synced = ZenithSyncManager.performSync(context, "MANUAL")
+                                        bodyStatsSaving = false
+                                        bodyStatsSavedOk = true
+                                        bodyStatsMessage = if (synced) {
+                                            "Saved and sent to Zenith."
+                                        } else {
+                                            "Saved to Health Connect. It will reach Zenith on the next sync."
+                                        }
+                                        hasWriteAccess = true
+                                    }
+                                },
+                                enabled = !bodyStatsSaving,
+                                colors = ButtonDefaults.buttonColors(containerColor = ZenithAccent),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = when {
+                                        bodyStatsSaving -> "SAVING..."
+                                        !hasWriteAccess -> "ALLOW ACCESS & SAVE"
+                                        else -> "SAVE"
+                                    },
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Background access is a separate grant, and its absence is silent:

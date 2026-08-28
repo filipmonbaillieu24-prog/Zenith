@@ -7,6 +7,9 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.Mass
+import androidx.health.connect.client.units.Percentage
+import java.time.LocalDate
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -88,6 +91,106 @@ class HealthConnectManager(private val context: Context) {
         } catch (e: Exception) {
             Log.w("HealthConnectManager", "Background permission check failed: ${e.message}")
             false
+        }
+    }
+
+    /**
+     * Write access, requested separately from the read permissions.
+     *
+     * Needed because a Virtuagym-branded scale only reports into Virtuagym, and
+     * Virtuagym does not write to Health Connect - so these two numbers were being
+     * read off one app and typed into another every day. Writing them here puts
+     * them where every other app can see them, Zenith included, from one entry.
+     */
+    val writePermissions = setOf(
+        HealthPermission.getWritePermission(WeightRecord::class),
+        HealthPermission.getWritePermission(BodyFatRecord::class)
+    )
+
+    suspend fun hasWritePermissions(): Boolean {
+        val client = healthConnectClient ?: return false
+        return try {
+            client.permissionController.getGrantedPermissions().containsAll(writePermissions)
+        } catch (e: Exception) {
+            Log.w("HealthConnectManager", "Write permission check failed: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * Records a weight and optional body-fat reading into Health Connect.
+     *
+     * Written at noon local time on [date], matching how the server keys a day, so a
+     * re-entry for the same day replaces the day's figure rather than stacking a
+     * second reading beside it - the read path above keeps only the latest record per
+     * date, and the ingest upserts on (user, local_date).
+     *
+     * Returns null on success, or a message describing what stopped it.
+     */
+    suspend fun writeBodyStats(
+        weightKg: Double,
+        bodyFatPercent: Double?,
+        date: LocalDate = LocalDate.now()
+    ): String? {
+        val client = healthConnectClient ?: return "Health Connect is not available on this device"
+        if (weightKg <= 0) return "Enter a weight first"
+        // Health Connect rejects out-of-range values outright; catching it here gives
+        // a useful message instead of a stack trace.
+        if (weightKg < 20 || weightKg > 400) return "That weight looks wrong - check the number"
+        if (bodyFatPercent != null && (bodyFatPercent <= 0 || bodyFatPercent > 75)) {
+            return "That body fat percentage looks wrong - check the number"
+        }
+        if (!hasWritePermissions()) return "Allow Zenith Pulse to write to Health Connect first"
+
+        val zone = ZoneId.systemDefault()
+        val at = date.atTime(12, 0).atZone(zone).toInstant()
+        val offset = zone.rules.getOffset(at)
+
+        return try {
+            // Correcting a figure must replace the day's reading, not add a second one
+            // beside it. Both would carry the same noon timestamp, so the read path's
+            // "latest record wins" rule could then pick either. Health Connect only
+            // permits deleting records this app wrote, which is exactly the scope wanted.
+            val dayStart = date.atStartOfDay(zone).toInstant()
+            val dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant()
+            val dayRange = TimeRangeFilter.between(dayStart, dayEnd)
+            try {
+                client.deleteRecords(WeightRecord::class, dayRange)
+                client.deleteRecords(BodyFatRecord::class, dayRange)
+            } catch (e: Exception) {
+                // Nothing of ours to delete, or the delete was refused. Not fatal - the
+                // insert below still records today's figure.
+                Log.i("HealthConnectManager", "No prior body stats to replace for $date: ${e.message}")
+            }
+
+            val records = mutableListOf<Record>(
+                WeightRecord(time = at, zoneOffset = offset, weight = Mass.kilograms(weightKg))
+            )
+            if (bodyFatPercent != null) {
+                records.add(BodyFatRecord(time = at, zoneOffset = offset, percentage = Percentage(bodyFatPercent)))
+            }
+            client.insertRecords(records)
+            Log.i("HealthConnectManager", "Wrote body stats for $date: ${weightKg}kg, fat=$bodyFatPercent")
+            null
+        } catch (e: Exception) {
+            Log.w("HealthConnectManager", "Body stats write failed: ${e.message}")
+            "Could not save to Health Connect: ${e.message}"
+        }
+    }
+
+    /** The most recent weight and body fat already in Health Connect, for prefilling. */
+    suspend fun latestBodyStats(): Pair<Double?, Double?> {
+        val client = healthConnectClient ?: return null to null
+        return try {
+            val since = Instant.now().minus(30, ChronoUnit.DAYS)
+            val w = client.readRecords(ReadRecordsRequest(WeightRecord::class, TimeRangeFilter.after(since)))
+                .records.maxByOrNull { it.time }?.weight?.inKilograms
+            val f = client.readRecords(ReadRecordsRequest(BodyFatRecord::class, TimeRangeFilter.after(since)))
+                .records.maxByOrNull { it.time }?.percentage?.value
+            w to f
+        } catch (e: Exception) {
+            Log.w("HealthConnectManager", "Prefill read failed: ${e.message}")
+            null to null
         }
     }
 
