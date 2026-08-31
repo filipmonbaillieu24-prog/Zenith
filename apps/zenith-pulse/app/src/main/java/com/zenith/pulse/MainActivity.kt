@@ -228,6 +228,10 @@ fun ZenithPulseScreen(
         // Prefilled with the last reading so a daily entry is a small correction to an
         // existing number rather than typing two figures from scratch.
         val (lastWeight, lastFat) = healthConnectManager.latestBodyStats()
+        // Gives the frame search something to check itself against. Without it a
+        // single in-range value wins by default, which is how 25.1 kg reached the
+        // confirmation field.
+        scaleManager.setExpectedWeight(lastWeight)
         if (weightInput.isBlank() && lastWeight != null) {
             weightInput = String.format(java.util.Locale.US, "%.1f", lastWeight)
         }
@@ -833,43 +837,6 @@ fun ZenithPulseScreen(
                                     Text(text = scaleStatus, fontSize = 11.sp, color = ZenithTextMuted)
                                 }
 
-                                scaleDevices.forEach { dev ->
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                scaleManager.stopScan()
-                                                scaleScanning = false
-                                                scaleManager.rememberScale(dev.address, dev.name)
-                                                savedScaleAddress = dev.address
-                                                savedScaleName = dev.name
-                                                scaleManager.clearReading()
-                                                awaitingConfirm = false
-                                                scaleManager.connect(dev.address)
-                                            }
-                                            .background(Color(0xFF1A1F27), RoundedCornerShape(8.dp))
-                                            .padding(10.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = dev.name,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (dev.looksLikeAScale) ZenithAccent else ZenithTextMain
-                                            )
-                                            Text(
-                                                text = if (dev.looksLikeAScale) "Looks like a scale · tap to use it" else "tap to use it",
-                                                fontSize = 10.sp,
-                                                color = ZenithTextMuted
-                                            )
-                                        }
-                                        Text(text = "${dev.rssi} dBm", fontSize = 10.sp, color = ZenithTextMuted)
-                                    }
-                                }
-
                                 // Always offered, never gated on having captured
                                 // something. A scan that finds nothing is exactly
                                 // when these details are needed, and the previous
@@ -910,6 +877,44 @@ fun ZenithPulseScreen(
                                     ) {
                                         Text("SHARE", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                     }
+
+                                scaleDevices.forEach { dev ->
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                scaleManager.stopScan()
+                                                scaleScanning = false
+                                                scaleManager.rememberScale(dev.address, dev.name)
+                                                savedScaleAddress = dev.address
+                                                savedScaleName = dev.name
+                                                scaleManager.clearReading()
+                                                awaitingConfirm = false
+                                                scaleManager.connect(dev.address)
+                                            }
+                                            .background(Color(0xFF1A1F27), RoundedCornerShape(8.dp))
+                                            .padding(10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = dev.name,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (dev.looksLikeAScale) ZenithAccent else ZenithTextMain
+                                            )
+                                            Text(
+                                                text = if (dev.looksLikeAScale) "Looks like a scale · tap to use it" else "tap to use it",
+                                                fontSize = 10.sp,
+                                                color = ZenithTextMuted
+                                            )
+                                        }
+                                        Text(text = "${dev.rssi} dBm", fontSize = 10.sp, color = ZenithTextMuted)
+                                    }
+                                }
+
                                 }
 
                                 Text(

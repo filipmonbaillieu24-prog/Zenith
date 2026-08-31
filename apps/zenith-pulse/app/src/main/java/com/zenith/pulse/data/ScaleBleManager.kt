@@ -85,6 +85,9 @@ class ScaleBleManager(private val context: Context) {
          */
         val TUYA_SERVICE: UUID = uuid16("1910")
 
+        /** The vendor characteristic this scale accepts commands on. */
+        val FFF2: UUID = uuid16("FFF2")
+
         private fun uuid16(short: String): UUID =
             UUID.fromString("0000$short-0000-1000-8000-00805f9b34fb")
 
@@ -313,7 +316,13 @@ class ScaleBleManager(private val context: Context) {
                 existing.toMutableList().also { it[idx] = device }
             } else {
                 existing + device
-            }.sortedWith(compareByDescending<DiscoveredDevice> { it.looksLikeAScale }.thenByDescending { it.rssi })
+            }
+                // Sorted on signal strength, this list re-ordered itself on every
+                // advertisement - several times a second - so it slid under the finger
+                // of anyone trying to scroll past it or tap an entry. Scales first,
+                // then a stable key.
+                .sortedWith(compareByDescending<DiscoveredDevice> { it.looksLikeAScale }.thenBy { it.address })
+                .take(12)
 
             // A broadcast-only scale: try the service data against the SIG formats.
             record?.serviceData?.forEach { (parcelUuid, bytes) ->
@@ -404,6 +413,7 @@ class ScaleBleManager(private val context: Context) {
         // silent because the previous connection had already used it up.
         probeRan = false
         handshakeAccepted = false
+        measurementSeen = false
         gatt = try {
             device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
         } catch (e: SecurityException) {
@@ -568,6 +578,22 @@ class ScaleBleManager(private val context: Context) {
     private var handshakeAccepted = false
     /** Set when the connected device speaks a profile whose payload is encrypted. */
     private var encryptedProfile = false
+    /** Set once anything that could be a measurement arrives, to stop the probing. */
+    private var measurementSeen = false
+
+    /**
+     * The athlete's last known weight, when the app has one.
+     *
+     * A search over unlabelled bytes will happily return 25.1 kg, and it did - that
+     * figure reached the confirmation field. A weight nobody could plausibly have
+     * gained or lost since yesterday is not a reading, it is a coincidence, and
+     * having a prior is the difference between offering a number and guessing one.
+     */
+    private var expectedWeightKg: Double? = null
+
+    fun setExpectedWeight(kg: Double?) {
+        expectedWeightKg = kg?.takeIf { it > 20 && it < 300 }
+    }
     private val probeHandler = Handler(Looper.getMainLooper())
 
     /** Appends the frame checksum: the sum of every preceding byte, mod 256. */
@@ -629,6 +655,64 @@ class ScaleBleManager(private val context: Context) {
         }
     }
 
+    /**
+     * A short sweep of neighbouring command bytes, run only after the scale has proved
+     * it answers well-formed frames.
+     *
+     * Every one is minimal and correctly framed. The scale ignored 0x14 and 0x12
+     * writes in the first probe without complaint, so an unrecognised command costs
+     * nothing; what is being looked for is another reply like the 0x14, which would
+     * say which command it understood.
+     */
+    private fun requestMeasurement() {
+        val g = gatt ?: return
+        val target = writable.firstOrNull { it.uuid == FFF2 } ?: writable.firstOrNull() ?: return
+        capture("PROBE stage 2 - asking for a measurement")
+
+        val asks = listOf(
+            withChecksum(byteArrayOf(0x15, 0x05, 0x00, 0x00)),
+            withChecksum(byteArrayOf(0x16, 0x05, 0x00, 0x00)),
+            withChecksum(byteArrayOf(0x1F, 0x05, 0x00, 0x00)),
+            withChecksum(byteArrayOf(0x20, 0x05, 0x00, 0x00)),
+            withChecksum(byteArrayOf(0x10, 0x05, 0x00, 0x00))
+        )
+
+        var delay = 0L
+        for (frame in asks) {
+            delay += 700
+            probeHandler.postDelayed({
+                if (measurementSeen) return@postDelayed
+                try {
+                    @Suppress("DEPRECATION")
+                    target.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                    @Suppress("DEPRECATION")
+                    target.value = frame
+                    @Suppress("DEPRECATION")
+                    val ok = g.writeCharacteristic(target)
+                    capture("TX2 ${target.uuid} ${frame.toHex()}${if (ok) "" else "  (write refused)"}")
+                } catch (e: Exception) {
+                    capture("TX2 failed: ${e.message}")
+                }
+            }, delay)
+        }
+    }
+
+    /**
+     * Listen to the advertisement as well as the connection.
+     *
+     * Plenty of scales put the live weight in their broadcast and use the connection
+     * only for configuration. Every diagnostics report so far says "devices seen: 0"
+     * because no scan was ever running during a weigh-in, so that whole channel has
+     * gone unexamined. Android is content to scan while connected.
+     */
+    @SuppressLint("MissingPermission")
+    private fun onSilentAfterHandshake() {
+        if (measurementSeen) return
+        capture("PROBE stage 3 - nothing over the connection; listening for broadcasts too")
+        _status.value = "Listening for a broadcast — stay on the scale"
+        startScan()
+    }
+
     private data class WeightCandidate(val kg: Double, val description: String)
 
     /**
@@ -651,7 +735,17 @@ class ScaleBleManager(private val context: Context) {
             for ((raw, order) in listOf(be to "BE", le to "LE")) {
                 for ((divisor, unit) in listOf(10.0 to "/10", 100.0 to "/100")) {
                     val kg = raw / divisor
-                    if (kg in 25.0..250.0) {
+                    // Anchored to what this person actually weighs when that is known.
+                    // The bare 25-250 kg band let 25.1 through as the single candidate
+                    // for someone who weighs 88, and being the only answer in range
+                    // does not make an answer right.
+                    val expected = expectedWeightKg
+                    val plausible = if (expected != null) {
+                        kotlin.math.abs(kg - expected) <= 10.0
+                    } else {
+                        kg in 35.0..200.0
+                    }
+                    if (plausible) {
                         found.add(WeightCandidate(
                             kg = Math.round(kg * 100) / 100.0,
                             description = "offset $i $order $unit -> $kg kg"
@@ -680,6 +774,14 @@ class ScaleBleManager(private val context: Context) {
             probeHandler.removeCallbacksAndMessages(null)
             capture("PROBE accepted - scale replied 0x14, remaining writes cancelled")
             _status.value = "Scale is listening — step on it now"
+
+            // The handshake completes and then nothing follows, while the counter in
+            // the greeting climbs with every weigh-in - 5, 7, 8, 10 across four
+            // sessions. The scale is recording measurements and not volunteering
+            // them, so two things are tried, neither of them a guess about weight:
+            // asking for them, and listening to the airwaves instead of the socket.
+            probeHandler.postDelayed({ requestMeasurement() }, 2500)
+            probeHandler.postDelayed({ onSilentAfterHandshake() }, 9000)
         }
 
         // Anything that is neither the greeting nor the handshake reply is a candidate
@@ -697,6 +799,7 @@ class ScaleBleManager(private val context: Context) {
             val candidates = weightCandidates(value)
             when {
                 candidates.size == 1 -> {
+                    measurementSeen = true
                     capture("  CAND ${candidates[0].description}")
                     capture("  -> offering ${candidates[0].kg} kg for confirmation")
                     publish(Reading(weightKg = candidates[0].kg, source = "vendor frame (format not confirmed)"))
