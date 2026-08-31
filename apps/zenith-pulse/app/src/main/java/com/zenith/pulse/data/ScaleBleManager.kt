@@ -603,7 +603,53 @@ class ScaleBleManager(private val context: Context) {
         return body + (sum and 0xFF).toByte()
     }
 
-    private fun probeFrames(): List<ByteArray> = listOf(
+    /**
+     * Seconds since 2000-01-01, little-endian, four bytes.
+     *
+     * The epoch this family of device counts from. Unix seconds would not fit in four
+     * bytes as a signed value for much longer, which is why so much consumer firmware
+     * uses 2000 instead.
+     */
+    private fun secondsSince2000LE(): ByteArray {
+        val seconds = (System.currentTimeMillis() / 1000L) - 946_684_800L
+        return byteArrayOf(
+            (seconds and 0xFF).toByte(),
+            ((seconds shr 8) and 0xFF).toByte(),
+            ((seconds shr 16) and 0xFF).toByte(),
+            ((seconds shr 24) and 0xFF).toByte()
+        )
+    }
+
+    private fun unixSecondsLE(): ByteArray {
+        val seconds = System.currentTimeMillis() / 1000L
+        return byteArrayOf(
+            (seconds and 0xFF).toByte(),
+            ((seconds shr 8) and 0xFF).toByte(),
+            ((seconds shr 16) and 0xFF).toByte(),
+            ((seconds shr 24) and 0xFF).toByte()
+        )
+    }
+
+    /**
+     * The handshake reply, with its payload actually filled in.
+     *
+     * The first probe found the right command by luck of shape rather than of content:
+     * 0x13 got an answer, but the frame it sent was 13 09 15 01 10 00 00 00 - and
+     * reading the length back, 9 bytes is command, length, sub-command, one byte, FOUR
+     * bytes, checksum. Those four were zeros. A scale that wants its clock set was
+     * handed sixteen seconds past the epoch, acknowledged the packet, and had no
+     * reason to start reporting.
+     *
+     * Both plausible epochs are tried, since which one this firmware counts from is
+     * not something the captured frames reveal.
+     */
+    private fun handshakeFrames(): List<ByteArray> = listOf(
+        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x01) + secondsSince2000LE()),
+        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x01) + unixSecondsLE()),
+        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x02) + secondsSince2000LE())
+    )
+
+    private fun probeFrames(): List<ByteArray> = handshakeFrames() + listOf(
         // Acknowledge the hello. 0x13, total length 9, then a unit selector.
         withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x01, 0x10, 0x00, 0x00, 0x00)),
         withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00)),
@@ -669,7 +715,7 @@ class ScaleBleManager(private val context: Context) {
         val target = writable.firstOrNull { it.uuid == FFF2 } ?: writable.firstOrNull() ?: return
         capture("PROBE stage 2 - asking for a measurement")
 
-        val asks = listOf(
+        val asks = handshakeFrames() + listOf(
             withChecksum(byteArrayOf(0x15, 0x05, 0x00, 0x00)),
             withChecksum(byteArrayOf(0x16, 0x05, 0x00, 0x00)),
             withChecksum(byteArrayOf(0x1F, 0x05, 0x00, 0x00)),
