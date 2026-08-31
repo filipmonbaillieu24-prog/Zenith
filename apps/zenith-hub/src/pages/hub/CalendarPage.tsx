@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -11,7 +11,11 @@ import {
 import { supabase } from '../../utils/supabaseClient';
 import { PlannedWorkoutItem } from '../../utils/pmc';
 import './CalendarPage.css';
-import { DISCIPLINE_LABELS, Discipline } from '@zenith/shared';
+import {
+  DISCIPLINE_LABELS, Discipline, countTemplateSets, estimateGymDuration,
+  resolveRunPace, estimateRunDuration, formatPace, rideDurationFromTss, rideTssFromDuration,
+  MIN_PER_SET_FALLBACK
+} from '@zenith/shared';
 
 interface CalendarPageProps {
   userId: string;
@@ -81,7 +85,14 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
   const [formDiscipline, setFormDiscipline] = useState<Discipline>('aero');
   const [formDistanceKm, setFormDistanceKm] = useState<string>('');
   const [formTemplateId, setFormTemplateId] = useState<string>('');
-  const [kratosTemplates, setKratosTemplates] = useState<{ id: string; name: string }[]>([]);
+  const [kratosTemplates, setKratosTemplates] = useState<{ id: string; name: string; totalSets: number }[]>([]);
+  /** Wall-clock minutes of past sessions, per routine - the best duration predictor. */
+  const [gymDurationHistory, setGymDurationHistory] = useState<Record<string, number[]>>({});
+  const [runPace, setRunPace] = useState<{ paceMinPerKm: number; source: 'history' | 'default'; samples: number }>(
+    { paceMinPerKm: 6.5, source: 'default', samples: 0 }
+  );
+  /** True while the athlete has typed their own duration, so estimates stop overwriting it. */
+  const [durationTouched, setDurationTouched] = useState(false);
   const [formDuration, setFormDuration] = useState(60);
   const [formTSS, setFormTSS] = useState(65);
   const [formNotes, setFormNotes] = useState('');
@@ -111,10 +122,14 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
       // 1. Fetch Planned Workouts
       const { data: templateData } = await supabase
         .from('kratos_templates')
-        .select('id, name')
+        .select('id, name, exercises')
         .eq('user_id', userId)
         .order('name');
-      setKratosTemplates((templateData || []) as { id: string; name: string }[]);
+      setKratosTemplates((templateData || []).map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        totalSets: countTemplateSets(t.exercises)
+      })));
 
       const { data: plannedData } = await supabase
         .from('planned_workouts')
@@ -196,6 +211,28 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         };
       });
 
+      // How long each routine actually takes this athlete. Their own sessions are a
+      // far better predictor than any formula - and consistent: PUSH has run 42 to
+      // 51 minutes across four sessions, PULL 39 to 43.
+      const durations: Record<string, number[]> = {};
+      for (const k of (kratosData || []) as any[]) {
+        if (!k.template_id || !k.started_at || !k.completed_at || k.is_off_day) continue;
+        const mins = (new Date(k.completed_at).getTime() - new Date(k.started_at).getTime()) / 60000;
+        if (!Number.isFinite(mins) || mins <= 5 || mins >= 300) continue;
+        (durations[k.template_id] ||= []).push(mins);
+      }
+      // Only the last few, so a routine that has got quicker is not held to last year.
+      for (const id of Object.keys(durations)) durations[id] = durations[id].slice(-6);
+      setGymDurationHistory(durations);
+
+      const { data: runData } = await supabase
+        .from('stride_activities')
+        .select('avg_pace_min_km')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+        .limit(20);
+      setRunPace(resolveRunPace((runData || []).map((r: any) => r.avg_pace_min_km)));
+
       // 4. Fetch Strength Exercises for ID-to-name lookup
       const { data: exercisesData } = await supabase
         .from('kratos_exercises')
@@ -222,6 +259,60 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
     fetchData();
   }, [userId]);
 
+  // ── Expected duration ───────────────────────────────────────────────────────
+  //
+  // Duration used to be a number the athlete guessed at, and it is not cosmetic:
+  // Fuel costs gym and running plans directly from it, so guessing 60 for a session
+  // that really runs 44 overstated the day's calorie target by a third. Every
+  // discipline has something better than a guess available.
+  const durationEstimate = useMemo((): { minutes: number; note: string } | null => {
+    if (formDiscipline === 'kratos') {
+      if (!formTemplateId) return null;
+      const tpl = kratosTemplates.find(t => t.id === formTemplateId);
+      const est = estimateGymDuration(gymDurationHistory[formTemplateId], tpl?.totalSets);
+      if (est.source === 'history') {
+        return {
+          minutes: est.minutes,
+          note: `Median of your last ${est.samples} ${tpl?.name ?? 'session'} workout${est.samples === 1 ? '' : 's'}.`
+        };
+      }
+      if (est.source === 'structure') {
+        return {
+          minutes: est.minutes,
+          note: `${tpl?.totalSets} sets at about ${MIN_PER_SET_FALLBACK} min each — you have not logged this routine yet.`
+        };
+      }
+      return null;
+    }
+
+    if (formDiscipline === 'stride') {
+      const km = Number(formDistanceKm);
+      if (formDistanceKm.trim() === '' || !Number.isFinite(km) || km <= 0) return null;
+      return {
+        minutes: estimateRunDuration(km, runPace.paceMinPerKm),
+        note: runPace.source === 'history'
+          ? `${km} km at ${formatPace(runPace.paceMinPerKm)}, your median over ${runPace.samples} run${runPace.samples === 1 ? '' : 's'}.`
+          : `${km} km at an assumed ${formatPace(runPace.paceMinPerKm)} — no runs logged yet, so adjust if that is not your pace.`
+      };
+    }
+
+    // TSS is duration_hours x IF^2 x 100 by definition, so the zone ties the two
+    // together and either can be read off the other.
+    if (formTSS <= 0) return null;
+    return {
+      minutes: rideDurationFromTss(formTSS, formType),
+      note: `${formTSS} TSS ridden at ${formType} intensity.`
+    };
+  }, [formDiscipline, formTemplateId, kratosTemplates, gymDurationHistory, formDistanceKm, runPace, formTSS, formType]);
+
+  // Fills the field until the athlete types their own number, and then leaves it
+  // alone - an estimate that overwrites what someone has just typed is a bug, not
+  // a convenience.
+  useEffect(() => {
+    if (!isModalOpen || durationTouched || !durationEstimate) return;
+    if (durationEstimate.minutes > 0) setFormDuration(durationEstimate.minutes);
+  }, [isModalOpen, durationTouched, durationEstimate]);
+
 
 
   // ── Modal Actions ──
@@ -238,6 +329,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
     setFormTemplateId('');
     setFormDuration(60);
     setFormTSS(65);
+    setDurationTouched(false);
     setFormNotes('');
     setIsModalOpen(true);
   };
@@ -249,6 +341,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
     setFormType(item.type);
     setFormDuration(item.durationMinutes);
     setFormTSS(item.plannedTSS);
+    setDurationTouched(true);
     setFormDiscipline(item.discipline ?? 'aero');
     setFormDistanceKm(item.distanceKm != null ? String(item.distanceKm) : '');
     setFormTemplateId(item.templateId ?? '');
@@ -865,7 +958,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                   some form. */}
               <div style={{ display: 'grid', gridTemplateColumns: formDiscipline === 'aero' ? '1fr 1fr' : '1fr', gap: 12 }}>
                 <div className="wd-form-group">
-                  <label>{formDiscipline === 'aero' ? 'Duration (minutes)' : 'How long do you expect it to take? (minutes)'}</label>
+                  <label>Expected duration (minutes)</label>
                   <input
                     type="number"
                     min={15}
@@ -874,11 +967,40 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                     onChange={e => {
                       const dur = parseInt(e.target.value) || 0;
                       setFormDuration(dur);
+                      // From here on the number is theirs, so the estimate stops
+                      // writing over it.
+                      setDurationTouched(true);
+                      // For a ride the two are the same statement about the session,
+                      // so an overridden duration re-states the TSS rather than
+                      // leaving a pair that cannot both be true.
+                      if (formDiscipline === 'aero') setFormTSS(rideTssFromDuration(dur, formType));
                     }}
                   />
-                  {formDiscipline !== 'aero' && (
+                  {durationEstimate && !durationTouched && (
+                    <div style={{ fontSize: 10, color: '#38bdf8', marginTop: 4, lineHeight: 1.45 }}>
+                      Estimated: {durationEstimate.note}
+                    </div>
+                  )}
+                  {durationEstimate && durationTouched && durationEstimate.minutes !== formDuration && (
+                    <button
+                      type="button"
+                      onClick={() => { setFormDuration(durationEstimate.minutes); setDurationTouched(false); }}
+                      style={{
+                        marginTop: 4, padding: 0, border: 'none', background: 'none',
+                        color: '#38bdf8', fontSize: 10, cursor: 'pointer', textAlign: 'left'
+                      }}
+                    >
+                      Use the estimate ({durationEstimate.minutes} min) — {durationEstimate.note}
+                    </button>
+                  )}
+                  {!durationEstimate && formDiscipline === 'kratos' && (
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
-                      Used to estimate what the session will cost you, so Fuel can set the day&apos;s target.
+                      Pick a routine and this fills itself in from how long that routine actually takes you.
+                    </div>
+                  )}
+                  {!durationEstimate && formDiscipline === 'stride' && (
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                      Enter a distance and this fills itself in from your pace.
                     </div>
                   )}
                 </div>

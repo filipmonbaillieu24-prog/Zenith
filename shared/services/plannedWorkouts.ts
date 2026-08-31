@@ -213,3 +213,141 @@ export async function fetchPlannedWorkouts(
 export function outstandingPlansForDate(plans: PlannedWorkout[], dateKey: string): PlannedWorkout[] {
   return plans.filter(p => p.date === dateKey && !p.completedAt);
 }
+
+
+/**
+ * How long a planned session should be expected to take.
+ *
+ * Duration was a free-text number the athlete had to guess at, and it is not a
+ * cosmetic field: Fuel costs strength and running plans straight from it, so a
+ * guess of 60 when the session really runs 44 overstated the day's target by a
+ * third. Every discipline has something better than a guess available.
+ */
+
+/**
+ * Intensity factor by cycling zone. TSS is defined as duration_hours x IF^2 x 100,
+ * so knowing the zone ties duration and TSS together and either can be derived from
+ * the other. These are the conventional mid-band values for each zone.
+ */
+export const ZONE_INTENSITY_FACTOR: Record<string, number> = {
+  recovery: 0.55,
+  endurance: 0.68,
+  sweetspot: 0.88,
+  threshold: 0.98,
+  vo2max: 1.08,
+  custom: 0.75
+};
+
+const intensityFor = (type: string): number => ZONE_INTENSITY_FACTOR[type] ?? ZONE_INTENSITY_FACTOR.custom;
+
+/** Minutes a ride of this TSS at this zone's intensity would take. */
+export function rideDurationFromTss(plannedTss: number, type: string): number {
+  const tss = Math.max(0, Number(plannedTss) || 0);
+  if (tss === 0) return 0;
+  const factor = intensityFor(type);
+  return Math.round((tss / (factor * factor)) * 0.6);
+}
+
+/** The same relationship read the other way. */
+export function rideTssFromDuration(minutes: number, type: string): number {
+  const mins = Math.max(0, Number(minutes) || 0);
+  const factor = intensityFor(type);
+  return Math.round((mins / 60) * factor * factor * 100);
+}
+
+/**
+ * Minutes per set when there is no history to go on.
+ *
+ * Calibrated against this athlete's own logged sessions rather than picked: their
+ * three routines run 2.55, 2.61 and 2.94 minutes per set of wall-clock time. A set
+ * itself takes well under a minute, so most of this is rest and setup.
+ */
+export const MIN_PER_SET_FALLBACK = 2.7;
+
+export interface GymDurationEstimate {
+  minutes: number;
+  source: 'history' | 'structure' | 'default';
+  /** How many past sessions the history estimate is based on. */
+  samples: number;
+}
+
+/**
+ * How long this routine takes this athlete.
+ *
+ * Their own past sessions of the same routine are by far the best predictor and are
+ * remarkably consistent - PUSH ran 42, 43, 46 and 51 minutes, PULL 39 to 43 - so the
+ * median of recent sessions is used where it exists. Set count is the fallback, and
+ * a flat hour only when there is neither.
+ */
+export function estimateGymDuration(
+  pastDurationsMinutes: number[] | null | undefined,
+  totalSets?: number | null
+): GymDurationEstimate {
+  const clean = (pastDurationsMinutes ?? [])
+    .filter(m => Number.isFinite(m) && m > 5 && m < 300)
+    .sort((a, b) => a - b);
+
+  if (clean.length > 0) {
+    const mid = Math.floor(clean.length / 2);
+    const median = clean.length % 2 === 1 ? clean[mid] : (clean[mid - 1] + clean[mid]) / 2;
+    return { minutes: Math.round(median), source: 'history', samples: clean.length };
+  }
+
+  const sets = Number(totalSets);
+  if (Number.isFinite(sets) && sets > 0) {
+    return { minutes: Math.round(sets * MIN_PER_SET_FALLBACK), source: 'structure', samples: 0 };
+  }
+
+  return { minutes: 60, source: 'default', samples: 0 };
+}
+
+/** Sets across every exercise in a Kratos template, for the structural fallback. */
+export function countTemplateSets(exercises: any): number {
+  if (!Array.isArray(exercises)) return 0;
+  return exercises.reduce(
+    (sum, ex) => sum + (Array.isArray(ex?.sets) ? ex.sets.length : 0),
+    0
+  );
+}
+
+/**
+ * Pace to plan a run at, in minutes per kilometre.
+ *
+ * Only ever the athlete's own median when they have run: a default pace presented as
+ * if it were theirs would be a fabricated number driving a calorie target. The source
+ * is returned so the UI can say which it is.
+ */
+export const DEFAULT_RUN_PACE_MIN_PER_KM = 6.5;
+
+export function resolveRunPace(
+  pastPacesMinPerKm: (number | null | undefined)[] | null | undefined
+): { paceMinPerKm: number; source: 'history' | 'default'; samples: number } {
+  const clean = (pastPacesMinPerKm ?? [])
+    // null and '' must not reach Number(), which turns both into 0 - and a 0 pace
+    // would sail through a > 0 test on the other side of the conversion.
+    .filter(p => p !== null && p !== undefined && (p as any) !== '')
+    .map(p => Number(p))
+    .filter(p => Number.isFinite(p) && p >= 2 && p <= 15)
+    .sort((a, b) => a - b);
+
+  if (clean.length === 0) {
+    return { paceMinPerKm: DEFAULT_RUN_PACE_MIN_PER_KM, source: 'default', samples: 0 };
+  }
+  const mid = Math.floor(clean.length / 2);
+  const median = clean.length % 2 === 1 ? clean[mid] : (clean[mid - 1] + clean[mid]) / 2;
+  return { paceMinPerKm: median, source: 'history', samples: clean.length };
+}
+
+export function estimateRunDuration(distanceKm: number, paceMinPerKm: number): number {
+  const km = Number(distanceKm);
+  if (!Number.isFinite(km) || km <= 0) return 0;
+  return Math.round(km * paceMinPerKm);
+}
+
+/** "6:30 /km" from 6.5. */
+export function formatPace(paceMinPerKm: number): string {
+  const mins = Math.floor(paceMinPerKm);
+  const secs = Math.round((paceMinPerKm - mins) * 60);
+  const carry = secs === 60;
+  return `${mins + (carry ? 1 : 0)}:${String(carry ? 0 : secs).padStart(2, '0')} /km`;
+}
