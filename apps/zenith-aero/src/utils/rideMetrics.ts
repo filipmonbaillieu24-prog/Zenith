@@ -5,6 +5,7 @@ import {
 import { calcPowerZoneTime, calcHRZoneTime, calcCaloriesPower, calcCaloriesHR, calcCaloriesMET } from './zones';
 import { detectClimbs } from './climbDetector';
 import { classifyDiscipline } from './localNeuralNet';
+import { toDateKeyFromDate } from '@zenith/shared';
 
 // ─── Max HR estimation (Tanaka formula) ───────────────────────────────────────
 
@@ -235,7 +236,7 @@ export function getWeightForDate(profile: any, dateMs: number): number | undefin
   if (profile.weightHistory && Array.isArray(profile.weightHistory) && profile.weightHistory.length > 0) {
     // Sort history by date (newest to oldest)
     const sorted = [...profile.weightHistory].sort((a, b) => b.date.localeCompare(a.date));
-    const targetDate = new Date(dateMs).toISOString().slice(0, 10);
+    const targetDate = toDateKeyFromDate(new Date(dateMs));
     // Find the first measurement that is <= targetDate
     const entry = sorted.find(e => e.date <= targetDate);
     if (entry) return entry.weight;

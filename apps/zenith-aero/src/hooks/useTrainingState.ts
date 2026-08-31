@@ -1,4 +1,4 @@
-import { TSB_FATIGUED_ABOVE, TSB_OPTIMAL_ABOVE, TSB_PEAK_ABOVE, TSB_FRESH_ABOVE, buildTrainingLoadPool } from '@zenith/shared';
+import { TSB_FATIGUED_ABOVE, TSB_OPTIMAL_ABOVE, TSB_PEAK_ABOVE, TSB_FRESH_ABOVE, buildTrainingLoadPool, toDateKeyFromDate } from '@zenith/shared';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { FitnessProfile, RideSummaryWithBests } from '../types/workout';
 import {
@@ -104,7 +104,7 @@ export function useTrainingState(
     const saved = localStorage.getItem('zenith_event_date');
     if (saved) return saved;
     const d = new Date(); d.setMonth(d.getMonth() + 3);
-    return d.toISOString().slice(0, 10);
+    return toDateKeyFromDate(d);
   });
   const [eventName, setEventName] = useState(() => {
     return localStorage.getItem('zenith_event_name') ?? 'My Event';
@@ -183,7 +183,7 @@ export function useTrainingState(
   const ridesByDay = useMemo(() => {
     const map = new Map<string, { tss: number; distance: number; name: string }>();
     for (const r of rides) {
-      const key = new Date(r.date).toISOString().slice(0, 10);
+      const key = toDateKeyFromDate(new Date(r.date));
       const existing = map.get(key);
       const tss = r.tss ?? r.hrTSS ?? 0;
       if (existing) {
@@ -315,14 +315,14 @@ export function useTrainingState(
     const rideEntries = rides
       .filter(r => r.rpe != null)
       .map(r => ({
-        date: new Date(r.date).toISOString().slice(0, 10),
+        date: toDateKeyFromDate(new Date(r.date)),
         rpe: r.rpe!
       }));
     const allEntries = [...logEntries, ...rideEntries].sort((a, b) => b.date.localeCompare(a.date));
     if (allEntries.length === 0) return null;
     const lastEntry = allEntries[0];
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })();
+    const today = toDateKeyFromDate(new Date());
+    const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return toDateKeyFromDate(d); })();
     if ((lastEntry.date === yesterday || lastEntry.date === today) && lastEntry.rpe >= 8) return 'recovery';
     if (lastEntry.date === yesterday && lastEntry.rpe >= 6) return 'endurance';
     return null;
@@ -425,7 +425,7 @@ export function useTrainingState(
 
     return ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d, i) => {
       const date = new Date(monday); date.setDate(monday.getDate() + i);
-      const key = date.toISOString().slice(0, 10);
+      const key = toDateKeyFromDate(date);
       const rideInfo = ridesByDay.get(key);
       return { day: d, type: combined[i], date: key, rideInfo };
     });
@@ -444,7 +444,7 @@ export function useTrainingState(
     const today = new Date(); today.setHours(0,0,0,0);
     for (let i = 0; i < 60; i++) {
       const d = new Date(today); d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
+      const key = toDateKeyFromDate(d);
       const hasRide = ridesByDay.has(key);
       const hasLog  = workoutLog.some(e => e.date === key);
       if (hasRide || hasLog) count++;
@@ -480,11 +480,11 @@ export function useTrainingState(
     monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
     const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((label, i) => {
       const date = new Date(monday); date.setDate(monday.getDate() + i);
-      const key = date.toISOString().slice(0, 10);
+      const key = toDateKeyFromDate(date);
       const rideInfo = ridesByDay.get(key);
       const logEntries = workoutLog.filter(e => e.date === key);
       const tss = (rideInfo?.tss ?? 0) + logEntries.reduce((s, e) => s + e.rpe * e.durationMinutes * 0.1, 0);
-      return { label, tss: Math.round(tss), isToday: key === now.toISOString().slice(0, 10), date: key };
+      return { label, tss: Math.round(tss), isToday: key === toDateKeyFromDate(now), date: key };
     });
     const maxTSS = Math.max(...days.map(d => d.tss), 100);
     const weekTSS = days.reduce((s, d) => s + d.tss, 0);
@@ -523,10 +523,10 @@ export function useTrainingState(
   const weekTypeCount = useMemo(() => {
     const now = new Date(); now.setHours(0,0,0,0);
     const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-    const mon = monday.toISOString().slice(0, 10);
+    const mon = toDateKeyFromDate(monday);
     const counts: Record<string, number> = {};
     for (const r of rides) {
-      const key = new Date(r.date).toISOString().slice(0, 10);
+      const key = toDateKeyFromDate(new Date(r.date));
       if (key >= mon) {
         const ftp = profile.ftp ?? 200;
         const ratio = (r.normPower ?? r.avgPower ?? 0) / ftp;

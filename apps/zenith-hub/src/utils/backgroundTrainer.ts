@@ -1,4 +1,4 @@
-import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector, recoveryHeuristic, cardioFreshness, kratosEffortVolume, GYM_VOLUME_HARD_WEEK_KG } from '@zenith/shared';
+import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector, recoveryHeuristic, cardioFreshness, kratosEffortVolume, GYM_VOLUME_HARD_WEEK_KG, toDateKeyFromDate } from '@zenith/shared';
 import { computePMC } from './pmc';
 
 // ==========================================================
@@ -85,6 +85,13 @@ export const injuryModel = new SimpleMLP(6, 6, 1, 'cyclo_injury_nn_weights', gen
 // CENTRALIZED BACKGROUND TRAINER SERVICE
 // ==========================================================
 
+// Day bucketing here is the ecosystem's LOCAL calendar day (shared/dateKey.ts),
+// not the UTC one this file used to use. Sleep and step rows are written at 12:00
+// UTC so they landed on the same day either way, but ride timestamps are real
+// moments - so a ride before 02:00 in UTC+2, or after 19:00 in UTC-5, was trained
+// against the wrong night's sleep. The day cursor was also formatted with
+// toISOString() while carrying the current time of day, which shifted the whole
+// 31-day window depending on what time the page happened to load.
 export async function runBackgroundTraining(supabase: any, userId: string): Promise<boolean> {
   console.log(`Starting background training orchestrator for user: ${userId}`);
   
@@ -137,7 +144,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       .order('logged_at', { ascending: false });
 
     const getStepsForDate = (dStr: string): number => {
-      const rec = stepLogs?.find((s: any) => new Date(s.logged_at).toISOString().slice(0, 10) === dStr);
+      const rec = stepLogs?.find((s: any) => toDateKeyFromDate(new Date(s.logged_at)) === dStr);
       // No steps logged for that day -> genuinely 0, not a fabricated "average day" guess.
       return rec ? Number(rec.step_count) || 0 : 0;
     };
@@ -148,7 +155,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     // signal instead of a permanent hardcoded 0.
     const CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY = 24;
     const getCalorieBalanceForDate = (dStr: string, bodyWeightKg: number): number => {
-      const dayLogs = foodLogs?.filter((f: any) => new Date(f.logged_at).toISOString().slice(0, 10) === dStr) || [];
+      const dayLogs = foodLogs?.filter((f: any) => toDateKeyFromDate(new Date(f.logged_at)) === dStr) || [];
       if (dayLogs.length === 0) return 0; // no logged nutrition for that day -> neutral, not fabricated
       const consumed = dayLogs.reduce((sum: number, f: any) => sum + Number(f.calories || 0), 0);
       const roughTdee = bodyWeightKg * CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY;
@@ -209,8 +216,8 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
         const prevW = workouts[i + 1];
 
         // Fetch sleep quality logged on the day of current workout
-        const wDate = new Date(currentW.started_at).toISOString().slice(0, 10);
-        const daySleep = sleep?.find((s: any) => new Date(s.logged_at).toISOString().slice(0, 10) === wDate);
+        const wDate = toDateKeyFromDate(new Date(currentW.started_at));
+        const daySleep = sleep?.find((s: any) => toDateKeyFromDate(new Date(s.logged_at)) === wDate);
         const sleepQuality = daySleep?.quality || 75;
 
         // Use real cardio TSB calculated from rides PMC history (CR1)
@@ -305,7 +312,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     for (let dayOffset = 30; dayOffset >= 0; dayOffset--) {
       const d = new Date();
       d.setDate(d.getDate() - dayOffset);
-      const dStr = d.toISOString().slice(0, 10);
+      const dStr = toDateKeyFromDate(d);
       const dTime = d.setHours(0,0,0,0);
       
       const pmcOnDay = pmcPoints.find(p => {
@@ -328,10 +335,10 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       // be a train/serve mismatch of exactly the kind this file has already had.
       const gymEffort7d = recentWorkouts.reduce((sum: number, w: any) => sum + kratosEffortVolume(w.volume, w.sets), 0);
 
-      const daySleep = sleep?.find((s: any) => new Date(s.logged_at).toISOString().slice(0, 10) === dStr);
+      const daySleep = sleep?.find((s: any) => toDateKeyFromDate(new Date(s.logged_at)) === dStr);
       const sleepQuality = daySleep?.quality_score || daySleep?.quality || 75;
 
-      const dayRides = rides?.filter((r: any) => new Date(Number(r.date)).toISOString().slice(0, 10) === dStr) || [];
+      const dayRides = rides?.filter((r: any) => toDateKeyFromDate(new Date(Number(r.date))) === dStr) || [];
       const activeCalories = dayRides.reduce((sum: number, r: any) => {
         let witha = r.metadata;
         if (typeof witha === 'string') try { witha = JSON.parse(witha); } catch { witha = {}; }
@@ -359,7 +366,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     for (let dayOffset = 30; dayOffset >= 0; dayOffset--) {
       const d = new Date();
       d.setDate(d.getDate() - dayOffset);
-      const dStr = d.toISOString().slice(0, 10);
+      const dStr = toDateKeyFromDate(d);
       const dTime = d.setHours(0,0,0,0);
       
       const pmcOnDay = pmcPoints.find(p => {
@@ -382,7 +389,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       // be a train/serve mismatch of exactly the kind this file has already had.
       const gymEffort7d = recentWorkouts.reduce((sum: number, w: any) => sum + kratosEffortVolume(w.volume, w.sets), 0);
 
-      const daySleep = sleep?.find((s: any) => new Date(s.logged_at).toISOString().slice(0, 10) === dStr);
+      const daySleep = sleep?.find((s: any) => toDateKeyFromDate(new Date(s.logged_at)) === dStr);
       const sleepQuality = daySleep?.quality_score || daySleep?.quality || 75;
       const sleepDuration = (daySleep?.duration_minutes || 480) / 60;
 

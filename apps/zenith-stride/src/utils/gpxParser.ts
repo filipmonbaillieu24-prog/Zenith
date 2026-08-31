@@ -1,4 +1,4 @@
-import { parseGPX, RidePoint } from '@zenith/shared';
+import { parseGPX, RidePoint, toDateKeyFromDate } from '@zenith/shared';
 import { RunActivity } from '../types/stride';
 
 export function parseGpxFile(content: string, filename?: string): Partial<RunActivity> {
@@ -33,7 +33,7 @@ export function parseGpxFile(content: string, filename?: string): Partial<RunAct
 
   return {
     title: filename ? filename.replace(/\.(gpx|xml|tcx)$/i, '') : 'Imported Route',
-    date: new Date(startMs).toISOString().slice(0, 10),
+    date: toDateKeyFromDate(new Date(startMs)),
     distanceKm,
     durationSec,
     avgPaceMinKm,

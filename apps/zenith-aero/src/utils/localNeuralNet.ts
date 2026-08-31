@@ -1166,6 +1166,51 @@ export function analyzeTrainingProfile(
   };
 }
 
+/**
+ * Deterministic Fisher-Yates, seeded so a replay of the same history shuffles the
+ * same way every time.
+ *
+ * This replaces `sort(() => Math.random() - 0.5)`, which is wrong twice over: a
+ * random comparator is not a uniform shuffle (it biases toward the original order
+ * and the result depends on the sort implementation), and Math.random makes the
+ * training run unrepeatable even from identical data. The same idiom was already
+ * corrected in Kratos's autoregulation trainer and was left standing here.
+ */
+function seededShuffle<T>(items: T[], seed = 1337): T[] {
+  const out = [...items];
+  let state = seed;
+  const next = () => {
+    // Mulberry32
+    state |= 0; state = (state + 0x6D2B79F5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/**
+ * Fits Aero's summary models to the full ride history.
+ *
+ * Resets first, and that is the whole point. Aero calls this on every data load,
+ * and it replays the ENTIRE ride history each time - so without a reset each run
+ * applied a hundred epochs of gradient updates on top of whatever the last run had
+ * left behind. Nothing new is learned on the fortieth replay of the same ride; the
+ * weights simply keep walking, and every prediction built on them - route duration,
+ * FTP projection, injury risk - drifts a little further with each page load.
+ *
+ * This is the same defect that had to be fixed in Hub's background trainer, where
+ * it showed up as a recovery score that changed on its own between refreshes. Here
+ * it is quieter because nobody watches a route-duration estimate that closely, but
+ * it is the same bug and it was running across three models.
+ *
+ * With the reset and a seeded shuffle the resulting weights are a pure function of
+ * the rides, so the same history always produces the same predictions.
+ */
 export function calibrateSummaryModels(
   rides: { date: number; distance: number; elevGain: number; duration: number; eFTP?: number; ctl?: number; atl?: number; tss?: number; hrTSS?: number }[],
   ftp: number,
@@ -1174,10 +1219,16 @@ export function calibrateSummaryModels(
   const validRides = rides.filter(r => r.distance > 0 && r.duration > 0);
   if (validRides.length === 0) return;
 
+  routeDurationModel.resetToDefaults();
+  ftpModel.resetToDefaults();
+  injuryModel.resetToDefaults();
+
   // 1. Train Route Duration Model (100 epochs)
   const epochs = 100;
   for (let epoch = 0; epoch < epochs; epoch++) {
-    const shuffled = [...validRides].sort(() => Math.random() - 0.5);
+    // Reseeded per epoch so the order still varies between epochs, but the whole
+    // run is reproducible.
+    const shuffled = seededShuffle(validRides, 1337 + epoch);
     for (const r of shuffled) {
       trainRouteDurationModel(r.distance, r.elevGain, ftp, weight, r.duration);
     }
@@ -1230,6 +1281,14 @@ export function calibrateFullModels(
   ftp: number,
   weight: number
 ): void {
+  // Same reason as calibrateSummaryModels. The climb calibration is an exponential
+  // moving average with a sample count that only ever grows, so replaying every
+  // climb from every ride on each load kept feeding the same climbs into it - and
+  // once sampleCount passes 5 the learning rate drops to 0.1, so what the athlete
+  // actually gets is the same handful of climbs hammered in hundreds of times
+  // rather than a calibration over their riding.
+  resetClimbCalibration();
+
   for (const r of rides) {
     const full = allRidesFull.find(f => f.id === r.id);
     if (!full || !full.points || full.points.length === 0) continue;

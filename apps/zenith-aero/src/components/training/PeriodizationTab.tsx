@@ -2,6 +2,7 @@ import React from 'react';
 import { Flag, Star, AlertCircle } from 'lucide-react';
 import { TrainingPhase, phaseConfig } from '../../types/training';
 import { RideSummaryWithBests } from '../../types/workout';
+import { toDateKeyFromDate } from '@zenith/shared';
 
 interface PeriodizationTabProps {
   rides: RideSummaryWithBests[];
@@ -35,7 +36,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
 
   const weekTSSactual = days2.reduce((sum, _, i) => {
     const dd = new Date(mon); dd.setDate(mon.getDate() + i);
-    const rr = ridesByDay.get(dd.toISOString().slice(0,10));
+    const rr = ridesByDay.get(toDateKeyFromDate(dd));
     return sum + (rr?.tss ?? 0);
   }, 0);
 
@@ -126,9 +127,9 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
             {days2.map((day, i) => {
               const dd = new Date(mon); dd.setDate(mon.getDate() + i);
-              const key2 = dd.toISOString().slice(0, 10);
+              const key2 = toDateKeyFromDate(dd);
               const rideInfo2 = ridesByDay.get(key2);
-              const isToday2 = key2 === now2.toISOString().slice(0, 10);
+              const isToday2 = key2 === toDateKeyFromDate(now2);
               const focus = phase.weekFocus[i];
               const isRest = focus === 'Rest' || focus === 'RACE';
 

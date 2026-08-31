@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { RunActivity } from '../types/stride';
 import { parseGpxFile } from '../utils/gpxParser';
 import { UploadCloud, Check, X, FileText, MapPin, Activity, Flame, Clock } from 'lucide-react';
+import { toDateKeyFromDate } from '@zenith/shared';
 
 interface GpxImportModalProps {
   isOpen: boolean;
@@ -43,7 +44,7 @@ export const GpxImportModal: React.FC<GpxImportModalProps> = ({
     const finalRun: RunActivity = {
       id: `gpx-${Date.now()}`,
       title: parsedRun.title || 'Imported GPX Route',
-      date: parsedRun.date || new Date().toISOString().slice(0, 10),
+      date: parsedRun.date || toDateKeyFromDate(new Date()),
       type: parsedRun.type || 'easy',
       isTreadmill: false,
       distanceKm: parsedRun.distanceKm || 5.0,

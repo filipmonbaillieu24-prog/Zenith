@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RunningShoe } from '../types/stride';
 import { X, Plus, Footprints, Trash2, CheckCircle2, AlertTriangle, Check } from 'lucide-react';
+import { toDateKeyFromDate } from '@zenith/shared';
 
 interface ShoeTrackerModalProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
       totalDistanceKm: 0,
       maxDistanceKm: parseInt(maxDistanceKm, 10) || 700,
       retired: false,
-      purchaseDate: new Date().toISOString().slice(0, 10)
+      purchaseDate: toDateKeyFromDate(new Date())
     };
 
     onAddShoe(newShoe);

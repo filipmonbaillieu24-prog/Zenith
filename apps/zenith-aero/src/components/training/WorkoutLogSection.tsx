@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Award } from 'lucide-react';
+import { toDateKeyFromDate } from '@zenith/shared';
 
 export interface WorkoutLogEntry {
   id: string;
@@ -18,7 +19,7 @@ interface WorkoutLogSectionProps {
 
 export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAddLog, onDeleteLog }) => {
   const [showAdd, setShowAdd] = useState(false);
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(toDateKeyFromDate(new Date()));
   const [workoutType, setWorkoutType] = useState('Endurance / Z2');
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [rpe, setRpe] = useState(6);

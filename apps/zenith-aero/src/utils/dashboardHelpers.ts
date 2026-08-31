@@ -1,4 +1,5 @@
 import { RideSummaryWithBests } from '../types/workout';
+import { toDateKeyFromDate } from '@zenith/shared';
 
 export function fmtShortDate(ms: number) {
   return new Date(ms).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
@@ -34,7 +35,7 @@ export function buildWeeklyTSS(rides: RideSummaryWithBests[]) {
   for (const r of rides) {
     const d = new Date(r.date);
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // Monday of that week
-    const key = d.toISOString().slice(0, 10);
+    const key = toDateKeyFromDate(d);
     const tss = r.tss ?? r.hrTSS ?? 0;
     weeklyMap.set(key, (weeklyMap.get(key) ?? 0) + tss);
   }

@@ -1,3 +1,4 @@
+import { toDateKeyFromDate } from '@zenith/shared';
 export interface ZaneProfile {
   height?: number; // in cm
   gender?: string; // male, female, other
@@ -377,7 +378,7 @@ export function runZaneCalibration(
   let lastBodyFat: number | null = null;
 
   // Track the last date in logs to calculate daysAgo for recency weighting
-  const lastDate = logsWithWeight.length > 0 ? logsWithWeight[logsWithWeight.length - 1].date : new Date().toISOString().split('T')[0];
+  const lastDate = logsWithWeight.length > 0 ? logsWithWeight[logsWithWeight.length - 1].date : toDateKeyFromDate(new Date());
   const lastDateMs = new Date(lastDate + 'T12:00:00').getTime();
 
   for (let i = 1; i < logsWithWeight.length; i++) {

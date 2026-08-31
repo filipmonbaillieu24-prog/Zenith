@@ -2,6 +2,7 @@ import React from 'react';
 import './ConsistencyCalendar.css';
 import { Activity } from 'lucide-react';
 import { RideSummaryWithBests } from '../../types/workout';
+import { toDateKeyFromDate } from '@zenith/shared';
 
 interface ConsistencyCalendarProps {
   rides: RideSummaryWithBests[];
@@ -10,14 +11,14 @@ interface ConsistencyCalendarProps {
 export const ConsistencyCalendar: React.FC<ConsistencyCalendarProps> = ({ rides }) => {
   const ridesByDay = new Map<string, number>();
   for (const r of rides) {
-    const key = new Date(r.date).toISOString().slice(0, 10);
+    const key = toDateKeyFromDate(new Date(r.date));
     ridesByDay.set(key, (ridesByDay.get(key) ?? 0) + r.distance);
   }
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const days: { date: string; km: number; week: number; dow: number }[] = [];
   for (let i = 111; i >= 0; i--) {
     const d = new Date(today); d.setDate(today.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const key = toDateKeyFromDate(d);
     days.push({ date: key, km: ridesByDay.get(key) ?? 0, week: Math.floor(i / 7), dow: d.getDay() });
   }
   const maxKm = Math.max(...days.map(d => d.km), 1);

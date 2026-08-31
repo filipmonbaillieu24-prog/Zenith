@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { zenithAlert } from '@zenith/shared';
+import { zenithAlert, toDateKeyFromDate } from '@zenith/shared';
 import { RunActivity, RunType, RunningShoe } from '../types/stride';
 import { 
   X, 
@@ -34,7 +34,7 @@ export const RunModal: React.FC<RunModalProps> = ({
   if (!isOpen) return null;
 
   const [title, setTitle] = useState(initialRun?.title || '');
-  const [date, setDate] = useState(initialRun?.date || new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(initialRun?.date || toDateKeyFromDate(new Date()));
   const [timeOfDay, setTimeOfDay] = useState(initialRun?.timeOfDay || '09:30');
   const [type, setType] = useState<RunType>(initialRun?.type || 'easy');
   const [isTreadmill, setIsTreadmill] = useState(initialRun?.isTreadmill || false);

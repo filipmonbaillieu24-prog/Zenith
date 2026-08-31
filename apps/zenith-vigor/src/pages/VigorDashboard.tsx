@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { SleepStageDot } from '../components/SleepStageDot';
 import { getLocalDateKey } from '../utils/dates';
 import { supabase } from '../utils/supabaseClient';
-import { ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, zenithConfirm } from '@zenith/shared';
+import { ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, zenithConfirm, toDateKeyFromDate } from '@zenith/shared';
 import { 
   Scale, 
   Moon, 
@@ -84,7 +84,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
 
   // New Measurement form state
   const [newMeasurement, setNewMeasurement] = useState({
-    logged_at: new Date().toISOString().split('T')[0],
+    logged_at: toDateKeyFromDate(new Date()),
     body_fat_pct: '',
     muscle_mass_kg: '',
     waist_cm: '',
@@ -103,7 +103,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   // Photo form states
   const [photoAngle, setPhotoAngle] = useState<'front' | 'side' | 'back'>('front');
   const [photoNotes, setPhotoNotes] = useState('');
-  const [photoDate, setPhotoDate] = useState(new Date().toISOString().split('T')[0]);
+  const [photoDate, setPhotoDate] = useState(toDateKeyFromDate(new Date()));
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -453,7 +453,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       setMeasurements(prev => [...prev, data].sort((a, b) => a.logged_at.localeCompare(b.logged_at)));
       
       setNewMeasurement({
-        logged_at: new Date().toISOString().split('T')[0],
+        logged_at: toDateKeyFromDate(new Date()),
         body_fat_pct: '',
         muscle_mass_kg: '',
         waist_cm: '',

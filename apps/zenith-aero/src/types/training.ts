@@ -1,3 +1,5 @@
+import { toDateKeyFromDate } from '@zenith/shared';
+
 // ─── Training Types ───────────────────────────────────────────────────────────
 // Extracted from TrainingPage.tsx for reuse across training sub-components.
 
@@ -76,4 +78,7 @@ export function saveLog(entries: WorkoutLogEntry[]) {
   localStorage.setItem(LOG_KEY, JSON.stringify(entries));
 }
 
-export function todayStr() { return new Date().toISOString().slice(0, 10); }
+/** Today as a LOCAL calendar day. A UTC key here made "today" read as yesterday
+ *  for anyone east of UTC in the small hours, and as tomorrow for anyone west of
+ *  it in the evening - which is when most people log a ride. */
+export function todayStr() { return toDateKeyFromDate(new Date()); }
