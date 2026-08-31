@@ -259,6 +259,21 @@ class ScaleBleManager(private val context: Context) {
         _capturedFrames.value = (_capturedFrames.value + line).takeLast(60)
     }
 
+    /**
+     * The GATT map, kept apart from the frame buffer.
+     *
+     * Both used to share one 60-line ring, so a scale that repeats itself pushed the
+     * service list straight out of it - the first diagnostics report from a real
+     * weigh-in arrived with sixty identical frames and only a fragment of the map,
+     * which is exactly the half that identifies the device.
+     */
+    private val _gattMap = MutableStateFlow<List<String>>(emptyList())
+    val gattMap: StateFlow<List<String>> = _gattMap
+
+    private fun captureGatt(line: String) {
+        _gattMap.value = (_gattMap.value + line).takeLast(40)
+    }
+
     // ── Scanning ────────────────────────────────────────────────────────────────
 
     private val scanCallback = object : ScanCallback() {
@@ -293,6 +308,20 @@ class ScaleBleManager(private val context: Context) {
                 if (bytes != null && bytes.isNotEmpty()) {
                     capture("ADV ${device.name} svc=${parcelUuid.uuid} ${bytes.toHex()}")
                     decodeAny(parcelUuid.uuid, bytes, "advertisement")?.let { publish(it) }
+                }
+            }
+
+            // Manufacturer data was never captured, and it is where this family of
+            // scale is most likely to be putting the weight: the frames arriving over
+            // GATT are manufacturer-shaped (an 0x11 0xFF block carrying the MAC) and
+            // contain no weight at all, which is what a beacon looks like rather than
+            // a measurement.
+            record?.manufacturerSpecificData?.let { mfr ->
+                for (i in 0 until mfr.size()) {
+                    val id = mfr.keyAt(i)
+                    val bytes = mfr.valueAt(i) ?: continue
+                    if (bytes.isEmpty()) continue
+                    capture("ADV ${device.name} mfr=0x%04X %s".format(id, bytes.toHex()))
                 }
             }
         }
@@ -404,15 +433,19 @@ class ScaleBleManager(private val context: Context) {
             // which OEM family the scale belongs to.
             val notifiable = mutableListOf<BluetoothGattCharacteristic>()
             for (service in g.services) {
-                capture("SVC ${service.uuid}")
+                captureGatt("SVC ${service.uuid}")
                 for (ch in service.characteristics) {
                     val props = buildList {
                         if (ch.properties and BluetoothGattCharacteristic.PROPERTY_READ != 0) add("read")
                         if (ch.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) add("notify")
                         if (ch.properties and BluetoothGattCharacteristic.PROPERTY_INDICATE != 0) add("indicate")
                         if (ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0) add("write")
+                        // Without this, the one characteristic a vendor scale expects
+                        // a command on reported as "[]" - no properties at all - which
+                        // made it look inert when it is the way in.
+                        if (ch.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0) add("write-no-response")
                     }
-                    capture("  CHR ${ch.uuid} [${props.joinToString(",")}]")
+                    captureGatt("  CHR ${ch.uuid} [${props.joinToString(",")}]")
                     val canNotify = ch.properties and
                         (BluetoothGattCharacteristic.PROPERTY_NOTIFY or BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
                     if (canNotify) notifiable.add(ch)
@@ -546,11 +579,31 @@ class ScaleBleManager(private val context: Context) {
         }
         appendLine()
 
+        val gatt = _gattMap.value
         val frames = _capturedFrames.value
+        appendLine("gatt map:")
+        if (gatt.isEmpty()) {
+            appendLine("  (none - never connected, or the services were never read.)")
+        }
+        gatt.forEach { appendLine("  $it") }
+        appendLine()
+
         appendLine("frames: ${frames.size}")
         if (frames.isEmpty()) {
             appendLine("  (none - nothing was connected to, or the connection sent no data.)")
         }
-        frames.forEach { appendLine("  $it") }
+
+        // Consecutive repeats collapse to one line with a count. Sixty identical
+        // frames say one thing - the scale is repeating itself - and printing them
+        // sixty times buries every other line in the report.
+        var run = 0
+        var previous: String? = null
+        for (frame in frames) {
+            if (frame == previous) { run++; continue }
+            if (previous != null) appendLine("  $previous" + if (run > 1) "   (x$run)" else "")
+            previous = frame
+            run = 1
+        }
+        if (previous != null) appendLine("  $previous" + if (run > 1) "   (x$run)" else "")
     }
 }
