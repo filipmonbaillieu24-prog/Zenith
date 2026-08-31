@@ -1823,6 +1823,21 @@ export default function App() {
                         <span className="kratos-sparkline-value">
                           {latest1RM} <span className="kratos-sparkline-unit">{ex?.weight_unit}</span>
                         </span>
+                        {/* A number on its own does not say whether it is going
+                            anywhere. The verdict comes from the same analysis the
+                            logbook uses, so the two cannot disagree. */}
+                        {(() => {
+                          const t = exerciseTrends.find(x => x.exerciseId === exId);
+                          if (!t || t.verdict === 'new') return null;
+                          const colour = t.verdict === 'progressing' ? '#55efc4'
+                            : t.verdict === 'regressing' ? '#ff7675' : '#f5a623';
+                          return (
+                            <span style={{ fontSize: 9, fontWeight: 800, color: colour, letterSpacing: '0.3px' }}>
+                              {t.verdict === 'progressing' ? '↑' : t.verdict === 'regressing' ? '↓' : '→'}{' '}
+                              {t.headline.toUpperCase()}
+                            </span>
+                          );
+                        })()}
                         <div style={{ width: '100%', height: 40 }}>
                           <ResponsiveContainer>
                             <LineChart data={sparkData}>
@@ -1851,6 +1866,48 @@ export default function App() {
                         ))}
                       </select>
                     </div>
+
+                    {/* Every session of this exercise, whichever routine it came
+                        from. Several exercises here appear in more than one routine -
+                        Rear Delt Flye is in both ARMS and PULL - and looking at it
+                        one routine at a time hides half its history. */}
+                    {(() => {
+                      const t = exerciseTrends.find(x => x.exerciseId === selectedExercise1RM);
+                      if (!t) return null;
+                      const routines = [...new Set(t.sessions.map(x => x.workoutName))];
+                      const colour = t.verdict === 'progressing' ? '#55efc4'
+                        : t.verdict === 'regressing' ? '#ff7675'
+                        : t.verdict === 'stalled' ? '#f5a623' : '#94a3b8';
+                      return (
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: colour }}>{t.headline}</span>
+                            <span style={{ fontSize: 10, color: '#64748b' }}>
+                              {t.sessions.length} session{t.sessions.length === 1 ? '' : 's'}
+                              {routines.length > 1 ? ` across ${routines.join(' + ')}` : routines.length === 1 ? ` in ${routines[0]}` : ''}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, lineHeight: 1.5 }}>{t.detail}</div>
+
+                          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {t.sessions.slice(-6).map(x => (
+                              <div key={x.workoutId + x.exerciseId} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 10, color: '#64748b' }}>
+                                <span style={{ minWidth: 92 }}>
+                                  {new Date(x.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                  <span style={{ opacity: 0.6 }}> {x.workoutName}</span>
+                                </span>
+                                <span className="zenith-tnum" style={{ flex: 1, textAlign: 'right' }}>
+                                  {x.bestSet ? `${x.bestSet.weight}${t.unit} × ${x.bestSet.reps} @ RIR ${x.bestSet.rir}` : '—'}
+                                </span>
+                                <span className="zenith-tnum" style={{ width: 62, textAlign: 'right', color: '#94a3b8' }}>
+                                  {x.hardSets}/{x.workingSets} hard
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     <div style={{ width: '100%', height: 160 }}>
                       <ResponsiveContainer>
@@ -2681,6 +2738,26 @@ export default function App() {
                                       </strong>
                                     </>
                                   )}
+                                  {/* Hard sets, because effort and tonnage move
+                                      independently. This athlete's ARMS session went
+                                      from 5 sets near failure to 9 while the weights
+                                      barely changed - training meaningfully harder,
+                                      and nothing said so. */}
+                                  {(() => {
+                                    const now = cmp.exercises.reduce((n, e) => n + e.current.hardSets, 0);
+                                    const before = cmp.exercises.reduce((n, e) => n + (e.previous?.hardSets ?? 0), 0);
+                                    if (now === 0 && before === 0) return null;
+                                    const delta = now - before;
+                                    return (
+                                      <>
+                                        {'  ·  '}
+                                        <strong style={{ color: delta > 0 ? '#55efc4' : delta < 0 ? '#f5a623' : '#94a3b8' }}>
+                                          {now} hard set{now === 1 ? '' : 's'}
+                                        </strong>
+                                        {delta !== 0 ? ` (${delta > 0 ? '+' : ''}${delta})` : ''}
+                                      </>
+                                    );
+                                  })()}
                                 </span>
                               </div>
 
