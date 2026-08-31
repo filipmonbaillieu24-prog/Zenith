@@ -35,6 +35,7 @@ import {
   Line,
   ComposedChart
 } from 'recharts';
+import { buildExerciseSessions, analyseAllExercises, compareToPreviousSession, TREND_WINDOW } from './utils/progression';
 
 // Type Definitions
 export default function App() {
@@ -1534,6 +1535,18 @@ export default function App() {
     );
   };
 
+  // Per-exercise progression. Web only - the phone app is for logging a session in
+  // front of a rack, this is for looking back at a month of them.
+  const exerciseSessions = useMemo(
+    () => buildExerciseSessions(workouts as any, exercises as any, latestBodyweight || 0),
+    [workouts, exercises, latestBodyweight]
+  );
+  const exerciseTrends = useMemo(() => analyseAllExercises(exerciseSessions), [exerciseSessions]);
+  const needsAttention = useMemo(
+    () => exerciseTrends.filter(t => t.verdict === 'stalled' || t.verdict === 'regressing'),
+    [exerciseTrends]
+  );
+
   const userName = session?.user?.user_metadata?.name || session?.user?.user_metadata?.fitness_profile?.name || 'Athlete';
 
   const kratosNavItems = [
@@ -2524,6 +2537,72 @@ export default function App() {
         {/* ----------------- LOGBOOK TAB ----------------- */}
         {activeTab === 'logs' && (
           <div className="animate-slide-up">
+            {/* What is not moving.
+                Listed first and separately, because it is the only part of a logbook
+                that asks for a decision. Everything below is a record of what
+                happened; this is the bit that says something should change. */}
+            {exerciseTrends.length > 0 && (
+              <div className="kratos-card" style={{ marginBottom: 20 }}>
+                <h3 className="kratos-card-title">
+                  <TrendingUp size={16} style={{ color: needsAttention.length > 0 ? '#f5a623' : '#55efc4' }} />
+                  {needsAttention.length > 0 ? 'Worth a look' : 'Everything is moving'}
+                </h3>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: '0 0 14px' }}>
+                  Judged on your last {TREND_WINDOW} sessions of each exercise, not against an all-time best &mdash;
+                  an early session logged with an optimistic RIR would otherwise read as months of decline.
+                </p>
+
+                {needsAttention.length === 0 ? (
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                    Nothing has stalled. {exerciseTrends.filter(t => t.verdict === 'progressing').length} of{' '}
+                    {exerciseTrends.length} exercises are climbing.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {needsAttention.map(t => {
+                      const colour = t.verdict === 'regressing' ? '#ff7675' : '#f5a623';
+                      return (
+                        <div key={t.exerciseId} style={{
+                          background: `${colour}0f`, border: `1px solid ${colour}33`,
+                          borderRadius: 10, padding: '12px 14px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                            <strong style={{ fontSize: 13, color: '#e2e8f0' }}>{t.exerciseName}</strong>
+                            <span style={{ fontSize: 12, fontWeight: 800, color: colour }}>{t.headline}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, lineHeight: 1.5 }}>{t.detail}</div>
+                          <div style={{ fontSize: 10, color: '#64748b', marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
+                            {t.sessions.slice(-TREND_WINDOW).map(x => {
+                              const w = x.bestSet;
+                              return w
+                                ? `${new Date(x.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}: ${w.weight}${t.unit} × ${w.reps} @ RIR ${w.rir}`
+                                : '';
+                            }).filter(Boolean).join('   →   ')}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {exerciseTrends.some(t => t.verdict === 'progressing') && (
+                  <details style={{ marginTop: 14 }}>
+                    <summary style={{ cursor: 'pointer', fontSize: 11, color: '#94a3b8' }}>
+                      What is going well ({exerciseTrends.filter(t => t.verdict === 'progressing').length})
+                    </summary>
+                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {exerciseTrends.filter(t => t.verdict === 'progressing').map(t => (
+                        <div key={t.exerciseId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, gap: 12 }}>
+                          <span style={{ color: '#94a3b8' }}>{t.exerciseName}</span>
+                          <strong style={{ color: '#55efc4' }}>{t.headline}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
+
             <div className="kratos-card">
               <h3 className="kratos-card-title"><NotebookText size={16} style={{ color: '#cbd5e1' }} /> Training Logbook</h3>
 
@@ -2566,6 +2645,71 @@ export default function App() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Against the previous run of the SAME routine.
+                            Matched on template_id, so a PUSH is compared with the
+                            last PUSH rather than with whatever session happened to
+                            come before it - which is usually a different day
+                            entirely and answers nothing. */}
+                        {(() => {
+                          const cmp = compareToPreviousSession(w.id, exerciseSessions);
+                          if (!cmp || cmp.previousDate === null) return null;
+                          const moved = cmp.exercises.filter(e => e.e1rmChangePct !== null);
+                          if (moved.length === 0) return null;
+
+                          const gained = moved.filter(e => (e.e1rmChangePct as number) >= 2.5);
+                          const lost = moved.filter(e => (e.e1rmChangePct as number) <= -2.5);
+                          const prevLabel = new Date(cmp.previousDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+
+                          return (
+                            <div style={{
+                              background: 'rgba(255,255,255,0.02)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: 10, padding: '12px 14px', marginBottom: 16
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, alignItems: 'baseline', marginBottom: 10 }}>
+                                <strong style={{ fontSize: 12, color: '#e2e8f0' }}>
+                                  vs your previous {cmp.workoutName} ({prevLabel})
+                                </strong>
+                                <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                                  {gained.length} up, {lost.length} down, {moved.length - gained.length - lost.length} the same
+                                  {cmp.volumeChangePct !== null && (
+                                    <>
+                                      {'  ·  volume '}
+                                      <strong style={{ color: cmp.volumeChangePct >= 0 ? '#55efc4' : '#ff7675' }}>
+                                        {cmp.volumeChangePct >= 0 ? '+' : ''}{cmp.volumeChangePct}%
+                                      </strong>
+                                    </>
+                                  )}
+                                </span>
+                              </div>
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                {moved.map(e => {
+                                  const pct = e.e1rmChangePct as number;
+                                  const colour = pct >= 2.5 ? '#55efc4' : pct <= -2.5 ? '#ff7675' : '#94a3b8';
+                                  const now = e.current.bestSet;
+                                  const before = e.previous?.bestSet;
+                                  return (
+                                    <div key={e.exerciseName} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11, alignItems: 'baseline' }}>
+                                      <span style={{ color: '#94a3b8', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {e.exerciseName}
+                                      </span>
+                                      <span style={{ color: '#64748b', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                        {before ? `${before.weight}×${before.reps}` : '—'}
+                                        {'  →  '}
+                                        {now ? `${now.weight}×${now.reps}` : '—'} {e.unit}
+                                      </span>
+                                      <strong style={{ color: colour, width: 52, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                        {pct >= 0 ? '+' : ''}{pct}%
+                                      </strong>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
 
                         {/* Exercise Sets breakdown */}
                         <div style={{ display: 'flex', flexFlow: 'row wrap', gap: 16 }}>
