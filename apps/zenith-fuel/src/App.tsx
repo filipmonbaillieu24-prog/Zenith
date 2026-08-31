@@ -13,6 +13,33 @@ import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates'
 import { toDateKey, toDateKeyFromDate } from '@zenith/shared';
 import { buildFusionTrainingSamples, measuredWeeklyRateKg } from './utils/fusionRetrain';
 
+/** Trims a portion count for display: 1, 1.5, 0.25 - never "1.0000000002". */
+function formatPortions(n: number): string {
+  return String(Math.round(n * 100) / 100);
+}
+
+/**
+ * One portion's worth of a recipe.
+ *
+ * The stored columns are totals for the whole recipe, which is exactly the trap
+ * this exists to close - reading them as a portion overstated every logged meal
+ * by however many portions the recipe made.
+ */
+export function perPortion(recipe: {
+  calories: number; carbs: number; protein: number; fat: number;
+  caffeine_mg?: number; servings?: number;
+}) {
+  const makes = Math.max(0.1, Number(recipe.servings) || 1);
+  return {
+    calories: recipe.calories / makes,
+    carbs: recipe.carbs / makes,
+    protein: recipe.protein / makes,
+    fat: recipe.fat / makes,
+    caffeine_mg: (Number(recipe.caffeine_mg) || 0) / makes,
+    makes
+  };
+}
+
 function App() {
   // Auth & Session
   const [loadingSession, setLoadingSession] = useState(true);
@@ -150,6 +177,7 @@ function App() {
   const [recDesc, setRecDesc] = useState('');
   const [recCategory, setRecCategory] = useState('baseline');
   const [recServingSize, setRecServingSize] = useState('1 portion');
+  const [recServings, setRecServings] = useState('1');
   const [recIngredients, setRecIngredients] = useState<any[]>([]);
   const [recInstructions, setRecInstructions] = useState<string[]>(['']);
 
@@ -1081,6 +1109,8 @@ function App() {
         description: recDesc,
         category: recCategory,
         serving_size: recServingSize,
+        // The number the maths uses. serving_size beside it is prose.
+        servings: Math.max(0.1, parseFloat(recServings) || 1),
         calories: totalCal,
         carbs: totalCarb,
         protein: totalProt,
@@ -1129,6 +1159,7 @@ function App() {
     setRecDesc(rec.description);
     setRecCategory(rec.category);
     setRecServingSize(rec.serving_size === '1 portie' ? '1 portion' : rec.serving_size);
+    setRecServings(String(rec.servings ?? 1));
     setRecIngredients(rec.ingredients);
     setRecInstructions(rec.instructions.length > 0 ? rec.instructions : ['']);
     setShowRecipeModal(true);
@@ -1159,6 +1190,7 @@ function App() {
     setRecDesc('');
     setRecCategory('baseline');
     setRecServingSize('1 portion');
+    setRecServings('1');
     setRecIngredients([]);
     setRecInstructions(['']);
     setRecipeIngSearch('');
@@ -1260,15 +1292,24 @@ function App() {
       const rec = recipes.find(r => r.id === selectedLogRecipe);
       if (!rec) return;
 
-      const servings = parseFloat(logRecipeServings) || 1.0;
+      // Portions eaten, divided by the portions the recipe makes. This used to
+      // multiply the WHOLE recipe's totals by this field while labelling it
+      // "servings", so eating one portion of a four-portion bake required typing
+      // 0.25 - and typing 1, which the label invites, logged the entire dish.
+      const portionsEaten = parseFloat(logRecipeServings) || 1.0;
+      const recipeMakes = Math.max(0.1, Number(rec.servings) || 1);
+      const share = portionsEaten / recipeMakes;
+
       entry.recipe_id = rec.id;
-      entry.custom_name = rec.name;
-      entry.quantity = servings;
-      entry.calories = Math.round(rec.calories * servings);
-      entry.carbs = Math.round(rec.carbs * servings);
-      entry.protein = Math.round(rec.protein * servings);
-      entry.fat = Math.round(rec.fat * servings);
-      entry.caffeine_mg = Math.round((Number(rec.caffeine_mg) || 0) * servings);
+      entry.custom_name = recipeMakes > 1
+        ? `${rec.name} (${formatPortions(portionsEaten)} of ${formatPortions(recipeMakes)} portions)`
+        : rec.name;
+      entry.quantity = portionsEaten;
+      entry.calories = Math.round(rec.calories * share);
+      entry.carbs = Math.round(rec.carbs * share);
+      entry.protein = Math.round(rec.protein * share);
+      entry.fat = Math.round(rec.fat * share);
+      entry.caffeine_mg = Math.round((Number(rec.caffeine_mg) || 0) * share);
     }
 
     try {
@@ -3482,24 +3523,42 @@ function App() {
                   <h4 className="recipe-title">{rec.name}</h4>
                   <p className="recipe-desc">{rec.description || 'No description'}</p>
                   
-                  <div className="recipe-macros" style={{ marginBottom: 12 }}>
-                    <div>
-                      <div className="recipe-macro-val">{rec.calories}</div>
-                      <div className="recipe-macro-lbl">kcal</div>
-                    </div>
-                    <div>
-                      <div className="recipe-macro-val">{rec.carbs}g</div>
-                      <div className="recipe-macro-lbl">carbs</div>
-                    </div>
-                    <div>
-                      <div className="recipe-macro-val">{rec.protein}g</div>
-                      <div className="recipe-macro-lbl">prot</div>
-                    </div>
-                    <div>
-                      <div className="recipe-macro-val">{rec.fat}g</div>
-                      <div className="recipe-macro-lbl">fat</div>
-                    </div>
-                  </div>
+                  {/* Per portion, not per batch. These four numbers used to be the
+                      whole recipe's totals with no label saying so, which reads as a
+                      serving and is what made a four-portion bake look like a
+                      2,400 kcal meal. */}
+                  {(() => {
+                    const per = perPortion(rec);
+                    return (
+                      <>
+                        <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
+                          Per portion{rec.serving_size ? ` · ${rec.serving_size}` : ''}
+                        </div>
+                        <div className="recipe-macros" style={{ marginBottom: 6 }}>
+                          <div>
+                            <div className="recipe-macro-val">{Math.round(per.calories)}</div>
+                            <div className="recipe-macro-lbl">kcal</div>
+                          </div>
+                          <div>
+                            <div className="recipe-macro-val">{Math.round(per.carbs)}g</div>
+                            <div className="recipe-macro-lbl">carbs</div>
+                          </div>
+                          <div>
+                            <div className="recipe-macro-val">{Math.round(per.protein)}g</div>
+                            <div className="recipe-macro-lbl">prot</div>
+                          </div>
+                          <div>
+                            <div className="recipe-macro-val">{Math.round(per.fat)}g</div>
+                            <div className="recipe-macro-lbl">fat</div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 12 }}>
+                          Makes {formatPortions(per.makes)} portion{per.makes === 1 ? '' : 's'}
+                          {per.makes !== 1 ? ` · ${Math.round(rec.calories)} kcal for the batch` : ''}
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
                     <button 
@@ -4150,15 +4209,36 @@ function App() {
 
                     {selectedLogRecipe && (
                       <div className="form-group" style={{ marginTop: 8 }}>
-                        <label className="form-label">Portions / Factor</label>
-                        <input 
-                          type="number" 
+                        <label className="form-label">How many portions did you eat?</label>
+                        <input
+                          type="number"
                           step="any"
+                          min="0"
                           className="form-input"
                           value={logRecipeServings}
                           onChange={e => setLogRecipeServings(e.target.value)}
                           required
                         />
+                        {/* What is about to be logged, before it is logged. The old
+                            field was labelled "Portions / Factor" and multiplied the
+                            WHOLE recipe by it, so the honest entry for one portion of
+                            a four-portion bake was 0.25 and nothing on screen said so. */}
+                        {(() => {
+                          const rec = recipes.find(r => r.id === selectedLogRecipe);
+                          if (!rec) return null;
+                          const per = perPortion(rec);
+                          const eaten = parseFloat(logRecipeServings) || 0;
+                          return (
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
+                              Makes <strong>{formatPortions(per.makes)}</strong> portion{per.makes === 1 ? '' : 's'} at{' '}
+                              <strong>{Math.round(per.calories)} kcal</strong> each.
+                              {eaten > 0 && (
+                                <> Logging <strong style={{ color: 'var(--color-primary)' }}>{Math.round(per.calories * eaten)} kcal</strong>
+                                  {' '}&middot; {Math.round(per.carbs * eaten)}g C &middot; {Math.round(per.protein * eaten)}g P &middot; {Math.round(per.fat * eaten)}g F</>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </>
@@ -4384,17 +4464,64 @@ function App() {
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Portion size (textual)</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="e.g. 4 bars" 
+                    <label className="form-label">Makes how many portions?</label>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0.1"
+                      className="form-input"
+                      placeholder="e.g. 4"
+                      value={recServings}
+                      onChange={e => setRecServings(e.target.value)}
+                      required
+                    />
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                      Ingredients below are for the whole recipe. This is what they get divided by.
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">What one portion looks like (optional)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. one bowl, 2 slices"
                       value={recServingSize}
                       onChange={e => setRecServingSize(e.target.value)}
-                      required
                     />
                   </div>
                 </div>
+
+                {/* The per-portion figure, live, while the recipe is being built.
+                    Without it the only number on screen while adding ingredients is
+                    the whole-batch total, which is not the number anyone eats. */}
+                {recIngredients.length > 0 && (() => {
+                  const makes = Math.max(0.1, parseFloat(recServings) || 1);
+                  const tot = recIngredients.reduce((a: any, i: any) => ({
+                    calories: a.calories + i.calories,
+                    carbs: a.carbs + i.carbs,
+                    protein: a.protein + i.protein,
+                    fat: a.fat + i.fat,
+                    grams: a.grams + (Number(i.amount_g) || 0)
+                  }), { calories: 0, carbs: 0, protein: 0, fat: 0, grams: 0 });
+                  const per = (v: number) => Math.round(v / makes);
+                  return (
+                    <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: 10, padding: '12px 14px', marginTop: 12 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
+                        One portion{makes !== 1 ? ` (1 of ${formatPortions(makes)})` : ''}
+                        {tot.grams > 0 ? ` · about ${Math.round(tot.grams / makes)} g` : ''}
+                      </div>
+                      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                        <div><strong style={{ fontSize: 20 }}>{per(tot.calories)}</strong> <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>kcal</span></div>
+                        <div><strong style={{ fontSize: 14, color: 'var(--color-carb)' }}>{per(tot.carbs)}g</strong> <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>carbs</span></div>
+                        <div><strong style={{ fontSize: 14, color: 'var(--color-protein)' }}>{per(tot.protein)}g</strong> <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>protein</span></div>
+                        <div><strong style={{ fontSize: 14, color: 'var(--color-fat)' }}>{per(tot.fat)}g</strong> <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>fat</span></div>
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 8 }}>
+                        Whole recipe: {Math.round(tot.calories)} kcal &middot; {Math.round(tot.carbs)}g C &middot; {Math.round(tot.protein)}g P &middot; {Math.round(tot.fat)}g F
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16, marginTop: 10 }}>
                   <h4 className="form-label" style={{ marginBottom: 10 }}>Add Ingredients</h4>

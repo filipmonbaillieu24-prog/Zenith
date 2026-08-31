@@ -27,7 +27,15 @@ export interface Recipe {
   name: string;
   description: string;
   category: string;
+  /** Free-text description of a portion ("a bowl"). Descriptive only. */
   serving_size: string;
+  /**
+   * How many portions the recipe makes.
+   *
+   * calories/carbs/protein/fat below are totals for the WHOLE recipe - divide by
+   * this for one portion. Never read the totals as a portion.
+   */
+  servings: number;
   calories: number;
   carbs: number;
   protein: number;
