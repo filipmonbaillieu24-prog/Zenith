@@ -1,4 +1,4 @@
-import { TSB_FATIGUED_ABOVE, TSB_OPTIMAL_ABOVE, TSB_PEAK_ABOVE, TSB_FRESH_ABOVE, buildTrainingLoadPool, toDateKeyFromDate } from '@zenith/shared';
+import { TSB_FATIGUED_ABOVE, TSB_OPTIMAL_ABOVE, TSB_PEAK_ABOVE, TSB_FRESH_ABOVE, buildTrainingLoadPool, toDateKeyFromDate, assessLoadRisk, fetchSoreness, Severity } from '@zenith/shared';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { FitnessProfile, RideSummaryWithBests } from '../types/workout';
 import {
@@ -7,7 +7,7 @@ import {
 } from '../types/training';
 import { generateWorkout } from '../utils/workouts';
 import { computePMC, interpretTSB } from '../utils/pmc';
-import { analyzeNotesLocally, predictRecommendedWorkout, trainCoachModel, predictInjuryRisk } from '../utils/localNeuralNet';
+import { analyzeNotesLocally, predictRecommendedWorkout, trainCoachModel } from '../utils/localNeuralNet';
 import { customToWorkout } from '../utils/trainingHelpers';
 import { supabase } from '../utils/supabaseClient';
 
@@ -492,32 +492,30 @@ export function useTrainingState(
     return { days, maxTSS, weekTSS, weekGoal };
   }, [ridesByDay, workoutLog, pmcData.ctl]);
 
-  // Gym volume last 7 days (CR8)
-  const gymVolume7d = useMemo(() => {
-    const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
-    return kratosWorkouts
-      .filter((w: any) => w.completed_at && new Date(w.completed_at).getTime() >= sevenDaysAgo)
-      .reduce((sum, w) => sum + Number(w.volume || 0), 0);
-  }, [kratosWorkouts]);
+  // Soreness, for the load assessment. A muscle that stays sore for days is the
+  // closest thing to an early warning that can actually be collected - unlike an
+  // injury, which happens once or twice a year and can never train anything.
+  const [sorenessByDate, setSorenessByDate] = useState<Record<string, { groups: Record<string, Severity> }>>({});
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      const uid = data.session?.user?.id;
+      if (!uid) return;
+      setSorenessByDate(await fetchSoreness(supabase, uid, 14));
+    });
+  }, []);
 
-  // Calculate dynamic injury risk (CR5 & CR8)
-  const injuryRiskScore = useMemo(() => {
-    const acwr = pmcData.ctl > 0 ? pmcData.atl / pmcData.ctl : 1.0;
-    const tsb = pmcData.tsb;
-    const fatigueProxy = Math.min(1.0, Math.max(0, (pmcData.atl - pmcData.ctl) / 50));
-    const illnessProxy = acwr > 1.3 ? 0.6 : 0.1;
-    return predictInjuryRisk(
-      pmcData.ctl,
-      pmcData.atl,
-      tsb,
-      fatigueProxy,
-      illnessProxy,
-      dailySteps,
-      gymVolume7d
-    );
-  }, [pmcData, dailySteps, gymVolume7d]);
 
-  const overtrainingRisk = injuryRiskScore > 0.7 ? 'high' : injuryRiskScore > 0.4 ? 'moderate' : null;
+  // Training-load risk, as the workload ratio it always was.
+  //
+  // This used to run an eight-input neural network whose training target was a
+  // threshold on its own inputs - see the note in localNeuralNet.ts. The result was
+  // then turned into 'high'/'moderate'/null and returned from this hook, where
+  // nothing rendered it. A model that cannot learn, feeding a value nothing shows.
+  const loadRisk = useMemo(
+    () => assessLoadRisk(pmcData.ctl, pmcData.atl, sorenessByDate),
+    [pmcData.ctl, pmcData.atl, sorenessByDate]
+  );
+  const overtrainingRisk = loadRisk.level === 'low' ? null : loadRisk.level;
 
   // ── Type counts ──
   const weekTypeCount = useMemo(() => {
@@ -581,6 +579,7 @@ export function useTrainingState(
     tssImpact,
     weekLoadData,
     overtrainingRisk,
+    loadRisk,
     typeCountWarning,
     todaySleepQuality,
     dailySteps,

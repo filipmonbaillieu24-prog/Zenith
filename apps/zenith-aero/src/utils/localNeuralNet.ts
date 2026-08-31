@@ -503,80 +503,9 @@ export function trainFTPModel(
 
 // ─── MODEL 6: OVERTRAINING & INJURY RISK ────────────────────────────────────────
 
-function generateInjuryDefaultWeights() {
-  // Input: [CTL/100, ATL/100, TSB/100, fatigueScore, illnessScore, acuteChronicRatio/3, dailySteps/20000, gymVolume/10000] (8 features)
-  // Hidden: 8, Output: 1
-  const W1: number[][] = Array.from({ length: 8 }, () => new Array(8).fill(0));
-  const B1: number[] = new Array(8).fill(0.0);
-  const W2: number[][] = Array.from({ length: 8 }, () => new Array(1).fill(0));
-  const B2: number[] = [-0.15];
 
-  for (let i = 0; i < 8; i++) {
-    W1[0][i] = 0.2;  // ctl
-    W1[1][i] = 0.4;  // atl
-    W1[2][i] = -0.6; // tsb (negative TSB increases risk)
-    W1[3][i] = 0.7;  // fatigue
-    W1[4][i] = 0.9;  // illness
-    W1[5][i] = 0.8;  // acute chronic ratio
-    W1[6][i] = 0.5;  // daily steps
-    W1[7][i] = 0.6;  // gym volume
-    W2[i][0] = 0.5;
-  }
 
-  return { W1, B1, W2, B2 };
-}
 
-const injuryModel = new SimpleMLP(8, 8, 1, 'cyclo_injury_nn_weights_v2', generateInjuryDefaultWeights);
-
-export function predictInjuryRisk(
-  ctl: number,
-  atl: number,
-  tsb: number,
-  fatigueScore: number,
-  illnessScore: number,
-  dailySteps: number = 0,
-  recentGymVolume: number = 0
-): number {
-  const acRatio = ctl > 0 ? (atl / ctl) : 1.0;
-  const x = [
-    Math.min(1.5, ctl / 100),
-    Math.min(1.5, atl / 100),
-    Math.max(0, Math.min(1, (tsb + 50) / 100)),
-    Math.min(1.0, fatigueScore),
-    Math.min(1.0, illnessScore),
-    Math.min(1.0, acRatio / 3),
-    Math.min(1.0, dailySteps / 20000),
-    Math.min(1.5, recentGymVolume / 10000)
-  ];
-
-  const y = injuryModel.predict(x);
-  return parseFloat(y[0].toFixed(2)); // returns risk 0..1
-}
-
-export function trainInjuryModel(
-  ctl: number,
-  atl: number,
-  tsb: number,
-  fatigueScore: number,
-  illnessScore: number,
-  actualInjuryOccurred: boolean,
-  dailySteps: number = 0,
-  recentGymVolume: number = 0
-): void {
-  const acRatio = ctl > 0 ? (atl / ctl) : 1.0;
-  const x = [
-    Math.min(1.5, ctl / 100),
-    Math.min(1.5, atl / 100),
-    Math.max(0, Math.min(1, (tsb + 50) / 100)),
-    Math.min(1.0, fatigueScore),
-    Math.min(1.0, illnessScore),
-    Math.min(1.0, acRatio / 3),
-    Math.min(1.0, dailySteps / 20000),
-    Math.min(1.5, recentGymVolume / 10000)
-  ];
-
-  injuryModel.trainLocal(x, [actualInjuryOccurred ? 0.95 : 0.05], 0.15);
-}
 
 // ─── MODEL 7: CLIMB TIME PREDICTOR (physics model + per-rider calibration) ────
 //
@@ -1221,7 +1150,6 @@ export function calibrateSummaryModels(
 
   routeDurationModel.resetToDefaults();
   ftpModel.resetToDefaults();
-  injuryModel.resetToDefaults();
 
   // 1. Train Route Duration Model (100 epochs)
   const epochs = 100;
@@ -1258,21 +1186,25 @@ export function calibrateSummaryModels(
     }
   }
 
-  // 3. Train Injury Model (using ACWR load zones)
-  for (const r of validRides) {
-    if (r.ctl && r.atl) {
-      const acwr = r.ctl > 0 ? r.atl / r.ctl : 1.0;
-      const isHighRisk = acwr > 1.5 || acwr < 0.5;
-      trainInjuryModel(
-        r.ctl,
-        r.atl,
-        r.ctl - r.atl,
-        Math.min(1.0, Math.max(0, (r.atl - r.ctl) / 50)), // fatigue proxy
-        acwr > 1.3 ? 0.8 : 0.1, // illness risk proxy (0..1)
-        isHighRisk
-      );
-    }
-  }
+  // The injury model that used to be trained here has been removed rather than
+  // fixed, because it could not be fixed.
+  //
+  // Its target was `acwr > 1.5 || acwr < 0.5`, computed from CTL and ATL - its own
+  // inputs. Six of its eight features were functions of those same two numbers, so
+  // it was a network fitted to a threshold rule over its own inputs: it could only
+  // ever approximate that rule less exactly than the rule itself. The two features
+  // that did carry outside information, daily steps and gym volume, were passed here
+  // only as their zero defaults, so the model never saw a non-zero value in those
+  // slots while prediction fed it live ones.
+  //
+  // It also had an actualInjuryOccurred path that no caller ever supplied, because
+  // no table records an injury. And more feedback would not have rescued it: an
+  // athlete produces maybe one or two injuries a year, and nothing learns a
+  // classifier from two positive examples. Readiness and soreness became learnable
+  // by being answerable daily; injury is not that kind of question.
+  //
+  // The ratio it was approximating is now applied directly, and labelled as the
+  // workload guideline it is - see shared/services/injuryRisk.ts.
 }
 
 export function calibrateFullModels(
@@ -1327,7 +1259,7 @@ export function calibrateFullModels(
 // fetched in one query and handed to each model directly (loadFromPreloaded), instead
 // of each model querying for itself.
 export async function initializeModels(supabase: any, userId: string): Promise<void> {
-  const models = [notesModel, coachModel, rpeModel, labelModel, ftpModel, injuryModel, cadenceModel, routeDurationModel];
+  const models = [notesModel, coachModel, rpeModel, labelModel, ftpModel, cadenceModel, routeDurationModel];
   const modelNames = models.map(m => m.modelName);
 
   const byModel = new Map<string, any>();
@@ -1354,7 +1286,6 @@ export function resetAllWeights() {
   rpeModel.reset();
   labelModel.reset();
   ftpModel.reset();
-  injuryModel.reset();
   cadenceModel.reset();
   routeDurationModel.reset();
   resetClimbCalibration();

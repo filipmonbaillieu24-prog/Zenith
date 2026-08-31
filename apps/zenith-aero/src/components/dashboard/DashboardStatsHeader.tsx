@@ -1,5 +1,5 @@
 import React from 'react';
-import { ZenithHeroStat, tsbContext } from '@zenith/shared';
+import { ZenithHeroStat, tsbContext, assessLoadRisk } from '@zenith/shared';
 
 interface DashboardStatsHeaderProps {
   profileName?: string;
@@ -52,6 +52,35 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Workload ratio, stated as the guideline it is.
+          There was an injury-risk neural network behind this idea, trained to
+          reproduce a threshold on its own inputs and feeding a hook nothing
+          rendered - so this information existed, could not learn, and was never
+          shown. See shared/services/injuryRisk.ts. */}
+      {(() => {
+        const risk = assessLoadRisk(latestPMC.ctl, latestPMC.atl);
+        if (risk.level === 'low' && risk.acwr !== null) return null;
+        const colour = risk.level === 'high' ? '#ff7675' : risk.level === 'moderate' ? '#f5a623' : '#94a3b8';
+        return (
+          <div style={{
+            background: `${colour}14`,
+            border: `1px solid ${colour}33`,
+            borderRadius: 12,
+            padding: '12px 16px'
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: colour, marginBottom: 2 }}>
+              {risk.headline}
+              {risk.acwr !== null && (
+                <span style={{ fontWeight: 600, color: '#94a3b8', marginLeft: 8 }}>
+                  this week vs your usual: {Math.round(risk.acwr * 100)}%
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>{risk.detail}</div>
+          </div>
+        );
+      })()}
 
       <div className="zenith-grid-12">
         <div className="zenith-span-8">
