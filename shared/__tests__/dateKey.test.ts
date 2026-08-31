@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative } from 'path';
-import { toDateKey, toDateKeyFromDate } from '../dateKey';
+import { toDateKey, toDateKeyFromDate, calendarDaysAgo } from '../dateKey';
 
 describe('local calendar day', () => {
   it('uses the day the athlete actually lived, not the UTC one', () => {
@@ -65,5 +65,38 @@ describe('no UTC day-keys in date-bucketing code', () => {
   it('every app buckets days with the shared helper', () => {
     walk(APPS);
     expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * "Yesterday" is a calendar word. Elapsed hours cannot answer it, and the muscle
+ * heatmap used to try: a session at 20:00 was still "Today (13h ago)" at 09:00 the
+ * next morning, and floor(hours / 24) under-counted any span that did not begin at
+ * midnight.
+ */
+describe('calendarDaysAgo', () => {
+  const at = (y: number, m: number, d: number, h: number) => new Date(y, m - 1, d, h, 0, 0);
+
+  it('counts an evening session as yesterday the next morning', () => {
+    const trained = at(2026, 8, 30, 20);   // 13 hours before...
+    const now = at(2026, 8, 31, 9);        // ...this
+    expect(calendarDaysAgo(trained.getTime(), now)).toBe(1);
+  });
+
+  it('still calls this morning today, hours later', () => {
+    expect(calendarDaysAgo(at(2026, 8, 31, 8).getTime(), at(2026, 8, 31, 23))).toBe(0);
+  });
+
+  it('does not under-count a span that started late in the day', () => {
+    // 58 hours, spanning three calendar days. floor(58/24) said 2.
+    const trained = at(2026, 8, 28, 23);
+    const now = at(2026, 8, 31, 9);
+    expect(calendarDaysAgo(trained.getTime(), now)).toBe(3);
+  });
+
+  it("matches this athlete's real last session", () => {
+    // Last Kratos workout 26 Aug 21:00 local, viewed on 31 Aug. Five calendar days;
+    // the hours-based rule reported four.
+    expect(calendarDaysAgo(at(2026, 8, 26, 21).getTime(), at(2026, 8, 31, 11))).toBe(5);
   });
 });

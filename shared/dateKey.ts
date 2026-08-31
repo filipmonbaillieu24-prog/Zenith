@@ -44,3 +44,24 @@ export function localDateToISO(dateStr: string): string {
   if (!y || !m || !d) return new Date().toISOString();
   return new Date(y, m - 1, d, 12, 0, 0, 0).toISOString();
 }
+
+/**
+ * Whole CALENDAR days between a timestamp and now, counting midnights crossed
+ * rather than 24-hour blocks elapsed.
+ *
+ * The distinction is the whole point. "Yesterday" is a calendar word, and elapsed
+ * hours do not answer it: a session at 20:00 last night is 13 hours old at 09:00
+ * the next morning, so an hours-based rule calls it "Today". Equally, something 58
+ * hours old spans three calendar days but floor(58/24) reports two.
+ *
+ * Use this for anything a person reads as a date. Keep elapsed hours for physical
+ * decay, where 24 hours really is 24 hours regardless of where midnight fell.
+ */
+export function calendarDaysAgo(ms: number, now: Date = new Date()): number {
+  const then = new Date(ms);
+  then.setHours(0, 0, 0, 0);
+  const today = new Date(now.getTime());
+  today.setHours(0, 0, 0, 0);
+  // Round rather than floor: DST shifts make some of these spans 23 or 25 hours.
+  return Math.round((today.getTime() - then.getTime()) / 86400000);
+}

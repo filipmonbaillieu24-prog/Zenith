@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, cardioFreshness, recoveryModel, fetchReadiness, saveReadiness, summariseAccuracy, FELT_OPTIONS, FELT_LABELS, FELT_DESCRIPTIONS, ReadinessEntry, FeltRating, toDateKeyFromDate, calculateZenithSleepScore, buildTrainingLoadPool, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { predictRecoveryScore, cardioFreshness, recoveryModel, fetchReadiness, saveReadiness, summariseAccuracy, FELT_OPTIONS, FELT_LABELS, FELT_DESCRIPTIONS, ReadinessEntry, FeltRating, toDateKeyFromDate, calculateZenithSleepScore, buildTrainingLoadPool, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, calendarDaysAgo } from '@zenith/shared';
 import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
@@ -606,15 +606,24 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       let primaryExercisesArr: string[] = ['No recent load'];
 
       if (item.lastTrainedMs > 0) {
+        // Calendar days, not elapsed hours. These labels are calendar words and
+        // hours cannot answer them: a session at 20:00 last night is 13 hours old at
+        // 09:00 this morning, which the old rule called "Today (13h ago)". And
+        // floor(hours / 24) under-counts whenever the span does not start at
+        // midnight - this athlete's last session, five calendar days back, read as
+        // "4 days ago".
+        //
+        // The decay above still uses real elapsed hours, which is correct: muscle
+        // recovery does not care where midnight fell.
         const hoursAgo = Math.round((nowMs - item.lastTrainedMs) / (1000 * 60 * 60));
+        const daysAgo = calendarDaysAgo(item.lastTrainedMs);
         if (hoursAgo < 1) {
           lastTrainedStr = 'Just trained';
-        } else if (hoursAgo < 24) {
+        } else if (daysAgo === 0) {
           lastTrainedStr = `Today (${hoursAgo}h ago)`;
-        } else if (hoursAgo < 48) {
+        } else if (daysAgo === 1) {
           lastTrainedStr = 'Yesterday';
         } else {
-          const daysAgo = Math.floor(hoursAgo / 24);
           lastTrainedStr = `${daysAgo} days ago`;
         }
 
