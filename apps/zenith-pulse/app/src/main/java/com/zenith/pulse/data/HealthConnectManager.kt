@@ -626,15 +626,78 @@ class HealthConnectManager(private val context: Context) {
                     timeRangeFilter = TimeRangeFilter.after(startTime30Days)
                 )
             )
-            for (ex in exRes.records) {
+            // Newest first, and capped: enrichment costs a handful of reads per
+            // session and nobody needs the 200th workout of the month backfilled.
+            val recentSessions = exRes.records.sortedByDescending { it.startTime }.take(30)
+
+            for (ex in recentSessions) {
                 val durSec = ChronoUnit.SECONDS.between(ex.startTime, ex.endTime)
+                val range = TimeRangeFilter.between(ex.startTime, ex.endTime)
+
+                // The session record carries none of this, and until now none of it
+                // was sent: every imported run landed in Stride with 0 km, 0 pace and
+                // no heart rate, which is not a run anybody can look at.
+                var distM = 0.0
+                var kcal = 0.0
+                var hrSum = 0L
+                var hrCount = 0
+                var hrMax = 0
+                var stepCount = 0L
+
+                try {
+                    for (r in client.readRecords(ReadRecordsRequest(DistanceRecord::class, range)).records) {
+                        distM += r.distance.inMeters
+                    }
+                } catch (e: Exception) { Log.w("HealthConnectManager", "Session distance: ${e.message}") }
+
+                try {
+                    for (r in client.readRecords(ReadRecordsRequest(TotalCaloriesBurnedRecord::class, range)).records) {
+                        kcal += r.energy.inKilocalories
+                    }
+                    if (kcal <= 0.0) {
+                        for (r in client.readRecords(ReadRecordsRequest(ActiveCaloriesBurnedRecord::class, range)).records) {
+                            kcal += r.energy.inKilocalories
+                        }
+                    }
+                } catch (e: Exception) { Log.w("HealthConnectManager", "Session calories: ${e.message}") }
+
+                try {
+                    for (r in client.readRecords(ReadRecordsRequest(HeartRateRecord::class, range)).records) {
+                        for (sample in r.samples) {
+                            val bpm = sample.beatsPerMinute.toInt()
+                            if (bpm <= 0) continue
+                            hrSum += bpm
+                            hrCount++
+                            if (bpm > hrMax) hrMax = bpm
+                        }
+                    }
+                } catch (e: Exception) { Log.w("HealthConnectManager", "Session heart rate: ${e.message}") }
+
+                try {
+                    for (r in client.readRecords(ReadRecordsRequest(StepsRecord::class, range)).records) {
+                        stepCount += r.count
+                    }
+                } catch (e: Exception) { Log.w("HealthConnectManager", "Session steps: ${e.message}") }
+
+                // The session's OWN offset where it has one, not this phone's zone
+                // today: a run recorded abroad keeps the clock time it was run at.
+                val startLocal = ex.startZoneOffset
+                    ?.let { ex.startTime.atOffset(it).toLocalDateTime().toString() }
+                    ?: ex.startTime.atZone(systemZone).toLocalDateTime().toString()
+
                 exerciseMaps.add(
                     mapOf(
                         "type" to ex.exerciseType,
                         "title" to (ex.title ?: "Workout"),
                         "start_time" to ex.startTime.toString(),
+                        "start_local" to startLocal,
                         "end_time" to ex.endTime.toString(),
                         "duration_seconds" to durSec,
+                        "distance_meters" to distM,
+                        "calories" to kcal,
+                        "avg_heart_rate" to (if (hrCount > 0) (hrSum / hrCount).toInt() else 0),
+                        "max_heart_rate" to hrMax,
+                        "steps" to stepCount,
                         "metadata" to mapOf("data_origin" to ex.metadata.dataOrigin.packageName)
                     )
                 )

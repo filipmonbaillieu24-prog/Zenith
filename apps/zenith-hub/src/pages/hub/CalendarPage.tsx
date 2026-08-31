@@ -180,7 +180,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           .select('date, avg_pace_min_km, duration_sec, avg_heart_rate')
           .eq('user_id', userId).order('date', { ascending: false }).limit(50)),
         run<any[]>('exercise names', supabase
-          .from('kratos_exercises').select('id, name, unit').eq('user_id', userId))
+          .from('kratos_exercises').select('id, name, weight_unit').eq('user_id', userId))
       ]);
 
       setRawRides(ridesData || []);
@@ -336,7 +336,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         const unitMap: Record<string, string | null> = {};
         exercisesData.forEach((ex: any) => {
           exMap[ex.id] = ex.name;
-          unitMap[ex.id] = ex.unit ?? null;
+          unitMap[ex.id] = ex.weight_unit ?? null;
         });
         setExercisesMap(exMap);
         setExerciseUnits(unitMap);

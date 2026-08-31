@@ -18,12 +18,14 @@ export const ShoeTrackerModal: React.FC<ShoeTrackerModalProps> = ({
   onAddShoe,
   onToggleRetire
 }) => {
-  if (!isOpen) return null;
-
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [maxDistanceKm, setMaxDistanceKm] = useState('700');
   const [showAddForm, setShowAddForm] = useState(false);
+
+  // Below the hooks, not above them: React counts hooks per render, and returning
+  // first took this component from zero to several the moment the modal opened.
+  if (!isOpen) return null;
 
   const handleCreateShoe = (e: React.FormEvent) => {
     e.preventDefault();

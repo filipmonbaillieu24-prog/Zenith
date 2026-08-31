@@ -53,7 +53,6 @@ function fmtDuration(s: number): string {
 
 export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredPoint }) => {
   const gpsPts = ride.points.filter(p => p.lat != null && p.lng != null);
-  if (gpsPts.length < 10) return null;
 
   // State to switch coloring mode interactively
   const [metric, setMetric] = useState<'power' | 'hr' | 'speed' | 'wkg'>(() => {
@@ -62,6 +61,14 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
     if (ride.hasHR) return 'hr';
     return 'speed';
   });
+
+  // 3. Retrieve climbs
+  const climbs = useMemo(() => detectClimbs(ride.points), [ride.points]);
+
+  // Every hook is above this line. It used to sit at the top, which meant a ride
+  // without GPS rendered zero hooks and a ride with GPS rendered two - so opening a
+  // recorded ride after an indoor one crashed the panel.
+  if (gpsPts.length < 10) return null;
 
   const values = gpsPts.map(p => {
     if (metric === 'wkg') return weight && p.power != null ? (p.power / weight) : 0;
@@ -125,9 +132,6 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
       maxHRPt = validHRPts.reduce((max, p) => (p.hr! > (max.hr ?? 0) ? p : max), validHRPts[0]);
     }
   }
-
-  // 3. Retrieve climbs
-  const climbs = useMemo(() => detectClimbs(ride.points), [ride.points]);
 
   return (
     <div className="rp-map-wrap">

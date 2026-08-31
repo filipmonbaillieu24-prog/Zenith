@@ -19,15 +19,6 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
   const tssList: RideTSS[] = rides.map(r => ({ date: r.date, tss: r.tss ?? r.hrTSS ?? 0 })).filter(r => r.tss > 0);
   const pmc = useMemo(() => computePMC(tssList), [tssList.length]);
   
-  if (pmc.length < 3) return (
-    <div className="wd-section-card">
-      <p style={{ color: '#64748b', fontSize: 12 }}>Upload rides with TSS to compute the PMC.</p>
-    </div>
-  );
-  
-  const today   = pmc[pmc.length - 1];
-  const tsbInfo = interpretTSB(today.tsb);
-  
   const recent = useMemo(() => {
     if (timeRange === 'all') return pmc.map(p => ({ ...p, date: fmtShortDate(p.date) }));
     const cutoff = Date.now() - timeRange * 24 * 3600 * 1000;
@@ -38,6 +29,19 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
     }
     return pmc.slice(-10).map(p => ({ ...p, date: fmtShortDate(p.date) }));
   }, [pmc, timeRange]);
+
+  // Both hooks run before this guard. It used to sit between them, so an athlete
+  // with two PMC points rendered one hook and the same athlete with three rendered
+  // two - the panel crashed on the ride that crossed the threshold.
+  if (pmc.length < 3) return (
+    <div className="wd-section-card">
+      <p style={{ color: '#64748b', fontSize: 12 }}>Upload rides with TSS to compute the PMC.</p>
+    </div>
+  );
+
+  const today   = pmc[pmc.length - 1];
+  const tsbInfo = interpretTSB(today.tsb);
+
   return (
     <div className="wd-section-card wd-section-card--grow">
       <div className="wd-section-card__head">

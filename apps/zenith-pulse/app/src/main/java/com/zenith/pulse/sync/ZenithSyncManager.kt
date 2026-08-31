@@ -146,8 +146,17 @@ object ZenithSyncManager {
                             put("type", (ex["type"] as? Int)?.toString() ?: (ex["type"] as? String) ?: "workout")
                             put("title", (ex["title"] as? String) ?: "Workout")
                             put("start_time", (ex["start_time"] as? String) ?: "")
+                            // Local wall-clock start. Without it the ingest read the
+                            // time in UTC, which put an evening session on the wrong
+                            // hour and, near midnight, the wrong day.
+                            put("start_local", (ex["start_local"] as? String) ?: "")
                             put("end_time", (ex["end_time"] as? String) ?: "")
                             put("duration_seconds", (ex["duration_seconds"] as? Long) ?: ((ex["duration_seconds"] as? Int)?.toLong()) ?: 0L)
+                            put("distance_meters", (ex["distance_meters"] as? Double) ?: 0.0)
+                            put("calories", (ex["calories"] as? Double) ?: 0.0)
+                            put("avg_heart_rate", (ex["avg_heart_rate"] as? Int) ?: 0)
+                            put("max_heart_rate", (ex["max_heart_rate"] as? Int) ?: 0)
+                            put("steps", (ex["steps"] as? Long) ?: ((ex["steps"] as? Int)?.toLong()) ?: 0L)
                             put("data_origin", ((ex["metadata"] as? Map<*, *>)?.get("data_origin") as? String) ?: "")
                         })
                     }

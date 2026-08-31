@@ -24,9 +24,17 @@ describe('no hooks after an early return', () => {
   const APPS = join(REPO, 'apps');
 
   const HOOK = /^\s{2}(?:const\s+[\w{}[\],\s:]+\s*=\s*)?(useMemo|useState|useEffect|useCallback|useRef|useReducer|useContext)\s*\(/;
-  // A top-level guard inside a component: two-space `if (...) {` whose body returns.
+  // A top-level guard inside a component: two-space `if (...)` whose body returns.
   const GUARD = /^\s{2}if\s*\(/;
   const RETURN = /^\s{4}return[\s(;]/;
+  // The same guard written on one line. RunModal had `if (!isOpen) return null;`
+  // directly above sixteen useState calls, and this test walked straight past it
+  // because it only ever looked for the return on a FOLLOWING line.
+  const INLINE_GUARD = /^\s{2}if\s*\(.*\)\s*return[\s(;]/;
+  // A guard only applies to the component it is in. Without this, a small helper
+  // component with an early return made every hook in every component BELOW it in
+  // the same file look like a violation.
+  const NEW_TOP_LEVEL = /^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function|const|class)\s/;
 
   const offenders: string[] = [];
 
@@ -35,6 +43,11 @@ describe('no hooks after an early return', () => {
     let guardLine = -1;
 
     for (let i = 0; i < lines.length; i++) {
+      if (NEW_TOP_LEVEL.test(lines[i])) guardLine = -1;
+      if (guardLine === -1 && INLINE_GUARD.test(lines[i])) {
+        guardLine = i + 1;
+        continue;
+      }
       if (guardLine === -1 && GUARD.test(lines[i])) {
         // Does this guard's body return? Look at the next few lines only.
         for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {

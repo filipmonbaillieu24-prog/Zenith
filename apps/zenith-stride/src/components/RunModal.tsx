@@ -31,8 +31,6 @@ export const RunModal: React.FC<RunModalProps> = ({
   shoes,
   initialRun
 }) => {
-  if (!isOpen) return null;
-
   const [title, setTitle] = useState(initialRun?.title || '');
   const [date, setDate] = useState(initialRun?.date || toDateKeyFromDate(new Date()));
   const [timeOfDay, setTimeOfDay] = useState(initialRun?.timeOfDay || '09:30');
@@ -57,6 +55,11 @@ export const RunModal: React.FC<RunModalProps> = ({
       setElevationGainM('0');
     }
   };
+
+  // Below every hook, not above them. React counts hooks per render, so returning
+  // before they run took this component from zero hooks to sixteen the moment the
+  // modal opened - the same fault that blanked the Kratos page.
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,12 +97,18 @@ export const RunModal: React.FC<RunModalProps> = ({
       elevationGainM: isTreadmill ? 0 : (parseInt(elevationGainM, 10) || 0),
       avgHeartRate: avgHeartRate ? parseInt(avgHeartRate, 10) : undefined,
       maxHeartRate: maxHeartRate ? parseInt(maxHeartRate, 10) : undefined,
-      avgCadenceSpm: avgCadenceSpm ? parseInt(avgCadenceSpm, 10) : 172,
-      calories: Math.round(distNum * 65),
+      // Clearing the field means "not recorded", not 172. Inventing a cadence for a
+      // run that never measured one is how a made-up number ends up in a chart.
+      avgCadenceSpm: avgCadenceSpm ? parseInt(avgCadenceSpm, 10) : undefined,
+      // A measured calorie figure outranks an estimate from distance. Editing an
+      // imported run would otherwise overwrite the watch's own 239 kcal with
+      // distance x 65 - and with zero, for a treadmill run that logged no distance.
+      calories: initialRun?.calories ?? (distNum > 0 ? Math.round(distNum * 65) : undefined),
       rpe,
       shoeId: selectedShoe?.id,
       shoeName: selectedShoe ? `${selectedShoe.brand} ${selectedShoe.model}` : undefined,
-      source: 'manual',
+      // Correcting an imported run does not make it a manual entry.
+      source: initialRun?.source || 'manual',
       notes
     };
 

@@ -59,6 +59,11 @@ export function App() {
   const [shoes, setShoes] = useState<RunningShoe[]>([]);
 
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
+  // The run being edited, or null when logging a new one. Imports arrive with
+  // whatever the watch recorded and sometimes get it wrong - an outdoor run landing
+  // as a treadmill session, a distance the source never sent - and until now there
+  // was no way to correct one short of deleting it and typing it again.
+  const [editingRun, setEditingRun] = useState<RunActivity | null>(null);
   const [isGpxModalOpen, setIsGpxModalOpen] = useState(false);
   const [isIntegrationsModalOpen, setIsIntegrationsModalOpen] = useState(false);
   const [isShoeModalOpen, setIsShoeModalOpen] = useState(false);
@@ -231,6 +236,59 @@ export function App() {
       }
     } catch (e) {
       console.warn("Failed to persist new run to Supabase:", e);
+    }
+  };
+
+  const handleUpdateRun = async (updated: RunActivity) => {
+    const previous = runs.find(r => r.id === updated.id);
+    setRuns(prev => prev.map(r => (r.id === updated.id ? updated : r)));
+
+    // Shoe mileage has to follow the correction, not just the original entry.
+    if (previous && (previous.shoeId !== updated.shoeId || previous.distanceKm !== updated.distanceKm)) {
+      setShoes(prev => prev.map(s => {
+        let total = s.totalDistanceKm;
+        if (previous.shoeId === s.id) total -= previous.distanceKm;
+        if (updated.shoeId === s.id) total += updated.distanceKm;
+        if (total === s.totalDistanceKm) return s;
+        const rounded = parseFloat(Math.max(0, total).toFixed(1));
+        void persistShoeMileage(s.id, rounded);
+        return { ...s, totalDistanceKm: rounded };
+      }));
+    }
+
+    try {
+      const { error } = await supabase.from('stride_activities').update({
+        title: updated.title,
+        date: updated.date,
+        time_of_day: updated.timeOfDay,
+        type: updated.type,
+        is_treadmill: updated.isTreadmill,
+        incline_percent: updated.inclinePercent || 0,
+        distance_km: updated.distanceKm,
+        duration_sec: updated.durationSec,
+        avg_pace_min_km: updated.avgPaceMinKm,
+        elevation_gain_m: updated.elevationGainM || 0,
+        avg_heart_rate: updated.avgHeartRate,
+        max_heart_rate: updated.maxHeartRate,
+        avg_cadence_spm: updated.avgCadenceSpm,
+        calories: updated.calories,
+        rpe: updated.rpe,
+        shoe_name: updated.shoeName,
+        notes: updated.notes,
+        // Tells the Health Connect ingest to leave this row alone from here on. A
+        // correction made by hand must not be undone by the next sync.
+        manually_edited: true
+      }).eq('id', updated.id);
+
+      if (error) {
+        console.error('Failed to save run edit:', error);
+        // Put the old values back rather than leaving the screen claiming a save
+        // that did not happen.
+        if (previous) setRuns(prev => prev.map(r => (r.id === updated.id ? previous : r)));
+      }
+    } catch (e) {
+      console.warn('Failed to save run edit:', e);
+      if (previous) setRuns(prev => prev.map(r => (r.id === updated.id ? previous : r)));
     }
   };
 
@@ -698,7 +756,19 @@ export function App() {
               >
                 Delete run
               </button>
-              <button className="btn-cancel" onClick={() => setSelectedRunDetail(null)}>Close</button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn-cancel"
+                  onClick={() => {
+                    setEditingRun(selectedRunDetail);
+                    setSelectedRunDetail(null);
+                    setIsRunModalOpen(true);
+                  }}
+                >
+                  Edit
+                </button>
+                <button className="btn-cancel" onClick={() => setSelectedRunDetail(null)}>Close</button>
+              </div>
             </div>
           </div>
         </div>
@@ -706,10 +776,18 @@ export function App() {
 
       {/* Modals */}
       <RunModal
+        // Keyed so the form re-seeds from whichever run is being edited. Without it
+        // the fields keep the values they were first mounted with.
+        key={editingRun ? `edit-${editingRun.id}` : 'new'}
         isOpen={isRunModalOpen}
-        onClose={() => setIsRunModalOpen(false)}
-        onSave={handleSaveRun}
+        onClose={() => { setIsRunModalOpen(false); setEditingRun(null); }}
+        onSave={run => {
+          if (editingRun) handleUpdateRun(run);
+          else handleSaveRun(run);
+          setEditingRun(null);
+        }}
         shoes={shoes}
+        initialRun={editingRun}
       />
 
       <GpxImportModal
