@@ -6,7 +6,8 @@ import {
   Plus, 
   Trash2,
   Dumbbell,
-  Bike
+  Bike,
+  Footprints
 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 import { PlannedWorkoutItem } from '../../utils/pmc';
@@ -63,10 +64,25 @@ interface KratosWorkout {
   }[];
 }
 
+interface StrideRun {
+  id: string;
+  title: string;
+  date: string;
+  distanceKm: number;
+  durationSec: number;
+  avgPaceMinKm: number | null;
+  avgHeartRate: number | null;
+  isTreadmill: boolean;
+}
+
 type CalendarItem = 
   | { category: 'planned'; dateStr: string; raw: PlannedWorkoutItem }
   | { category: 'ride'; dateStr: string; raw: CompletedRide }
-  | { category: 'kratos'; dateStr: string; raw: KratosWorkout };
+  | { category: 'kratos'; dateStr: string; raw: KratosWorkout }
+  // Runs were fetched for pace and for the load totals, and then never turned into
+  // calendar items - so a logged run counted toward the week's load while showing
+  // nothing at all on the day it was run.
+  | { category: 'stride'; dateStr: string; raw: StrideRun };
 
 export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideInAero }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -177,7 +193,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           .from('kratos_workouts').select('*').eq('user_id', userId)),
         run<any[]>('runs', supabase
           .from('stride_activities')
-          .select('date, avg_pace_min_km, duration_sec, avg_heart_rate')
+          .select('id, title, date, distance_km, duration_sec, avg_pace_min_km, avg_heart_rate, is_treadmill')
           .eq('user_id', userId).order('date', { ascending: false }).limit(50)),
         run<any[]>('exercise names', supabase
           .from('kratos_exercises').select('id, name, weight_unit').eq('user_id', userId))
@@ -342,7 +358,26 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         setExerciseUnits(unitMap);
       }
 
-      setItems([...mappedPlanned, ...mappedRides, ...mappedKratos]);
+      const mappedRuns: CalendarItem[] = (runData || []).map((r: any) => ({
+        category: 'stride' as const,
+        dateStr: String(r.date),
+        raw: {
+          id: String(r.id),
+          title: r.title || 'Run',
+          date: String(r.date),
+          distanceKm: Number(r.distance_km) || 0,
+          durationSec: Number(r.duration_sec) || 0,
+          // null must not become 0 here: 0.00 /km is a claim of instant running,
+          // where null is the truth that no pace was recorded.
+          avgPaceMinKm: r.avg_pace_min_km === null || r.avg_pace_min_km === undefined || Number(r.avg_pace_min_km) === 0
+            ? null
+            : Number(r.avg_pace_min_km),
+          avgHeartRate: r.avg_heart_rate === null || r.avg_heart_rate === undefined ? null : Number(r.avg_heart_rate),
+          isTreadmill: !!r.is_treadmill
+        }
+      }));
+
+      setItems([...mappedPlanned, ...mappedRides, ...mappedKratos, ...mappedRuns]);
       if (failures.length > 0) setLoadError(failures.join(' · '));
     } catch (err: any) {
       console.error('Failed to fetch calendar data:', err);
@@ -973,6 +1008,30 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                             )}
                           </div>
                         );
+                      } else if (item.category === 'stride') {
+                        const run = item.raw;
+                        const pace = run.avgPaceMinKm;
+                        const paceLabel = pace
+                          ? `${Math.floor(pace)}:${String(Math.round((pace - Math.floor(pace)) * 60)).padStart(2, '0')}/km`
+                          : `${Math.round(run.durationSec / 60)}m`;
+                        return (
+                          <div
+                            key={`s-${run.id}-${idx}`}
+                            className="zh-workout-badge zh-badge-stride"
+                            onClick={() => setSelectedItem(item)}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            title={`${run.title}
+${run.distanceKm ? run.distanceKm + ' km · ' : ''}${Math.round(run.durationSec / 60)} min${pace ? ' · ' + paceLabel : ''}`}
+                          >
+                            <Footprints size={10} style={{ flexShrink: 0 }} />
+                            <span>
+                              {run.title} ({run.distanceKm > 0 ? `${run.distanceKm.toFixed(1)}km` : paceLabel})
+                            </span>
+                            {plannedAndDoneByDate[dateStr]?.has('stride') && (
+                              <Calendar size={9} style={{ flexShrink: 0, opacity: 0.65 }} aria-label="Planned" />
+                            )}
+                          </div>
+                        );
                       } else {
                         return (
                           <div 
@@ -1133,8 +1192,12 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           <div className="wd-modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
             <div className="wd-modal-header">
               <h3 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                {selectedItem.category === 'ride' ? <Bike size={16} /> : <Dumbbell size={16} />}
-                {selectedItem.category === 'ride' ? 'Completed Cycling Ride' : 'Completed Kratos Workout'}
+                {selectedItem.category === 'ride' ? <Bike size={16} />
+                  : selectedItem.category === 'stride' ? <Footprints size={16} />
+                  : <Dumbbell size={16} />}
+                {selectedItem.category === 'ride' ? 'Completed Cycling Ride'
+                  : selectedItem.category === 'stride' ? (selectedItem.raw.isTreadmill ? 'Completed Treadmill Run' : 'Completed Run')
+                  : 'Completed Kratos Workout'}
               </h3>
               <button className="wd-modal-close" aria-label="Close" onClick={() => setSelectedItem(null)}>✕</button>
             </div>
@@ -1232,6 +1295,38 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                   </div>
                 );
               })()}
+
+              {selectedItem.category === 'stride' ? (
+                <>
+                  <h4 style={{ fontSize: 18, fontWeight: 900, color: '#fff', margin: '0 0 12px' }}>
+                    {selectedItem.raw.title}
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontSize: 10, color: '#64748b', display: 'block', textTransform: 'uppercase', fontWeight: 800 }}>Distance</span>
+                      <strong style={{ fontSize: 16, color: '#34d399' }}>
+                        {selectedItem.raw.distanceKm > 0 ? `${selectedItem.raw.distanceKm.toFixed(2)} km` : '—'}
+                      </strong>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontSize: 10, color: '#64748b', display: 'block', textTransform: 'uppercase', fontWeight: 800 }}>Duration</span>
+                      <strong style={{ fontSize: 16, color: '#34d399' }}>{Math.round(selectedItem.raw.durationSec / 60)} min</strong>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: 12, borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span style={{ fontSize: 10, color: '#64748b', display: 'block', textTransform: 'uppercase', fontWeight: 800 }}>Avg Pace</span>
+                      <strong style={{ fontSize: 16, color: '#34d399' }}>
+                        {selectedItem.raw.avgPaceMinKm
+                          ? `${Math.floor(selectedItem.raw.avgPaceMinKm)}:${String(Math.round((selectedItem.raw.avgPaceMinKm % 1) * 60)).padStart(2, '0')} /km`
+                          : '—'}
+                      </strong>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 11, color: '#64748b', margin: 0 }}>
+                    {selectedItem.raw.avgHeartRate ? `Average heart rate ${selectedItem.raw.avgHeartRate} bpm. ` : ''}
+                    Open Stride to edit this run.
+                  </p>
+                </>
+              ) : null}
 
               {/* COMPLETED RIDE DETAILS */}
               {selectedItem.category === 'ride' ? (

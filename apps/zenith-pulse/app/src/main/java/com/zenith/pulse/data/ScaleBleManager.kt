@@ -392,6 +392,7 @@ class ScaleBleManager(private val context: Context) {
         // Each connection gets one probe. Without this reset a reconnect would stay
         // silent because the previous connection had already used it up.
         probeRan = false
+        handshakeAccepted = false
         gatt = try {
             device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
         } catch (e: SecurityException) {
@@ -411,6 +412,7 @@ class ScaleBleManager(private val context: Context) {
         gatt = null
         probeHandler.removeCallbacksAndMessages(null)
         probeRan = false
+        handshakeAccepted = false
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
@@ -542,6 +544,15 @@ class ScaleBleManager(private val context: Context) {
     // If none do, the report says exactly what was tried.
     private val writable = mutableListOf<BluetoothGattCharacteristic>()
     private var probeRan = false
+
+    /**
+     * Set once the scale replies to a probe write.
+     *
+     * The first probe found the answer on its first attempt: writing 0x13 to fff2 got
+     * a 0x14 back and the endless hello stopped. Every write after that is noise sent
+     * to a scale that has already moved on, so the sweep stops here.
+     */
+    private var handshakeAccepted = false
     private val probeHandler = Handler(Looper.getMainLooper())
 
     /** Appends the frame checksum: the sum of every preceding byte, mod 256. */
@@ -592,6 +603,7 @@ class ScaleBleManager(private val context: Context) {
                         @Suppress("DEPRECATION")
                         target.value = frame
                         @Suppress("DEPRECATION")
+                        if (handshakeAccepted) return@postDelayed
                         val ok = g.writeCharacteristic(target)
                         capture("TX ${target.uuid} ${frame.toHex()}${if (ok) "" else "  (write refused)"}")
                     } catch (e: Exception) {
@@ -602,13 +614,73 @@ class ScaleBleManager(private val context: Context) {
         }
     }
 
+    private data class WeightCandidate(val kg: Double, val description: String)
+
+    /**
+     * Every 16-bit window in the frame, read both ways and scaled both ways, filtered
+     * to values a person could weigh.
+     *
+     * This is a search, not a decode, and it is labelled as one everywhere it surfaces.
+     * It exists because the alternative - picking an offset because it looked right
+     * once - is how a number nobody checked ends up in a weight chart.
+     */
+    private fun weightCandidates(frame: ByteArray): List<WeightCandidate> {
+        val found = mutableListOf<WeightCandidate>()
+        // The last byte is the checksum and the first two are command and length;
+        // neither is ever part of a measurement.
+        for (i in 2 until frame.size - 2) {
+            val a = frame[i].toInt() and 0xFF
+            val b = frame[i + 1].toInt() and 0xFF
+            val be = (a shl 8) or b
+            val le = (b shl 8) or a
+            for ((raw, order) in listOf(be to "BE", le to "LE")) {
+                for ((divisor, unit) in listOf(10.0 to "/10", 100.0 to "/100")) {
+                    val kg = raw / divisor
+                    if (kg in 25.0..250.0) {
+                        found.add(WeightCandidate(
+                            kg = Math.round(kg * 100) / 100.0,
+                            description = "offset $i $order $unit -> $kg kg"
+                        ))
+                    }
+                }
+            }
+        }
+        return found
+    }
+
     private fun handleFrame(characteristic: UUID, value: ByteArray) {
         capture("NTF $characteristic ${value.toHex()}")
 
+        val command = if (value.isNotEmpty()) value[0].toInt() and 0xFF else -1
+
         // A frame that carries no weight and repeats unchanged is a greeting, not a
         // measurement. Answer it once per connection.
-        if (value.isNotEmpty() && (value[0].toInt() and 0xFF) == 0x12) {
+        if (command == 0x12) {
             probeHandler.postDelayed({ runHandshakeProbe() }, 1200)
+        }
+
+        // The scale answered. Stop writing at it and tell the athlete it is their turn.
+        if (command == 0x14 && !handshakeAccepted) {
+            handshakeAccepted = true
+            probeHandler.removeCallbacksAndMessages(null)
+            capture("PROBE accepted - scale replied 0x14, remaining writes cancelled")
+            _status.value = "Scale is listening — step on it now"
+        }
+
+        // Anything that is neither the greeting nor the handshake reply is a candidate
+        // measurement. Rather than guess a field offset, every 16-bit window is tried
+        // and the ones landing in a human weight range are reported. A single
+        // candidate is offered as a reading - which the athlete confirms before it is
+        // saved anywhere - and the rest of the arithmetic goes into the diagnostics so
+        // the guess can be checked rather than trusted.
+        if (command != 0x12 && command != 0x14 && value.size >= 4) {
+            val candidates = weightCandidates(value)
+            for (c in candidates) capture("  CAND ${c.description}")
+            if (candidates.size == 1) {
+                capture("  -> offering ${candidates[0].kg} kg for confirmation")
+                publish(Reading(weightKg = candidates[0].kg, source = "vendor frame (format not confirmed)"))
+                return
+            }
         }
         val decoded = decodeAny(characteristic, value, "notification")
         if (decoded != null) {
