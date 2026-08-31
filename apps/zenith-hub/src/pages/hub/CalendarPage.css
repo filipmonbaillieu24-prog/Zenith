@@ -78,7 +78,8 @@
 
 .zh-calendar-grid-header {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* Seven days plus a week-summary column, TrainingPeaks-style. */
+  grid-template-columns: repeat(7, 1fr) 128px;
   gap: 8px;
   margin-bottom: 12px;
   text-align: center;
@@ -94,7 +95,7 @@
 
 .zh-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, 1fr) 128px;
   grid-auto-rows: minmax(100px, auto);
   gap: 8px;
 }
@@ -677,4 +678,92 @@
 
 .wd-modal-btn--danger:hover {
   background: rgba(239, 68, 68, 0.2);
+}
+
+
+/* ── Weekly planned-vs-actual summary ─────────────────────────────────────────
+   A month of chips tells you what happened but not whether it matched the plan.
+   This column carries the week's planned load against the load actually done. */
+.zh-week-summary {
+  background: rgba(56, 189, 248, 0.04);
+  border: 1px solid rgba(56, 189, 248, 0.12);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.zh-week-summary.empty {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
+.zh-week-summary-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.zh-week-summary-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.zh-week-summary-rows > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.zh-week-summary-rows span { color: #94a3b8; }
+
+.zh-week-summary-rows strong {
+  font-weight: 800;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.zh-week-summary-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.zh-week-summary-bar > div {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.zh-week-summary-foot {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.zh-week-summary-note {
+  font-size: 9px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+/* Narrow screens keep the seven days and drop the summary rather than squeezing
+   eight columns into a phone. */
+@media (max-width: 900px) {
+  .zh-calendar-grid,
+  .zh-calendar-grid-header {
+    grid-template-columns: repeat(7, 1fr);
+  }
+  .zh-week-summary,
+  .zh-week-col {
+    display: none;
+  }
 }

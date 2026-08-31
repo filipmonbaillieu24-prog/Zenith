@@ -14,7 +14,8 @@ import './CalendarPage.css';
 import {
   DISCIPLINE_LABELS, Discipline, countTemplateSets, estimateGymDuration,
   resolveRunPace, estimateRunDuration, formatPace, rideDurationFromTss, rideTssFromDuration,
-  MIN_PER_SET_FALLBACK, fulfilledPlanIds, CompletedActivity
+  MIN_PER_SET_FALLBACK, fulfilledPlanIds, CompletedActivity,
+  summariseWeekLoad, buildTrainingLoadPool, estimateKratosSessionLoadFromSets
 } from '@zenith/shared';
 
 interface CalendarPageProps {
@@ -90,6 +91,10 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
   const [gymDurationHistory, setGymDurationHistory] = useState<Record<string, number[]>>({});
   /** Sessions actually carried out, used to tell which plans have been fulfilled. */
   const [completedActivities, setCompletedActivities] = useState<CompletedActivity[]>([]);
+  /** Actual training load per local day, in the same TSS-equivalent unit for all three sports. */
+  const [actualLoads, setActualLoads] = useState<{ dateKey: string; tss: number }[]>([]);
+  /** Strength load of past sessions, so a planned routine is charged what it really costs. */
+  const [gymLoadByTemplate, setGymLoadByTemplate] = useState<Record<string, number[]>>({});
   const [runPace, setRunPace] = useState<{ paceMinPerKm: number; source: 'history' | 'default'; samples: number }>(
     { paceMinPerKm: 6.5, source: 'default', samples: 0 }
   );
@@ -229,7 +234,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
 
       const { data: runData } = await supabase
         .from('stride_activities')
-        .select('date, avg_pace_min_km')
+        .select('date, avg_pace_min_km, duration_sec, avg_heart_rate')
         .eq('user_id', userId)
         .order('date', { ascending: false })
         .limit(50);
@@ -255,6 +260,23 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         }))
       ];
       setCompletedActivities(activities);
+
+      // Actual load, through the one shared definition all four apps use, so the
+      // planned-versus-done comparison is not against a number computed differently
+      // here than in Aero's Form chart.
+      const pool = buildTrainingLoadPool(
+        { rides: ridesData, kratosWorkouts: (kratosData || []).filter((k: any) => !k.is_off_day), strideRuns: runData },
+        'all'
+      );
+      setActualLoads(pool.map(e => ({ dateKey: getLocalDateString(new Date(e.date)), tss: e.tss })));
+
+      const gymLoads: Record<string, number[]> = {};
+      for (const k of (kratosData || []) as any[]) {
+        if (!k.template_id || k.is_off_day || !k.volume) continue;
+        const load = estimateKratosSessionLoadFromSets(k.volume, k.sets);
+        if (load > 0) (gymLoads[k.template_id] ||= []).push(load);
+      }
+      setGymLoadByTemplate(gymLoads);
 
       // 4. Fetch Strength Exercises for ID-to-name lookup
       const { data: exercisesData } = await supabase
@@ -584,6 +606,24 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
     });
   }
 
+  // Six rows of seven, so each week can carry a summary of what was planned against
+  // what was actually done - the thing a month of chips cannot tell you.
+  const weeks: (typeof calendarDays)[] = [];
+  for (let i = 0; i < calendarDays.length; i += 7) weeks.push(calendarDays.slice(i, i + 7));
+
+  const weekSummaries = weeks.map(week =>
+    summariseWeekLoad(
+      week.map(d => d.dateStr),
+      plannedWorkouts as any,
+      actualLoads,
+      {
+        gymLoadByTemplate,
+        gymLoadOverall: Object.values(gymLoadByTemplate).flat(),
+        runPaceMinPerKm: runPace.paceMinPerKm
+      }
+    )
+  );
+
   // Map items to dates
   const itemsByDate: Record<string, CalendarItem[]> = {};
   items.forEach(item => {
@@ -648,9 +688,12 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
               <div key={day} className="zh-calendar-day-label">{day}</div>
             ))}
+            <div className="zh-calendar-day-label zh-week-col">Week</div>
           </div>
           <div className="zh-calendar-grid">
-            {calendarDays.map(({ date, dateStr, outside }) => {
+            {weeks.map((week, weekIdx) => (
+              <React.Fragment key={`w-${weekIdx}`}>
+            {week.map(({ date, dateStr, outside }) => {
               const dayItems = itemsByDate[dateStr] || [];
               const isToday = dateStr === todayStr;
 
@@ -738,6 +781,50 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                 </div>
               );
             })}
+                {(() => {
+                  const w = weekSummaries[weekIdx];
+                  const hasAnything = w.plannedSessions > 0 || w.actualSessions > 0;
+                  // Compliance is null, not 0, when nothing was planned: a week with
+                  // three unplanned sessions is not 0% compliant, it is unplanned.
+                  const pct = w.compliance === null ? null : Math.round(w.compliance * 100);
+                  const tone = pct === null ? '#64748b'
+                    : pct >= 90 && pct <= 115 ? '#22c55e'
+                    : pct >= 70 ? '#eab308'
+                    : '#f87171';
+                  return (
+                    <div className={`zh-week-summary ${hasAnything ? '' : 'empty'}`}>
+                      {hasAnything ? (
+                        <>
+                          <div className="zh-week-summary-label">Week load</div>
+                          <div className="zh-week-summary-rows">
+                            <div><span>Planned</span><strong>{w.plannedLoad || '—'}</strong></div>
+                            <div><span>Done</span><strong style={{ color: tone }}>{w.actualLoad || '—'}</strong></div>
+                          </div>
+                          <div className="zh-week-summary-bar">
+                            <div
+                              style={{
+                                width: `${Math.min(100, w.plannedLoad > 0 ? (w.actualLoad / w.plannedLoad) * 100 : 0)}%`,
+                                background: tone
+                              }}
+                            />
+                          </div>
+                          <div className="zh-week-summary-foot" style={{ color: tone }}>
+                            {pct === null
+                              ? `${w.actualSessions} session${w.actualSessions === 1 ? '' : 's'}, none planned`
+                              : `${pct}% of plan · ${w.actualSessions}/${w.plannedSessions} sessions`}
+                          </div>
+                          {w.unknownPlans > 0 && (
+                            <div className="zh-week-summary-note">
+                              {w.unknownPlans} plan{w.unknownPlans === 1 ? '' : 's'} not costed yet
+                            </div>
+                          )}
+                        </>
+                      ) : null}
+                    </div>
+                  );
+                })()}
+              </React.Fragment>
+            ))}
           </div>
         </div>
       )}

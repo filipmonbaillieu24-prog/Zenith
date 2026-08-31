@@ -12,7 +12,9 @@ import {
   MIN_PER_SET_FALLBACK,
   DEFAULT_RUN_PACE_MIN_PER_KM,
   fulfilledPlanIds,
-  outstandingPlansForDate
+  outstandingPlansForDate,
+  plannedTrainingLoad,
+  summariseWeekLoad
 } from '../services/plannedWorkouts';
 
 describe('estimateGymDuration', () => {
@@ -241,5 +243,78 @@ describe('fulfilledPlanIds', () => {
     ]);
     expect(before).toHaveLength(1);
     expect(after).toHaveLength(0);
+  });
+});
+
+describe('plannedTrainingLoad', () => {
+  it('uses the stated TSS for a ride', () => {
+    expect(plannedTrainingLoad({ discipline: 'aero', durationMinutes: 90, plannedTss: 110, distanceKm: null, templateId: null })).toBe(110);
+  });
+
+  it('charges a planned routine what that routine actually costs this athlete', () => {
+    const load = plannedTrainingLoad(
+      { discipline: 'kratos', durationMinutes: 45, plannedTss: 0, distanceKm: null, templateId: 'push' },
+      { gymLoadByTemplate: { push: [38, 42, 40], pull: [30] } }
+    );
+    expect(load).toBe(40);
+  });
+
+  it('falls back to the athlete\'s other routines for one never done', () => {
+    const load = plannedTrainingLoad(
+      { discipline: 'kratos', durationMinutes: 45, plannedTss: 0, distanceKm: null, templateId: 'new' },
+      { gymLoadByTemplate: { push: [40] }, gymLoadOverall: [40, 30, 50] }
+    );
+    expect(load).toBe(40);
+  });
+
+  it('admits it cannot cost a gym plan with no history rather than inventing one', () => {
+    expect(plannedTrainingLoad(
+      { discipline: 'kratos', durationMinutes: 45, plannedTss: 0, distanceKm: null, templateId: 'x' }, {}
+    )).toBeNull();
+  });
+
+  it('costs a run from its distance and pace', () => {
+    expect(plannedTrainingLoad(
+      { discipline: 'stride', durationMinutes: 0, plannedTss: 0, distanceKm: 10, templateId: null },
+      { runPaceMinPerKm: 6 }
+    )).toBe(66);
+  });
+});
+
+describe('summariseWeekLoad', () => {
+  const week = ['2026-08-24', '2026-08-25', '2026-08-26', '2026-08-27', '2026-08-28', '2026-08-29', '2026-08-30'];
+  const p = (date: string, tss: number): any =>
+    ({ id: date + tss, date, discipline: 'aero', title: '', type: 'custom', durationMinutes: 60, plannedTss: tss, distanceKm: null, templateId: null, notes: null, completedAt: null });
+
+  it('adds up both sides of the week', () => {
+    const s = summariseWeekLoad(week, [p('2026-08-25', 80), p('2026-08-28', 100)], [
+      { dateKey: '2026-08-25', tss: 75 },
+      { dateKey: '2026-08-28', tss: 60 }
+    ]);
+    expect(s.plannedLoad).toBe(180);
+    expect(s.actualLoad).toBe(135);
+    expect(s.compliance).toBeCloseTo(0.75);
+  });
+
+  it('ignores days outside the week', () => {
+    const s = summariseWeekLoad(week, [p('2026-08-31', 80)], [{ dateKey: '2026-08-31', tss: 75 }]);
+    expect(s.plannedSessions).toBe(0);
+    expect(s.actualLoad).toBe(0);
+  });
+
+  it('reports no compliance rather than 0% for an unplanned week', () => {
+    // Three sessions done with nothing planned is not a 0% week - showing 0 there
+    // would read as a failure the athlete never committed to.
+    const s = summariseWeekLoad(week, [], [{ dateKey: '2026-08-25', tss: 75 }]);
+    expect(s.compliance).toBeNull();
+    expect(s.actualSessions).toBe(1);
+  });
+
+  it('flags plans it could not cost instead of silently understating the week', () => {
+    const gym: any = { id: 'g', date: '2026-08-26', discipline: 'kratos', title: '', type: 'custom', durationMinutes: 45, plannedTss: 0, distanceKm: null, templateId: 'x', notes: null, completedAt: null };
+    const s = summariseWeekLoad(week, [p('2026-08-25', 80), gym], []);
+    expect(s.plannedSessions).toBe(2);
+    expect(s.unknownPlans).toBe(1);
+    expect(s.plannedLoad).toBe(80);
   });
 });

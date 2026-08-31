@@ -431,3 +431,112 @@ export function formatPace(paceMinPerKm: number): string {
   const carry = secs === 60;
   return `${mins + (carry ? 1 : 0)}:${String(carry ? 0 : secs).padStart(2, '0')} /km`;
 }
+
+
+/**
+ * Planned training load, in the same TSS-equivalent unit the actual load uses.
+ *
+ * Comparing a week's plan against what was done is only meaningful if both sides are
+ * in the same unit, and only cycling states its load directly. For the other two the
+ * athlete's own history is the honest source: a planned PUSH is charged what their
+ * PUSH sessions actually charge. Returns null rather than a number when there is
+ * nothing to base it on - a fabricated load is worse than an admitted gap.
+ */
+export interface PlannedLoadContext {
+  /** Strength-TSS of past sessions, keyed by routine. */
+  gymLoadByTemplate?: Record<string, number[]>;
+  /** Strength-TSS across all routines, for one that has never been done. */
+  gymLoadOverall?: number[];
+  /** Median pace, to turn a planned distance into minutes. */
+  runPaceMinPerKm?: number;
+}
+
+/** Same scalar the actual running load uses, so the two sides are comparable. */
+const RUN_LOAD_PER_MINUTE = 1.1;
+
+function median(values: number[] | undefined | null): number | null {
+  const clean = (values ?? []).filter(v => Number.isFinite(v) && v > 0).sort((a, b) => a - b);
+  if (clean.length === 0) return null;
+  const mid = Math.floor(clean.length / 2);
+  return clean.length % 2 === 1 ? clean[mid] : (clean[mid - 1] + clean[mid]) / 2;
+}
+
+export function plannedTrainingLoad(
+  plan: Pick<PlannedWorkout, 'discipline' | 'durationMinutes' | 'plannedTss' | 'distanceKm' | 'templateId'>,
+  ctx: PlannedLoadContext = {}
+): number | null {
+  if (plan.discipline === 'aero') {
+    const tss = Number(plan.plannedTss);
+    return Number.isFinite(tss) && tss > 0 ? Math.round(tss) : null;
+  }
+
+  if (plan.discipline === 'kratos') {
+    const forRoutine = plan.templateId ? median(ctx.gymLoadByTemplate?.[plan.templateId]) : null;
+    const overall = forRoutine ?? median(ctx.gymLoadOverall);
+    return overall === null ? null : Math.round(overall);
+  }
+
+  // A planned run is charged at its planned minutes, assuming the athlete runs it at
+  // roughly the reference intensity the actual figure is scaled against.
+  const km = Number(plan.distanceKm);
+  const pace = ctx.runPaceMinPerKm ?? DEFAULT_RUN_PACE_MIN_PER_KM;
+  const minutes = Number.isFinite(km) && km > 0
+    ? km * pace
+    : Math.max(0, Number(plan.durationMinutes) || 0);
+  return minutes > 0 ? Math.round(minutes * RUN_LOAD_PER_MINUTE) : null;
+}
+
+export interface WeekLoadSummary {
+  plannedLoad: number;
+  actualLoad: number;
+  plannedSessions: number;
+  actualSessions: number;
+  /** Plans whose load could not be estimated, so the planned figure understates them. */
+  unknownPlans: number;
+  /** actual / planned, or null when nothing was planned - not 0, which reads as failure. */
+  compliance: number | null;
+}
+
+/**
+ * One week of plan against reality.
+ *
+ * Compliance is null rather than 0 when nothing was planned: a week with no plan and
+ * three sessions done is not 0% compliant, it is unplanned, and showing 0 there would
+ * read as a failure the athlete did not commit.
+ */
+export function summariseWeekLoad(
+  dateKeys: string[],
+  plans: PlannedWorkout[],
+  actualLoads: { dateKey: string; tss: number }[],
+  ctx: PlannedLoadContext = {}
+): WeekLoadSummary {
+  const days = new Set(dateKeys);
+
+  let plannedLoad = 0;
+  let plannedSessions = 0;
+  let unknownPlans = 0;
+  for (const plan of plans) {
+    if (!days.has(plan.date)) continue;
+    plannedSessions++;
+    const load = plannedTrainingLoad(plan, ctx);
+    if (load === null) unknownPlans++;
+    else plannedLoad += load;
+  }
+
+  let actualLoad = 0;
+  let actualSessions = 0;
+  for (const entry of actualLoads) {
+    if (!days.has(entry.dateKey)) continue;
+    actualSessions++;
+    actualLoad += entry.tss;
+  }
+
+  return {
+    plannedLoad: Math.round(plannedLoad),
+    actualLoad: Math.round(actualLoad),
+    plannedSessions,
+    actualSessions,
+    unknownPlans,
+    compliance: plannedLoad > 0 ? actualLoad / plannedLoad : null
+  };
+}
