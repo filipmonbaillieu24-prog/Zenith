@@ -332,27 +332,79 @@ fun CompletionScreen(
                                                     maxReps = existing?.maxReps ?: (s.reps + 2),
                                                     targetRir = existing?.targetRir ?: s.rir
                                                 )
-                                            }
+                                            // Only completed sets reach the log, so a skipped set would
+                                            // otherwise delete itself from the routine - run out of time
+                                            // once and the set is gone for good. Any template sets beyond
+                                            // what was performed are kept.
+                                            } + te.sets.drop(log.sets.size)
                                             te.copy(sets = sets)
                                         } else te
                                     }
 
-                                    // Save back local cache
-                                    db.templateDao().insertTemplates(listOf(
-                                        localTemp.copy(exercisesJson = Json.encodeToString(updatedEx))
-                                    ))
-
-                                    // Save back remote Supabase
-                                    try {
-                                        SupabaseClient.client.postgrest["kratos_templates"].update(
-                                            mapOf("exercises" to updatedEx)
-                                        ) {
-                                            filter {
-                                                eq("id", templateId)
-                                            }
+                                    // Nothing to save unless the STRUCTURE actually changed.
+                                    //
+                                    // Now that targets are preserved rather than overwritten, a
+                                    // normal session produces a template identical to the one it
+                                    // started from - so writing it back can only ever do harm. And
+                                    // it could: templates are cached locally and refreshed on app
+                                    // launch, so editing a template on the web while the phone is
+                                    // already running leaves the phone holding a stale copy. Saving
+                                    // a workout would then push that stale copy back over the edit.
+                                    //
+                                    // Skipping the no-op write removes that risk for every ordinary
+                                    // session.
+                                    if (updatedEx == currentEx) {
+                                        // Structure unchanged - the template already says this.
+                                    } else {
+                                        // Something structural did change (a set added or dropped
+                                        // mid-session). Merge onto the CURRENT remote template rather
+                                        // than the local cache, so a concurrent edit made elsewhere
+                                        // is not overwritten by whatever this phone last downloaded.
+                                        val remoteEx: List<TemplateExercise>? = try {
+                                            SupabaseClient.client.postgrest["kratos_templates"].select {
+                                                filter { eq("id", templateId) }
+                                            }.decodeList<Template>().firstOrNull()?.exercises
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                            null
                                         }
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
+
+                                        val merged = if (remoteEx != null) {
+                                            // Re-run the same preserve-targets merge, this time against
+                                            // what the server currently holds.
+                                            remoteEx.map { rte ->
+                                                val log = logs.find { it.exerciseId == rte.exerciseId }
+                                                if (log != null) {
+                                                    rte.copy(sets = log.sets.mapIndexed { idx, ls ->
+                                                        val existing = rte.sets.getOrNull(idx)
+                                                            ?: rte.sets.lastOrNull { it.type == ls.type }
+                                                            ?: rte.sets.lastOrNull()
+                                                        TemplateSet(
+                                                            type = ls.type,
+                                                            minReps = existing?.minReps ?: ls.reps,
+                                                            maxReps = existing?.maxReps ?: (ls.reps + 2),
+                                                            targetRir = existing?.targetRir ?: ls.rir
+                                                        )
+                                                    } + rte.sets.drop(log.sets.size))
+                                                } else rte
+                                            }
+                                        } else updatedEx
+
+                                        db.templateDao().insertTemplates(listOf(
+                                            localTemp.copy(exercisesJson = Json.encodeToString(merged))
+                                        ))
+
+                                        try {
+                                            SupabaseClient.client.postgrest["kratos_templates"].update(
+                                                mapOf("exercises" to merged)
+                                            ) {
+                                                filter {
+                                                    eq("id", templateId)
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
                                     }
                                 }
                             }
