@@ -1223,9 +1223,12 @@ export default function App() {
       d.setDate(d.getDate() - i);
       const yyyymmdd = toDateKeyFromDate(d);
       const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      // With real HRV data, days without a reading are left as gaps (null) rather
-      // than filled with a fabricated baseline.
-      dateMap.set(yyyymmdd, { dateStr, volume: 0, hrv: hasRealHrvData ? null : 65 });
+      // Always null. A day is filled below only if there is something behind it -
+      // a measured HRV reading, or a sleep score to derive the labelled estimate
+      // from. Users without a wearable used to get a flat 65 seeded into every day
+      // and then partially overwritten, so days with no sleep log at all still drew
+      // a confident line at a number nothing had produced.
+      dateMap.set(yyyymmdd, { dateStr, volume: 0, hrv: null });
     }
 
     // 1. Accumulate workout volume per day
@@ -1257,9 +1260,15 @@ export default function App() {
                 item.hrv = s.hrv_ms;
               }
             } else {
-              const baseVal = 55;
-              const offsetVal = ((s.quality_score || 80) - 75) * 0.8;
-              item.hrv = Math.round(Math.max(30, Math.min(110, baseVal + offsetVal)));
+              // `|| 80` would have turned a quality_score of 0 - which means the
+              // score was never computed, not that the night was terrible - into an
+              // invented above-average night. Same trap as Number(null) being 0.
+              const quality = Number(s.quality_score);
+              if (Number.isFinite(quality) && quality > 0) {
+                const baseVal = 55;
+                const offsetVal = (quality - 75) * 0.8;
+                item.hrv = Math.round(Math.max(30, Math.min(110, baseVal + offsetVal)));
+              }
             }
           }
         } catch (e) {
@@ -1757,7 +1766,19 @@ export default function App() {
                     <CartesianGrid {...ZENITH_CHART_GRID} />
                     <XAxis dataKey="dateStr" stroke="#94a3b8" tick={ZENITH_CHART_AXIS_TICK} />
                     <YAxis yAxisId="left" stroke="#94a3b8" tick={ZENITH_CHART_AXIS_TICK} />
-                    <YAxis yAxisId="right" orientation="right" domain={[30, 110]} stroke="#38bdf8" tick={ZENITH_CHART_AXIS_TICK} />
+                    {/* Auto-scaled for measured HRV. The fixed 30-110 window was
+                        the range of the sleep-quality ESTIMATE; real rMSSD often sits
+                        far above it - this athlete's is 132-162 ms - so a measured
+                        line was drawn straight off the top of the chart. The estimate
+                        keeps its fixed window, where it is meaningful. */}
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      domain={hasRealHrvData ? ['dataMin - 10', 'dataMax + 10'] : [30, 110]}
+                      allowDecimals={false}
+                      stroke="#38bdf8"
+                      tick={ZENITH_CHART_AXIS_TICK}
+                    />
                     <Tooltip
                       contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
                       labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}

@@ -4,35 +4,8 @@ import { computePMC } from './pmc';
 // ==========================================================
 // 1. SMART COACH MODEL DEFINITION
 // ==========================================================
-const COACH_WORKOUTS = ['recovery', 'endurance', 'tempo', 'threshold', 'sweetspot', 'vo2max'] as const;
 
-function generateCoachDefaultWeights() {
-  const W1: number[][] = Array.from({ length: 8 }, () => new Array(8).fill(0));
-  const B1: number[] = new Array(8).fill(0.02);
-  const W2: number[][] = Array.from({ length: 8 }, () => new Array(6).fill(0));
-  const B2: number[] = new Array(6).fill(0.0);
 
-  W1[0][0] = -0.5; W1[1][0] = 0.8;
-  W1[0][1] = 0.6;  W1[1][1] = -0.2;
-  W1[2][0] = -0.9;
-  W1[2][5] = 0.9;
-
-  W1[4][4] = 0.9;
-  W1[5][5] = 0.9;
-  W1[6][1] = 0.9;
-  W1[7][0] = 0.8;
-
-  W2[0][0] = 1.2;
-  W2[1][1] = 1.0;
-  W2[2][2] = 0.9;
-  W2[3][3] = 0.9;
-  W2[4][4] = 1.0;
-  W2[5][5] = 1.1;
-
-  return { W1, B1, W2, B2 };
-}
-
-export const coachModel = new SimpleMLP(8, 8, 6, 'cyclo_coach_nn_weights', generateCoachDefaultWeights);
 
 // ==========================================================
 // 2. VO2MAX MODEL DEFINITION
@@ -59,26 +32,7 @@ export const vo2maxModel = new SimpleMLP(4, 6, 1, 'cyclo_vo2max_weights', genera
 // ==========================================================
 // 3. INJURY RISK MODEL DEFINITION
 // ==========================================================
-function generateInjuryDefaultWeights() {
-  const W1: number[][] = Array.from({ length: 6 }, () => new Array(6).fill(0));
-  const B1: number[] = new Array(6).fill(0.0);
-  const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
-  const B2: number[] = [-0.15];
 
-  for (let i = 0; i < 6; i++) {
-    W1[0][i] = 0.2;
-    W1[1][i] = 0.4;
-    W1[2][i] = -0.6;
-    W1[3][i] = 0.7;
-    W1[4][i] = 0.9;
-    W1[5][i] = 0.8;
-    W2[i][0] = 0.5;
-  }
-
-  return { W1, B1, W2, B2 };
-}
-
-export const injuryModel = new SimpleMLP(6, 6, 1, 'cyclo_injury_nn_weights', generateInjuryDefaultWeights);
 
 
 // ==========================================================
@@ -105,7 +59,6 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
 
     const weight = profile?.weight_kg || 75;
     const ftp = profile?.ftp_watts || 220;
-    const goal = profile?.training_goal || 'general';
 
     // 2. Fetch recent datasets
     const { data: rides } = await supabase
@@ -165,9 +118,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     // Load weights
     await Promise.all([
       kratosOverloadModel.loadFromSupabase(supabase, userId),
-      coachModel.loadFromSupabase(supabase, userId),
       vo2maxModel.loadFromSupabase(supabase, userId),
-      injuryModel.loadFromSupabase(supabase, userId),
       dualSportFatigueModel.loadFromSupabase(supabase, userId),
       recoveryModel.loadFromSupabase(supabase, userId)
     ]);
@@ -242,47 +193,27 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       await kratosOverloadModel.retrainFromScratch(supabase, userId, overloadSamples);
     }
 
-    // 4. Train Smart Coach Model
-    if (rides && rides.length > 0) {
-      // Basic PMC calculation for inputs
-      let ctl = 45;
-      let atl = 50;
-      let tsb = -5;
-
-      const lastRpe = 6; // default average RPE last 3 rides
-      const goalIndex = ['general', 'climbing', 'speed', 'endurance'].indexOf(goal);
-
-      const x = [
-        Math.min(1.5, ctl / 100),
-        Math.min(1.5, atl / 100),
-        Math.max(0, Math.min(1, (tsb + 50) / 100)),
-        goalIndex === 0 ? 1 : 0,
-        goalIndex === 1 ? 1 : 0,
-        goalIndex === 2 ? 1 : 0,
-        goalIndex === 3 ? 1 : 0,
-        Math.min(1.0, lastRpe / 10)
-      ];
-
-      // Smart coach trains on completed ride intensity mapping
-      const recentRide = rides[0];
-      let witha = recentRide.metadata;
-      if (typeof witha === 'string') {
-        try { witha = JSON.parse(witha); } catch { witha = {}; }
-      }
-      const tss = Number(witha?.tss ?? witha?.hrTSS ?? 50);
-      
-      let targetWorkout: typeof COACH_WORKOUTS[number] = 'endurance';
-      if (tss < 35) targetWorkout = 'recovery';
-      else if (tss < 70) targetWorkout = 'endurance';
-      else if (tss < 110) targetWorkout = 'sweetspot';
-      else targetWorkout = 'threshold';
-
-      const targetIdx = COACH_WORKOUTS.indexOf(targetWorkout);
-      const targets = new Array(6).fill(0.05);
-      targets[targetIdx] = 0.95;
-
-      await coachModel.retrainFromScratch(supabase, userId, [{ x, targets }], 20, 0.2);
-    }
+    // 4. Smart Coach: trained by Aero, not here.
+    //
+    // This used to train cyclo_coach_nn_weights - the SAME storage key Aero's coach
+    // model uses - on three hardcoded constants:
+    //
+    //     let ctl = 45; let atl = 50; let tsb = -5;   // "Basic PMC calculation"
+    //     const lastRpe = 6;                          // "default average RPE"
+    //
+    // None of them were calculated. This file computes a real PMC a few lines above
+    // and ignored it; the athlete's actual figures are nearer 15 / 25 / -10. The
+    // target was a relabelling of the LAST ride's TSS into a workout bucket, so it
+    // taught the model to recommend repeating whatever was just done, and it trained
+    // on exactly one sample with an identical input vector every run.
+    //
+    // Hub then never predicted from it. Aero does, and Aero trains the same model on
+    // the athlete's real CTL/ATL/TSB, real recent RPE, and the workout they actually
+    // chose - which is real supervised feedback. So the only effect this had was to
+    // periodically overwrite a properly trained model with one fitted to three made
+    // up numbers.
+    //
+    // One owner per model. Aero owns this one.
 
     if (rides && rides.length > 0) {
       const validRide = rides.find((r: any) => r.avg_power && r.avg_hr);
