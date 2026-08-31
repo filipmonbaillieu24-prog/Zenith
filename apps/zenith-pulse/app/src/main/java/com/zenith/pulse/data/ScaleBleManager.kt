@@ -77,6 +77,14 @@ class ScaleBleManager(private val context: Context) {
             uuid16("FFE0")    // generic serial-over-BLE modules
         )
 
+        /**
+         * Tuya's BLE profile. Its payload is AES encrypted with a key issued when the
+         * scale was paired to a Tuya account, so the bytes cannot be read without
+         * that key however many offsets are tried - and trying them anyway produced
+         * sixteen mutually contradictory "weights" per frame.
+         */
+        val TUYA_SERVICE: UUID = uuid16("1910")
+
         private fun uuid16(short: String): UUID =
             UUID.fromString("0000$short-0000-1000-8000-00805f9b34fb")
 
@@ -253,6 +261,8 @@ class ScaleBleManager(private val context: Context) {
 
     private var gatt: BluetoothGatt? = null
     private var scanning = false
+    /** Whether a scan has been run at all, as against one that found nothing. */
+    private var everScanned = false
 
     fun isBluetoothOn(): Boolean = adapter?.isEnabled == true
 
@@ -356,6 +366,7 @@ class ScaleBleManager(private val context: Context) {
                 scanCallback
             )
             scanning = true
+            everScanned = true
             _status.value = "Scanning — step on the scale so it wakes up"
             null
         } catch (e: SecurityException) {
@@ -442,8 +453,10 @@ class ScaleBleManager(private val context: Context) {
             // which OEM family the scale belongs to.
             val notifiable = mutableListOf<BluetoothGattCharacteristic>()
             writable.clear()
+            encryptedProfile = false
             for (service in g.services) {
-                captureGatt("SVC ${service.uuid}")
+                captureGatt("SVC ${service.uuid}" + if (service.uuid == TUYA_SERVICE) "   (Tuya - encrypted payload)" else "")
+                if (service.uuid == TUYA_SERVICE) encryptedProfile = true
                 for (ch in service.characteristics) {
                     val props = buildList {
                         if (ch.properties and BluetoothGattCharacteristic.PROPERTY_READ != 0) add("read")
@@ -553,6 +566,8 @@ class ScaleBleManager(private val context: Context) {
      * to a scale that has already moved on, so the sweep stops here.
      */
     private var handshakeAccepted = false
+    /** Set when the connected device speaks a profile whose payload is encrypted. */
+    private var encryptedProfile = false
     private val probeHandler = Handler(Looper.getMainLooper())
 
     /** Appends the frame checksum: the sum of every preceding byte, mod 256. */
@@ -673,13 +688,28 @@ class ScaleBleManager(private val context: Context) {
         // candidate is offered as a reading - which the athlete confirms before it is
         // saved anywhere - and the rest of the arithmetic goes into the diagnostics so
         // the guess can be checked rather than trusted.
+        if (encryptedProfile) {
+            _status.value = "This scale encrypts its readings — Zenith cannot read them"
+            return
+        }
+
         if (command != 0x12 && command != 0x14 && value.size >= 4) {
             val candidates = weightCandidates(value)
-            for (c in candidates) capture("  CAND ${c.description}")
-            if (candidates.size == 1) {
-                capture("  -> offering ${candidates[0].kg} kg for confirmation")
-                publish(Reading(weightKg = candidates[0].kg, source = "vendor frame (format not confirmed)"))
-                return
+            when {
+                candidates.size == 1 -> {
+                    capture("  CAND ${candidates[0].description}")
+                    capture("  -> offering ${candidates[0].kg} kg for confirmation")
+                    publish(Reading(weightKg = candidates[0].kg, source = "vendor frame (format not confirmed)"))
+                    return
+                }
+                // A frame that yields a dozen different "weights" has told us nothing,
+                // and printing all dozen buries the frames that matter. The count is
+                // the finding; a couple of examples are enough to show the spread.
+                candidates.size > 3 -> {
+                    capture("  CAND ${candidates.size} possible values, none conclusive" +
+                        " (e.g. ${candidates.take(2).joinToString("; ") { it.description }})")
+                }
+                else -> candidates.forEach { capture("  CAND ${it.description}") }
             }
         }
         val decoded = decodeAny(characteristic, value, "notification")
@@ -736,8 +766,15 @@ class ScaleBleManager(private val context: Context) {
         val devices = _devices.value
         appendLine("devices seen: ${devices.size}")
         if (devices.isEmpty()) {
-            appendLine("  (none - the scan found no Bluetooth LE devices at all.")
-            appendLine("   Step on the scale so it powers up, and check Bluetooth is on.)")
+            // Saying "the scan found nothing" when no scan ever ran sends people to
+            // check their Bluetooth over a list that was simply never filled.
+            if (everScanned) {
+                appendLine("  (none - the scan found no Bluetooth LE devices at all.")
+                appendLine("   Step on the scale so it powers up, and check Bluetooth is on.)")
+            } else {
+                appendLine("  (no scan has been run in this session - this connection went")
+                appendLine("   straight to the remembered scale. Scan to pick a different one.)")
+            }
         }
         devices.forEach {
             appendLine("  ${it.name} [${it.address}] rssi=${it.rssi} scaleLike=${it.looksLikeAScale}")
