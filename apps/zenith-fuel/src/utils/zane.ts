@@ -161,6 +161,68 @@ export const CREATINE_WATER_KG_AT_FULL = 1.2;
  * therefore the calorie target, so an inflated coefficient hands back around 80 kcal
  * a day of deficit that was never actually earned.
  */
+/**
+ * Is a correlation of this size, from this many points, worth reporting at all?
+ *
+ * A raw |r| threshold cannot answer that, because the same r means completely
+ * different things at n = 8 and n = 80. Ten nights of resting heart rate spanning
+ * 49-51 bpm produce r = 0.31 with nothing behind it - three distinct integer
+ * values is the quantisation floor of the measurement, not a signal - and a flat
+ * "0.3 counts as a link" rule would have announced it as one.
+ *
+ * Standard two-tailed t-test on the correlation coefficient at p < 0.05. The
+ * critical-t approximation is accurate to about 0.02 for df >= 4, which is far
+ * finer than the decision needs.
+ */
+export function isCorrelationMeaningful(r: number, n: number): boolean {
+  const df = n - 2;
+  if (!Number.isFinite(r) || df < 3) return false;
+  const rr = Math.min(0.9999, Math.abs(r));
+  const t = rr * Math.sqrt(df / (1 - rr * rr));
+  const tCrit = 1.96 + 2.36 / df + 3.5 / (df * df);
+  return t > tCrit;
+}
+
+/**
+ * Sleep duration, in kcal per hour away from this athlete's own average night.
+ *
+ * An hour asleep replaces an hour awake, and the difference is the whole effect.
+ * Sleeping metabolic rate runs about 0.93 x BMR; an awake hour, mostly sedentary,
+ * about 1.15-1.3 x. At this athlete's ~1,850 kcal BMR that is roughly 72 kcal/h
+ * asleep against 89-100 awake, so somewhere between -17 and -29 kcal per hour.
+ * Deliberate exercise is already subtracted from the regression target, so the
+ * residual this coefficient should carry is at the smaller end.
+ *
+ * It was previously bounded at +/-50 with a prior of zero, and the fit ran to
+ * exactly -50 and stopped there. A coefficient sitting precisely on its clamp is
+ * not a measurement, it is the bound being reported back - and -50 claims that
+ * every extra hour of sleep costs 50 kcal, so a nine-hour night against a
+ * six-hour one would be worth 150.
+ *
+ * Two things drove it there. Sleep duration correlates with rest days, exactly as
+ * caffeine correlates with training days. And more subtly, the two sleep features
+ * are collinear by construction: Zenith's sleep SCORE already contains a duration
+ * component (see zenithSleepEngine), so quality and duration are close to the same
+ * column of the design matrix. Ridge splits collinear columns unstably, which is
+ * why they ended up pulling in opposite directions - quality at +0.9 kcal/point
+ * while duration sat at -50 kcal/hour.
+ */
+export const SLEEP_DURATION_KCAL_PER_HOUR_PRIOR = -20;
+export const SLEEP_DURATION_KCAL_MIN = -40;
+export const SLEEP_DURATION_KCAL_MAX = 5;
+
+/**
+ * Sleep quality, in kcal per point of a 0-100 score, away from this athlete's own
+ * average night.
+ *
+ * There is no direct thermic effect of sleeping well; whatever exists runs through
+ * moving about more the next day. Its typical spread is about 20 points, so a bound
+ * of +/-1.5 still allows a whole standard deviation of sleep quality to be worth
+ * +/-30 kcal, which is generous for an indirect effect. The old bound of +/-10
+ * allowed that same swing to be worth 200 kcal in either direction.
+ */
+export const SLEEP_QUALITY_KCAL_PER_POINT_MAX = 1.5;
+
 export const CAFFEINE_KCAL_PER_MG_PRIOR = 0.10;
 export const CAFFEINE_KCAL_PER_MG_MIN = 0.02;
 export const CAFFEINE_KCAL_PER_MG_MAX = 0.18;
@@ -260,7 +322,7 @@ export function runZaneCalibration(
 
   let bmrOffset = 0;
   let sleepQualityCoeff = 0;
-  let sleepDurationCoeff = 0;
+  let sleepDurationCoeff = SLEEP_DURATION_KCAL_PER_HOUR_PRIOR;
   let gymVolumeCoeff = 0.025; // baseline prior (0.025 kcal per kg moved in strength training)
   // Caffeine's thermogenic effect, in kcal per mg. The literature puts a 100 mg dose
   // at roughly a 3-4% rise in energy expenditure for a couple of hours, which works
@@ -419,9 +481,17 @@ export function runZaneCalibration(
       Y.push(priorNormQ * anchorWeight);
     }
 
-    // Anchor for sleepDurationCoeff (Feature 2: normalized prior)
+    // Anchor for sleepDurationCoeff (Feature 2: normalized DELTA prior)
+    //
+    // A delta from the physiological prior, the same way gym volume and caffeine
+    // are handled, rather than an absolute anchor on the previous run's output.
+    // That mattered: the old form re-anchored each fit on whatever the last one
+    // saved, so once the coefficient reached its clamp it kept anchoring itself
+    // there and had no path back. Anchoring on the delta means a run with thin or
+    // confounded data falls back toward physiology instead of toward its own
+    // previous mistake.
     if (profile.priorSleepDurationCoeff !== undefined) {
-      const priorNormD = profile.priorSleepDurationCoeff * SLEEP_D_SCALE;
+      const priorNormD = (profile.priorSleepDurationCoeff - SLEEP_DURATION_KCAL_PER_HOUR_PRIOR) * SLEEP_D_SCALE;
       X.push([0, 0, anchorWeight, 0, 0, 0]);
       Y.push(priorNormD * anchorWeight);
     }
@@ -455,8 +525,9 @@ export function runZaneCalibration(
     // FIX 1+4: Un-normalize on retrieval: coeff_raw = coeff_normalized / scale
     // so that the forward pass can use raw feature values directly.
     bmrOffset          = Math.min(250,  Math.max(-250, Math.round(coefficients[0] || 0)));
-    sleepQualityCoeff  = Math.min(10,   Math.max(-10,  (coefficients[1] || 0) / SLEEP_Q_SCALE));
-    sleepDurationCoeff = Math.min(50,   Math.max(-50,  (coefficients[2] || 0) / SLEEP_D_SCALE));
+    sleepQualityCoeff  = Math.min(SLEEP_QUALITY_KCAL_PER_POINT_MAX, Math.max(-SLEEP_QUALITY_KCAL_PER_POINT_MAX, (coefficients[1] || 0) / SLEEP_Q_SCALE));
+    const deltaSleepDurationCoeff = (coefficients[2] || 0) / SLEEP_D_SCALE;
+    sleepDurationCoeff = Math.min(SLEEP_DURATION_KCAL_MAX, Math.max(SLEEP_DURATION_KCAL_MIN, SLEEP_DURATION_KCAL_PER_HOUR_PRIOR + deltaSleepDurationCoeff));
 
     const deltaGymCoeff      = (coefficients[3] || 0) / GYM_VOL_SCALE;
     gymVolumeCoeff  = Math.min(0.10, Math.max(0.01, 0.025 + deltaGymCoeff));

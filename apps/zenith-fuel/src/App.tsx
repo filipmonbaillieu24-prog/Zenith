@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
 import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
-import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep, creatineWaterRetentionKg, CREATINE_BASELINE_SATURATION, CAFFEINE_KCAL_PER_MG_PRIOR } from './utils/zane';
+import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep, creatineWaterRetentionKg, isCorrelationMeaningful, CREATINE_BASELINE_SATURATION, CAFFEINE_KCAL_PER_MG_PRIOR } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
 import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates';
@@ -307,7 +307,7 @@ function App() {
         () => supabase.from('fuel_days').select('date, is_complete').eq('user_id', userId).gte('date', startOfWeekStr).lte('date', endOfWeekStr),
         () => supabase.from('vigor_weight').select('weight, logged_at').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()).order('logged_at'),
         () => supabase.from('vigor_body_measurements').select('body_fat_pct, muscle_mass_kg, logged_at').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()).order('logged_at'),
-        () => supabase.from('vigor_sleep').select('duration_minutes, quality_score, deep_minutes, rem_minutes, hrv_ms, logged_at').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()).order('logged_at'),
+        () => supabase.from('vigor_sleep').select('duration_minutes, quality_score, deep_minutes, rem_minutes, hrv_ms, resting_hr, logged_at').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()).order('logged_at'),
         () => supabase.from('rides').select('date, metadata').eq('user_id', userId).gte('date', startOfWeek.getTime()).lt('date', endOfWeek.getTime()),
         () => supabase.from('stride_activities').select('date, calories, duration_sec').eq('user_id', userId).gte('date', startOfWeekStr).lte('date', endOfWeekStr),
         () => supabase.from('kratos_workouts').select('volume, completed_at').eq('user_id', userId).gte('completed_at', startOfWeek.toISOString()).lt('completed_at', endOfWeek.toISOString()),
@@ -1547,32 +1547,55 @@ function App() {
       }
     });
 
-    const sleepMap: { [date: string]: number } = {};
+    // Measured resting heart rate. This line used to be computed as
+    //   58 + caffeine * 0.02 + sleepDeficit * 0.12
+    // which means a chart captioned "caffeine vs resting heart rate" was plotting
+    // caffeine against a function of caffeine. Any apparent relationship was
+    // guaranteed by construction and could never have shown anything else - the
+    // worst kind of chart, because it looks like evidence. Real resting_hr sat in
+    // vigor_sleep the whole time and was not even being selected.
+    const restingHrMap: { [date: string]: number } = {};
     sleepLogs.forEach(s => {
-      const dStr = toYYYYMMDD(s.logged_at);
-      sleepMap[dStr] = Number(s.quality_score);
+      const hr = Number((s as any).resting_hr);
+      if (Number.isFinite(hr) && hr > 0) {
+        restingHrMap[toYYYYMMDD(s.logged_at)] = hr;
+      }
     });
 
-    const chartData = dates30Days.map(date => {
-      const caffeine = intakeMap[date] || 0;
-      const sleepQuality = sleepMap[date] || 75;
-      
-      const caffeineEffect = caffeine * 0.02;
-      const sleepEffect = Math.max(0, (80 - sleepQuality) * 0.12);
-      const heartRate = Math.round(58 + caffeineEffect + sleepEffect);
+    const chartData = dates30Days.map(date => ({
+      dateStr: new Date(date + 'T12:00:00').toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+      caffeine: intakeMap[date] || 0,
+      // null, not a filled-in guess: a day with no measurement leaves a gap in the
+      // line rather than inventing a reading to keep the curve smooth.
+      heartRate: restingHrMap[date] ?? null
+    }));
 
-      return {
-        dateStr: new Date(date + 'T12:00:00').toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
-        caffeine: caffeine,
-        heartRate: heartRate
-      };
-    });
+    // Whether the two actually move together, over the days where both were
+    // measured. Stated rather than left to the eye, because two lines on twin axes
+    // will look related whatever they do.
+    const paired = chartData.filter(d => d.heartRate !== null);
+    let correlation: number | null = null;
+    if (paired.length >= 5) {
+      const xs = paired.map(d => d.caffeine);
+      const ys = paired.map(d => d.heartRate as number);
+      const mx = xs.reduce((a, b) => a + b, 0) / xs.length;
+      const my = ys.reduce((a, b) => a + b, 0) / ys.length;
+      let num = 0, dx2 = 0, dy2 = 0;
+      for (let i = 0; i < xs.length; i++) {
+        const dx = xs[i] - mx, dy = ys[i] - my;
+        num += dx * dy; dx2 += dx * dx; dy2 += dy * dy;
+      }
+      const den = Math.sqrt(dx2 * dy2);
+      if (den > 0) correlation = num / den;
+    }
 
     const activeDateCaffeine = intakeMap[selectedDateStr] || 0;
     const metabolicBoost = Math.round(activeDateCaffeine * (zaneResult.caffeineCoeff || CAFFEINE_KCAL_PER_MG_PRIOR));
 
     return {
       chartData,
+      correlation,
+      pairedDays: paired.length,
       activeDateCaffeine,
       metabolicBoost,
       // Per-day totals, reused by the FusionNet retrain so it trains on the
@@ -3763,22 +3786,38 @@ function App() {
           {/* CAFFEINE CHART */}
           <div className="fuel-card col-6">
             <h3 className="fuel-card-title">
-              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Caffeine vs. Resting Heart Rate Trend (30 Days)
+              <Sparkles size={14} style={{ color: 'var(--color-primary)' }} /> Does caffeine move your resting heart rate?
             </h3>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '0 0 10px', lineHeight: 1.5 }}>
+              {caffeineStats.correlation === null
+                ? `Not enough nights measured yet to say — ${caffeineStats.pairedDays} day${caffeineStats.pairedDays === 1 ? '' : 's'} so far with both a caffeine total and a recorded resting heart rate. Gaps in the red line are nights with no measurement.`
+                : !isCorrelationMeaningful(caffeineStats.correlation, caffeineStats.pairedDays)
+                  ? `Nothing you could call a link yet — ${caffeineStats.pairedDays} nights measured, and what movement there is could easily be chance. Gaps in the red line are nights with no measurement.`
+                  : caffeineStats.correlation > 0
+                    ? `Across ${caffeineStats.pairedDays} measured nights your resting heart rate does run higher after bigger caffeine days. Worth watching — it still isn't proof caffeine caused it, since plenty else moves together with how much coffee you drink.`
+                    : `Across ${caffeineStats.pairedDays} measured nights your resting heart rate runs lower after bigger caffeine days. Caffeine almost certainly isn't doing that — something else is moving alongside your coffee.`}
+            </p>
             <div style={{ height: 260 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={caffeineStats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid {...ZENITH_CHART_GRID} />
                   <XAxis dataKey="dateStr" tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.1)" />
                   <YAxis yAxisId="left" tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.1)" label={{ value: 'Caffeine (mg)', angle: -90, position: 'insideLeft', fill: 'var(--text-muted)', fontSize: 9 }} />
-                  <YAxis yAxisId="right" orientation="right" domain={[50, 75]} tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.1)" label={{ value: 'Heart Rate (bpm)', angle: 90, position: 'insideRight', fill: 'var(--text-muted)', fontSize: 9 }} />
+                  {/* Auto-scaled, not pinned to 50-75. The fixed range was chosen to
+                      frame a formula that always produced 58-65; real resting heart
+                      rate sits lower and moves less, and a fixed window either
+                      flattens it or crops it. */}
+                  <YAxis yAxisId="right" orientation="right" domain={['dataMin - 3', 'dataMax + 3']} allowDecimals={false} tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.1)" label={{ value: 'Resting HR (bpm)', angle: 90, position: 'insideRight', fill: 'var(--text-muted)', fontSize: 9 }} />
                   <Tooltip
                     contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
                     labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                     itemStyle={{ fontSize: 11 }}
                   />
                   <Area yAxisId="left" type="monotone" dataKey="caffeine" fill="rgba(84, 160, 255, 0.1)" stroke="var(--color-carb)" strokeWidth={1} name="Caffeine (mg)" />
-                  <Line yAxisId="right" type="monotone" dataKey="heartRate" stroke="rgba(255, 107, 107, 1)" strokeWidth={2} dot={{ r: 2 }} name="Resting Heart Rate (bpm)" />
+                  {/* connectNulls={false}: days with no measurement stay as gaps.
+                      Bridging them would draw a confident line through nights that
+                      were never recorded. */}
+                  <Line yAxisId="right" type="monotone" dataKey="heartRate" stroke="rgba(255, 107, 107, 1)" strokeWidth={2} dot={{ r: 2 }} connectNulls={false} name="Resting HR (measured)" />
                   <Legend wrapperStyle={{ fontSize: 10, color: 'var(--text-muted)' }} />
                 </ComposedChart>
               </ResponsiveContainer>
