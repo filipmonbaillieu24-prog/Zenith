@@ -275,10 +275,31 @@ fun TodayScreen(
 
                                 // 2. Async load previous weights for double progression starting values
                                 scope.launch {
-                                    val prevWorkout = repository.getPreviousWorkoutForTemplate(localTemp.id)
-                                    if (prevWorkout != null) {
+                                    // Per exercise, the best of the last few sessions rather than
+                                    // whatever happened last time.
+                                    //
+                                    // Targets used to be built from the single most recent session,
+                                    // so one bad day set the baseline and the athlete had to climb
+                                    // back out of it. The cause is usually invisible in the data -
+                                    // a machine was busy so the order changed and the chest was
+                                    // pre-fatigued by the time the press came round, or they slept
+                                    // badly, or they were short on time. All of it looks the same
+                                    // from here: a set that fell short.
+                                    //
+                                    // Judged on best working-set e1RM, which is the same measure the
+                                    // web logbook uses to decide whether a lift is progressing.
+                                    val recentWorkouts = repository.getRecentWorkoutsForTemplate(localTemp.id, 3)
+                                    if (recentWorkouts.isNotEmpty()) {
                                         for (ae in active) {
-                                            val log = prevWorkout.sets.find { it.exerciseId == ae.exerciseId }
+                                            val log = recentWorkouts
+                                                .mapNotNull { w -> w.sets.find { it.exerciseId == ae.exerciseId } }
+                                                .filter { it.sets.any { s -> s.type == "working" } }
+                                                .maxByOrNull { exLog ->
+                                                    exLog.sets
+                                                        .filter { it.type == "working" }
+                                                        .maxOfOrNull { s -> s.weight * (1.0 + (s.reps + s.rir) / 30.0) }
+                                                        ?: 0.0
+                                                }
                                             if (log != null && log.sets.isNotEmpty()) {
                                                 val workingSetsInLog = log.sets.filter { it.type == "working" }
                                                 val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }

@@ -2,6 +2,7 @@ package com.zenith.kratos.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +43,11 @@ fun CompletionScreen(
     val scope = rememberCoroutineScope()
 
     var saveToTemplate by remember { mutableStateOf(true) }
+    // Marked by the athlete when the session was not representative - a machine was
+    // taken and the order had to change, illness, a rushed lunch break. The session
+    // still counts for volume and history; it is only skipped when choosing the
+    // baseline the NEXT session's targets are built from.
+    var isOffDay by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
 
     // Parse duration
@@ -192,6 +199,44 @@ fun CompletionScreen(
             }
 
 
+            // Off-day switch.
+            //
+            // Targets are built from previous performance, so a bad session quietly
+            // becomes the new starting point. The best-of-recent baseline handles the
+            // common case on its own, but it cannot see WHY a session was poor - this
+            // is the escape hatch for the reasons no data captures.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isOffDay) ZenithAccentNeon.copy(alpha = 0.10f) else ZenithSurface)
+                    .clickable { isOffDay = !isOffDay }
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = isOffDay,
+                    onCheckedChange = { isOffDay = it },
+                    colors = CheckboxDefaults.colors(checkedColor = ZenithAccentNeon, checkmarkColor = ZenithBackground)
+                )
+                Column(modifier = Modifier.padding(start = 6.dp)) {
+                    Text(
+                        text = "Don't use this session for my next targets",
+                        color = ZenithPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Equipment taken, felt ill, short on time - it still counts in your history.",
+                        color = ZenithSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             // Save button
             Button(
                 onClick = {
@@ -199,6 +244,16 @@ fun CompletionScreen(
                     scope.launch {
                         try {
                             // 1. Build Workout Exercise Logs
+                            // The order exercises were actually started in, derived from
+                            // the timestamps stamped as each one's first set was ticked
+                            // off. Exercises that were never started have no stamp and
+                            // are dropped below anyway.
+                            val performedRank = exercises
+                                .filter { it.firstCompletedAtMs != null }
+                                .sortedBy { it.firstCompletedAtMs }
+                                .mapIndexed { idx, ex -> ex.exerciseId to idx }
+                                .toMap()
+
                             val logs = exercises.mapNotNull { ex ->
                                 val completedSets = ex.sets.filter { it.isCompleted }.map { s ->
                                     WorkoutLoggedSet(
@@ -211,7 +266,11 @@ fun CompletionScreen(
                                 if (completedSets.isNotEmpty()) {
                                     WorkoutExerciseLog(
                                         exerciseId = ex.exerciseId,
-                                        sets = completedSets
+                                        sets = completedSets,
+                                        // The array itself stays in template order - other
+                                        // code matches by id and renders in array order -
+                                        // so the real order is recorded as a field.
+                                        performedOrder = performedRank[ex.exerciseId]
                                     )
                                 } else null
                             }
@@ -227,6 +286,7 @@ fun CompletionScreen(
                                 completedAt = completedTime,
                                 volume = volume,
                                 cardioStressFactor = cardioStressFactor,
+                                isOffDay = isOffDay,
                                 sets = logs
                             )
                             repository.logWorkout(workoutObj)

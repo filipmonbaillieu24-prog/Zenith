@@ -36,6 +36,7 @@ export interface WorkoutRow {
   template_id?: string | null;
   completed_at: string;
   sets: unknown;
+  is_off_day?: boolean | null;
 }
 
 /** One exercise's showing in one session. */
@@ -55,6 +56,17 @@ export interface ExerciseSession {
   /** Sets taken to within one rep of failure. */
   hardSets: number;
   volumeKg: number;
+  /**
+   * The position this exercise was actually performed in, when recorded.
+   *
+   * Null for every session logged before Kratos Pilot began recording it. An
+   * exercise pushed later in a session - because the machine was busy - is worked
+   * on muscles that are already tired, so a dip there is not the same thing as
+   * getting weaker. Without this the two are indistinguishable.
+   */
+  performedOrder: number | null;
+  /** The athlete marked this session as unrepresentative. */
+  isOffDay: boolean;
 }
 
 /** Epley, extended to count reps left in reserve as reps not performed. */
@@ -137,7 +149,17 @@ export function buildExerciseSessions(
         bestSet,
         workingSets,
         hardSets,
-        volumeKg: Math.round(volumeKg)
+        volumeKg: Math.round(volumeKg),
+        // null and undefined must be rejected BEFORE Number(), which turns both into
+        // 0 - and 0 is the valid, meaningful value "done first". A session logged
+        // before the order was recorded would otherwise claim to have been first.
+        performedOrder: (() => {
+          const raw = exLog?.performed_order;
+          if (raw === null || raw === undefined || raw === '') return null;
+          const n = Number(raw);
+          return Number.isFinite(n) ? n : null;
+        })(),
+        isOffDay: w.is_off_day === true
       });
     }
   }
@@ -184,6 +206,21 @@ export const TREND_WINDOW = 3;
  */
 const MEANINGFUL_CHANGE_PCT = 2.5;
 
+function ordinal(n: number): string {
+  const i = Math.round(n) + 1; // performedOrder is 0-based; people count from one
+  const suffix = i % 10 === 1 && i % 100 !== 11 ? 'st'
+    : i % 10 === 2 && i % 100 !== 12 ? 'nd'
+    : i % 10 === 3 && i % 100 !== 13 ? 'rd' : 'th';
+  return `${i}${suffix}`;
+}
+
+function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
 export function analyseExerciseTrend(sessions: ExerciseSession[]): ExerciseTrend {
   const sorted = [...sessions].sort((a, b) => a.date.localeCompare(b.date));
   const latest = sorted[sorted.length - 1];
@@ -209,6 +246,23 @@ export function analyseExerciseTrend(sessions: ExerciseSession[]): ExerciseTrend
   // permanent regression on any lift whose first session was logged with an
   // optimistic RIR, which no amount of good training afterwards can undo.
   const window = sorted.slice(-TREND_WINDOW);
+
+  // A session the athlete flagged, or one where this exercise was pushed later than
+  // usual because a machine was taken, is not evidence of getting weaker - it is
+  // evidence of a worse position to lift from. Noted so the verdict can say so
+  // rather than quietly counting it as decline.
+  const typicalOrder = median(sorted.map(x => x.performedOrder).filter((n): n is number => n !== null));
+  const mostRecent = window[window.length - 1];
+  const displaced = typicalOrder !== null && mostRecent.performedOrder !== null
+    && mostRecent.performedOrder > typicalOrder + 1;
+  const flagged = window.some(x => x.isOffDay);
+  // Prefixed onto a decline verdict so a worse position to lift from is not read as
+  // getting weaker.
+  const caveat = displaced
+    ? ` Note that you did this ${ordinal(mostRecent.performedOrder as number)} last time rather than your usual ${ordinal(typicalOrder as number)} - later in the session, on muscles that were already tired.`
+    : flagged
+      ? ' One of these sessions is marked as not representative.'
+      : '';
   const first = window[0].bestE1rmKg;
   const last = window[window.length - 1].bestE1rmKg;
   const changePct = first > 0 ? Math.round(((last - first) / first) * 1000) / 10 : 0;
@@ -246,11 +300,11 @@ export function analyseExerciseTrend(sessions: ExerciseSession[]): ExerciseTrend
       recentChangePct: changePct,
       lastChangePct,
       headline: recovering ? `Climbing back (+${lastChangePct}%)` : `Down ${Math.abs(changePct)}%`,
-      detail: recovering
+      detail: (recovering
         ? `Still ${Math.abs(changePct)}% below where this window started (${span}), but up ${lastChangePct}% since last time - it is moving in the right direction again.`
         : stillHard
         ? `Your best set has dropped over the last ${TREND_WINDOW} sessions (${span}) even though you are still taking sets near failure. Worth checking recovery, or whether the weight jumped too fast earlier.`
-        : `Your best set has dropped over the last ${TREND_WINDOW} sessions (${span}), and none of the recent sets went near failure. This may be effort rather than capacity.`
+        : `Your best set has dropped over the last ${TREND_WINDOW} sessions (${span}), and none of the recent sets went near failure. This may be effort rather than capacity.`) + caveat
     };
   }
 

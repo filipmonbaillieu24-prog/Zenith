@@ -179,6 +179,35 @@ class WorkoutRepository(
     }
 
     // 5. Fetch previous workout logs of a template for Double Progression start values
+    /**
+     * The recent sessions of a routine that may serve as a progression baseline.
+     *
+     * Deliberately more than one. Targets used to be built from `limit(1)` - the
+     * single most recent session - so any bad day became the new starting point: a
+     * machine taken and the order changed, illness, a rushed lunch break. All of
+     * them produce the same signature, a set that fell short, and the athlete then
+     * had to climb back out of it.
+     *
+     * Sessions the athlete marked as unrepresentative are excluded outright.
+     */
+    suspend fun getRecentWorkoutsForTemplate(templateId: String, limit: Int = 3): List<Workout> = withContext(Dispatchers.IO) {
+        try {
+            val uId = client.auth.currentUserOrNull()?.id ?: return@withContext emptyList()
+            val response = client.postgrest["kratos_workouts"].select {
+                filter {
+                    eq("template_id", templateId)
+                    eq("user_id", uId)
+                }
+                order("completed_at", io.github.jan.supabase.postgrest.query.Order.DESCENDING)
+                limit(limit.toLong())
+            }
+            response.decodeList<Workout>().filter { !it.isOffDay }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
     suspend fun getPreviousWorkoutForTemplate(templateId: String): Workout? = withContext(Dispatchers.IO) {
         try {
             val uId = client.auth.currentUserOrNull()?.id ?: return@withContext null
@@ -341,7 +370,7 @@ class WorkoutRepository(
                             )
                         })
                     }
-                )
+                ).also { it.firstCompletedAtMs = pe.firstCompletedAtMs }
             }
             PersistedWorkoutState(
                 templateId = local.templateId,
@@ -376,6 +405,7 @@ class WorkoutRepository(
                     maxWeight = ae.maxWeight,
                     notes = ae.notes,
                     isBodyweight = ae.isBodyweight,
+                    firstCompletedAtMs = ae.firstCompletedAtMs,
                     sets = ae.sets.map { as_ ->
                         PersistedActiveSet(
                             type = as_.type,

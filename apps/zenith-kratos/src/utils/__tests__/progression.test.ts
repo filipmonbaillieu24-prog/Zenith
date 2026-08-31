@@ -150,6 +150,49 @@ describe('trend verdicts', () => {
   });
 });
 
+describe('a session done out of order is not the same as getting weaker', () => {
+  const withOrder = (e1rms: number[], orders: (number | null)[]) =>
+    buildExerciseSessions(
+      e1rms.map((w, i) => ({
+        id: `w${i}`, name: 'PUSH', template_id: 'tpl',
+        completed_at: `2026-08-${String(1 + i * 7).padStart(2, '0')}T19:00:00Z`,
+        sets: [{ exercise_id: KG.id, performed_order: orders[i], sets: [set(w, 10, 1)] }]
+      })), [KG]);
+
+  it('reads the recorded position off the log', () => {
+    const s = withOrder([50, 55], [0, 3]);
+    expect(s[0].performedOrder).toBe(0);
+    expect(s[1].performedOrder).toBe(3);
+  });
+
+  it('leaves it null for sessions logged before it was recorded', () => {
+    expect(withOrder([50], [null])[0].performedOrder).toBeNull();
+  });
+
+  it('says so when a decline followed the exercise being pushed later', () => {
+    // Done 1st, 1st, then 4th - and the numbers fell.
+    const t = analyseExerciseTrend(withOrder([60, 58, 50], [0, 0, 3]));
+    expect(t.verdict).toBe('regressing');
+    expect(t.detail).toMatch(/4th.*rather than your usual 1st/i);
+    expect(t.detail).toMatch(/already tired/i);
+  });
+
+  it('stays quiet when the position did not change', () => {
+    const t = analyseExerciseTrend(withOrder([60, 58, 50], [0, 0, 0]));
+    expect(t.verdict).toBe('regressing');
+    expect(t.detail).not.toMatch(/rather than your usual/i);
+  });
+
+  it('flags a session the athlete marked as unrepresentative', () => {
+    const sessions = buildExerciseSessions([
+      { id: 'a', name: 'PUSH', template_id: 't', completed_at: '2026-08-01T19:00:00Z', sets: [{ exercise_id: KG.id, sets: [set(60, 10, 1)] }] },
+      { id: 'b', name: 'PUSH', template_id: 't', completed_at: '2026-08-08T19:00:00Z', sets: [{ exercise_id: KG.id, sets: [set(58, 10, 1)] }] },
+      { id: 'c', name: 'PUSH', template_id: 't', completed_at: '2026-08-15T19:00:00Z', is_off_day: true, sets: [{ exercise_id: KG.id, sets: [set(50, 10, 1)] }] }
+    ], [KG]);
+    expect(analyseExerciseTrend(sessions).detail).toMatch(/not representative/i);
+  });
+});
+
 describe('same-routine comparison', () => {
   const sessions = buildExerciseSessions([
     workout('w1', 'PUSH', '2026-08-18T19:00:00Z', KG.id, [set(50, 10, 1)]),

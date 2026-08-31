@@ -58,7 +58,20 @@ data class WorkoutLoggedSet(
 @Serializable
 data class WorkoutExerciseLog(
     @SerialName("exercise_id") val exerciseId: String,
-    val sets: List<WorkoutLoggedSet>
+    val sets: List<WorkoutLoggedSet>,
+    /**
+     * The 0-based position this exercise was actually performed in, which can differ
+     * from the template order when a machine was busy.
+     *
+     * Recorded rather than inferred: the logged array is built from the template, so
+     * a session done out of order used to produce a log byte-identical to one done
+     * in order. Nothing could tell them apart, which meant a dip caused by doing an
+     * exercise on pre-fatigued muscles looked exactly like getting weaker.
+     *
+     * Nullable because every session logged before this existed has no such record,
+     * and guessing one would be worse than admitting it is unknown.
+     */
+    @SerialName("performed_order") val performedOrder: Int? = null
 )
 
 @Serializable
@@ -71,6 +84,8 @@ data class Workout(
     @SerialName("completed_at") val completedAt: String,
     val volume: Double,
     @SerialName("cardio_stress_factor") val cardioStressFactor: Double = 1.0,
+    /** Marked unrepresentative by the athlete. Still counts for volume; never used as a progression baseline. */
+    @SerialName("is_off_day") val isOffDay: Boolean = false,
     val sets: List<WorkoutExerciseLog>
 )
 
@@ -110,7 +125,18 @@ data class ActiveExerciseState(
     val notes: String?,
     val isBodyweight: Boolean,
     val sets: SnapshotStateList<ActiveSetState>
-)
+) {
+    /**
+     * When the first set of this exercise was ticked off, in epoch millis.
+     *
+     * Stamped as it happens rather than reconstructed afterwards: the logged array
+     * is built in template order, so once a session is saved there is no trace of
+     * what was actually done when. Sorting by this at completion gives the real
+     * order - which matters when a busy machine forces an exercise later in the
+     * session, onto muscles that are already tired.
+     */
+    var firstCompletedAtMs by mutableStateOf<Long?>(null)
+}
 
 @Serializable
 data class PersistedActiveSet(
@@ -137,6 +163,9 @@ data class PersistedActiveExercise(
     val maxWeight: Double? = null,
     val notes: String?,
     val isBodyweight: Boolean = false,
+    // Survives the app being killed mid-session, or the performed order would be
+    // lost for exactly the sessions most likely to have been disrupted.
+    val firstCompletedAtMs: Long? = null,
     val sets: List<PersistedActiveSet>
 )
 

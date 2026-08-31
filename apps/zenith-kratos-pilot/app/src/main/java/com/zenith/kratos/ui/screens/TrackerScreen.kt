@@ -681,6 +681,17 @@ fun TrackerScreen(
                                                     setVal.rirInput = rir.toString()
                                                     setVal.isCompleted = true
 
+                                                    // Stamp when this exercise was actually started, so the
+                                                    // performed order can be recovered at the end. The logged
+                                                    // array is built in template order, so without this a
+                                                    // session done out of order - because a machine was taken -
+                                                    // saves as byte-identical to one done in order, and a dip
+                                                    // caused by working pre-fatigued muscles is indistinguishable
+                                                    // from getting weaker.
+                                                    if (exState.firstCompletedAtMs == null) {
+                                                        exState.firstCompletedAtMs = System.currentTimeMillis()
+                                                    }
+
                                                     // Update target parawithers upon confirmation
                                                     setVal.targetWeight = w
                                                     setVal.targetReps = r
