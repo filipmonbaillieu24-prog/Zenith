@@ -13,6 +13,8 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -387,6 +389,9 @@ class ScaleBleManager(private val context: Context) {
         } ?: return
 
         _status.value = "Connecting…"
+        // Each connection gets one probe. Without this reset a reconnect would stay
+        // silent because the previous connection had already used it up.
+        probeRan = false
         gatt = try {
             device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
         } catch (e: SecurityException) {
@@ -404,6 +409,8 @@ class ScaleBleManager(private val context: Context) {
             Log.w(TAG, "disconnect failed: ${e.message}")
         }
         gatt = null
+        probeHandler.removeCallbacksAndMessages(null)
+        probeRan = false
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
@@ -432,6 +439,7 @@ class ScaleBleManager(private val context: Context) {
             // Record the full GATT map. When nothing decodes, this is what identifies
             // which OEM family the scale belongs to.
             val notifiable = mutableListOf<BluetoothGattCharacteristic>()
+            writable.clear()
             for (service in g.services) {
                 captureGatt("SVC ${service.uuid}")
                 for (ch in service.characteristics) {
@@ -449,6 +457,10 @@ class ScaleBleManager(private val context: Context) {
                     val canNotify = ch.properties and
                         (BluetoothGattCharacteristic.PROPERTY_NOTIFY or BluetoothGattCharacteristic.PROPERTY_INDICATE) != 0
                     if (canNotify) notifiable.add(ch)
+                    val canWrite = ch.properties and
+                        (BluetoothGattCharacteristic.PROPERTY_WRITE or
+                         BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0
+                    if (canWrite) writable.add(ch)
                 }
             }
 
@@ -513,8 +525,91 @@ class ScaleBleManager(private val context: Context) {
         }
     }
 
+    // ── Handshake probe ─────────────────────────────────────────────────────────
+    //
+    // This scale connects, subscribes and then repeats one 17-byte frame forever. It
+    // carries the scale's own MAC and a checksum, and no weight: two weigh-ins 0.05 kg
+    // apart produced identical frames except for a single byte that stepped 5 -> 7,
+    // which counts measurements rather than measuring them. A device that keeps saying
+    // the same thing is waiting for an answer.
+    //
+    // The answer is not documented anywhere I can verify, so this does not pretend to
+    // know it. It writes a short series of candidate replies, shaped the way the
+    // scale's own frames are shaped - byte 0 a command, byte 1 the total length, last
+    // byte the sum of everything before it, which is verified against both captured
+    // frames - and records every write and everything that comes back. If one of them
+    // unlocks the measurement stream the diagnostics will show the frames changing.
+    // If none do, the report says exactly what was tried.
+    private val writable = mutableListOf<BluetoothGattCharacteristic>()
+    private var probeRan = false
+    private val probeHandler = Handler(Looper.getMainLooper())
+
+    /** Appends the frame checksum: the sum of every preceding byte, mod 256. */
+    private fun withChecksum(body: ByteArray): ByteArray {
+        var sum = 0
+        for (b in body) sum += (b.toInt() and 0xFF)
+        return body + (sum and 0xFF).toByte()
+    }
+
+    private fun probeFrames(): List<ByteArray> = listOf(
+        // Acknowledge the hello. 0x13, total length 9, then a unit selector.
+        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x01, 0x10, 0x00, 0x00, 0x00)),
+        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00)),
+        // Ask for state, the usual follow-up in this frame family.
+        withChecksum(byteArrayOf(0x14, 0x09, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00)),
+        withChecksum(byteArrayOf(0x14, 0x05, 0x10, 0x00)),
+        // Acknowledge using the same command byte the scale sent, in case it wants
+        // its own hello echoed back.
+        withChecksum(byteArrayOf(0x12, 0x05, 0x00, 0x00))
+    )
+
+    @SuppressLint("MissingPermission")
+    private fun runHandshakeProbe() {
+        if (probeRan) return
+        val g = gatt ?: return
+        val targets = writable.toList()
+        if (targets.isEmpty()) {
+            capture("PROBE skipped - no writable characteristic")
+            return
+        }
+        probeRan = true
+        capture("PROBE start - ${targets.size} writable characteristic(s)")
+
+        var delay = 0L
+        for (target in targets) {
+            for (frame in probeFrames()) {
+                delay += 700
+                probeHandler.postDelayed({
+                    try {
+                        val noResponse = target.properties and
+                            BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0
+                        @Suppress("DEPRECATION")
+                        target.writeType = if (noResponse) {
+                            BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+                        } else {
+                            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+                        }
+                        @Suppress("DEPRECATION")
+                        target.value = frame
+                        @Suppress("DEPRECATION")
+                        val ok = g.writeCharacteristic(target)
+                        capture("TX ${target.uuid} ${frame.toHex()}${if (ok) "" else "  (write refused)"}")
+                    } catch (e: Exception) {
+                        capture("TX ${target.uuid} failed: ${e.message}")
+                    }
+                }, delay)
+            }
+        }
+    }
+
     private fun handleFrame(characteristic: UUID, value: ByteArray) {
         capture("NTF $characteristic ${value.toHex()}")
+
+        // A frame that carries no weight and repeats unchanged is a greeting, not a
+        // measurement. Answer it once per connection.
+        if (value.isNotEmpty() && (value[0].toInt() and 0xFF) == 0x12) {
+            probeHandler.postDelayed({ runHandshakeProbe() }, 1200)
+        }
         val decoded = decodeAny(characteristic, value, "notification")
         if (decoded != null) {
             publish(decoded)
