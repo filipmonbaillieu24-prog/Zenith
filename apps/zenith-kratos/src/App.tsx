@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useEffect, useMemo } from 'react';
 import type { Exercise, TemplateSet, TemplateExercise, Template, WorkoutExerciseLog, Workout, PMCPoint } from './types';
 import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, buildTrainingLoadPool, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm, fetchSoreness, saveSoreness, sorenessAdjustment, overallSoreness, SORENESS_GROUPS, SEVERITY_LABELS, SEVERITY_DESCRIPTIONS, Severity, toKg } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
@@ -2700,7 +2700,7 @@ export default function App() {
                           <div style={{ display: 'flex', gap: 20, textAlign: 'right' }}>
                             <div>
                               <div className="zenith-label">Total Volume</div>
-                              <div className="zenith-stat-value" style={{ fontSize: 16, marginTop: 2 }}>{w.volume} kg</div>
+                              <div className="zenith-stat-value zenith-tnum" style={{ fontSize: 16, marginTop: 2 }}>{Math.round(w.volume).toLocaleString('en-US')} kg</div>
                             </div>
                             <div>
                               <div className="zenith-label" style={{ marginBottom: 4 }}>Cardio Recovery</div>
@@ -2736,15 +2736,20 @@ export default function App() {
                                 <strong style={{ fontSize: 12, color: '#e2e8f0' }}>
                                   vs your previous {cmp.workoutName} ({prevLabel})
                                 </strong>
-                                <span style={{ fontSize: 11, color: '#94a3b8' }}>
-                                  {gained.length} up, {lost.length} down, {moved.length - gained.length - lost.length} the same
+                                <span style={{ fontSize: 11, color: '#94a3b8', display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                                  <span>
+                                    <strong style={{ color: gained.length > 0 ? '#55efc4' : '#94a3b8' }}>{gained.length}</strong> up
+                                    {', '}
+                                    <strong style={{ color: lost.length > 0 ? '#ff7675' : '#94a3b8' }}>{lost.length}</strong> down
+                                    {', '}{moved.length - gained.length - lost.length} the same
+                                  </span>
                                   {cmp.volumeChangePct !== null && (
-                                    <>
-                                      {'  ·  volume '}
-                                      <strong style={{ color: cmp.volumeChangePct >= 0 ? '#55efc4' : '#ff7675' }}>
+                                    <span style={{ opacity: 0.55 }}>
+                                      volume{' '}
+                                      <strong style={{ color: cmp.volumeChangePct >= 0 ? '#55efc4' : '#ff7675', opacity: 1 }}>
                                         {cmp.volumeChangePct >= 0 ? '+' : ''}{cmp.volumeChangePct}%
                                       </strong>
-                                    </>
+                                    </span>
                                   )}
                                   {/* Hard sets, because effort and tonnage move
                                       independently. This athlete's ARMS session went
@@ -2757,38 +2762,43 @@ export default function App() {
                                     if (now === 0 && before === 0) return null;
                                     const delta = now - before;
                                     return (
-                                      <>
-                                        {'  ·  '}
-                                        <strong style={{ color: delta > 0 ? '#55efc4' : delta < 0 ? '#f5a623' : '#94a3b8' }}>
+                                      <span style={{ opacity: 0.55 }}>
+                                        <strong style={{ color: delta > 0 ? '#55efc4' : delta < 0 ? '#f5a623' : '#94a3b8', opacity: 1 }}>
                                           {now} hard set{now === 1 ? '' : 's'}
                                         </strong>
                                         {delta !== 0 ? ` (${delta > 0 ? '+' : ''}${delta})` : ''}
-                                      </>
+                                      </span>
                                     );
                                   })()}
                                 </span>
                               </div>
 
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                              {/* A grid, not space-between. With the exercise name on
+                                  the left and the figures pushed to the far right of a
+                                  wide card, the eye had to cross the whole row to pair
+                                  them up - and the middle column never lined up between
+                                  rows because each name is a different length. */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', columnGap: 16, rowGap: 6, alignItems: 'baseline' }}>
                                 {moved.map(e => {
                                   const pct = e.e1rmChangePct as number;
                                   const colour = pct >= 2.5 ? '#55efc4' : pct <= -2.5 ? '#ff7675' : '#94a3b8';
                                   const now = e.current.bestSet;
                                   const before = e.previous?.bestSet;
                                   return (
-                                    <div key={e.exerciseName} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11, alignItems: 'baseline' }}>
-                                      <span style={{ color: '#94a3b8', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <Fragment key={e.exerciseName}>
+                                      <span style={{ fontSize: 11, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {e.exerciseName}
                                       </span>
-                                      <span style={{ color: '#64748b', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                                      <span className="zenith-tnum" style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap', textAlign: 'right' }}>
                                         {before ? `${before.weight}×${before.reps}` : '—'}
-                                        {'  →  '}
-                                        {now ? `${now.weight}×${now.reps}` : '—'} {e.unit}
+                                        <span style={{ opacity: 0.5 }}>{'  →  '}</span>
+                                        <span style={{ color: '#94a3b8' }}>{now ? `${now.weight}×${now.reps}` : '—'}</span>
+                                        <span style={{ opacity: 0.5 }}> {e.unit}</span>
                                       </span>
-                                      <strong style={{ color: colour, width: 52, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                      <strong className="zenith-tnum" style={{ fontSize: 11, color: colour, minWidth: 52, textAlign: 'right' }}>
                                         {pct >= 0 ? '+' : ''}{pct}%
                                       </strong>
-                                    </div>
+                                    </Fragment>
                                   );
                                 })}
                               </div>
@@ -2797,25 +2807,74 @@ export default function App() {
                         })()}
 
                         {/* Exercise Sets breakdown */}
-                        <div style={{ display: 'flex', flexFlow: 'row wrap', gap: 16 }}>
+                        {/* An even grid. A wrapping flex row of min-width boxes gave
+                            every card a different width depending on its longest set
+                            line, so nothing aligned between cards and the row ended in
+                            a ragged gap. */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 12, alignItems: 'start' }}>
                           {w.sets.map((exLog, idx) => {
                             const ex = exerciseMap.get(exLog.exercise_id);
                             if (!ex) return null;
                             return (
-                              <div key={idx} className="zenith-card" style={{ minWidth: 220, padding: 12, borderRadius: 10 }}>
-                                <span className="zenith-table-name" style={{ display: 'block', marginBottom: 6, maxWidth: 'none' }}>{ex.name}</span>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  {exLog.sets.map((s, sIdx) => (
-                                    <div key={sIdx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: s.type === 'warmup' ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
-                                      <span>
-                                        Set {sIdx + 1} {s.type === 'warmup' && <span style={{ fontSize: 9, opacity: 0.6 }}>(W)</span>}:
-                                      </span>
-                                      <strong className="zenith-tnum">
-                                        {s.weight} {ex.weight_unit} x {s.reps} <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}> (RIR {s.rir})</span>
-                                      </strong>
-                                    </div>
-                                  ))}
+                              <div key={idx} className="zenith-card" style={{ padding: '12px 14px', borderRadius: 10 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                                  <span className="zenith-table-name" style={{ maxWidth: 'none', lineHeight: 1.3 }}>{ex.name}</span>
+                                  <span style={{ fontSize: 9, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px', flexShrink: 0 }}>
+                                    {ex.weight_unit}
+                                  </span>
                                 </div>
+
+                                {/* Four aligned columns instead of label-left /
+                                    value-right. With space-between across a card this
+                                    wide the two halves drifted apart, and no two set
+                                    lines lined up with each other. The unit moved to
+                                    the card header - it is the same for every set, and
+                                    repeating it pushed the numbers out of alignment. */}
+                                {(() => {
+                                  const working = exLog.sets.filter(x => x.type !== 'warmup');
+                                  const best = working.reduce<typeof working[number] | null>(
+                                    (b, x) => (!b || (x.weight * x.reps) > (b.weight * b.reps) ? x : b), null);
+                                  return (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', columnGap: 8, rowGap: 5, alignItems: 'baseline' }}>
+                                      {exLog.sets.map((x, sIdx) => {
+                                        const warm = x.type === 'warmup';
+                                        const top = !warm && best !== null && x === best;
+                                        return (
+                                          <Fragment key={sIdx}>
+                                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', opacity: warm ? 0.55 : 1 }}>
+                                              {warm ? 'W' : sIdx + 1}
+                                            </span>
+                                            <span className="zenith-tnum" style={{
+                                              fontSize: 11,
+                                              textAlign: 'right',
+                                              color: warm ? 'var(--text-secondary)' : 'var(--text-primary)',
+                                              fontWeight: top ? 700 : 500,
+                                              opacity: warm ? 0.7 : 1
+                                            }}>
+                                              {x.weight} <span style={{ opacity: 0.45 }}>&times;</span> {x.reps}
+                                            </span>
+                                            <span className="zenith-tnum" style={{
+                                              fontSize: 10,
+                                              color: !warm && x.rir <= 1 ? '#f5a623' : 'var(--text-secondary)',
+                                              opacity: warm ? 0.55 : 1,
+                                              minWidth: 40,
+                                              textAlign: 'right'
+                                            }}>
+                                              RIR {x.rir}
+                                            </span>
+                                            {/* Marks the heaviest working set, which is
+                                                the one every comparison above is drawn
+                                                from - so the row it came from is
+                                                findable rather than guessed at. */}
+                                            <span style={{ fontSize: 9, color: '#55efc4', width: 10, textAlign: 'center' }}>
+                                              {top ? '•' : ''}
+                                            </span>
+                                          </Fragment>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                })()}
                               </div>
                             );
                           })}
