@@ -758,6 +758,30 @@ fun TrackerScreen(
                                                             // physically can't provide.
                                                             var minSafeW = Math.max(w * (1.0 - shrinkPct), epleyW * 0.92)
                                                             var maxSafeW = Math.min(w * (1.0 + growthPct), epleyW * 1.08)
+
+                                                            // On coarse equipment the percentage band can be narrower
+                                                            // than a single notch, and then it excludes the only weight
+                                                            // the machine can actually provide. A 15 lb stack at 100 lb
+                                                            // has its next position at +15%, while rirDelta 2 allows
+                                                            // +7% - so the band tops out at 107, rounds back to 100, and
+                                                            // the athlete never moves up no matter how easy it gets.
+                                                            // Reps cannot rescue it either, because they cap at
+                                                            // targetReps + 4.
+                                                            //
+                                                            // So once the reps have hit their ceiling and the set is
+                                                            // still at or above the target RIR, let the band reach the
+                                                            // next real notch - but only if Epley says that much has
+                                                            // actually been earned, which keeps a very coarse machine
+                                                            // from launching someone up a stack they are not ready for.
+                                                            if (rirDelta > 0 && r >= nextTargetReps + 4) {
+                                                                val gridBase = exState.minWeight ?: w
+                                                                val notchesUp = Math.ceil((w - gridBase + 1e-6) / step)
+                                                                val nextNotch = gridBase + notchesUp * step
+                                                                if (nextNotch > maxSafeW && nextNotch <= epleyW * 1.08) {
+                                                                    maxSafeW = nextNotch
+                                                                }
+                                                            }
+
                                                             exState.minWeight?.let { minSafeW = Math.max(minSafeW, it) }
                                                             exState.maxWeight?.let { maxSafeW = Math.min(maxSafeW, it) }
                                                             // A hard limit can push minSafeW above maxSafeW (e.g. max_weight
@@ -827,9 +851,24 @@ fun TrackerScreen(
                                                                 nextSet.targetWeight = roundedW
                                                                 nextSet.targetReps = nextTargetReps
                                                             } else {
+                                                                // The equipment has no notch small enough for the
+                                                                // increase this set earned, so progress the reps at
+                                                                // the same weight instead.
                                                                 nextSet.targetWeight = w
-                                                                val e1RMFallback = w * (1.0 + (r + rir) / 30.0)
-                                                                val exactReps = (30.0 * (e1RMFallback / w - 1.0) - nextTargetRir).toInt()
+                                                                // Integer arithmetic, on purpose. This was computed as
+                                                                //
+                                                                //   (30.0 * (w * (1 + (r + rir)/30.0) / w - 1.0) - targetRir).toInt()
+                                                                //
+                                                                // which reduces exactly to r + rir - targetRir, but the
+                                                                // float round-trip lands on 15.999999999999998 where it
+                                                                // should be 16, and toInt() truncates rather than
+                                                                // rounds. That quietly LOST a rep: a 12-rep set at RIR 4
+                                                                // aiming for RIR 3 asked for 12 again instead of 13, so
+                                                                // the rep progression stalled - and on one of these
+                                                                // exercises it went backwards, suggesting 11 after a set
+                                                                // of 12. Two of nine real cases from this athlete's log
+                                                                // were affected.
+                                                                val exactReps = r + rir - nextTargetRir
                                                                 nextSet.targetReps = exactReps.coerceIn(3, nextTargetReps + 4)
                                                             }
                                                         }

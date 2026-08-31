@@ -235,6 +235,25 @@ export function predictAutoregWeight(
   let minSafeW = Math.max(prevWeight * (1 - shrinkPct), epleyW * 0.92);
   let maxSafeW = Math.min(prevWeight * (1 + growthPct), epleyW * 1.08);
 
+  // On coarse equipment the percentage band can be narrower than a single notch,
+  // and then it excludes the only weight the machine can actually provide: a 15 lb
+  // stack at 100 lb has its next position at +15%, while a rirDelta of 2 allows
+  // +7%. The band tops out at 107, snapping rounds it back to 100, and the athlete
+  // never moves up however easy the set was. Reps cannot rescue it either - the
+  // caller's rep fallback caps at targetReps + 4.
+  //
+  // Once the reps are at that ceiling and the set is still at or above target RIR,
+  // let the band reach the next real notch - but only when Epley says that much has
+  // been earned, so a very coarse machine cannot launch someone up a stack.
+  //
+  // Kept identical to TrackerScreen.kt in Kratos Pilot, which runs the same
+  // arithmetic on-device; the two have drifted before.
+  if (rirDelta > 0 && prevReps >= targetReps + 4) {
+    const gridBase = hardMinWeight ?? prevWeight;
+    const nextNotch = gridBase + Math.ceil((prevWeight - gridBase + 1e-6) / Math.max(0.25, stepWeight)) * Math.max(0.25, stepWeight);
+    if (nextNotch > maxSafeW && nextNotch <= epleyW * 1.08) maxSafeW = nextNotch;
+  }
+
   // Hard equipment limits (e.g. a machine's actual stack range) always win over the
   // rirDelta-scaled band above - no amount of overperformance should suggest a weight
   // the equipment physically can't provide.

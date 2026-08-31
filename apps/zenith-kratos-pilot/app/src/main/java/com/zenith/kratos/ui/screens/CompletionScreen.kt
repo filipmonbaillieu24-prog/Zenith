@@ -240,13 +240,37 @@ fun CompletionScreen(
                                     val updatedEx = currentEx.map { te ->
                                         val log = logs.find { it.exerciseId == te.exerciseId }
                                         if (log != null) {
-                                            // map completed sets back to TemplateSet specs
-                                            val sets = log.sets.map { s ->
+                                            // Keep the athlete's TARGETS. Only the structure of the
+                                            // session - how many sets, and whether each is a warmup
+                                            // or a working set - is written back.
+                                            //
+                                            // This used to copy the performed set straight into the
+                                            // template:
+                                            //
+                                            //     minReps = s.reps, maxReps = s.reps + 2, targetRir = s.rir
+                                            //
+                                            // which made the RIR you HIT the RIR you were next asked
+                                            // for. A set that came back easy at RIR 4 rewrote its own
+                                            // target to 4, the next session then aimed for 4, hit 4,
+                                            // and wrote 4 again - a one-way ratchet with no path back
+                                            // up, because nothing in the app ever raises a target.
+                                            // Three exercises here had drifted from a hand-set RIR 2
+                                            // to RIR 4 this way, which is warm-up intensity being
+                                            // prescribed as working sets. It is the reason the weight
+                                            // suggestions looked timid: they were obeying a target
+                                            // that performance had quietly lowered.
+                                            //
+                                            // A template is what you intend to do. A log is what
+                                            // happened. The second must not overwrite the first.
+                                            val sets = log.sets.mapIndexed { idx, s ->
+                                                val existing = te.sets.getOrNull(idx)
+                                                    ?: te.sets.lastOrNull { it.type == s.type }
+                                                    ?: te.sets.lastOrNull()
                                                 TemplateSet(
                                                     type = s.type,
-                                                    minReps = s.reps,
-                                                    maxReps = s.reps + 2, // simple default boundary range
-                                                    targetRir = s.rir
+                                                    minReps = existing?.minReps ?: s.reps,
+                                                    maxReps = existing?.maxReps ?: (s.reps + 2),
+                                                    targetRir = existing?.targetRir ?: s.rir
                                                 )
                                             }
                                             te.copy(sets = sets)
