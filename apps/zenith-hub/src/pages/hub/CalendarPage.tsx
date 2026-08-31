@@ -10,12 +10,16 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
 import { PlannedWorkoutItem } from '../../utils/pmc';
+import { computeSimulatedPMC, interpretTSB } from '@zenith/shared';
 import './CalendarPage.css';
 import {
   DISCIPLINE_LABELS, Discipline, countTemplateSets, estimateGymDuration,
   resolveRunPace, estimateRunDuration, formatPace, rideDurationFromTss, rideTssFromDuration,
   MIN_PER_SET_FALLBACK, fulfilledPlanIds, CompletedActivity,
-  summariseWeekLoad, buildTrainingLoadPool, estimateKratosSessionLoadFromSets
+  summariseWeekLoad, buildTrainingLoadPool, estimateKratosSessionLoadFromSets,
+  matchPlansToActivities, plannedTrainingLoad, suggestedWeeklyLoad, weekStartKey,
+  fetchWeeklyLoadTargets, saveWeeklyLoadTarget,
+  eftpTrend, strengthTrend, runningEconomyTrend, loadTrend, Trend
 } from '@zenith/shared';
 
 interface CalendarPageProps {
@@ -94,9 +98,19 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
   /** Sessions actually carried out, used to tell which plans have been fulfilled. */
   const [completedActivities, setCompletedActivities] = useState<CompletedActivity[]>([]);
   /** Actual training load per local day, in the same TSS-equivalent unit for all three sports. */
-  const [actualLoads, setActualLoads] = useState<{ dateKey: string; tss: number }[]>([]);
+  const [actualLoads, setActualLoads] = useState<{ dateKey: string; tss: number; discipline: Discipline }[]>([]);
   /** Strength load of past sessions, so a planned routine is charged what it really costs. */
   const [gymLoadByTemplate, setGymLoadByTemplate] = useState<Record<string, number[]>>({});
+  /** Load targets per week, so the calendar can say whether the plan is the right size. */
+  const [weeklyTargets, setWeeklyTargets] = useState<Record<string, number>>({});
+  const [editingTargetWeek, setEditingTargetWeek] = useState<string | null>(null);
+  const [targetDraft, setTargetDraft] = useState('');
+  /** Raw rows kept for the progress trends, which need more than the calendar chips do. */
+  const [rawRides, setRawRides] = useState<any[]>([]);
+  const [rawKratos, setRawKratos] = useState<any[]>([]);
+  const [rawRuns, setRawRuns] = useState<any[]>([]);
+  const [exerciseUnits, setExerciseUnits] = useState<Record<string, string | null>>({});
+  const [showProgress, setShowProgress] = useState(false);
   const [runPace, setRunPace] = useState<{ paceMinPerKm: number; source: 'history' | 'default'; samples: number }>(
     { paceMinPerKm: 6.5, source: 'default', samples: 0 }
   );
@@ -166,8 +180,17 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           .select('date, avg_pace_min_km, duration_sec, avg_heart_rate')
           .eq('user_id', userId).order('date', { ascending: false }).limit(50)),
         run<any[]>('exercise names', supabase
-          .from('kratos_exercises').select('id, name').eq('user_id', userId))
+          .from('kratos_exercises').select('id, name, unit').eq('user_id', userId))
       ]);
+
+      setRawRides(ridesData || []);
+      setRawKratos(kratosData || []);
+      setRawRuns(runData || []);
+      setWeeklyTargets(await fetchWeeklyLoadTargets(
+        supabase, userId,
+        weekStartKey(getLocalDateString(new Date(currentYear, currentMonth - 1, 1))),
+        weekStartKey(getLocalDateString(new Date(currentYear, currentMonth + 2, 1)))
+      ));
 
       setKratosTemplates((templateData || []).map((t: any) => ({
         id: t.id,
@@ -260,18 +283,29 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
       // timestamps and have to be converted rather than sliced, or a late-evening
       // session lands on tomorrow.
       const activities: CompletedActivity[] = [
-        ...(ridesData || []).map((r: any) => ({
-          discipline: 'aero' as const,
-          dateKey: getLocalDateString(new Date(Number(r.date)))
-        })),
+        ...(ridesData || []).map((r: any) => {
+          let meta = r.metadata;
+          if (typeof meta === 'string') { try { meta = JSON.parse(meta); } catch { meta = {}; } }
+          return {
+            id: String(r.id),
+            discipline: 'aero' as const,
+            dateKey: getLocalDateString(new Date(Number(r.date))),
+            load: Math.round(Number(meta?.tss ?? meta?.hrTSS ?? 0)) || undefined,
+            title: r.name
+          };
+        }),
         ...(kratosData || []).filter((k: any) => !k.is_off_day).map((k: any) => ({
+          id: String(k.id),
           discipline: 'kratos' as const,
           dateKey: getLocalDateString(new Date(k.completed_at)),
-          templateId: k.template_id ?? null
+          templateId: k.template_id ?? null,
+          load: estimateKratosSessionLoadFromSets(k.volume, k.sets) || undefined,
+          title: k.name
         })),
         ...(runData || []).map((r: any) => ({
           discipline: 'stride' as const,
-          dateKey: String(r.date)
+          dateKey: String(r.date),
+          title: 'Run'
         }))
       ];
       setCompletedActivities(activities);
@@ -283,7 +317,11 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         { rides: ridesData, kratosWorkouts: (kratosData || []).filter((k: any) => !k.is_off_day), strideRuns: runData },
         'all'
       );
-      setActualLoads(pool.map(e => ({ dateKey: getLocalDateString(new Date(e.date)), tss: e.tss })));
+      setActualLoads(pool.map(e => ({
+        dateKey: getLocalDateString(new Date(e.date)),
+        tss: e.tss,
+        discipline: e.source as Discipline
+      })));
 
       const gymLoads: Record<string, number[]> = {};
       for (const k of (kratosData || []) as any[]) {
@@ -295,10 +333,13 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
 
       if (exercisesData) {
         const exMap: Record<string, string> = {};
+        const unitMap: Record<string, string | null> = {};
         exercisesData.forEach((ex: any) => {
           exMap[ex.id] = ex.name;
+          unitMap[ex.id] = ex.unit ?? null;
         });
         setExercisesMap(exMap);
+        setExerciseUnits(unitMap);
       }
 
       setItems([...mappedPlanned, ...mappedRides, ...mappedKratos]);
@@ -337,6 +378,67 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
     () => fulfilledPlanIds(plannedWorkouts, completedActivities),
     [plannedWorkouts, completedActivities]
   );
+
+  /** The session that met each plan, so the two can be compared side by side. */
+  const planByActivityId = useMemo(() => {
+    const map: Record<string, PlannedWorkoutItem> = {};
+    const matched = matchPlansToActivities(plannedWorkouts, completedActivities);
+    for (const plan of plannedWorkouts) {
+      const activity = matched.get(plan.id);
+      if (activity && (activity as any).id) map[(activity as any).id] = plan;
+    }
+    return map;
+  }, [plannedWorkouts, completedActivities]);
+
+  /** How a planned session is costed, in the unit the actual load uses. */
+  const planLoadCtx = useMemo(() => ({
+    gymLoadByTemplate,
+    gymLoadOverall: Object.values(gymLoadByTemplate).flat(),
+    runPaceMinPerKm: runPace.paceMinPerKm
+  }), [gymLoadByTemplate, runPace]);
+
+  /**
+   * Form projected forward through what is planned.
+   *
+   * The plans are restated in the shared load unit first: computeSimulatedPMC reads
+   * plannedTSS, which only a ride ever fills in, so without this a week of planned
+   * gym work projected as though the athlete were resting.
+   */
+  const projectedPMC = useMemo(() => {
+    if (actualLoads.length === 0) return [];
+    const rideTSSList = actualLoads.map(l => ({
+      date: new Date(`${l.dateKey}T12:00:00`).getTime(),
+      tss: l.tss
+    }));
+    const simPlans = plannedWorkouts.map(p => ({
+      ...p,
+      plannedTSS: plannedTrainingLoad(p as any, planLoadCtx) ?? 0
+    }));
+    return computeSimulatedPMC(rideTSSList, simPlans, 45);
+  }, [actualLoads, plannedWorkouts, planLoadCtx]);
+
+  const projectedByDate = useMemo(() => {
+    const map: Record<string, { ctl: number; atl: number; tsb: number; isSimulated?: boolean }> = {};
+    for (const point of projectedPMC) map[point.date] = point as any;
+    return map;
+  }, [projectedPMC]);
+
+  /**
+   * Are we getting better? Adherence and progress are different questions, and the
+   * week column only answers the first.
+   */
+  const progress = useMemo((): Trend[] => {
+    // Each metric sizes its own comparison window against the history it actually
+    // has. A fixed six-versus-six would put this athlete's entire gym history on one
+    // side and report nothing until October.
+    const now = Date.now();
+    return [
+      loadTrend(actualLoads, null, now),
+      eftpTrend(rawRides.map((r: any) => ({ date: Number(r.date), metadata: r.metadata })), null, now),
+      strengthTrend(rawKratos, exerciseUnits, null, now),
+      runningEconomyTrend(rawRuns, null, undefined, now)
+    ];
+  }, [actualLoads, rawRides, rawKratos, rawRuns, exerciseUnits]);
 
   /** Disciplines whose plan for a given day has been fulfilled, for the merged badge. */
   const plannedAndDoneByDate = useMemo(() => {
@@ -703,6 +805,65 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         </div>
       </div>
 
+      {/* Are we getting better? The week column answers how faithfully the plan was
+          followed, which is a different question and can look identical whether the
+          athlete is improving or declining. */}
+      <div className="zh-progress-panel">
+        <button className="zh-progress-toggle" onClick={() => setShowProgress(v => !v)}>
+          <span>Are we improving?</span>
+          <span className="zh-progress-toggle-hint">
+            recent form vs before {showProgress ? '▲' : '▼'}
+          </span>
+        </button>
+
+        {showProgress && (
+          <div className="zh-progress-grid">
+            {progress.map(trend => {
+              const arrow = trend.direction === 'up' ? '▲' : trend.direction === 'down' ? '▼' : trend.direction === 'flat' ? '▬' : '';
+              const colour = trend.direction === 'up' ? '#22c55e'
+                : trend.direction === 'down' ? '#f87171'
+                : trend.direction === 'flat' ? '#94a3b8' : '#64748b';
+              return (
+                <div key={trend.key} className="zh-progress-card">
+                  <div className="zh-progress-label">{trend.label}</div>
+                  {trend.value === null ? (
+                    <div className="zh-progress-empty">{trend.note ?? 'Not enough data yet.'}</div>
+                  ) : (
+                    <>
+                      <div className="zh-progress-value">
+                        {trend.value}<span className="zh-progress-unit">{trend.unit}</span>
+                      </div>
+                      <div className="zh-progress-delta" style={{ color: colour }}>
+                        {trend.changePct === null
+                          ? (trend.note ?? 'No comparison yet')
+                          : `${arrow} ${trend.changePct > 0 ? '+' : ''}${trend.changePct.toFixed(1)}% vs ${trend.previous}${trend.unit === 'W' ? 'W' : ''}`}
+                      </div>
+                      {trend.windowDays !== null && trend.changePct !== null && (
+                        <div className="zh-progress-window">
+                          last {trend.windowDays} days vs the {trend.windowDays} before
+                        </div>
+                      )}
+                      {trend.key === 'strength' && (trend as any).movers?.length > 0 && (
+                        <div className="zh-progress-movers">
+                          {(trend as any).movers.slice(0, 3).map((m: any) => (
+                            <div key={m.exerciseId}>
+                              <span>{exercisesMap[m.exerciseId] ?? 'Exercise'}</span>
+                              <strong style={{ color: m.changePct >= 0 ? '#22c55e' : '#f87171' }}>
+                                {m.changePct > 0 ? '+' : ''}{m.changePct.toFixed(1)}%
+                              </strong>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {loadError && (
         <div style={{
           background: 'rgba(248,113,113,0.08)',
@@ -835,7 +996,12 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
             })}
                 {(() => {
                   const w = weekSummaries[weekIdx];
-                  const hasAnything = w.plannedSessions > 0 || w.actualSessions > 0;
+                  const weekKey = weekStartKey(week[0].dateStr);
+                  const lastDay = week[6].dateStr;
+                  const isFuture = lastDay > todayStr;
+                  const target = weeklyTargets[weekKey] ?? null;
+                  const projection = isFuture ? projectedByDate[lastDay] : null;
+                  const hasAnything = w.plannedSessions > 0 || w.actualSessions > 0 || target !== null;
                   // Compliance is null, not 0, when nothing was planned: a week with
                   // three unplanned sessions is not 0% compliant, it is unplanned.
                   const pct = w.compliance === null ? null : Math.round(w.compliance * 100);
@@ -870,8 +1036,88 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                               {w.unknownPlans} plan{w.unknownPlans === 1 ? '' : 's'} not costed yet
                             </div>
                           )}
+
+                          {/* Where the week's load came from. Drift toward one sport
+                              is invisible in a single total. */}
+                          {w.actualLoad > 0 && (
+                            <div className="zh-week-split" title={`Ride ${w.byDiscipline.aero} · Gym ${w.byDiscipline.kratos} · Run ${w.byDiscipline.stride}`}>
+                              {(['aero', 'kratos', 'stride'] as Discipline[]).map(d => (
+                                w.byDiscipline[d] > 0 ? (
+                                  <div
+                                    key={d}
+                                    className={`zh-week-split-seg zh-split-${d}`}
+                                    style={{ flexGrow: w.byDiscipline[d] }}
+                                  />
+                                ) : null
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Projected Form, for weeks that have not happened yet:
+                              what this plan leaves you at, rather than what last
+                              week cost. */}
+                          {projection && (
+                            <div className="zh-week-summary-note" title="Projected Form (TSB) at the end of this week if you do what is planned">
+                              Form Sun:{' '}
+                              <strong style={{ color: interpretTSB(projection.tsb).color }}>
+                                {projection.tsb > 0 ? '+' : ''}{Math.round(projection.tsb)}
+                              </strong>{' '}
+                              {interpretTSB(projection.tsb).label.toLowerCase()}
+                            </div>
+                          )}
                         </>
                       ) : null}
+
+                      {/* Target for the week. Compliance says how faithfully the plan
+                          was followed; it cannot say whether the plan was the right
+                          size in the first place. */}
+                      {editingTargetWeek === weekKey ? (
+                        <div className="zh-week-target-edit">
+                          <input
+                            type="number"
+                            autoFocus
+                            min={0}
+                            max={2000}
+                            value={targetDraft}
+                            placeholder={String(suggestedWeeklyLoad(projectedByDate[lastDay]?.ctl ?? 0) || '')}
+                            onChange={e => setTargetDraft(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Escape') setEditingTargetWeek(null);
+                              if (e.key !== 'Enter') return;
+                              const value = targetDraft.trim() === '' ? null : Number(targetDraft);
+                              setWeeklyTargets(prev => {
+                                const next = { ...prev };
+                                if (value === null || !(value > 0)) delete next[weekKey];
+                                else next[weekKey] = Math.round(value);
+                                return next;
+                              });
+                              saveWeeklyLoadTarget(supabase, userId, weekKey, value);
+                              setEditingTargetWeek(null);
+                            }}
+                            onBlur={() => setEditingTargetWeek(null)}
+                          />
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="zh-week-target"
+                          onClick={() => {
+                            setTargetDraft(target ? String(target) : '');
+                            setEditingTargetWeek(weekKey);
+                          }}
+                          title="Set a load target for this week"
+                        >
+                          {target !== null ? (
+                            <>
+                              Target {target}
+                              {w.actualLoad > 0 && <span> · {Math.round((w.actualLoad / target) * 100)}%</span>}
+                            </>
+                          ) : (
+                            <>+ target</>
+                          )}
+                        </button>
+                      )}
+
                     </div>
                   );
                 })()}
@@ -945,6 +1191,47 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                   )}
                 </>
               )}
+
+              {/* Planned against done, for this one session. A week-level figure
+                  hides which session was cut short. */}
+              {selectedItem.category !== 'planned' && (() => {
+                const plan = planByActivityId[String(selectedItem.raw.id)];
+                if (!plan) return null;
+                const planned = plannedTrainingLoad(plan as any, planLoadCtx);
+                const activity = completedActivities.find(a => (a as any).id === String(selectedItem.raw.id));
+                const actual = activity?.load ?? null;
+                const pct = planned && actual ? Math.round((actual / planned) * 100) : null;
+                return (
+                  <div style={{
+                    background: 'rgba(56,189,248,0.06)',
+                    border: '1px solid rgba(56,189,248,0.2)',
+                    borderRadius: 10,
+                    padding: '10px 12px',
+                    marginBottom: 16
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
+                      This was planned
+                    </div>
+                    <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
+                      <strong style={{ color: '#e2e8f0' }}>{plan.title}</strong>
+                      {plan.durationMinutes ? ` · ${plan.durationMinutes} min planned` : ''}
+                      <br />
+                      Load planned{' '}
+                      <strong style={{ color: '#e2e8f0' }}>{planned ?? '—'}</strong>
+                      {' · '}done{' '}
+                      <strong style={{ color: '#e2e8f0' }}>{actual ?? '—'}</strong>
+                      {pct !== null && (
+                        <span style={{ color: pct >= 90 && pct <= 115 ? '#22c55e' : pct >= 70 ? '#eab308' : '#f87171', fontWeight: 800 }}>
+                          {' '}({pct}%)
+                        </span>
+                      )}
+                    </div>
+                    {plan.notes && (
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 6, lineHeight: 1.5 }}>{plan.notes}</div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* COMPLETED RIDE DETAILS */}
               {selectedItem.category === 'ride' ? (

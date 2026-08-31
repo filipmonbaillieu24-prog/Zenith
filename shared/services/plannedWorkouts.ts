@@ -224,6 +224,9 @@ export interface CompletedActivity {
   dateKey: string;
   /** Kratos routine, where the activity has one. */
   templateId?: string | null;
+  /** What it actually cost, in the shared TSS-equivalent unit. */
+  load?: number;
+  title?: string;
 }
 
 /**
@@ -244,15 +247,16 @@ export interface PlanForMatching {
   completedAt?: string | null;
 }
 
-export function fulfilledPlanIds(
+export function matchPlansToActivities(
   plans: PlanForMatching[],
   activities: CompletedActivity[]
-): Set<string> {
-  const fulfilled = new Set<string>();
+): Map<string, CompletedActivity | null> {
+  const fulfilled = new Map<string, CompletedActivity | null>();
   const claimed = new Set<number>();
 
+  // An explicit completed_at says the plan was met but not by which session.
   for (const plan of plans) {
-    if (plan.completedAt) fulfilled.add(plan.id);
+    if (plan.completedAt) fulfilled.set(plan.id, null);
   }
 
   // Pass 0 pairs a plan with the exact routine it named; pass 1 accepts any session
@@ -271,12 +275,19 @@ export function fulfilledPlanIds(
 
       if (idx >= 0) {
         claimed.add(idx);
-        fulfilled.add(plan.id);
+        fulfilled.set(plan.id, activities[idx]);
       }
     }
   }
 
   return fulfilled;
+}
+
+export function fulfilledPlanIds(
+  plans: PlanForMatching[],
+  activities: CompletedActivity[]
+): Set<string> {
+  return new Set(matchPlansToActivities(plans, activities).keys());
 }
 
 /**
@@ -495,6 +506,8 @@ export interface WeekLoadSummary {
   unknownPlans: number;
   /** actual / planned, or null when nothing was planned - not 0, which reads as failure. */
   compliance: number | null;
+  /** Where the week's load came from. Drift toward one sport is invisible in a total. */
+  byDiscipline: Record<Discipline, number>;
 }
 
 /**
@@ -507,10 +520,11 @@ export interface WeekLoadSummary {
 export function summariseWeekLoad(
   dateKeys: string[],
   plans: PlannedWorkout[],
-  actualLoads: { dateKey: string; tss: number }[],
+  actualLoads: { dateKey: string; tss: number; discipline?: Discipline }[],
   ctx: PlannedLoadContext = {}
 ): WeekLoadSummary {
   const days = new Set(dateKeys);
+  const byDiscipline: Record<Discipline, number> = { aero: 0, kratos: 0, stride: 0 };
 
   let plannedLoad = 0;
   let plannedSessions = 0;
@@ -529,6 +543,7 @@ export function summariseWeekLoad(
     if (!days.has(entry.dateKey)) continue;
     actualSessions++;
     actualLoad += entry.tss;
+    if (entry.discipline) byDiscipline[entry.discipline] += entry.tss;
   }
 
   return {
@@ -537,6 +552,92 @@ export function summariseWeekLoad(
     plannedSessions,
     actualSessions,
     unknownPlans,
-    compliance: plannedLoad > 0 ? actualLoad / plannedLoad : null
+    compliance: plannedLoad > 0 ? actualLoad / plannedLoad : null,
+    byDiscipline: {
+      aero: Math.round(byDiscipline.aero),
+      kratos: Math.round(byDiscipline.kratos),
+      stride: Math.round(byDiscipline.stride)
+    }
   };
+}
+
+
+/**
+ * A load target for a week, so the calendar can say whether the plan is the right
+ * size before the week is ridden rather than only how faithfully it was followed.
+ *
+ * Stored per week rather than as one number on the profile, because the whole point
+ * of a target is that it changes: build weeks go up, a recovery week goes down, and
+ * a single figure could express neither.
+ */
+export interface WeeklyLoadTarget {
+  weekStart: string;   // Monday, YYYY-MM-DD
+  targetLoad: number;
+}
+
+/**
+ * What to suggest when the athlete has not set a target.
+ *
+ * Chronic training load is an exponential average of daily load, so holding fitness
+ * means averaging roughly CTL per day - seven times CTL across a week. The ramp is
+ * applied on top of that: the widely used guidance is that chronic load should climb
+ * by no more than about 5-8% a week, and this takes the conservative end.
+ */
+export const SUGGESTED_WEEKLY_RAMP = 1.05;
+
+export function suggestedWeeklyLoad(ctl: number, ramp: number = SUGGESTED_WEEKLY_RAMP): number {
+  const fitness = Number(ctl);
+  if (!Number.isFinite(fitness) || fitness <= 0) return 0;
+  return Math.round(fitness * 7 * ramp);
+}
+
+/** Monday of the week a date falls in, in local time. */
+export function weekStartKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const date = new Date(y, (m || 1) - 1, d || 1);
+  const dow = date.getDay();               // 0 = Sunday
+  date.setDate(date.getDate() - (dow === 0 ? 6 : dow - 1));
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+export async function fetchWeeklyLoadTargets(
+  supabase: SupabaseClient,
+  userId: string,
+  fromWeek: string,
+  toWeek: string
+): Promise<Record<string, number>> {
+  const { data, error } = await supabase
+    .from('weekly_load_targets')
+    .select('week_start, target_load')
+    .eq('user_id', userId)
+    .gte('week_start', fromWeek)
+    .lte('week_start', toWeek);
+
+  if (error || !data) return {};
+  const map: Record<string, number> = {};
+  for (const row of data as any[]) {
+    const load = Number(row.target_load);
+    if (Number.isFinite(load)) map[String(row.week_start)] = load;
+  }
+  return map;
+}
+
+export async function saveWeeklyLoadTarget(
+  supabase: SupabaseClient,
+  userId: string,
+  weekStart: string,
+  targetLoad: number | null
+): Promise<void> {
+  if (targetLoad === null || !Number.isFinite(targetLoad) || targetLoad <= 0) {
+    await supabase.from('weekly_load_targets')
+      .delete().eq('user_id', userId).eq('week_start', weekStart);
+    return;
+  }
+  await supabase.from('weekly_load_targets').upsert(
+    { user_id: userId, week_start: weekStart, target_load: Math.round(targetLoad) },
+    { onConflict: 'user_id,week_start' }
+  );
 }
