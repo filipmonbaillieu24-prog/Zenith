@@ -85,8 +85,18 @@ class ScaleBleManager(private val context: Context) {
          */
         val TUYA_SERVICE: UUID = uuid16("1910")
 
-        /** The vendor characteristic this scale accepts commands on. */
+        /** The Inlife family's write characteristic. */
         val FFF2: UUID = uuid16("FFF2")
+
+        /**
+         * The QN family: service AE00, write AE01, notify AE02.
+         *
+         * This scale exposes BOTH AE00 and FFF0, and that combination is a known trap
+         * - a scale offering both is a QN device, and matching on FFF0 first picks the
+         * Inlife protocol it does not speak. Writing to FFF2 did get an acknowledgement
+         * out of it, but the measurement stream lives on the other service.
+         */
+        val QN_WRITE: UUID = uuid16("AE01")
 
         private fun uuid16(short: String): UUID =
             UUID.fromString("0000$short-0000-1000-8000-00805f9b34fb")
@@ -604,50 +614,35 @@ class ScaleBleManager(private val context: Context) {
     }
 
     /**
-     * Seconds since 2000-01-01, little-endian, four bytes.
+     * The QN handshake, as documented rather than guessed.
      *
-     * The epoch this family of device counts from. Unix seconds would not fit in four
-     * bytes as a signed value for much longer, which is why so much consumer firmware
-     * uses 2000 instead.
+     * `13 09 15 01 10 00 00 00 42` is the published magic frame for this protocol,
+     * fixed and complete - which is why the probe got an answer from it on the first
+     * attempt. I had briefly read the trailing zeros as an unfilled timestamp and
+     * started substituting a real clock into them; that was wrong, and it would have
+     * broken the one frame known to work. The time is a SEPARATE write.
      */
-    private fun secondsSince2000LE(): ByteArray {
-        val seconds = (System.currentTimeMillis() / 1000L) - 946_684_800L
-        return byteArrayOf(
-            (seconds and 0xFF).toByte(),
-            ((seconds shr 8) and 0xFF).toByte(),
-            ((seconds shr 16) and 0xFF).toByte(),
-            ((seconds shr 24) and 0xFF).toByte()
-        )
-    }
-
-    private fun unixSecondsLE(): ByteArray {
-        val seconds = System.currentTimeMillis() / 1000L
-        return byteArrayOf(
-            (seconds and 0xFF).toByte(),
-            ((seconds shr 8) and 0xFF).toByte(),
-            ((seconds shr 16) and 0xFF).toByte(),
-            ((seconds shr 24) and 0xFF).toByte()
-        )
-    }
+    private val QN_MAGIC = byteArrayOf(0x13, 0x09, 0x15, 0x01, 0x10, 0x00, 0x00, 0x00, 0x42)
 
     /**
-     * The handshake reply, with its payload actually filled in.
+     * The time write: 0x02 followed by four little-endian seconds.
      *
-     * The first probe found the right command by luck of shape rather than of content:
-     * 0x13 got an answer, but the frame it sent was 13 09 15 01 10 00 00 00 - and
-     * reading the length back, 9 bytes is command, length, sub-command, one byte, FOUR
-     * bytes, checksum. Those four were zeros. A scale that wants its clock set was
-     * handed sixteen seconds past the epoch, acknowledged the packet, and had no
-     * reason to start reporting.
-     *
-     * Both plausible epochs are tried, since which one this firmware counts from is
-     * not something the captured frames reveal.
+     * The epoch is Unix minus 946,702,800, the constant this firmware family counts
+     * from. It is not the round 2000-01-01 UTC value and there is no point tidying it
+     * into one - the scale is the authority on its own clock.
      */
-    private fun handshakeFrames(): List<ByteArray> = listOf(
-        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x01) + secondsSince2000LE()),
-        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x01) + unixSecondsLE()),
-        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x02) + secondsSince2000LE())
-    )
+    private fun qnTimeFrame(): ByteArray {
+        val seconds = (System.currentTimeMillis() / 1000L) - 946_702_800L
+        return byteArrayOf(
+            0x02,
+            (seconds and 0xFF).toByte(),
+            ((seconds shr 8) and 0xFF).toByte(),
+            ((seconds shr 16) and 0xFF).toByte(),
+            ((seconds shr 24) and 0xFF).toByte()
+        )
+    }
+
+    private fun handshakeFrames(): List<ByteArray> = listOf(QN_MAGIC, qnTimeFrame())
 
     private fun probeFrames(): List<ByteArray> = handshakeFrames() + listOf(
         // Acknowledge the hello. 0x13, total length 9, then a unit selector.
@@ -671,10 +666,13 @@ class ScaleBleManager(private val context: Context) {
             return
         }
         probeRan = true
-        capture("PROBE start - ${targets.size} writable characteristic(s)")
+        // AE01 first. A scale exposing both AE00 and FFF0 is a QN device, and the
+        // measurement stream is on AE02 however politely FFF1 answers.
+        val ordered = targets.sortedByDescending { it.uuid == QN_WRITE }
+        capture("PROBE start - ${ordered.size} writable characteristic(s), AE01 first")
 
         var delay = 0L
-        for (target in targets) {
+        for (target in ordered) {
             for (frame in probeFrames()) {
                 delay += 700
                 probeHandler.postDelayed({
@@ -712,7 +710,9 @@ class ScaleBleManager(private val context: Context) {
      */
     private fun requestMeasurement() {
         val g = gatt ?: return
-        val target = writable.firstOrNull { it.uuid == FFF2 } ?: writable.firstOrNull() ?: return
+        val target = writable.firstOrNull { it.uuid == QN_WRITE }
+            ?: writable.firstOrNull { it.uuid == FFF2 }
+            ?: writable.firstOrNull() ?: return
         capture("PROBE stage 2 - asking for a measurement")
 
         val asks = handshakeFrames() + listOf(
@@ -836,6 +836,31 @@ class ScaleBleManager(private val context: Context) {
         // candidate is offered as a reading - which the athlete confirms before it is
         // saved anywhere - and the rest of the arithmetic goes into the diagnostics so
         // the guess can be checked rather than trusted.
+        // ── The QN measurement frame ────────────────────────────────────────────
+        //
+        // A documented format, not a search: command 0x10, weight in bytes 3 and 4 as
+        // a big-endian hundredth of a kilogram, and byte 5 saying whether the reading
+        // has settled. Live values are shown as they change; only the settled one is
+        // offered for confirmation, because a scale reads low for the first second or
+        // two while the load spreads.
+        if (command == 0x10 && value.size >= 6) {
+            val kg = (((value[3].toInt() and 0xFF) shl 8) or (value[4].toInt() and 0xFF)) / 100.0
+            val settled = (value[5].toInt() and 0xFF) == 0x01
+            if (kg in 2.0..300.0) {
+                measurementSeen = true
+                capture("  QN weight ${kg} kg${if (settled) " (settled)" else " (still settling)"}")
+                if (settled) {
+                    probeHandler.removeCallbacksAndMessages(null)
+                    _status.value = "Got it — check the reading and confirm"
+                    publish(Reading(weightKg = Math.round(kg * 100) / 100.0, source = "QN protocol"))
+                } else {
+                    _status.value = "Weighing — hold still (${String.format(java.util.Locale.US, "%.1f", kg)} kg)"
+                }
+                return
+            }
+            capture("  QN frame but ${kg} kg is out of range - not offered")
+        }
+
         if (encryptedProfile) {
             _status.value = "This scale encrypts its readings — Zenith cannot read them"
             return

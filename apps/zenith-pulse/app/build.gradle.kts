@@ -11,8 +11,8 @@ android {
         applicationId = "com.zenith.pulse"
         minSdk = 26
         targetSdk = 36
-        versionCode = 46
-        versionName = "1.0.45"
+        versionCode = 47
+        versionName = "1.0.46"
     }
 
     buildTypes {
