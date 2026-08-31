@@ -83,6 +83,15 @@ export interface PlannedWorkoutItem {
   notes?: string;
   steps?: any[];
   routeId?: string;
+  /**
+   * Which app the session belongs to. Absent on every row planned before the
+   * calendar handled anything but cycling, which is what the 'aero' default means.
+   */
+  discipline?: 'aero' | 'kratos' | 'stride';
+  /** Planned run distance. */
+  distanceKm?: number | null;
+  /** Planned Kratos routine. */
+  templateId?: string | null;
 }
 
 export interface SimulatedPMCPoint extends PMCPoint {

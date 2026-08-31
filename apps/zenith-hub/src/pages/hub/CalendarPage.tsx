@@ -11,6 +11,7 @@ import {
 import { supabase } from '../../utils/supabaseClient';
 import { PlannedWorkoutItem } from '../../utils/pmc';
 import './CalendarPage.css';
+import { DISCIPLINE_LABELS, Discipline } from '@zenith/shared';
 
 interface CalendarPageProps {
   userId: string;
@@ -74,6 +75,13 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
   const [targetDate, setTargetDate] = useState('');
   const [formTitle, setFormTitle] = useState('');
   const [formType, setFormType] = useState<PlannedWorkoutItem['type']>('sweetspot');
+  // Which app the planned session belongs to. Planning was cycling-only, so a
+  // scheduled gym session or run had nowhere to live - and Fuel, which now reads
+  // these to work out what a training day costs, could only ever see rides.
+  const [formDiscipline, setFormDiscipline] = useState<Discipline>('aero');
+  const [formDistanceKm, setFormDistanceKm] = useState<string>('');
+  const [formTemplateId, setFormTemplateId] = useState<string>('');
+  const [kratosTemplates, setKratosTemplates] = useState<{ id: string; name: string }[]>([]);
   const [formDuration, setFormDuration] = useState(60);
   const [formTSS, setFormTSS] = useState(65);
   const [formNotes, setFormNotes] = useState('');
@@ -101,6 +109,13 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
     setLoading(true);
     try {
       // 1. Fetch Planned Workouts
+      const { data: templateData } = await supabase
+        .from('kratos_templates')
+        .select('id, name')
+        .eq('user_id', userId)
+        .order('name');
+      setKratosTemplates((templateData || []) as { id: string; name: string }[]);
+
       const { data: plannedData } = await supabase
         .from('planned_workouts')
         .select('*')
@@ -113,6 +128,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         type: p.type as any,
         durationMinutes: p.duration_minutes,
         plannedTSS: p.planned_tss,
+        discipline: (['aero', 'kratos', 'stride'].includes(p.discipline) ? p.discipline : 'aero') as Discipline,
+        distanceKm: p.distance_km === null || p.distance_km === undefined ? null : Number(p.distance_km),
+        templateId: p.template_id ?? null,
         notes: p.notes,
         steps: p.steps,
         routeId: p.route_id
@@ -212,6 +230,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
     setTargetDate(dateStr);
     setFormTitle('Sweet Spot Intervallen');
     setFormType('sweetspot');
+    setFormDiscipline('aero');
+    setFormDistanceKm('');
+    setFormTemplateId('');
     setFormDuration(60);
     setFormTSS(65);
     setFormNotes('');
@@ -225,6 +246,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
     setFormType(item.type);
     setFormDuration(item.durationMinutes);
     setFormTSS(item.plannedTSS);
+    setFormDiscipline(item.discipline ?? 'aero');
+    setFormDistanceKm(item.distanceKm != null ? String(item.distanceKm) : '');
+    setFormTemplateId(item.templateId ?? '');
     setFormNotes(item.notes ?? '');
     setIsModalOpen(true);
   };
@@ -239,7 +263,10 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           title: formTitle,
           type: formType,
           durationMinutes: formDuration,
-          plannedTSS: formTSS,
+          plannedTSS: formDiscipline === 'aero' ? formTSS : 0,
+          discipline: formDiscipline,
+          distanceKm: formDiscipline === 'stride' && formDistanceKm.trim() !== '' ? Number(formDistanceKm) : null,
+          templateId: formDiscipline === 'kratos' && formTemplateId ? formTemplateId : null,
           notes: formNotes,
         };
         const row = {
@@ -250,6 +277,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           type: updated.type,
           duration_minutes: updated.durationMinutes,
           planned_tss: updated.plannedTSS,
+          discipline: updated.discipline ?? 'aero',
+          distance_km: updated.distanceKm ?? null,
+          template_id: updated.templateId ?? null,
           notes: updated.notes,
           steps: updated.steps || [],
           route_id: updated.routeId
@@ -265,7 +295,10 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           title: formTitle,
           type: formType,
           durationMinutes: formDuration,
-          plannedTSS: formTSS,
+          plannedTSS: formDiscipline === 'aero' ? formTSS : 0,
+          discipline: formDiscipline,
+          distanceKm: formDiscipline === 'stride' && formDistanceKm.trim() !== '' ? Number(formDistanceKm) : null,
+          templateId: formDiscipline === 'kratos' && formTemplateId ? formTemplateId : null,
           notes: formNotes,
         };
         const row = {
@@ -276,6 +309,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           type: newWorkout.type,
           duration_minutes: newWorkout.durationMinutes,
           planned_tss: newWorkout.plannedTSS,
+          discipline: newWorkout.discipline ?? 'aero',
+          distance_km: newWorkout.distanceKm ?? null,
+          template_id: newWorkout.templateId ?? null,
           notes: newWorkout.notes,
           steps: newWorkout.steps || [],
           route_id: newWorkout.routeId
@@ -331,6 +367,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
             type: updated.type,
             duration_minutes: updated.durationMinutes,
             planned_tss: updated.plannedTSS,
+            discipline: updated.discipline ?? 'aero',
+            distance_km: updated.distanceKm ?? null,
+            template_id: updated.templateId ?? null,
             notes: updated.notes,
             steps: updated.steps || [],
             route_id: updated.routeId
@@ -706,6 +745,70 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                 />
               </div>
 
+              {/* Discipline first, because it decides which of the fields below
+                  mean anything. Cycling is costed from TSS, running from distance,
+                  strength from time - showing all three at once asked for numbers
+                  that do not apply. */}
+              <div className="wd-form-group">
+                <label>What kind of session?</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {(['aero', 'kratos', 'stride'] as Discipline[]).map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        setFormDiscipline(d);
+                        // TSS is a cycling measure; carrying a stale one onto a gym
+                        // plan would feed a fabricated figure into the PMC.
+                        if (d !== 'aero') setFormTSS(0);
+                        if (d !== 'stride') setFormDistanceKm('');
+                        if (d !== 'kratos') setFormTemplateId('');
+                      }}
+                      style={{
+                        flex: 1, padding: '8px 4px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                        border: formDiscipline === d ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.08)',
+                        background: formDiscipline === d ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.02)',
+                        color: formDiscipline === d ? '#38bdf8' : '#94a3b8'
+                      }}
+                    >
+                      {DISCIPLINE_LABELS[d]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {formDiscipline === 'kratos' && (
+                <div className="wd-form-group">
+                  <label>Routine</label>
+                  <select value={formTemplateId} onChange={e => {
+                    setFormTemplateId(e.target.value);
+                    const t = kratosTemplates.find(k => k.id === e.target.value);
+                    if (t && !formTitle.trim()) setFormTitle(t.name);
+                  }}>
+                    <option value="">Choose a routine…</option>
+                    {kratosTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {formDiscipline === 'stride' && (
+                <div className="wd-form-group">
+                  <label>Distance (km, optional)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    placeholder="e.g. 10"
+                    value={formDistanceKm}
+                    onChange={e => setFormDistanceKm(e.target.value)}
+                  />
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Used to estimate the day&apos;s energy cost. Left blank, the duration is used instead.
+                  </div>
+                </div>
+              )}
+
+              {formDiscipline === 'aero' && (
               <div className="wd-form-group">
                 <label>Training Type</label>
                 <select
@@ -728,6 +831,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                   <option value="custom">⚡ Custom</option>
                 </select>
               </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="wd-form-group">

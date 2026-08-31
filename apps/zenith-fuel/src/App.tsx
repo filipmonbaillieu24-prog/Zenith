@@ -5,7 +5,7 @@ import {
   AlertTriangle, Pill
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
-import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, plannedEnergyKcal, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout } from '@zenith/shared';
 import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep, creatineWaterRetentionKg, isCorrelationMeaningful, CREATINE_BASELINE_SATURATION, CAFFEINE_KCAL_PER_MG_PRIOR } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
@@ -139,6 +139,12 @@ function App() {
   const [quickCarbs, setQuickCarbs] = useState('');
   
   // Supplement Log Fields
+  // What is scheduled but not yet done. Fuel had no idea a hard ride was planned for
+  // today, so a 3-hour ride day got the same calorie and macro targets as a rest day
+  // right up until the ride had already happened - which is exactly backwards, since
+  // the point of a target is to eat for the day ahead.
+  const [plannedWorkouts, setPlannedWorkouts] = useState<PlannedWorkout[]>([]);
+
   const [logSuppType, setLogSuppType] = useState<'creatine' | 'caffeine'>('creatine');
   const [logSuppAmount, setLogSuppAmount] = useState('5');
   const [logSuppHour, setLogSuppHour] = useState('08:00');
@@ -368,6 +374,12 @@ function App() {
       setWeightLogs(wLogs || []);
       setBodyMeasurementsLogs(bMeasureLogs || []);
       setSleepLogs(sLogs || []);
+
+      // A fortnight either side, so moving a plan in the calendar is reflected here
+      // without needing a particular week to be open.
+      const planFrom = formatDateString(addDays(startOfWeek, -14));
+      const planTo = formatDateString(addDays(startOfWeek, 14));
+      setPlannedWorkouts(await fetchPlannedWorkouts(supabase, userId, planFrom, planTo));
 
       const activeCalMap: { [date: string]: number } = {};
       for (let i = 0; i < 7; i++) {
@@ -1776,7 +1788,37 @@ function App() {
   // higher intake → more TEF → less stored — captured naturally without adding it to TDEE.
   const isTargetWeekend = [0, 6].includes(new Date(selectedDateStr + 'T12:00:00').getDay()) ? 1 : 0;
   const weekendAdjustment = zaneResult.isCalibrated ? ((zaneResult.weekendCoeff || 0) * isTargetWeekend) : 0;
-  const preAdaptationTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + gymCalories + caffeineCalories + weekendAdjustment);
+  // ── What is still planned for this day ──────────────────────────────────────
+  //
+  // Added to the day's burn so the target reflects the day ahead rather than the day
+  // behind. Without it a 3-hour ride day was fuelled identically to a rest day right
+  // up until the ride was already over, which is the wrong way round: a target is
+  // for deciding what to eat, and that decision happens first.
+  //
+  // Only sessions not yet done are counted. Once a planned ride is completed the
+  // real activity calories arrive through activeCalories, and adding the estimate on
+  // top would inflate the target on precisely the hardest days.
+  // Fuel does not hold an FTP - it belongs to the cycling profile - so planned ride
+  // energy is estimated against a typical one. It only scales the estimate, and the
+  // figure is labelled as planned wherever it is shown.
+  const DEFAULT_FTP_FOR_PLAN_ESTIMATE = 200;
+
+  const outstandingPlans = useMemo(
+    () => outstandingPlansForDate(plannedWorkouts, selectedDateStr),
+    [plannedWorkouts, selectedDateStr]
+  );
+  const plannedBurn = useMemo(
+    () => outstandingPlans.reduce(
+      (sum, plan) => sum + plannedEnergyKcal(plan, latestWeight, DEFAULT_FTP_FOR_PLAN_ESTIMATE), 0),
+    [outstandingPlans, latestWeight]
+  );
+  const plannedCarbShift = useMemo(
+    () => outstandingPlans.reduce(
+      (sum, plan) => sum + plannedCarbShiftGrams(plan, latestWeight, DEFAULT_FTP_FOR_PLAN_ESTIMATE), 0),
+    [outstandingPlans, latestWeight]
+  );
+
+  const preAdaptationTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + gymCalories + caffeineCalories + weekendAdjustment + plannedBurn);
   const adaptationFactor = zaneResult.adaptationFactor ?? 1.0;
   const adaptationPenalty = Math.round(preAdaptationTdee * (1 - adaptationFactor));
   const totalTdee = preAdaptationTdee - adaptationPenalty;
@@ -2920,10 +2962,46 @@ function App() {
                 <span style={{ fontWeight: 700, color: '#fff' }}>{displayedBurnToday} kcal</span>
               </div>
               <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '-6px', lineHeight: 1.45 }}>
-                {burnParts.activeCalories + burnParts.gymCalories > 0
-                  ? 'Higher than usual because of the training you logged today.'
-                  : 'Lower than your average because no training is logged today, which is normal on a rest day.'}
+                {plannedBurn > 0
+                  ? `Includes ${plannedBurn} kcal for training you have planned but not done yet.`
+                  : burnParts.activeCalories + burnParts.gymCalories > 0
+                    ? 'Higher than usual because of the training you logged today.'
+                    : 'Lower than your average because no training is logged today, which is normal on a rest day.'}
               </div>
+
+              {/* Planned work, shown separately from what has actually happened.
+                  It is an estimate of something that has not occurred yet, so it is
+                  labelled as such rather than folded silently into the total - and it
+                  stops counting the moment the session is marked done, or the day
+                  would be charged twice. */}
+              {outstandingPlans.length > 0 && (
+                <div style={{
+                  background: 'rgba(56,189,248,0.06)',
+                  border: '1px solid rgba(56,189,248,0.2)',
+                  borderRadius: 10,
+                  padding: '10px 12px'
+                }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
+                    Planned today &mdash; not done yet
+                  </div>
+                  {outstandingPlans.map(plan => (
+                    <div key={plan.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 11, marginBottom: 3 }}>
+                      <span style={{ color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {DISCIPLINE_LABELS[plan.discipline]} &middot; {plan.title || plan.type}
+                        {plan.distanceKm ? ` (${plan.distanceKm} km)` : plan.durationMinutes ? ` (${plan.durationMinutes} min)` : ''}
+                      </span>
+                      <span className="zenith-tnum" style={{ fontWeight: 700, color: '#e2e8f0', whiteSpace: 'nowrap' }}>
+                        ~{plannedEnergyKcal(plan, latestWeight, DEFAULT_FTP_FOR_PLAN_ESTIMATE)} kcal
+                      </span>
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
+                    Counted toward today&apos;s target so you can eat for the session before doing it.
+                    {plannedCarbShift > 0 && <> Roughly <strong style={{ color: 'var(--color-carb)' }}>{plannedCarbShift}g</strong> of that should come from carbohydrate.</>}
+                    {' '}It drops off automatically once the session is logged.
+                  </div>
+                </div>
+              )}
 
               {hasBurnBreakdown && (
               <details style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
