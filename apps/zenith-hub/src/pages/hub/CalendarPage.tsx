@@ -67,6 +67,8 @@ type CalendarItem =
 export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideInAero }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  /** What went wrong, if anything - an eternal spinner tells the athlete nothing. */
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [items, setItems] = useState<CalendarItem[]>([]);
   const [exercisesMap, setExercisesMap] = useState<Record<string, string>>({});
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
@@ -125,23 +127,54 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
 
   const fetchData = async () => {
     setLoading(true);
+    setLoadError(null);
+    const failures: string[] = [];
+
+    // Every query reports its own failure instead of returning a silent null. A page
+    // that spins forever, or quietly renders an empty month, is the same bug wearing
+    // two different faces.
+    const run = async <T,>(label: string, query: PromiseLike<{ data: T | null; error: any }>): Promise<T | null> => {
+      try {
+        const { data, error } = await query;
+        if (error) {
+          failures.push(`${label}: ${error.message ?? error}`);
+          return null;
+        }
+        return data;
+      } catch (err: any) {
+        failures.push(`${label}: ${err?.message ?? err}`);
+        return null;
+      }
+    };
+
     try {
       // 1. Fetch Planned Workouts
-      const { data: templateData } = await supabase
-        .from('kratos_templates')
-        .select('id, name, exercises')
-        .eq('user_id', userId)
-        .order('name');
+      // All six are independent, so they go out together rather than in a chain of
+      // sequential round-trips.
+      const [templateData, plannedData, ridesData, kratosData, runData, exercisesData] = await Promise.all([
+        run<any[]>('routines', supabase
+          .from('kratos_templates').select('id, name, exercises')
+          .eq('user_id', userId).order('name')),
+        run<any[]>('planned workouts', supabase
+          .from('planned_workouts').select('*').eq('user_id', userId)),
+        run<any[]>('rides', supabase
+          .from('rides').select('*').eq('user_id', userId)),
+        run<any[]>('gym sessions', supabase
+          .from('kratos_workouts').select('*').eq('user_id', userId)),
+        run<any[]>('runs', supabase
+          .from('stride_activities')
+          .select('date, avg_pace_min_km, duration_sec, avg_heart_rate')
+          .eq('user_id', userId).order('date', { ascending: false }).limit(50)),
+        run<any[]>('exercise names', supabase
+          .from('kratos_exercises').select('id, name').eq('user_id', userId))
+      ]);
+
       setKratosTemplates((templateData || []).map((t: any) => ({
         id: t.id,
         name: t.name,
         totalSets: countTemplateSets(t.exercises)
       })));
 
-      const { data: plannedData } = await supabase
-        .from('planned_workouts')
-        .select('*')
-        .eq('user_id', userId);
       
       const mappedPlannedWorkouts: PlannedWorkoutItem[] = (plannedData || []).map((p: any) => ({
         id: p.id,
@@ -164,12 +197,6 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         dateStr: p.date, // format YYYY-MM-DD
         raw: p
       }));
-
-      // 2. Fetch Completed Rides
-      const { data: ridesData } = await supabase
-        .from('rides')
-        .select('*')
-        .eq('user_id', userId);
 
       const mappedRides: CalendarItem[] = (ridesData || []).map((r: any) => {
         const rideDate = new Date(Number(r.date));
@@ -195,12 +222,6 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           }
         };
       });
-
-      // 3. Fetch Completed Strength Workouts (Kratos)
-      const { data: kratosData } = await supabase
-        .from('kratos_workouts')
-        .select('*')
-        .eq('user_id', userId);
 
       const mappedKratos: CalendarItem[] = (kratosData || []).map((k: any) => {
         const kDate = new Date(k.completed_at);
@@ -232,12 +253,6 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
       for (const id of Object.keys(durations)) durations[id] = durations[id].slice(-6);
       setGymDurationHistory(durations);
 
-      const { data: runData } = await supabase
-        .from('stride_activities')
-        .select('date, avg_pace_min_km, duration_sec, avg_heart_rate')
-        .eq('user_id', userId)
-        .order('date', { ascending: false })
-        .limit(50);
       setRunPace(resolveRunPace((runData || []).slice(0, 20).map((r: any) => r.avg_pace_min_km)));
 
       // Everything that was actually done, for matching against what was planned.
@@ -278,12 +293,6 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
       }
       setGymLoadByTemplate(gymLoads);
 
-      // 4. Fetch Strength Exercises for ID-to-name lookup
-      const { data: exercisesData } = await supabase
-        .from('kratos_exercises')
-        .select('id, name')
-        .eq('user_id', userId);
-
       if (exercisesData) {
         const exMap: Record<string, string> = {};
         exercisesData.forEach((ex: any) => {
@@ -293,15 +302,31 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
       }
 
       setItems([...mappedPlanned, ...mappedRides, ...mappedKratos]);
-    } catch (err) {
+      if (failures.length > 0) setLoadError(failures.join(' · '));
+    } catch (err: any) {
       console.error('Failed to fetch calendar data:', err);
+      setLoadError(err?.message ? String(err.message) : 'Something went wrong loading the calendar.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    let settled = false;
+    // A request that never comes back used to leave "Loading calendar data..." on
+    // screen indefinitely, with nothing to act on. Give up out loud instead.
+    const watchdog = window.setTimeout(() => {
+      if (settled) return;
+      setLoading(false);
+      setLoadError('Timed out waiting for your data. Check your connection and reload.');
+    }, 20000);
+
+    fetchData().finally(() => {
+      settled = true;
+      window.clearTimeout(watchdog);
+    });
+
+    return () => { settled = true; window.clearTimeout(watchdog); };
   }, [userId]);
 
   // Which plans were actually carried out. Resolved from the logged sessions rather
@@ -677,6 +702,33 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div style={{
+          background: 'rgba(248,113,113,0.08)',
+          border: '1px solid rgba(248,113,113,0.25)',
+          borderRadius: 12,
+          padding: '10px 14px',
+          marginBottom: 12,
+          color: '#fca5a5',
+          fontSize: 12,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          flexWrap: 'wrap'
+        }}>
+          <span style={{ flex: 1, minWidth: 200 }}>{loadError}</span>
+          <button
+            onClick={() => fetchData()}
+            style={{
+              padding: '5px 12px', borderRadius: 8, cursor: 'pointer', fontSize: 11, fontWeight: 700,
+              border: '1px solid rgba(248,113,113,0.35)', background: 'rgba(248,113,113,0.12)', color: '#fca5a5'
+            }}
+          >
+            Try again
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="zh-calendar-grid-wrap" style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
