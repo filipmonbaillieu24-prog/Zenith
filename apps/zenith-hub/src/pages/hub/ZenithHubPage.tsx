@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, cardioFreshness, recoveryModel, calculateZenithSleepScore, buildTrainingLoadPool, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
+import { predictRecoveryScore, cardioFreshness, recoveryModel, fetchReadiness, saveReadiness, summariseAccuracy, FELT_OPTIONS, FELT_LABELS, FELT_DESCRIPTIONS, ReadinessEntry, FeltRating, toDateKeyFromDate, calculateZenithSleepScore, buildTrainingLoadPool, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE } from '@zenith/shared';
 import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
@@ -49,6 +49,10 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   const [weeklyStrideCount, setWeeklyStrideCount] = useState<number>(0);
   const [weeklyStrideDistance, setWeeklyStrideDistance] = useState<number>(0);
   const [weeklyKratosCount, setWeeklyKratosCount] = useState<number>(0);
+  // How the athlete says they actually feel - the recovery model's only real
+  // feedback. See shared/services/readiness.ts for why this exists at all.
+  const [readiness, setReadiness] = useState<Record<string, ReadinessEntry>>({});
+  const [savingFelt, setSavingFelt] = useState(false);
   // Starts true (not false) so the dashboard never flashes zero-state PMC/Recovery
   // numbers on first paint before fetchDashboardData's effect has had a chance to run.
   const [loadingDashboard, setLoadingDashboard] = useState(true);
@@ -203,6 +207,9 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       } else {
         setWeeklyKratosCount(0);
       }
+
+      const readinessRows = await fetchReadiness(supabase, userId, 60);
+      setReadiness(readinessRows);
 
       if (exCatalog) {
         setKratosExercises(exCatalog);
@@ -923,6 +930,72 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                   {recoveryNote.text}
                 </span>
               </div>
+
+              {/* The one question the model cannot answer for itself.
+                  Everything above this line is computed from sleep, cardio and gym
+                  load; the score's training target was a formula over those same
+                  inputs, so the model could only ever restate them. This is where
+                  something it does not already know gets in. */}
+              {recoveryScore !== null && (() => {
+                const todayKey = toDateKeyFromDate(new Date());
+                const answered = readiness[todayKey];
+                const accuracy = summariseAccuracy(Object.values(readiness));
+
+                return (
+                  <div style={{ marginTop: 18, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
+                      {answered ? 'How you said you feel today' : 'How do you actually feel today?'}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {FELT_OPTIONS.map(f => {
+                        const isChosen = answered?.felt === f;
+                        return (
+                          <button
+                            key={f}
+                            title={FELT_DESCRIPTIONS[f]}
+                            disabled={savingFelt}
+                            onClick={async () => {
+                              setSavingFelt(true);
+                              const ok = await saveReadiness(supabase, userId, f as FeltRating, recoveryScore, new Date());
+                              if (ok) {
+                                setReadiness(prev => ({
+                                  ...prev,
+                                  [todayKey]: { local_date: todayKey, felt: f as FeltRating, predicted_score: recoveryScore }
+                                }));
+                              }
+                              setSavingFelt(false);
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '8px 4px',
+                              borderRadius: 8,
+                              cursor: savingFelt ? 'default' : 'pointer',
+                              border: isChosen ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.08)',
+                              background: isChosen ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.02)',
+                              color: isChosen ? '#38bdf8' : '#94a3b8',
+                              fontSize: 10,
+                              fontWeight: 700
+                            }}
+                          >
+                            {FELT_LABELS[f]}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <p style={{ margin: '10px 0 0', fontSize: 11, color: '#94a3b8', lineHeight: 1.5 }}>
+                      {accuracy.meanBias === null
+                        ? `Answer this daily and the score learns from you rather than from a formula. ${accuracy.n} of 5 days recorded so far.`
+                        : Math.abs(accuracy.meanBias) <= 5
+                          ? `Over ${accuracy.n} days the score has matched how you felt to within ${Math.abs(accuracy.meanBias)} points on average. It is reading you well.`
+                          : accuracy.meanBias > 0
+                            ? `Over ${accuracy.n} days the score has run about ${accuracy.meanBias} points HIGHER than how you actually felt. It is learning to come down.`
+                            : `Over ${accuracy.n} days the score has run about ${Math.abs(accuracy.meanBias)} points LOWER than how you actually felt. It is learning to come up.`}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* This card sits in a grid row sized by the PMC card beside it, so it
                   was mostly empty space below a single sentence. Showing what the

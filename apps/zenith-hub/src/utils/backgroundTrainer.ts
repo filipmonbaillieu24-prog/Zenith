@@ -1,4 +1,4 @@
-import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector, recoveryHeuristic, cardioFreshness, kratosEffortVolume, GYM_VOLUME_HARD_WEEK_KG, toDateKeyFromDate } from '@zenith/shared';
+import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector, recoveryHeuristic, fetchReadiness, feltToTarget, cardioFreshness, kratosEffortVolume, GYM_VOLUME_HARD_WEEK_KG, toDateKeyFromDate } from '@zenith/shared';
 import { computePMC } from './pmc';
 
 // ==========================================================
@@ -293,6 +293,20 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     await dualSportFatigueModel.retrainFromScratch(supabase, userId, fatigueSamples);
 
     // 6. Train Unified Recovery Score Model (CR11)
+    //
+    // Where the athlete has said how they actually felt, that is the target. Where
+    // they have not, the heuristic stands in.
+    //
+    // This is the difference between a model that learns and one that recites. Every
+    // target here used to be recoveryHeuristic - a formula over the model's own
+    // inputs - and a network fitted to a formula over its own inputs cannot beat the
+    // formula, only approximate it less exactly. Real answers give it something the
+    // formula does not contain: where THIS athlete departs from the average.
+    //
+    // No weighting is needed to phase it in. Early on, days with an answer are a
+    // small minority of the training set and the heuristic naturally dominates; as
+    // answers accumulate they become the majority on their own.
+    const readiness = await fetchReadiness(supabase, userId, 60);
     const recoverySamples: { x: number[]; targets: number[] }[] = [];
     for (let dayOffset = 30; dayOffset >= 0; dayOffset--) {
       const d = new Date();
@@ -355,7 +369,8 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       // capped at 15,000 kg a week, so a serious lifter forfeited it permanently;
       // and the gym term counted raw tonnage, teaching an easy high-tonnage week
       // as though it had been a hard one.
-      const recoveryTarget = recoveryHeuristic(recoveryInput);
+      const feltTarget = feltToTarget(readiness[dStr]?.felt ?? NaN);
+      const recoveryTarget = feltTarget ?? recoveryHeuristic(recoveryInput);
 
       recoverySamples.push({ x, targets: [recoveryTarget] });
     }
