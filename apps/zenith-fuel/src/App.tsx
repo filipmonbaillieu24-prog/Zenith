@@ -5,7 +5,7 @@ import {
   AlertTriangle, Pill
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
-import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, plannedEnergyKcal, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout, resolveCurrentFtp, FTP_ESTIMATE_WINDOW_DAYS, FTP_FALLBACK_WATTS } from '@zenith/shared';
+import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, CompletedActivity, plannedEnergyKcal, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout, resolveCurrentFtp, FTP_ESTIMATE_WINDOW_DAYS, FTP_FALLBACK_WATTS } from '@zenith/shared';
 import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep, creatineWaterRetentionKg, isCorrelationMeaningful, CREATINE_BASELINE_SATURATION, CAFFEINE_KCAL_PER_MG_PRIOR } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
@@ -144,6 +144,8 @@ function App() {
   // right up until the ride had already happened - which is exactly backwards, since
   // the point of a target is to eat for the day ahead.
   const [plannedWorkouts, setPlannedWorkouts] = useState<PlannedWorkout[]>([]);
+  /** What was actually done, so a plan that has been carried out stops being counted. */
+  const [completedActivities, setCompletedActivities] = useState<CompletedActivity[]>([]);
   // Threshold power for costing a planned ride. Resolved from real rides rather than
   // the profile field, which defaults to 220 W and nobody has changed - see
   // resolveCurrentFtp.
@@ -350,7 +352,7 @@ function App() {
         () => supabase.from('vigor_sleep').select('duration_minutes, quality_score, deep_minutes, rem_minutes, hrv_ms, resting_hr, logged_at').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()).order('logged_at'),
         () => supabase.from('rides').select('date, metadata').eq('user_id', userId).gte('date', startOfWeek.getTime()).lt('date', endOfWeek.getTime()),
         () => supabase.from('stride_activities').select('date, calories, duration_sec').eq('user_id', userId).gte('date', startOfWeekStr).lte('date', endOfWeekStr),
-        () => supabase.from('kratos_workouts').select('volume, completed_at').eq('user_id', userId).gte('completed_at', startOfWeek.toISOString()).lt('completed_at', endOfWeek.toISOString()),
+        () => supabase.from('kratos_workouts').select('volume, completed_at, template_id, is_off_day').eq('user_id', userId).gte('completed_at', startOfWeek.toISOString()).lt('completed_at', endOfWeek.toISOString()),
       ];
 
       const bulkResults: any[] = [];
@@ -429,11 +431,31 @@ function App() {
       }
 
       kratosData?.forEach((k: any) => {
-        const dStr = k.completed_at.split('T')[0];
+        const dStr = formatDateString(new Date(k.completed_at));
         if (gymVolMap[dStr] !== undefined) {
           gymVolMap[dStr] += Number(k.volume || 0);
         }
       });
+
+      // What was actually done this week. planned_workouts.completed_at is never
+      // written, so without matching these against the plans a session that has been
+      // finished keeps being charged twice: once as a planned estimate and again as
+      // the real activity, on exactly the days the athlete trained hardest.
+      setCompletedActivities([
+        ...(ridesData || []).map((r: any) => ({
+          discipline: 'aero' as const,
+          dateKey: formatDateString(new Date(Number(r.date)))
+        })),
+        ...(kratosData || []).filter((k: any) => !k.is_off_day).map((k: any) => ({
+          discipline: 'kratos' as const,
+          dateKey: formatDateString(new Date(k.completed_at)),
+          templateId: k.template_id ?? null
+        })),
+        ...(strideData || []).map((s: any) => ({
+          discipline: 'stride' as const,
+          dateKey: String(s.date)
+        }))
+      ]);
 
       setActiveCaloriesMap(activeCalMap);
       setGymVolumeMap(gymVolMap);
@@ -1817,8 +1839,8 @@ function App() {
   // real activity calories arrive through activeCalories, and adding the estimate on
   // top would inflate the target on precisely the hardest days.
   const outstandingPlans = useMemo(
-    () => outstandingPlansForDate(plannedWorkouts, selectedDateStr),
-    [plannedWorkouts, selectedDateStr]
+    () => outstandingPlansForDate(plannedWorkouts, selectedDateStr, completedActivities),
+    [plannedWorkouts, selectedDateStr, completedActivities]
   );
   const plannedBurn = useMemo(
     () => outstandingPlans.reduce(

@@ -14,7 +14,7 @@ import './CalendarPage.css';
 import {
   DISCIPLINE_LABELS, Discipline, countTemplateSets, estimateGymDuration,
   resolveRunPace, estimateRunDuration, formatPace, rideDurationFromTss, rideTssFromDuration,
-  MIN_PER_SET_FALLBACK
+  MIN_PER_SET_FALLBACK, fulfilledPlanIds, CompletedActivity
 } from '@zenith/shared';
 
 interface CalendarPageProps {
@@ -88,6 +88,8 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
   const [kratosTemplates, setKratosTemplates] = useState<{ id: string; name: string; totalSets: number }[]>([]);
   /** Wall-clock minutes of past sessions, per routine - the best duration predictor. */
   const [gymDurationHistory, setGymDurationHistory] = useState<Record<string, number[]>>({});
+  /** Sessions actually carried out, used to tell which plans have been fulfilled. */
+  const [completedActivities, setCompletedActivities] = useState<CompletedActivity[]>([]);
   const [runPace, setRunPace] = useState<{ paceMinPerKm: number; source: 'history' | 'default'; samples: number }>(
     { paceMinPerKm: 6.5, source: 'default', samples: 0 }
   );
@@ -227,11 +229,32 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
 
       const { data: runData } = await supabase
         .from('stride_activities')
-        .select('avg_pace_min_km')
+        .select('date, avg_pace_min_km')
         .eq('user_id', userId)
         .order('date', { ascending: false })
-        .limit(20);
-      setRunPace(resolveRunPace((runData || []).map((r: any) => r.avg_pace_min_km)));
+        .limit(50);
+      setRunPace(resolveRunPace((runData || []).slice(0, 20).map((r: any) => r.avg_pace_min_km)));
+
+      // Everything that was actually done, for matching against what was planned.
+      // stride_activities.date is already a local calendar day; the other two carry
+      // timestamps and have to be converted rather than sliced, or a late-evening
+      // session lands on tomorrow.
+      const activities: CompletedActivity[] = [
+        ...(ridesData || []).map((r: any) => ({
+          discipline: 'aero' as const,
+          dateKey: getLocalDateString(new Date(Number(r.date)))
+        })),
+        ...(kratosData || []).filter((k: any) => !k.is_off_day).map((k: any) => ({
+          discipline: 'kratos' as const,
+          dateKey: getLocalDateString(new Date(k.completed_at)),
+          templateId: k.template_id ?? null
+        })),
+        ...(runData || []).map((r: any) => ({
+          discipline: 'stride' as const,
+          dateKey: String(r.date)
+        }))
+      ];
+      setCompletedActivities(activities);
 
       // 4. Fetch Strength Exercises for ID-to-name lookup
       const { data: exercisesData } = await supabase
@@ -258,6 +281,25 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
   useEffect(() => {
     fetchData();
   }, [userId]);
+
+  // Which plans were actually carried out. Resolved from the logged sessions rather
+  // than from planned_workouts.completed_at, which nothing has ever written to - so
+  // without this a finished session and the plan for it sat on the calendar as two
+  // separate entries forever.
+  const fulfilledPlans = useMemo(
+    () => fulfilledPlanIds(plannedWorkouts, completedActivities),
+    [plannedWorkouts, completedActivities]
+  );
+
+  /** Disciplines whose plan for a given day has been fulfilled, for the merged badge. */
+  const plannedAndDoneByDate = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    for (const p of plannedWorkouts) {
+      if (!fulfilledPlans.has(p.id)) continue;
+      (map[p.date] ||= new Set()).add(p.discipline ?? 'aero');
+    }
+    return map;
+  }, [plannedWorkouts, fulfilledPlans]);
 
   // ── Expected duration ───────────────────────────────────────────────────────
   //
@@ -633,6 +675,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                   <div className="zh-calendar-badge-list">
                     {dayItems.map((item, idx) => {
                       if (item.category === 'planned') {
+                        // The session happened, so the plan and the workout are one
+                        // thing. The completed badge below carries the marker.
+                        if (fulfilledPlans.has(item.raw.id)) return null;
                         return (
                           <div 
                             key={`p-${item.raw.id}-${idx}`}
@@ -667,6 +712,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                           >
                             <Bike size={10} style={{ flexShrink: 0 }} />
                             <span>{item.raw.name} ({item.raw.distance.toFixed(0)}km)</span>
+                            {plannedAndDoneByDate[dateStr]?.has('aero') && (
+                              <Calendar size={9} style={{ flexShrink: 0, opacity: 0.65 }} aria-label="Planned" />
+                            )}
                           </div>
                         );
                       } else {
@@ -679,6 +727,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                           >
                             <Dumbbell size={10} style={{ flexShrink: 0 }} />
                             <span>{item.raw.name} ({item.raw.volume.toLocaleString('en-US')} kg)</span>
+                            {plannedAndDoneByDate[dateStr]?.has('kratos') && (
+                              <Calendar size={9} style={{ flexShrink: 0, opacity: 0.65 }} aria-label="Planned" />
+                            )}
                           </div>
                         );
                       }

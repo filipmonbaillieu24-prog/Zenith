@@ -203,15 +203,95 @@ export async function fetchPlannedWorkouts(
 }
 
 /**
+ * Pairing a plan with the session that fulfilled it.
+ *
+ * planned_workouts has a completed_at column and nothing has ever written to it -
+ * all three rows in the database hold null, including one whose date has passed. So
+ * "not completed" was true of every plan forever: the calendar showed a planned chip
+ * and the finished workout side by side as two separate things, and Fuel kept adding
+ * the planned estimate on top of the real logged activity, charging the day twice on
+ * exactly the days the athlete trained hardest.
+ *
+ * Rather than adding a write path in three apps and hoping every one of them fires,
+ * the match is resolved when the data is read. That is idempotent, needs no
+ * migration, fixes plans that are already in the past, and cannot drift out of step
+ * with reality. An explicitly set completed_at is still honoured if anything ever
+ * does write one.
+ */
+export interface CompletedActivity {
+  discipline: Discipline;
+  /** Local calendar day, YYYY-MM-DD. */
+  dateKey: string;
+  /** Kratos routine, where the activity has one. */
+  templateId?: string | null;
+}
+
+/**
+ * Which plans have been carried out.
+ *
+ * One activity fulfils one plan, not all of them: if two rides were planned and one
+ * was ridden, the second is still outstanding and should still be fuelled for. Plans
+ * naming a routine are paired against that same routine first, so planning PUSH and
+ * PULL on one day and doing PULL leaves PUSH outstanding rather than whichever came
+ * first in the list.
+ */
+export interface PlanForMatching {
+  id: string;
+  date: string;
+  /** Absent on rows planned before the calendar handled anything but cycling. */
+  discipline?: Discipline;
+  templateId?: string | null;
+  completedAt?: string | null;
+}
+
+export function fulfilledPlanIds(
+  plans: PlanForMatching[],
+  activities: CompletedActivity[]
+): Set<string> {
+  const fulfilled = new Set<string>();
+  const claimed = new Set<number>();
+
+  for (const plan of plans) {
+    if (plan.completedAt) fulfilled.add(plan.id);
+  }
+
+  // Pass 0 pairs a plan with the exact routine it named; pass 1 accepts any session
+  // of the right discipline on the day.
+  for (const exactOnly of [true, false]) {
+    for (const plan of plans) {
+      if (fulfilled.has(plan.id)) continue;
+      if (exactOnly && !plan.templateId) continue;
+
+      const idx = activities.findIndex((a, i) =>
+        !claimed.has(i) &&
+        a.dateKey === plan.date &&
+        a.discipline === (plan.discipline ?? 'aero') &&
+        (!exactOnly || a.templateId === plan.templateId)
+      );
+
+      if (idx >= 0) {
+        claimed.add(idx);
+        fulfilled.add(plan.id);
+      }
+    }
+  }
+
+  return fulfilled;
+}
+
+/**
  * The planned sessions for one day that have NOT already been done.
  *
- * A plan whose session has been completed must stop contributing, or the day is
- * charged twice: once as an estimate and again as the real logged activity, which
- * would quietly inflate the calorie target on exactly the days the athlete trained
- * hardest.
+ * A plan whose session has been carried out must stop contributing, or the day is
+ * charged twice: once as an estimate and again as the real logged activity.
  */
-export function outstandingPlansForDate(plans: PlannedWorkout[], dateKey: string): PlannedWorkout[] {
-  return plans.filter(p => p.date === dateKey && !p.completedAt);
+export function outstandingPlansForDate(
+  plans: PlannedWorkout[],
+  dateKey: string,
+  activities: CompletedActivity[] = []
+): PlannedWorkout[] {
+  const fulfilled = fulfilledPlanIds(plans, activities);
+  return plans.filter(p => p.date === dateKey && !fulfilled.has(p.id));
 }
 
 

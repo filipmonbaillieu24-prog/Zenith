@@ -10,7 +10,9 @@ import {
   resolveCurrentFtp,
   plannedEnergyKcal,
   MIN_PER_SET_FALLBACK,
-  DEFAULT_RUN_PACE_MIN_PER_KM
+  DEFAULT_RUN_PACE_MIN_PER_KM,
+  fulfilledPlanIds,
+  outstandingPlansForDate
 } from '../services/plannedWorkouts';
 
 describe('estimateGymDuration', () => {
@@ -163,5 +165,81 @@ describe('plannedEnergyKcal', () => {
   it('costs a run from distance and a gym session from time', () => {
     expect(plannedEnergyKcal({ discipline: 'stride', durationMinutes: 52, plannedTss: 0, distanceKm: 8 }, 80, 158)).toBe(640);
     expect(plannedEnergyKcal({ discipline: 'kratos', durationMinutes: 45, plannedTss: 0, distanceKm: null }, 80, 158)).toBe(270);
+  });
+});
+
+describe('fulfilledPlanIds', () => {
+  const plan = (id: string, date: string, discipline: any, templateId: string | null = null) =>
+    ({ id, date, discipline, templateId });
+
+  it('marks a plan done when the session was carried out that day', () => {
+    const plans = [plan('p1', '2026-08-31', 'kratos', 'push')];
+    const done = fulfilledPlanIds(plans, [
+      { discipline: 'kratos', dateKey: '2026-08-31', templateId: 'push' }
+    ]);
+    expect(done.has('p1')).toBe(true);
+  });
+
+  it('does not let one session tick off two plans', () => {
+    // Two rides planned, one ridden: the second still has to be fuelled for.
+    const plans = [plan('p1', '2026-08-31', 'aero'), plan('p2', '2026-08-31', 'aero')];
+    const done = fulfilledPlanIds(plans, [{ discipline: 'aero', dateKey: '2026-08-31' }]);
+    expect(done.size).toBe(1);
+  });
+
+  it('pairs a plan with the routine it actually named', () => {
+    // PUSH and PULL planned, PULL done: PUSH must stay outstanding, not whichever
+    // plan happened to come first in the list.
+    const plans = [plan('push', '2026-08-31', 'kratos', 'tpl-push'), plan('pull', '2026-08-31', 'kratos', 'tpl-pull')];
+    const done = fulfilledPlanIds(plans, [
+      { discipline: 'kratos', dateKey: '2026-08-31', templateId: 'tpl-pull' }
+    ]);
+    expect(done.has('pull')).toBe(true);
+    expect(done.has('push')).toBe(false);
+  });
+
+  it('still counts a gym session that did not follow the planned routine', () => {
+    const plans = [plan('p1', '2026-08-31', 'kratos', 'tpl-push')];
+    const done = fulfilledPlanIds(plans, [
+      { discipline: 'kratos', dateKey: '2026-08-31', templateId: 'tpl-other' }
+    ]);
+    expect(done.has('p1')).toBe(true);
+  });
+
+  it('does not match across days or disciplines', () => {
+    const plans = [plan('p1', '2026-08-31', 'aero'), plan('p2', '2026-08-30', 'kratos')];
+    const done = fulfilledPlanIds(plans, [
+      { discipline: 'kratos', dateKey: '2026-08-31' },
+      { discipline: 'aero', dateKey: '2026-08-29' }
+    ]);
+    expect(done.size).toBe(0);
+  });
+
+  it('treats a plan from before disciplines existed as a ride', () => {
+    const done = fulfilledPlanIds([{ id: 'old', date: '2026-08-31' }], [
+      { discipline: 'aero', dateKey: '2026-08-31' }
+    ]);
+    expect(done.has('old')).toBe(true);
+  });
+
+  it('honours an explicit completed_at if anything ever writes one', () => {
+    const done = fulfilledPlanIds(
+      [{ id: 'p1', date: '2026-08-31', discipline: 'aero', completedAt: '2026-08-31T10:00:00Z' }],
+      []
+    );
+    expect(done.has('p1')).toBe(true);
+  });
+
+  it('stops the day being charged twice for the same session', () => {
+    const plans: any[] = [
+      { id: 'p1', date: '2026-08-31', discipline: 'kratos', title: 'PUSH', type: 'custom',
+        durationMinutes: 45, plannedTss: 0, distanceKm: null, templateId: 'push', notes: null, completedAt: null }
+    ];
+    const before = outstandingPlansForDate(plans, '2026-08-31', []);
+    const after = outstandingPlansForDate(plans, '2026-08-31', [
+      { discipline: 'kratos', dateKey: '2026-08-31', templateId: 'push' }
+    ]);
+    expect(before).toHaveLength(1);
+    expect(after).toHaveLength(0);
   });
 });
