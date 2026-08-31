@@ -97,6 +97,74 @@ export function plannedCarbShiftGrams(
   return Math.round((kcal * carbFraction) / 4);
 }
 
+
+/**
+ * Functional threshold power to cost a planned ride against.
+ *
+ * ## Why measured eFTP wins over the profile
+ *
+ * profiles.ftp_watts DEFAULTS to 220, and in this database every account still holds
+ * exactly 220 - it is the column default rather than anything an athlete typed. Using
+ * it would have costed this athlete's planned rides against 220 W when their rides
+ * actually measure around 158, overstating every planned ride by nearly 40% and
+ * feeding that straight into a calorie target.
+ *
+ * So a threshold estimated from real rides is preferred, and the profile is the
+ * fallback rather than the authority. If someone has genuinely set their FTP, their
+ * riding will reflect it and the two will agree.
+ *
+ * ## Why the best of a window, not the latest
+ *
+ * Per-ride eFTP reflects how hard that particular ride was, not the athlete's
+ * capacity: this athlete's runs 79, 85, 106, 86, 109, 158, 152 - the 86 came from an
+ * easy day, not a bad one. Taking the most recent would let one gentle ride collapse
+ * the estimate; taking the all-time best would keep crediting a peak reached last
+ * winter. The best of a recent window is the usual compromise and behaves sensibly
+ * in both directions.
+ */
+export const FTP_ESTIMATE_WINDOW_DAYS = 90;
+
+/** Last-resort figure, used only when there is neither a ride nor a profile value. */
+export const FTP_FALLBACK_WATTS = 200;
+
+export interface RideForFtp {
+  /** Epoch milliseconds. */
+  date: number;
+  metadata?: any;
+}
+
+export function resolveCurrentFtp(
+  rides: RideForFtp[] | null | undefined,
+  profileFtpWatts?: number | null,
+  now: Date = new Date()
+): { watts: number; source: 'measured' | 'profile' | 'default' } {
+  const cutoff = now.getTime() - FTP_ESTIMATE_WINDOW_DAYS * 86400000;
+
+  let bestRecent = 0;
+  for (const ride of rides ?? []) {
+    const at = Number(ride?.date);
+    if (!Number.isFinite(at) || at < cutoff) continue;
+
+    let meta = ride?.metadata;
+    if (typeof meta === 'string') {
+      try { meta = JSON.parse(meta); } catch { meta = {}; }
+    }
+    // null and '' must not reach Number(), which turns both into 0 - harmless for a
+    // max, but it would mask a genuinely absent reading as a real zero elsewhere.
+    const raw = meta?.eFTP ?? meta?.eftp;
+    if (raw === null || raw === undefined || raw === '') continue;
+    const eftp = Number(raw);
+    if (Number.isFinite(eftp) && eftp > bestRecent) bestRecent = eftp;
+  }
+
+  if (bestRecent > 0) return { watts: Math.round(bestRecent), source: 'measured' };
+
+  const profile = Number(profileFtpWatts);
+  if (Number.isFinite(profile) && profile > 0) return { watts: Math.round(profile), source: 'profile' };
+
+  return { watts: FTP_FALLBACK_WATTS, source: 'default' };
+}
+
 const rowToPlan = (row: any): PlannedWorkout => ({
   id: String(row.id),
   date: String(row.date),

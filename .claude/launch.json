@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "zenith-aero", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--workspace=apps/zenith-aero"], "port": 1430 },
+    { "name": "zenith-hub", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--workspace=apps/zenith-hub"], "port": 1420 },
+    { "name": "zenith-vigor", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--workspace=apps/zenith-vigor"], "port": 1440 },
+    { "name": "zenith-kratos", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--workspace=apps/zenith-kratos"], "port": 1450 },
+    { "name": "zenith-fuel", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--workspace=apps/zenith-fuel"], "port": 1460 },
+    { "name": "zenith-stride", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "--workspace=apps/zenith-stride"], "port": 1470 }
+  ]
+}

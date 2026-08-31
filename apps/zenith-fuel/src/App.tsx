@@ -5,7 +5,7 @@ import {
   AlertTriangle, Pill
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
-import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, plannedEnergyKcal, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout } from '@zenith/shared';
+import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, plannedEnergyKcal, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout, resolveCurrentFtp, FTP_ESTIMATE_WINDOW_DAYS, FTP_FALLBACK_WATTS } from '@zenith/shared';
 import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep, creatineWaterRetentionKg, isCorrelationMeaningful, CREATINE_BASELINE_SATURATION, CAFFEINE_KCAL_PER_MG_PRIOR } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
@@ -144,6 +144,12 @@ function App() {
   // right up until the ride had already happened - which is exactly backwards, since
   // the point of a target is to eat for the day ahead.
   const [plannedWorkouts, setPlannedWorkouts] = useState<PlannedWorkout[]>([]);
+  // Threshold power for costing a planned ride. Resolved from real rides rather than
+  // the profile field, which defaults to 220 W and nobody has changed - see
+  // resolveCurrentFtp.
+  const [currentFtp, setCurrentFtp] = useState<{ watts: number; source: 'measured' | 'profile' | 'default' }>(
+    { watts: FTP_FALLBACK_WATTS, source: 'default' }
+  );
 
   const [logSuppType, setLogSuppType] = useState<'creatine' | 'caffeine'>('creatine');
   const [logSuppAmount, setLogSuppAmount] = useState('5');
@@ -380,6 +386,18 @@ function App() {
       const planFrom = formatDateString(addDays(startOfWeek, -14));
       const planTo = formatDateString(addDays(startOfWeek, 14));
       setPlannedWorkouts(await fetchPlannedWorkouts(supabase, userId, planFrom, planTo));
+
+      // Rides over the FTP window, purely to resolve a current threshold. The weekly
+      // ride query above is too narrow: a week with no riding would drop the estimate
+      // to the profile default, which is 220 W for everyone because nobody has ever
+      // edited it.
+      const ftpSince = Date.now() - FTP_ESTIMATE_WINDOW_DAYS * 86400000;
+      const { data: ftpRides } = await supabase
+        .from('rides').select('date, metadata')
+        .eq('user_id', userId).gte('date', ftpSince);
+      const { data: profileRow } = await supabase
+        .from('profiles').select('ftp_watts').eq('id', userId).maybeSingle();
+      setCurrentFtp(resolveCurrentFtp(ftpRides as any, profileRow?.ftp_watts));
 
       const activeCalMap: { [date: string]: number } = {};
       for (let i = 0; i < 7; i++) {
@@ -1798,24 +1816,19 @@ function App() {
   // Only sessions not yet done are counted. Once a planned ride is completed the
   // real activity calories arrive through activeCalories, and adding the estimate on
   // top would inflate the target on precisely the hardest days.
-  // Fuel does not hold an FTP - it belongs to the cycling profile - so planned ride
-  // energy is estimated against a typical one. It only scales the estimate, and the
-  // figure is labelled as planned wherever it is shown.
-  const DEFAULT_FTP_FOR_PLAN_ESTIMATE = 200;
-
   const outstandingPlans = useMemo(
     () => outstandingPlansForDate(plannedWorkouts, selectedDateStr),
     [plannedWorkouts, selectedDateStr]
   );
   const plannedBurn = useMemo(
     () => outstandingPlans.reduce(
-      (sum, plan) => sum + plannedEnergyKcal(plan, latestWeight, DEFAULT_FTP_FOR_PLAN_ESTIMATE), 0),
-    [outstandingPlans, latestWeight]
+      (sum, plan) => sum + plannedEnergyKcal(plan, latestWeight, currentFtp.watts), 0),
+    [outstandingPlans, latestWeight, currentFtp]
   );
   const plannedCarbShift = useMemo(
     () => outstandingPlans.reduce(
-      (sum, plan) => sum + plannedCarbShiftGrams(plan, latestWeight, DEFAULT_FTP_FOR_PLAN_ESTIMATE), 0),
-    [outstandingPlans, latestWeight]
+      (sum, plan) => sum + plannedCarbShiftGrams(plan, latestWeight, currentFtp.watts), 0),
+    [outstandingPlans, latestWeight, currentFtp]
   );
 
   const preAdaptationTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + gymCalories + caffeineCalories + weekendAdjustment + plannedBurn);
@@ -2991,12 +3004,22 @@ function App() {
                         {plan.distanceKm ? ` (${plan.distanceKm} km)` : plan.durationMinutes ? ` (${plan.durationMinutes} min)` : ''}
                       </span>
                       <span className="zenith-tnum" style={{ fontWeight: 700, color: '#e2e8f0', whiteSpace: 'nowrap' }}>
-                        ~{plannedEnergyKcal(plan, latestWeight, DEFAULT_FTP_FOR_PLAN_ESTIMATE)} kcal
+                        ~{plannedEnergyKcal(plan, latestWeight, currentFtp.watts)} kcal
                       </span>
                     </div>
                   ))}
                   <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
                     Counted toward today&apos;s target so you can eat for the session before doing it.
+                    {outstandingPlans.some(p => p.discipline === 'aero') && (
+                      <> Rides are costed against{' '}
+                        <strong style={{ color: '#cbd5e1' }}>{currentFtp.watts} W</strong>
+                        {currentFtp.source === 'measured'
+                          ? ', your best estimated threshold from the last 90 days of riding.'
+                          : currentFtp.source === 'profile'
+                            ? ', the threshold set on your profile — no recent rides to estimate from.'
+                            : ', a default — set your FTP or log a ride to improve this.'}
+                      </>
+                    )}
                     {plannedCarbShift > 0 && <> Roughly <strong style={{ color: 'var(--color-carb)' }}>{plannedCarbShift}g</strong> of that should come from carbohydrate.</>}
                     {' '}It drops off automatically once the session is logged.
                   </div>

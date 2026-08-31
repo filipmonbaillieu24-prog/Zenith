@@ -228,7 +228,10 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
   const handleOpenAddModal = (dateStr: string) => {
     setEditingWorkout(null);
     setTargetDate(dateStr);
-    setFormTitle('Sweet Spot Intervallen');
+    // A cycling title was pre-filled whatever the discipline, so a gym plan opened
+    // named "Sweet Spot Intervallen". Left blank instead - picking a routine fills it
+    // with the routine's name, and a run does not need one.
+    setFormTitle('');
     setFormType('sweetspot');
     setFormDiscipline('aero');
     setFormDistanceKm('');
@@ -254,14 +257,23 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
   };
 
   const handleSaveWorkout = async () => {
-    if (!formTitle.trim()) return;
+    // The title used to be pre-filled with a cycling name, so it was never empty and
+    // this guard never fired. Now that it starts blank, a gym plan whose routine
+    // carries the name, or a run that simply does not need one, would have hit Save
+    // and had nothing happen. Fall back to the discipline instead of refusing.
+    const title = formTitle.trim()
+      || kratosTemplates.find(k => k.id === formTemplateId)?.name
+      || DISCIPLINE_LABELS[formDiscipline];
+    // The type list is cycling zones. It is only offered for a ride, so anything else
+    // would otherwise save with the untouched default of 'sweetspot'.
+    const type = formDiscipline === 'aero' ? formType : 'custom';
     try {
       if (editingWorkout) {
         const updated: PlannedWorkoutItem = {
           ...editingWorkout,
           date: targetDate,
-          title: formTitle,
-          type: formType,
+          title,
+          type,
           durationMinutes: formDuration,
           plannedTSS: formDiscipline === 'aero' ? formTSS : 0,
           discipline: formDiscipline,
@@ -292,8 +304,8 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
         const newWorkout: PlannedWorkoutItem = {
           id: 'plan_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
           date: targetDate,
-          title: formTitle,
-          type: formType,
+          title,
+          type,
           durationMinutes: formDuration,
           plannedTSS: formDiscipline === 'aero' ? formTSS : 0,
           discipline: formDiscipline,
@@ -538,7 +550,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                               e.stopPropagation();
                               handleOpenEditModal(item.raw);
                             }}
-                            title={`Planned: ${item.raw.title}\nDuration: ${item.raw.durationMinutes} min\nTSS: ${item.raw.plannedTSS}\nDrag to move, click to edit.`}
+                            title={`Planned ${DISCIPLINE_LABELS[item.raw.discipline ?? 'aero']}: ${item.raw.title}\nDuration: ${item.raw.durationMinutes} min${(item.raw.discipline ?? 'aero') === 'aero' ? `\nTSS: ${item.raw.plannedTSS}` : ''}${item.raw.distanceKm ? `\nDistance: ${item.raw.distanceKm} km` : ''}\nDrag to move, click to edit.`}
                             style={{ borderLeft: `3px solid ${getWorkoutColor(item.raw.type)}`, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                           >
                             <Calendar size={10} style={{ flexShrink: 0 }} />
@@ -605,7 +617,9 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                   <h2 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 900 }}>{selectedItem.raw.title}</h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: getWorkoutColor(selectedItem.raw.type), fontWeight: 800, textTransform: 'uppercase', marginBottom: 12 }}>
                     <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: getWorkoutColor(selectedItem.raw.type) }} />
-                    {selectedItem.raw.type}
+                    {(selectedItem.raw.discipline ?? 'aero') === 'aero'
+                      ? selectedItem.raw.type
+                      : DISCIPLINE_LABELS[selectedItem.raw.discipline ?? 'aero']}
                   </div>
 
                   <div className="zh-workout-witha-grid">
@@ -613,10 +627,18 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                       <span className="zh-workout-witha-label">Planned Duration</span>
                       <span className="zh-workout-witha-value">{selectedItem.raw.durationMinutes} minutes</span>
                     </div>
-                    <div className="zh-workout-witha-item">
-                      <span className="zh-workout-witha-label">Planned TSS</span>
-                      <span className="zh-workout-witha-value">{selectedItem.raw.plannedTSS} TSS</span>
-                    </div>
+                    {(selectedItem.raw.discipline ?? 'aero') === 'aero' && (
+                      <div className="zh-workout-witha-item">
+                        <span className="zh-workout-witha-label">Planned TSS</span>
+                        <span className="zh-workout-witha-value">{selectedItem.raw.plannedTSS} TSS</span>
+                      </div>
+                    )}
+                    {selectedItem.raw.discipline === 'stride' && selectedItem.raw.distanceKm ? (
+                      <div className="zh-workout-witha-item">
+                        <span className="zh-workout-witha-label">Planned Distance</span>
+                        <span className="zh-workout-witha-value">{selectedItem.raw.distanceKm} km</span>
+                      </div>
+                    ) : null}
                   </div>
 
                   {selectedItem.raw.notes && (
@@ -735,16 +757,6 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                 />
               </div>
 
-              <div className="wd-form-group">
-                <label>Workout Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Sweet Spot 2x15m"
-                  value={formTitle}
-                  onChange={e => setFormTitle(e.target.value)}
-                />
-              </div>
-
               {/* Discipline first, because it decides which of the fields below
                   mean anything. Cycling is costed from TSS, running from distance,
                   strength from time - showing all three at once asked for numbers
@@ -775,6 +787,20 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="wd-form-group">
+                <label>{formDiscipline === 'kratos' ? 'Title (optional — the routine name is used)' : 'Workout Title'}</label>
+                <input
+                  type="text"
+                  placeholder={
+                    formDiscipline === 'kratos' ? 'e.g. Push Day A'
+                      : formDiscipline === 'stride' ? 'e.g. Easy 8k'
+                      : 'e.g. Sweet Spot 2x15m'
+                  }
+                  value={formTitle}
+                  onChange={e => setFormTitle(e.target.value)}
+                />
               </div>
 
               {formDiscipline === 'kratos' && (
@@ -833,9 +859,13 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
               </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {/* TSS is a cycling measure and means nothing for a gym session or a
+                  run - it was being shown, and defaulted to 0, on both. Duration is
+                  asked for everywhere because every discipline is costed from it in
+                  some form. */}
+              <div style={{ display: 'grid', gridTemplateColumns: formDiscipline === 'aero' ? '1fr 1fr' : '1fr', gap: 12 }}>
                 <div className="wd-form-group">
-                  <label>Duration (minutes)</label>
+                  <label>{formDiscipline === 'aero' ? 'Duration (minutes)' : 'How long do you expect it to take? (minutes)'}</label>
                   <input
                     type="number"
                     min={15}
@@ -846,8 +876,14 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                       setFormDuration(dur);
                     }}
                   />
+                  {formDiscipline !== 'aero' && (
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>
+                      Used to estimate what the session will cost you, so Fuel can set the day&apos;s target.
+                    </div>
+                  )}
                 </div>
 
+                {formDiscipline === 'aero' && (
                 <div className="wd-form-group">
                   <label>Expected TSS</label>
                   <input
@@ -858,13 +894,18 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                     onChange={e => setFormTSS(parseInt(e.target.value) || 0)}
                   />
                 </div>
+                )}
               </div>
 
               <div className="wd-form-group">
                 <label>Notes / Instructions</label>
                 <textarea
                   rows={3}
-                  placeholder="e.g. Warm-up 15m, 2x 15m at 220W with 5m recovery..."
+                  placeholder={
+                    formDiscipline === 'kratos' ? 'e.g. go heavier on the first press, skip the flyes if short on time'
+                      : formDiscipline === 'stride' ? 'e.g. easy pace, keep HR under 150'
+                      : 'e.g. Warm-up 15m, 2x 15m at 220W with 5m recovery...'
+                  }
                   value={formNotes}
                   onChange={e => setFormNotes(e.target.value)}
                 />
@@ -892,7 +933,7 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({ userId, onOpenRideIn
                 onClick={handleSaveWorkout}
                 style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#fff', border: 'none' }}
               >
-                Save & Simulate
+                {formDiscipline === 'aero' ? 'Save & Simulate' : 'Save to calendar'}
               </button>
             </div>
           </div>
