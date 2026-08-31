@@ -8,6 +8,7 @@ export * from './pro';
 export * from './services/zenithSleepEngine';
 export * from './services/trainingLoad';
 export * from './services/readiness';
+export * from './services/soreness';
 export * from './ml/SimpleMLP';
 export * from './ml/MinMaxScaler';
 export * from './ml/AnomalyFilter';

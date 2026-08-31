@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Exercise, TemplateSet, TemplateExercise, Template, WorkoutExerciseLog, Workout, PMCPoint } from './types';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, buildTrainingLoadPool, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, buildTrainingLoadPool, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm, fetchSoreness, saveSoreness, sorenessAdjustment, overallSoreness, SORENESS_GROUPS, SEVERITY_LABELS, SEVERITY_DESCRIPTIONS, Severity } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import {
   Dumbbell,
@@ -75,6 +75,13 @@ export default function App() {
   const [todaySleepQuality, setTodaySleepQuality] = useState<number | null>(null);
   const [todaySteps, setTodaySteps] = useState<number | null>(null);
   const [ansIntensityMultiplier, setAnsIntensityMultiplier] = useState<number>(1.0);
+
+  // Which muscles the athlete says are sore today. The only local recovery signal
+  // in the ecosystem - weekly tonnage cannot tell a fresh chest from one still
+  // wrecked from Monday. See shared/services/soreness.ts.
+  const [todaySoreness, setTodaySoreness] = useState<Record<string, Severity>>({});
+  const [sorenessLoaded, setSorenessLoaded] = useState(false);
+  const [savingSoreness, setSavingSoreness] = useState(false);
   const [ansToneInsight, setAnsToneInsight] = useState<string>('');
   const [todayAcwr, setTodayAcwr] = useState<number>(1.0);
   const [isDeloadAccepted, setIsDeloadAccepted] = useState<boolean>(false);
@@ -535,7 +542,12 @@ export default function App() {
     restSeconds: number = 120,
     recommendedRestSeconds: number = 120,
     hardMinWeight?: number,
-    hardMaxWeight?: number
+    hardMaxWeight?: number,
+    // Optional so the existing window.kratosAutoreg2 bridge keeps working
+    // unchanged; a caller that knows what the exercise trains gets the soreness
+    // hold-back, one that does not is unaffected.
+    primaryMuscle?: string | null,
+    secondaryMuscles?: string[] | null
   ) => {
     const rawRec = predictAutoregWeight(
       setIndex,
@@ -555,7 +567,12 @@ export default function App() {
 
     // Scale by SOTA HRV Autonomic Tone multiplier, then re-apply the hard equipment
     // limits since this multiplier is applied after predictAutoregWeight's own clamp.
-    let scaledRec = rawRec * ansIntensityMultiplier;
+    // Whole-body autonomic tone, then local soreness. Both hold weight back, and
+    // they answer different questions: the first is "how is the athlete today", the
+    // second is "how is THIS muscle today". A chest still wrecked from Monday is
+    // invisible to every other signal the app has.
+    const sore = sorenessAdjustment(todaySoreness, primaryMuscle, secondaryMuscles);
+    let scaledRec = rawRec * ansIntensityMultiplier * sore.multiplier;
     if (hardMinWeight != null) scaledRec = Math.max(scaledRec, hardMinWeight);
     if (hardMaxWeight != null) scaledRec = Math.min(scaledRec, hardMaxWeight);
 
@@ -630,11 +647,25 @@ export default function App() {
   };
 
   useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) return;
+    (async () => {
+      const rows = await fetchSoreness(supabase, uid, 30);
+      setTodaySoreness(rows[toDateKeyFromDate(new Date())]?.groups ?? {});
+      setSorenessLoaded(true);
+    })();
+  }, [session?.user?.id]);
+
+  useEffect(() => {
     (window as any).kratosAutoreg2 = {
       compute: computeAutoregRecommendation,
-      train: trainAutoreg
+      train: trainAutoreg,
+      // So a caller can explain a held-back suggestion rather than just showing a
+      // lower number with no reason attached.
+      sorenessReason: (primaryMuscle?: string | null, secondaryMuscles?: string[] | null) =>
+        sorenessAdjustment(todaySoreness, primaryMuscle, secondaryMuscles).reason
     };
-  }, [todaySleepQuality, session?.user?.id]);
+  }, [todaySleepQuality, session?.user?.id, todaySoreness, ansIntensityMultiplier]);
 
   // Unified fatigue detection & rest extension computation for Cross-Talk and PMC widget
   const isSleepFatigued = !!(todaySleepQuality && todaySleepQuality < 75);
@@ -1613,6 +1644,79 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            {/* Soreness check-in.
+                The only LOCAL recovery signal the ecosystem has. Everything else -
+                tonnage, TSB, sleep - describes the whole athlete, and none of it can
+                tell a fresh chest from one still wrecked from Monday. What is
+                collected here holds back the suggested weight on exercises that work
+                a sore muscle, by a stated amount shown to the athlete. */}
+            <section className="kratos-pmc-card" style={{ gridTemplateColumns: '1fr', marginBottom: 24 }}>
+              <div style={{ padding: '4px 2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
+                  <h3 className="kratos-card-title" style={{ display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
+                    <Activity size={16} style={{ color: '#38bdf8' }} /> Anything sore today?
+                  </h3>
+                  {Object.keys(todaySoreness).length > 0 && (
+                    <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                      Suggested weights are held back on affected exercises
+                    </span>
+                  )}
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--text-secondary)', margin: '0 0 12px' }}>
+                  Tap a muscle to cycle mild &rarr; moderate &rarr; severe &rarr; off. Nothing sore is a valid answer &mdash; leave them all blank.
+                </p>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {SORENESS_GROUPS.map(g => {
+                    const level = todaySoreness[g.slug];
+                    const colour = level === 3 ? '#ff7675' : level === 2 ? '#f5a623' : level === 1 ? '#fdcb6e' : null;
+                    return (
+                      <button
+                        key={g.slug}
+                        disabled={savingSoreness || !sorenessLoaded}
+                        title={level ? SEVERITY_DESCRIPTIONS[level] : 'Not sore'}
+                        onClick={async () => {
+                          const next: Record<string, Severity> = { ...todaySoreness };
+                          const cur = next[g.slug];
+                          // mild -> moderate -> severe -> gone. Cycling beats a
+                          // separate severity picker for something answered daily.
+                          if (!cur) next[g.slug] = 1;
+                          else if (cur === 3) delete next[g.slug];
+                          else next[g.slug] = (cur + 1) as Severity;
+
+                          setTodaySoreness(next);
+                          setSavingSoreness(true);
+                          const uid = session?.user?.id;
+                          if (uid) await saveSoreness(supabase, uid, next, new Date());
+                          setSavingSoreness(false);
+                        }}
+                        style={{
+                          padding: '7px 12px',
+                          borderRadius: 999,
+                          cursor: 'pointer',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          border: colour ? `1px solid ${colour}` : '1px solid rgba(255,255,255,0.10)',
+                          background: colour ? `${colour}22` : 'rgba(255,255,255,0.02)',
+                          color: colour ?? '#94a3b8'
+                        }}
+                      >
+                        {g.label}
+                        {level ? ` · ${SEVERITY_LABELS[level]}` : ''}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {Object.keys(todaySoreness).length > 0 && (
+                  <div style={{ marginTop: 12, fontSize: 11, color: '#94a3b8' }}>
+                    Overall soreness <strong style={{ color: '#e2e8f0' }}>{Math.round(overallSoreness(todaySoreness) * 100)}%</strong>
+                    {' '}&mdash; recorded against today so the pattern can be looked at over time.
+                  </div>
+                )}
+              </div>
+            </section>
 
             {/* AI Cardio & Recovery Link */}
             <section className="kratos-pmc-card" style={{ gridTemplateColumns: '1fr' }}>
