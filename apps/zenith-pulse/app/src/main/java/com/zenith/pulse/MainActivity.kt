@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import android.Manifest
 import android.content.ClipData
+import android.content.Intent
 import android.content.ClipboardManager
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
@@ -142,6 +143,7 @@ fun ZenithPulseScreen(
     val scaleManager = remember { ScaleBleManager(context) }
     var scaleScanning by remember { mutableStateOf(false) }
     var showScalePanel by remember { mutableStateOf(false) }
+    var showDiagnostics by remember { mutableStateOf(false) }
     val scaleDevices by scaleManager.devices.collectAsState()
     val scaleReading by scaleManager.reading.collectAsState()
     val scaleStatus by scaleManager.status.collectAsState()
@@ -769,7 +771,7 @@ fun ZenithPulseScreen(
                             Text(
                                 text = when {
                                     showScalePanel -> "Hide scale setup"
-                                    savedScaleAddress != null -> "Use a different scale"
+                                    savedScaleAddress != null -> "Scale setup & diagnostics"
                                     else -> "Set up my Bluetooth scale"
                                 },
                                 fontSize = 12.sp,
@@ -845,7 +847,6 @@ fun ZenithPulseScreen(
                                                 scaleManager.clearReading()
                                                 awaitingConfirm = false
                                                 scaleManager.connect(dev.address)
-                                                showScalePanel = false
                                             }
                                             .background(Color(0xFF1A1F27), RoundedCornerShape(8.dp))
                                             .padding(10.dp),
@@ -869,19 +870,82 @@ fun ZenithPulseScreen(
                                     }
                                 }
 
-                                if (scaleFrames.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    Text(
-                                        text = "COPY DIAGNOSTICS (${scaleFrames.size} frames)",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = ZenithAccent,
-                                        modifier = Modifier.clickable {
+                                // Always offered, never gated on having captured
+                                // something. A scan that finds nothing is exactly
+                                // when these details are needed, and the previous
+                                // version hid the button in precisely that case.
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            val text = scaleManager.diagnosticsText()
                                             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                            cm.setPrimaryClip(ClipData.newPlainText("Zenith scale diagnostics", scaleManager.diagnosticsText()))
-                                            Toast.makeText(context, "Diagnostics copied", Toast.LENGTH_SHORT).show()
-                                        }
-                                    )
+                                            cm.setPrimaryClip(ClipData.newPlainText("Zenith scale diagnostics", text))
+                                            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530)),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("COPY", color = ZenithTextMain, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                    Button(
+                                        onClick = {
+                                            // Share, not just clipboard: pasting a long
+                                            // hex dump out of an Android clipboard into
+                                            // something useful is its own small ordeal.
+                                            val send = Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(Intent.EXTRA_SUBJECT, "Zenith Pulse scale diagnostics")
+                                                putExtra(Intent.EXTRA_TEXT, scaleManager.diagnosticsText())
+                                            }
+                                            context.startActivity(Intent.createChooser(send, "Send diagnostics"))
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = ZenithAccent),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("SHARE", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                }
+
+                                Text(
+                                    text = if (scaleFrames.isEmpty())
+                                        "Nothing captured yet — send this anyway, what it does NOT contain is the useful part."
+                                    else
+                                        "${scaleFrames.size} frames captured.",
+                                    fontSize = 10.sp,
+                                    color = ZenithTextMuted,
+                                    modifier = Modifier.padding(top = 6.dp)
+                                )
+
+                                // On screen as well, and selectable. If sharing is
+                                // awkward this can still be read or screenshotted.
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = if (showDiagnostics) "Hide details" else "Show details",
+                                    fontSize = 11.sp,
+                                    color = ZenithAccent,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable { showDiagnostics = !showDiagnostics }
+                                )
+                                if (showDiagnostics) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    androidx.compose.foundation.text.selection.SelectionContainer {
+                                        Text(
+                                            text = scaleManager.diagnosticsText(),
+                                            fontSize = 9.sp,
+                                            color = ZenithTextMuted,
+                                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(Color(0xFF0E1217), RoundedCornerShape(8.dp))
+                                                .padding(10.dp)
+                                        )
+                                    }
                                 }
                             }
 

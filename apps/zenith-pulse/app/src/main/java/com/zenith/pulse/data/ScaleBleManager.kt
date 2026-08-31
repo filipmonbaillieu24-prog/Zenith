@@ -515,16 +515,42 @@ class ScaleBleManager(private val context: Context) {
         else -> null
     }
 
-    /** The captured log, formatted for sharing when a scale needs a new decoder. */
+    /**
+     * Everything known about the attempt, formatted for sending on.
+     *
+     * Written to be useful when NOTHING worked, which is the case that matters. An
+     * earlier version of the UI only offered this once frames had been captured -
+     * exactly backwards, since a scan that finds nothing is precisely when the
+     * details are needed and the moment they were unreachable.
+     */
     fun diagnosticsText(): String = buildString {
-        appendLine("Zenith Pulse — scale diagnostics")
-        appendLine("Devices seen:")
-        _devices.value.forEach {
-            appendLine("  ${it.name} [${it.address}] rssi=${it.rssi} services=${it.serviceUuids}")
+        appendLine("Zenith Pulse - scale diagnostics")
+        appendLine("time: ${java.time.Instant.now()}")
+        appendLine("device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})")
+        appendLine("bluetooth on: ${isBluetoothOn()}")
+        appendLine("scanning: $scanning")
+        appendLine("remembered scale: ${savedScaleName ?: "(none)"} [${savedScaleAddress ?: "-"}]")
+        appendLine("status: ${_status.value.ifEmpty { "(none)" }}")
+        appendLine()
+
+        val devices = _devices.value
+        appendLine("devices seen: ${devices.size}")
+        if (devices.isEmpty()) {
+            appendLine("  (none - the scan found no Bluetooth LE devices at all.")
+            appendLine("   Step on the scale so it powers up, and check Bluetooth is on.)")
+        }
+        devices.forEach {
+            appendLine("  ${it.name} [${it.address}] rssi=${it.rssi} scaleLike=${it.looksLikeAScale}")
+            if (it.serviceUuids.isNotEmpty()) appendLine("    services: ${it.serviceUuids}")
             if (it.advertisementHex.isNotEmpty()) appendLine("    adv: ${it.advertisementHex}")
         }
         appendLine()
-        appendLine("Frames:")
-        _capturedFrames.value.forEach { appendLine("  $it") }
+
+        val frames = _capturedFrames.value
+        appendLine("frames: ${frames.size}")
+        if (frames.isEmpty()) {
+            appendLine("  (none - nothing was connected to, or the connection sent no data.)")
+        }
+        frames.forEach { appendLine("  $it") }
     }
 }
