@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Exercise, TemplateSet, TemplateExercise, Template, WorkoutExerciseLog, Workout, PMCPoint } from './types';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, buildTrainingLoadPool, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm, fetchSoreness, saveSoreness, sorenessAdjustment, overallSoreness, SORENESS_GROUPS, SEVERITY_LABELS, SEVERITY_DESCRIPTIONS, Severity } from '@zenith/shared';
+import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, buildTrainingLoadPool, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm, fetchSoreness, saveSoreness, sorenessAdjustment, overallSoreness, SORENESS_GROUPS, SEVERITY_LABELS, SEVERITY_DESCRIPTIONS, Severity, toKg } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import {
   Dumbbell,
@@ -898,10 +898,14 @@ export default function App() {
       
       exLog.sets.forEach(s => {
         if (s.type === 'working') {
-          const weight = Number(s.weight || 0);
           const reps = Number(s.reps || 0);
-          const effectiveWeight = isBodyweight ? (latestBodyweight + weight) : weight;
-          newVolume += effectiveWeight * reps;
+          // Converted to kg before summing. Volume used to add a 100 lb stack as
+          // 100, identical to 100 kg, which inflated stored tonnage by 79-111% per
+          // session on a mixed metric/imperial gym floor - and that figure feeds the
+          // recovery model, the PMC and the weekly total.
+          const addedKg = toKg(Number(s.weight || 0), ex?.weight_unit);
+          const effectiveKg = isBodyweight ? (latestBodyweight + addedKg) : addedKg;
+          newVolume += effectiveKg * reps;
         }
       });
     });

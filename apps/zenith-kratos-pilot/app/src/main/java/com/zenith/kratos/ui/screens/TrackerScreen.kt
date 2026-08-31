@@ -950,11 +950,20 @@ fun TrackerScreen(
                             if (s.isCompleted && s.type == "working") {
                                 val w = s.weightInput.toDoubleOrNull() ?: s.targetWeight
                                 val r = s.repsInput.toIntOrNull() ?: s.targetReps
-                                // bodyWeight always comes from vigor_weight in kg; convert to the
-                                // exercise's own unit before combining with its per-set weight input.
-                                val bodyWeightInExerciseUnit = if (ex.weightUnit == "lb") bodyWeight * 2.2046226218 else bodyWeight
-                                val effectiveW = if (ex.isBodyweight) (bodyWeightInExerciseUnit + w) else w
-                                totalVolume += (effectiveW * r)
+                                // Volume is accumulated in KILOGRAMS, whatever unit the exercise is
+                                // configured in. It used to add a 100 lb stack as 100, identical to
+                                // 100 kg, which on a mixed metric/imperial gym floor inflated stored
+                                // tonnage by 79-111% per session - and that number feeds the recovery
+                                // model's gym input, the Kratos share of the PMC, and the weekly total.
+                                //
+                                // The old line also compared against "lb" while the database stores
+                                // "lbs", so it never matched: rather than converting bodyweight into
+                                // the exercise's unit it silently left everything as-is. Bodyweight is
+                                // already kg, so it is now added AFTER the conversion instead.
+                                val unit = ex.weightUnit.trim().lowercase()
+                                val addedKg = if (unit == "lb" || unit == "lbs") w * 0.45359237 else w
+                                val effectiveKg = if (ex.isBodyweight) (bodyWeight + addedKg) else addedKg
+                                totalVolume += (effectiveKg * r)
                             }
                         }
                     }

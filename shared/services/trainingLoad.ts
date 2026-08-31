@@ -36,6 +36,70 @@ export function estimateKratosSessionLoad(volume: number): number {
 // Kratos has always recorded reps-in-reserve per set. This is where that finally
 // gets used.
 
+/**
+ * Exercises can be configured in kilograms or pounds - a gym floor is usually a
+ * mix, since plate-loaded kit is often metric and pin-loaded stacks imperial - and
+ * session volume was summed with no regard for which.
+ *
+ * A 100 lb stack was added as 100, the same as 100 kg. On this athlete's own data
+ * that inflated stored tonnage by 79-111% per session: a PULL session recorded as
+ * 9,505 kg was really 4,557, because 9,055 of it came from pin-loaded machines
+ * configured in pounds.
+ *
+ * That figure is not cosmetic. It feeds the recovery model's gym input, the Kratos
+ * contribution to the PMC, and the "lifted this week" display - so the gym fatigue
+ * penalty was roughly double what the athlete had actually done.
+ */
+export const LB_TO_KG = 0.45359237;
+
+/**
+ * Normalises a logged weight to kilograms.
+ *
+ * Accepts "lb" and "lbs" both. The database stores "lbs" while the Android app
+ * compared against "lb", so its bodyweight conversion never fired - a latent bug
+ * that would have added a kilogram bodyweight to pound-denominated sets the moment
+ * a bodyweight exercise was configured on an imperial machine.
+ */
+export function toKg(weight: number, unit?: string | null): number {
+  const w = Number(weight);
+  if (!Number.isFinite(w)) return 0;
+  const u = (unit ?? 'kg').trim().toLowerCase();
+  return (u === 'lb' || u === 'lbs') ? w * LB_TO_KG : w;
+}
+
+/**
+ * A session's working volume in kilograms, from its stored set list.
+ *
+ * `unitByExerciseId` maps exercise id to its configured unit; an exercise not in
+ * the map is assumed metric, which is the app's own default.
+ */
+export function kratosSessionVolumeKg(
+  sets: unknown,
+  unitByExerciseId: Record<string, string | null | undefined>,
+  bodyWeightKg = 0,
+  bodyweightExerciseIds: Set<string> = new Set()
+): number {
+  if (!Array.isArray(sets)) return 0;
+  let total = 0;
+  for (const exercise of sets as any[]) {
+    const exId = exercise?.exercise_id;
+    const unit = exId ? unitByExerciseId[exId] : 'kg';
+    const setList = exercise?.sets;
+    if (!Array.isArray(setList)) continue;
+    for (const set of setList) {
+      if (set?.type !== 'working') continue;
+      const reps = Number(set?.reps);
+      if (!Number.isFinite(reps) || reps <= 0) continue;
+      // Bodyweight is already in kg, so it is added AFTER converting the logged
+      // added weight - not converted into the exercise's unit and back.
+      const addedKg = toKg(Number(set?.weight) || 0, unit);
+      const effectiveKg = (exId && bodyweightExerciseIds.has(exId)) ? bodyWeightKg + addedKg : addedKg;
+      total += effectiveKg * reps;
+    }
+  }
+  return total;
+}
+
 /** RIR assumed for a set that has none recorded - Kratos's own default. */
 export const RIR_DEFAULT = 2;
 
