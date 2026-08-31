@@ -1322,6 +1322,26 @@ export default function App() {
   }, [workouts, sleepLogs, hasRealHrvData]);
 
   // Loading screen
+  // These three must stay ABOVE the early returns below.
+  //
+  // They were originally placed further down, past `if (loadingSession)` and
+  // `if (!session)`. React counts hooks per render: the loading screen returned
+  // early and ran fewer of them, then the moment loading finished the component
+  // ran past the guard and called three more - "rendered more hooks than during
+  // the previous render", which blanks the page. It shows as a loading spinner
+  // followed by a black screen, and neither tsc nor vite build can see it.
+  // Per-exercise progression. Web only - the phone app is for logging a session in
+  // front of a rack, this is for looking back at a month of them.
+  const exerciseSessions = useMemo(
+    () => buildExerciseSessions(workouts as any, exercises as any, latestBodyweight || 0),
+    [workouts, exercises, latestBodyweight]
+  );
+  const exerciseTrends = useMemo(() => analyseAllExercises(exerciseSessions), [exerciseSessions]);
+  const needsAttention = useMemo(
+    () => exerciseTrends.filter(t => t.verdict === 'stalled' || t.verdict === 'regressing'),
+    [exerciseTrends]
+  );
+
   if (loadingSession) {
     return (
       <div className="kratos-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
@@ -1534,18 +1554,6 @@ export default function App() {
       </div>
     );
   };
-
-  // Per-exercise progression. Web only - the phone app is for logging a session in
-  // front of a rack, this is for looking back at a month of them.
-  const exerciseSessions = useMemo(
-    () => buildExerciseSessions(workouts as any, exercises as any, latestBodyweight || 0),
-    [workouts, exercises, latestBodyweight]
-  );
-  const exerciseTrends = useMemo(() => analyseAllExercises(exerciseSessions), [exerciseSessions]);
-  const needsAttention = useMemo(
-    () => exerciseTrends.filter(t => t.verdict === 'stalled' || t.verdict === 'regressing'),
-    [exerciseTrends]
-  );
 
   const userName = session?.user?.user_metadata?.name || session?.user?.user_metadata?.fitness_profile?.name || 'Athlete';
 
