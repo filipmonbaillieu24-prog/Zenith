@@ -839,7 +839,10 @@ function App() {
         const inputVec = [
           selectedDateCaloriesIntake,
           selectedDateGymVolume,
-          selectedDateActiveCalories > 0 ? 80 : 0, // TSS proxy
+          // The measured figure, not a flag. This was `> 0 ? 80 : 0` here, in the
+          // prediction below and in the retrain builder - so a 544 kcal run and a
+          // walk to the shops trained the network as the same day.
+          selectedDateActiveCalories,
           todaySleepQuality !== null ? todaySleepQuality : 80,
           todaySleepDuration !== null ? todaySleepDuration : 8.0,
           todayDeepSleepRatio, // real deep sleep ratio from vigor_sleep
@@ -1993,7 +1996,7 @@ function App() {
   const fusionPredict = ZenithFusionNet.getInstance().predict(
     intakeCalories,
     selectedDateGymVolume,
-    selectedDateActiveCalories > 0 ? 80 : 0, // TSS proxy
+    selectedDateActiveCalories,
     todaySleepQuality !== null ? todaySleepQuality : 80,
     todaySleepDuration !== null ? todaySleepDuration : 8.0,
     todayDeepSleepRatio, // real deep sleep ratio from vigor_sleep (falls back to 0.25 default only if unavailable)

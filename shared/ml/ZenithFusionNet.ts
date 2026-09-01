@@ -14,14 +14,26 @@ export class ZenithFusionNet {
   // Input min-max scalers
   private intakeScaler = new MinMaxScaler(1000, 5000);
   private gymVolScaler = new MinMaxScaler(0, 15000);
-  private tssScaler = new MinMaxScaler(0, 300);
+  /**
+   * Active calories, not a TSS stand-in.
+   *
+   * This input was fed `activeCalories > 0 ? 80 : 0` at every one of its three call
+   * sites - training, prediction and retraining alike. A 544 kcal run, a 3-hour ride
+   * and a brisk walk to the shops all arrived as the same number, so the network
+   * could not represent how hard a day was, only whether anything happened at all.
+   * Its output duly barely moved: 1969 kcal on a rest day, 1973 on a day with a
+   * 6 km run.
+   *
+   * The measured figure goes in instead, on a range wide enough for a long day.
+   */
+  private activeCaloriesScaler = new MinMaxScaler(0, 2000);
   private sleepQualityScaler = new MinMaxScaler(0, 100);
   private sleepDurationScaler = new MinMaxScaler(4, 12);
   private hrvScaler = new MinMaxScaler(15, 120);
 
   private constructor() {
     this.mlp = new SimpleMLP(
-      12, // Inputs: [Intake, GymVol, CardioTSS, SleepQuality, SleepDuration, DeepSleepRatio, REMRatio, HRV_rMSSD, DeltaRHR, Caffeine, Creatine, TrendWeight]
+      12, // Inputs: [Intake, GymVol, ActiveKcal, SleepQuality, SleepDuration, DeepSleepRatio, REMRatio, HRV_rMSSD, DeltaRHR, Caffeine, Creatine, TrendWeight]
       12, // Hidden size
       3,  // Outputs: [TDEE_Scaled, Recovery_Scaled, Capacity_Scaled]
       // Version bumped from 'zenith_fusion_net_weights'. Every set of weights
@@ -30,7 +42,13 @@ export class ZenithFusionNet {
       // priors of 0.3..0.8 - so they are not salvageable by further training
       // and must not be loaded. A new key abandons them in both Supabase and
       // localStorage and starts from the physiological defaults.
-      'zenith_fusion_net_weights_v2',
+      // Bumped again for v3. Input 2 changed meaning: it carried a constant 80 for
+      // any active day and now carries the day's measured active calories. Weights
+      // fitted against a flag cannot be reused against a magnitude - they encode
+      // "activity happened" where the input now says "how much" - so the old ones are
+      // abandoned rather than retrained. Everything under the v2 key was fitted on a
+      // feature that never varied.
+      'zenith_fusion_net_weights_v3',
       this.generateDefaultWeights
     );
   }
@@ -56,7 +74,7 @@ export class ZenithFusionNet {
     const priorWeightsByInput = new Array(inputSize).fill(0);
     priorWeightsByInput[0] = 0.3;  // Caloric Intake
     priorWeightsByInput[1] = 0.6;  // Gym Volume
-    priorWeightsByInput[2] = 0.8;  // Cardio TSS
+    priorWeightsByInput[2] = 0.8;  // Active calories
     priorWeightsByInput[3] = 0.5;  // Sleep Quality
     priorWeightsByInput[4] = 0.4;  // Sleep Duration
     priorWeightsByInput[5] = 0.3;  // Deep Sleep Ratio
@@ -92,7 +110,7 @@ export class ZenithFusionNet {
   public predict(
     intakeCalories: number,
     gymVolume: number,
-    cardioTSS: number,
+    activeCaloriesKcal: number,
     sleepQuality: number,
     sleepDurationHours: number,
     deepSleepRatio: number,
@@ -104,7 +122,7 @@ export class ZenithFusionNet {
     trendWeight: number
   ): FusionPrediction {
     const x = this.buildFeatureVector(
-      intakeCalories, gymVolume, cardioTSS, sleepQuality, sleepDurationHours,
+      intakeCalories, gymVolume, activeCaloriesKcal, sleepQuality, sleepDurationHours,
       deepSleepRatio, remSleepRatio, hrvRmssd, deltaRhr, caffeineMg,
       creatineSat, trendWeight
     );
@@ -150,7 +168,7 @@ export class ZenithFusionNet {
   public buildFeatureVector(
     intakeCalories: number,
     gymVolume: number,
-    cardioTSS: number,
+    activeCaloriesKcal: number,
     sleepQuality: number,
     sleepDurationHours: number,
     deepSleepRatio: number,
@@ -164,7 +182,7 @@ export class ZenithFusionNet {
     return [
       this.intakeScaler.scale(intakeCalories),
       this.gymVolScaler.scale(gymVolume),
-      this.tssScaler.scale(cardioTSS),
+      this.activeCaloriesScaler.scale(activeCaloriesKcal),
       this.sleepQualityScaler.scale(sleepQuality),
       this.sleepDurationScaler.scale(sleepDurationHours),
       Math.min(1.0, Math.max(0.0, deepSleepRatio)),

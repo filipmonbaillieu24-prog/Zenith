@@ -199,7 +199,10 @@ export function buildFusionTrainingSamples(args: BuildSamplesArgs): FusionDaySam
       rawInputs: [
         dailyCaloriesMap[date] || 0,
         gymVolumeMap[date] || 0,
-        (activeCaloriesMap[date] || 0) > 0 ? 80 : 0, // TSS proxy, as the live path uses
+        // The day's measured active calories, matching the live path. Both used to
+        // send a constant 80 for any active day, which taught the network that every
+        // training day costs the same.
+        activeCaloriesMap[date] || 0,
         quality,
         durationHours,
         deepRatio,
