@@ -12,6 +12,8 @@
  * per historical day so a whole month can be replayed at once.
  */
 
+import { strengthCaloriesFromVolume } from '@zenith/shared';
+
 export interface FusionDaySample {
   date: string;
   rawInputs: number[];
@@ -198,7 +200,10 @@ export function buildFusionTrainingSamples(args: BuildSamplesArgs): FusionDaySam
       // Same twelve metrics, same order, as ZenithFusionNet.predict().
       rawInputs: [
         dailyCaloriesMap[date] || 0,
-        gymVolumeMap[date] || 0,
+        // Kilocalories, matching the live path. Tonnage went in here while the
+        // network's other activity input was energy, so the layer was being asked to
+        // add kilograms to kilocalories.
+        strengthCaloriesFromVolume(gymVolumeMap[date] || 0),
         // The day's measured active calories, matching the live path. Both used to
         // send a constant 80 for any active day, which taught the network that every
         // training day costs the same.

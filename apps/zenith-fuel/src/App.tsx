@@ -5,7 +5,7 @@ import {
   AlertTriangle, Pill
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
-import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, CompletedActivity, plannedEnergyKcal, KCAL_PER_MIN_RUNNING_FALLBACK, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout, resolveCurrentFtp, FTP_ESTIMATE_WINDOW_DAYS, FTP_FALLBACK_WATTS } from '@zenith/shared';
+import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, CompletedActivity, plannedEnergyKcal, KCAL_PER_MIN_RUNNING_FALLBACK, strengthCaloriesFromVolume, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout, resolveCurrentFtp, FTP_ESTIMATE_WINDOW_DAYS, FTP_FALLBACK_WATTS } from '@zenith/shared';
 import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep, creatineWaterRetentionKg, isCorrelationMeaningful, CREATINE_BASELINE_SATURATION, CAFFEINE_KCAL_PER_MG_PRIOR } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
@@ -838,7 +838,11 @@ function App() {
         
         const inputVec = [
           selectedDateCaloriesIntake,
-          selectedDateGymVolume,
+          // Kilocalories, not kilograms of tonnage - and from the shared definition,
+          // so the value the network trains on is the value it later predicts from.
+          // Fuel's own display figure switches formula once ZANE calibrates, which
+          // would have moved this input under the model for no physical reason.
+          strengthCaloriesFromVolume(selectedDateGymVolume),
           // The measured figure, not a flag. This was `> 0 ? 80 : 0` here, in the
           // prediction below and in the retrain builder - so a 544 kcal run and a
           // walk to the shops trained the network as the same day.
@@ -1995,7 +1999,7 @@ function App() {
 
   const fusionPredict = ZenithFusionNet.getInstance().predict(
     intakeCalories,
-    selectedDateGymVolume,
+    strengthCaloriesFromVolume(selectedDateGymVolume),
     selectedDateActiveCalories,
     todaySleepQuality !== null ? todaySleepQuality : 80,
     todaySleepDuration !== null ? todaySleepDuration : 8.0,

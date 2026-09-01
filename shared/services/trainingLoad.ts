@@ -423,3 +423,30 @@ export function buildTrainingLoadPool(
 
   return pool;
 }
+
+
+/**
+ * Energy cost of a strength session, from its tonnage.
+ *
+ * Fuel computed this inline, and differently depending on whether ZANE had
+ * calibrated: a fitted coefficient once it had, a clamped 0.025 kcal per kilogram
+ * before. That is fine for a display but not for a model input - the same day would
+ * be presented to the network with one value while training and another while
+ * predicting, purely because a calibration flag had flipped in between. This is the
+ * stable definition, used wherever the number feeds a model.
+ *
+ * The bounds are the ones Fuel already used: a session that registers at all costs
+ * something, and no amount of tonnage makes a gym session cost more than a long ride.
+ */
+export const STRENGTH_KCAL_PER_KG = 0.025;
+export const STRENGTH_KCAL_MIN = 50;
+export const STRENGTH_KCAL_MAX = 280;
+
+export function strengthCaloriesFromVolume(volumeKg: unknown): number {
+  const volume = Number(volumeKg);
+  if (!Number.isFinite(volume) || volume <= 0) return 0;
+  return Math.min(
+    STRENGTH_KCAL_MAX,
+    Math.max(STRENGTH_KCAL_MIN, Math.round(volume * STRENGTH_KCAL_PER_KG))
+  );
+}

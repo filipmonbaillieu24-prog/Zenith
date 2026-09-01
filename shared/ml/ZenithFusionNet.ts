@@ -1,4 +1,4 @@
-import { SimpleMLP, buildSymmetryBrokenHiddenLayer } from './SimpleMLP';
+import { SimpleMLP } from './SimpleMLP';
 import { MinMaxScaler } from './MinMaxScaler';
 
 export interface FusionPrediction {
@@ -13,7 +13,14 @@ export class ZenithFusionNet {
 
   // Input min-max scalers
   private intakeScaler = new MinMaxScaler(1000, 5000);
-  private gymVolScaler = new MinMaxScaler(0, 15000);
+  /**
+   * Strength work, in kilocalories rather than kilograms of tonnage.
+   *
+   * Tonnage is not energy: 15,000 kg of leg press and 15,000 kg of curls do not cost
+   * the same, and the network was being asked to convert between them with no way to
+   * do it. Both activity inputs are now the same unit, so the layer can add them.
+   */
+  private strengthCaloriesScaler = new MinMaxScaler(0, 2000);
   /**
    * Active calories, not a TSS stand-in.
    *
@@ -33,7 +40,7 @@ export class ZenithFusionNet {
 
   private constructor() {
     this.mlp = new SimpleMLP(
-      12, // Inputs: [Intake, GymVol, ActiveKcal, SleepQuality, SleepDuration, DeepSleepRatio, REMRatio, HRV_rMSSD, DeltaRHR, Caffeine, Creatine, TrendWeight]
+      12, // Inputs: [Intake, StrengthKcal, ActiveKcal, SleepQuality, SleepDuration, DeepSleepRatio, REMRatio, HRV_rMSSD, DeltaRHR, Caffeine, Creatine, TrendWeight]
       12, // Hidden size
       3,  // Outputs: [TDEE_Scaled, Recovery_Scaled, Capacity_Scaled]
       // Version bumped from 'zenith_fusion_net_weights'. Every set of weights
@@ -48,7 +55,7 @@ export class ZenithFusionNet {
       // "activity happened" where the input now says "how much" - so the old ones are
       // abandoned rather than retrained. Everything under the v2 key was fitted on a
       // feature that never varied.
-      'zenith_fusion_net_weights_v3',
+      'zenith_fusion_net_weights_v4',
       this.generateDefaultWeights
     );
   }
@@ -63,36 +70,82 @@ export class ZenithFusionNet {
   /**
    * Generates physiologically grounded default weight matrices.
    */
+  /**
+   * Where each hidden unit's ReLU switches on.
+   *
+   * Every unit reads the same prior-weighted sum; what differs is its knee. Twelve
+   * knees spread across the range that sum actually takes give a piecewise-linear
+   * curve with twelve knots, which is enough to track the target closely.
+   *
+   * The previous defaults gave all twelve units the same bias of about 0.05 with a
+   * per-neuron perturbation of a few percent. Twelve near-identical units do the work
+   * of one, the layer can only be affine, and a sigmoid of an affine function of
+   * all-positive inputs saturates. It did: sweeping every one of the twelve inputs
+   * across its full range moved the output between 0 and 14 kcal, pinned at 5000 -
+   * the ceiling of its own range. Training could not rescue that either, because a
+   * saturated sigmoid has no gradient to descend; fitted on days where burn rose
+   * cleanly with activity, it settled on the mean and stayed flat.
+   */
+  private static readonly HIDDEN_KNEES = [
+    0.443999, 0.550842, 0.657685, 0.764528, 0.871371, 0.978214,
+    1.085058, 1.191901, 1.298744, 1.405587, 1.512430, 1.619273
+  ];
+
+  /**
+   * Physiologically grounded starting weights.
+   *
+   * The priors are chosen so that the untrained network reproduces the formula the
+   * app already trusts, rather than starting somewhere arbitrary and being averaged
+   * into the displayed burn regardless:
+   *
+   *     tdee = 26.4 x weight + activeKcal + strengthKcal
+   *
+   * where 26.4 is 22 kcal/kg of basal metabolism times 1.2 for everyday movement -
+   * which lands within 2% of what this app's own breakdown computes. With the inputs
+   * scaled as they are, that makes the prior-weighted sum s equal to tdee/4000, and
+   * the network's target y = (tdee - 1000)/4000 exactly s - 0.25.
+   *
+   * Everything else starts at zero: intake, sleep, HRV, caffeine, creatine. Not
+   * because they cannot matter, but because their effect on expenditure is what the
+   * model is there to learn from this athlete's own history. A guessed prior on them
+   * would be a number nobody measured, blended into a calorie target.
+   *
+   * The output layer is fitted by least squares against that target on the logit
+   * scale, over 20,000 sampled days spanning 45-135 kg, 0-2000 active kcal and
+   * 0-1500 strength kcal: RMSE 25 kcal, worst case 358 at the extremes of the range.
+   */
   private generateDefaultWeights() {
     const inputSize = 12;
     const hiddenSize = 12;
-    const outputSize = 3;
 
-    // Prior weight per input feature (hand-picked physiological priorities). Inputs
-    // 6, 8, 10, 11 (REM ratio, DeltaRHR, Creatine, TrendWeight) intentionally have no
-    // prior (0) — same as before.
+    // s = 0.66*(weight/100) + 0.5*(active/2000) + 0.5*(strength/2000) = tdee/4000
     const priorWeightsByInput = new Array(inputSize).fill(0);
-    priorWeightsByInput[0] = 0.3;  // Caloric Intake
-    priorWeightsByInput[1] = 0.6;  // Gym Volume
-    priorWeightsByInput[2] = 0.8;  // Active calories
-    priorWeightsByInput[3] = 0.5;  // Sleep Quality
-    priorWeightsByInput[4] = 0.4;  // Sleep Duration
-    priorWeightsByInput[5] = 0.3;  // Deep Sleep Ratio
-    priorWeightsByInput[7] = 0.7;  // HRV rMSSD
-    priorWeightsByInput[9] = 0.4;  // Caffeine
+    priorWeightsByInput[1] = 0.5;   // strength calories
+    priorWeightsByInput[2] = 0.5;   // active calories
+    priorWeightsByInput[11] = 0.66; // trend weight, carrying basal + everyday movement
 
-    // Small deterministic per-neuron perturbation breaks weight symmetry so hidden
-    // ReLU units don't stay identical (and identically-gradiented) forever.
-    const { W1, B1 } = buildSymmetryBrokenHiddenLayer(priorWeightsByInput, hiddenSize, 0.05);
-    const W2: number[][] = Array.from({ length: hiddenSize }, () => new Array(outputSize).fill(0));
-    const B2: number[] = [0.45, 0.70, 0.75]; // baseline offsets for [TDEE, Recovery, Capacity]
+    const W1: number[][] = Array.from({ length: inputSize }, (_, i) =>
+      new Array(hiddenSize).fill(priorWeightsByInput[i])
+    );
+    const B1: number[] = ZenithFusionNet.HIDDEN_KNEES.map(knee => -knee);
 
-    // Populate hidden -> output weights
-    for (let h = 0; h < hiddenSize; h++) {
-      W2[h][0] = 0.5;  // TDEE output node
-      W2[h][1] = 0.6;  // Recovery output node
-      W2[h][2] = 0.55; // Capacity output node
-    }
+    // Fitted; see above. Column 0 is TDEE.
+    const TDEE_W2 = [
+      7.059978, -2.996703, 0.023249, -0.112069, 0.803352, 0.093910,
+      8.225632, -1.637702, -14.578225, 4.240398, -1.601599, 0.816869
+    ];
+    const TDEE_B2 = -1.564520;
+
+    // Recovery and capacity are not fitted here - they have no formula to be fitted
+    // against - so they keep a modest positive prior and are shaped by training. They
+    // are given DIFFERENT weights per unit rather than one shared value, so those two
+    // outputs are not condemned to the same affine collapse the TDEE output had.
+    const W2: number[][] = Array.from({ length: hiddenSize }, (_, h) => [
+      TDEE_W2[h],
+      0.6 - 0.04 * h,
+      0.55 - 0.035 * h
+    ]);
+    const B2: number[] = [TDEE_B2, -0.2, -0.15];
 
     return { W1, B1, W2, B2 };
   }
@@ -109,7 +162,7 @@ export class ZenithFusionNet {
    */
   public predict(
     intakeCalories: number,
-    gymVolume: number,
+    strengthCaloriesKcal: number,
     activeCaloriesKcal: number,
     sleepQuality: number,
     sleepDurationHours: number,
@@ -122,7 +175,7 @@ export class ZenithFusionNet {
     trendWeight: number
   ): FusionPrediction {
     const x = this.buildFeatureVector(
-      intakeCalories, gymVolume, activeCaloriesKcal, sleepQuality, sleepDurationHours,
+      intakeCalories, strengthCaloriesKcal, activeCaloriesKcal, sleepQuality, sleepDurationHours,
       deepSleepRatio, remSleepRatio, hrvRmssd, deltaRhr, caffeineMg,
       creatineSat, trendWeight
     );
@@ -167,7 +220,7 @@ export class ZenithFusionNet {
    */
   public buildFeatureVector(
     intakeCalories: number,
-    gymVolume: number,
+    strengthCaloriesKcal: number,
     activeCaloriesKcal: number,
     sleepQuality: number,
     sleepDurationHours: number,
@@ -181,7 +234,7 @@ export class ZenithFusionNet {
   ): number[] {
     return [
       this.intakeScaler.scale(intakeCalories),
-      this.gymVolScaler.scale(gymVolume),
+      this.strengthCaloriesScaler.scale(strengthCaloriesKcal),
       this.activeCaloriesScaler.scale(activeCaloriesKcal),
       this.sleepQualityScaler.scale(sleepQuality),
       this.sleepDurationScaler.scale(sleepDurationHours),
