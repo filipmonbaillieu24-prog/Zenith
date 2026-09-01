@@ -77,16 +77,45 @@ export function App() {
   const [filterType, setFilterType] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Why the runs would not load at all.
+  //
+  // Stride is opened inside the hub as an iframe, and the hub hands the signed-in
+  // session down in the URL fragment. Aero, Vigor, Kratos and Fuel each pick those
+  // tokens up and call setSession before touching the database; Stride never did, so
+  // getUser() came back empty, the effect returned early, and the page rendered "No
+  // runs logged yet" over a database holding this athlete's runs. The hub dashboard
+  // showed the same runs on the same screen, because the hub is authenticated
+  // normally - which is what made it look like a Stride data problem rather than an
+  // auth one.
+  const [authFailed, setAuthFailed] = useState(false);
+
   // Load activities directly from Supabase stride_activities table
   useEffect(() => {
     async function loadActivitiesFromDb() {
       try {
+        const hash = window.location.hash;
+        if (hash) {
+          const params = new URLSearchParams(hash.replace('#', '?'));
+          const token = params.get('access_token');
+          const refresh = params.get('refresh_token');
+          if (token && refresh) {
+            // Drop the tokens from the address bar once taken, so they are not left
+            // sitting in history.
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+            await supabase.auth.setSession({ access_token: token, refresh_token: refresh });
+          }
+        }
+
         const { data: userData } = await supabase.auth.getUser();
         const uid = userData?.user?.id;
         if (!uid) {
+          // An empty list and a failed sign-in look identical to the athlete, and
+          // only one of them means "you have no runs". Say which this is.
           console.warn('Cannot load stride activities: User is not authenticated.');
+          setAuthFailed(true);
           return;
         }
+        setAuthFailed(false);
         setUserId(uid);
         // Show this user's own cached data straight away, then reconcile with
         // the server below.
@@ -789,7 +818,26 @@ export function App() {
             <span>Action</span>
           </div>
 
-          {filteredRuns.length === 0 && (
+          {filteredRuns.length === 0 && authFailed && (
+            <ZenithEmptyState
+              icon={
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 7v4" />
+                  <path d="M10 14h.01" />
+                  <circle cx="10" cy="10" r="7" />
+                </svg>
+              }
+              title="Could not read your runs"
+              message="Stride is not signed in, so it cannot tell whether you have runs logged. Reload the page from the Zenith hub; if it keeps happening, sign out and back in."
+              action={
+                <button className="btn-action primary" onClick={() => window.location.reload()}>
+                  <span>Reload</span>
+                </button>
+              }
+            />
+          )}
+
+          {filteredRuns.length === 0 && !authFailed && (
             <ZenithEmptyState
               icon={
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

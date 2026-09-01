@@ -33,6 +33,28 @@ const overlappingSubGroupSlugs = new Set([
   'hipFlexors'
 ]);
 
+/**
+ * The fatigue colour scale, declared once.
+ *
+ * The silhouette had five bands and the legend listed four: the cyan 10-29% step was
+ * missing. That was the band most muscles actually sat in the day after a session, so
+ * the legend failed to explain the colour the athlete was most often looking at.
+ */
+const FATIGUE_BANDS: { from: number; colour: string; label: string }[] = [
+  { from: 75, colour: '#ef4444', label: 'High' },
+  { from: 55, colour: '#f97316', label: 'Moderate' },
+  { from: 30, colour: '#eab308', label: 'Light' },
+  { from: 10, colour: '#06b6d4', label: 'Traces' },
+  { from: 0, colour: '#94a3b8', label: 'Recovered' }
+];
+
+function fatigueColour(pct: number): string {
+  for (const band of FATIGUE_BANDS) {
+    if (pct >= band.from) return band.colour;
+  }
+  return '#94a3b8';
+}
+
 export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData, isLoading = false }) => {
   // Never silently substitute the fake defaultMuscleDataMap for real data. There are
   // exactly three states: still loading (isLoading), confirmed no data (not loading,
@@ -51,12 +73,7 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData, is
     }
     const muscle = data[slug];
     if (!muscle) return '#94a3b8'; // Unselected muscle grey
-    const pct = muscle.fatiguePercent;
-    if (pct >= 75) return '#ef4444'; // Red
-    if (pct >= 55) return '#f97316'; // Orange
-    if (pct >= 30) return '#eab308'; // Yellow
-    if (pct >= 10) return '#06b6d4'; // Cyan
-    return '#94a3b8';
+    return fatigueColour(muscle.fatiguePercent);
   };
 
   const getPathsData = (side: 'front' | 'back') => {
@@ -309,22 +326,16 @@ export const AnatomicalMuscleHeatmap: React.FC<Props> = ({ customFatigueData, is
               Recovery Legend
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#94a3b8' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Recovered (Grey)</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#eab308' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Light (Yellow)</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#f97316' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>Moderate (Orange)</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#ef4444' }} />
-                <span style={{ color: 'rgba(255,255,255,0.7)' }}>High (Red)</span>
-              </div>
+              {[...FATIGUE_BANDS].reverse().map((band, i, all) => {
+                const upper = all[i + 1];
+                const range = upper ? `${band.from}-${upper.from - 1}%` : `${band.from}%+`;
+                return (
+                  <div key={band.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ width: '10px', height: '10px', borderRadius: '3px', background: band.colour, flexShrink: 0 }} />
+                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>{band.label} ({range})</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

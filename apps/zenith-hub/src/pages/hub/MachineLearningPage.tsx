@@ -102,11 +102,11 @@ export const MachineLearningPage: React.FC<{ userId: string }> = ({ userId }) =>
         </div>
         <div>
           <strong>{loading ? '–' : trained}</strong>
-          <span>have stored weights</span>
+          <span>{trained === 1 ? 'has stored weights' : 'have stored weights'}</span>
         </div>
         <div>
           <strong>{loading ? '–' : learning}</strong>
-          <span>have moved off their starting point</span>
+          <span>{learning === 1 ? 'has moved off its starting point' : 'have moved off their starting point'}</span>
         </div>
         <div>
           <strong>{rules.length}</strong>
@@ -258,7 +258,16 @@ const ModelCard: React.FC<{
                   <> &middot; {String(data.oldest).slice(0, 10)} to {String(data.newest).slice(0, 10)}</>
                 )}
                 {training.tables.length > 0 && (
-                  <> &middot; from <code>{training.tables.join('</code>, <code>')}</code></>
+                  <>
+                    {' '}&middot; from{' '}
+                    {/* JSX escapes strings, so joining on a tag printed the tag. */}
+                    {training.tables.map((table, i) => (
+                      <React.Fragment key={table}>
+                        {i > 0 && ', '}
+                        <code>{table}</code>
+                      </React.Fragment>
+                    ))}
+                  </>
                 )}
               </p>
               {data.note && <p className="zh-ml-training-note warn">{data.note}</p>}

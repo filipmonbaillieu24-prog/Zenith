@@ -450,6 +450,12 @@ async function countFuelSamples(supabase: any, userId: string): Promise<Training
 
   const usableDays = [...loggedDays].filter(d => !excluded.has(d)).sort();
 
+  // Only the marked days that actually carried a food log removed anything. Reporting
+  // the size of the exclusion set instead read as "9 days excluded" against 23 looked
+  // at and 21 usable - an arithmetic that cannot be true, and the sort of number that
+  // makes an athlete distrust the rest of the page.
+  const droppedDays = [...loggedDays].filter(d => excluded.has(d)).length;
+
   return {
     // Two weigh-ins are the floor: without a weight trend there is no independent
     // outcome to cost a day against, however completely it was logged.
@@ -459,8 +465,8 @@ async function countFuelSamples(supabase: any, userId: string): Promise<Training
     newest: usableDays[usableDays.length - 1] ?? null,
     note: weights.length < 2
       ? 'needs at least two weigh-ins before any day can be costed'
-      : excluded.size > 0
-        ? `${excluded.size} day${excluded.size === 1 ? '' : 's'} you marked incomplete, excluded`
+      : droppedDays > 0
+        ? `${droppedDays} day${droppedDays === 1 ? '' : 's'} you marked incomplete, excluded`
         : undefined
   };
 }
@@ -531,7 +537,7 @@ function countRidesWith(
 async function countRecoverySamples(supabase: any, userId: string): Promise<TrainingDataCount> {
   const [sleepRes, readinessRes] = await Promise.all([
     supabase.from('vigor_sleep').select('logged_at').eq('user_id', userId),
-    supabase.from('vigor_readiness').select('date, felt').eq('user_id', userId)
+    supabase.from('vigor_readiness').select('local_date, felt').eq('user_id', userId)
   ]);
 
   const sleep = (sleepRes?.data ?? []) as any[];

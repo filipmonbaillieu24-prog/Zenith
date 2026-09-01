@@ -41,10 +41,18 @@ export const STATE_COLOUR: Record<ModelState, string> = {
 export function modelState(status: BrainStatus): ModelState {
   const { entry, hasStoredWeights, learnedShift, data } = status;
   if (entry.kind === 'rule') return 'rule';
+  // Order matters. learnedShift measures how far the model's answers sit from its
+  // starting point, and a freshly calibrated model reads a percent or so off its own
+  // reference purely from fit error. Checking that first labelled a model that had
+  // never trained - "last trained: never", 7 samples of the 8 it needs - as "learning
+  // from you". Nothing can have learned before it has weights.
+  if (!hasStoredWeights) {
+    return data && entry.training && data.usable >= entry.training.minimumUseful
+      ? 'ready'
+      : 'waiting';
+  }
   if ((learnedShift ?? 0) > 0.01) return 'learning';
-  if (hasStoredWeights) return 'trained-no-change';
-  if (data && entry.training && data.usable >= entry.training.minimumUseful) return 'ready';
-  return 'waiting';
+  return 'trained-no-change';
 }
 
 const DOMAIN_COLOUR: Record<SourceDomain, string> = {
