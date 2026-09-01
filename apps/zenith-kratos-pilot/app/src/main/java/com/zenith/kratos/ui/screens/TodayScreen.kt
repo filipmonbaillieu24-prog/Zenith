@@ -291,29 +291,25 @@ fun TodayScreen(
                                     val recentWorkouts = repository.getRecentWorkoutsForTemplate(localTemp.id, 3)
                                     if (recentWorkouts.isNotEmpty()) {
                                         for (ae in active) {
-                                            val log = recentWorkouts
-                                                .mapNotNull { w -> w.sets.find { it.exerciseId == ae.exerciseId } }
-                                                .filter { it.sets.any { s -> s.type == "working" } }
-                                                .maxByOrNull { exLog ->
-                                                    exLog.sets
-                                                        .filter { it.type == "working" }
-                                                        .maxOfOrNull { s -> s.weight * (1.0 + (s.reps + s.rir) / 30.0) }
-                                                        ?: 0.0
+                                            val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }
+                                            val workingTargets = tempEx?.sets?.filter { it.type == "working" } ?: emptyList()
+
+                                            // Newest session in which the prescribed work was actually done, rather
+                                            // than the heaviest of the last three. See Progression.kt: choosing by
+                                            // best e1RM let a single abandoned overreach set the target for weeks.
+                                            val log = chooseBaselineSession(
+                                                sessions = recentWorkouts.mapNotNull { w -> w.sets.find { it.exerciseId == ae.exerciseId } },
+                                                workingSetsOf = { exLog ->
+                                                    exLog.sets.filter { it.type == "working" }
+                                                        .map { SetOutcome(it.weight, it.reps, it.rir) }
+                                                },
+                                                repFloorFor = { idx ->
+                                                    (workingTargets.getOrNull(idx) ?: workingTargets.lastOrNull())?.minReps ?: 8
                                                 }
+                                            )
+
                                             if (log != null && log.sets.isNotEmpty()) {
                                                 val workingSetsInLog = log.sets.filter { it.type == "working" }
-                                                val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }
-                                                val workingTargets = tempEx?.sets?.filter { it.type == "working" } ?: emptyList()
-                                                val allSuccess = workingSetsInLog.isNotEmpty() && workingSetsInLog.withIndex().all { (idx, s) ->
-                                                    // Compare each logged set against its own positional target spec,
-                                                    // not always the first set's - templates can have per-set targets
-                                                    // (e.g. a pyramid scheme).
-                                                    val target = workingTargets.getOrNull(idx) ?: workingTargets.lastOrNull()
-                                                    val maxReps = target?.maxReps ?: 10
-                                                    val targetRir = target?.targetRir ?: 2
-
-                                                    s.reps >= maxReps && s.rir <= targetRir
-                                                }
 
                                                 var workIdx = 0
                                                 for (i in ae.sets.indices) {
@@ -321,25 +317,19 @@ fun TodayScreen(
                                                     if (setType == "working") {
                                                         val prevSet = workingSetsInLog.getOrNull(workIdx) ?: workingSetsInLog.lastOrNull()
                                                         if (prevSet != null) {
-                                                            val minReps = tempEx?.sets?.filter { it.type == "working" }?.getOrNull(workIdx)?.minReps ?: 8
-                                                            val maxReps = tempEx?.sets?.filter { it.type == "working" }?.getOrNull(workIdx)?.maxReps ?: 12
-                                                            val targetRir = tempEx?.sets?.filter { it.type == "working" }?.getOrNull(workIdx)?.targetRir ?: 2
+                                                            val spec = workingTargets.getOrNull(workIdx) ?: workingTargets.lastOrNull()
+                                                            val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
 
-                                                            if (allSuccess) {
-                                                                val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
-                                                                val nextW = prevSet.weight + step
-                                                                ae.sets[i].targetWeight = snapToHardwareStep(nextW, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
-                                                                ae.sets[i].targetReps = minReps
-                                                            } else {
-                                                                val prevSuccessful = prevSet.rir <= targetRir
-                                                                val targetW = snapToHardwareStep(prevSet.weight, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
-                                                                ae.sets[i].targetWeight = targetW
-                                                                if (prevSuccessful && prevSet.reps < maxReps) {
-                                                                    ae.sets[i].targetReps = prevSet.reps + 1
-                                                                } else {
-                                                                    ae.sets[i].targetReps = prevSet.reps
-                                                                }
-                                                            }
+                                                            val next = nextSetTarget(
+                                                                prev = SetOutcome(prevSet.weight, prevSet.reps, prevSet.rir),
+                                                                minReps = spec?.minReps ?: 8,
+                                                                maxReps = spec?.maxReps ?: 12,
+                                                                targetRir = spec?.targetRir ?: 2,
+                                                                stepWeight = step,
+                                                                snap = { w -> snapToHardwareStep(w, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight) }
+                                                            )
+                                                            ae.sets[i].targetWeight = next.weight
+                                                            ae.sets[i].targetReps = next.reps
                                                         } else {
                                                             ae.sets[i].targetWeight = 20.0
                                                         }
