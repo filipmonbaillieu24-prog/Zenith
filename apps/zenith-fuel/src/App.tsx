@@ -148,6 +148,8 @@ function App() {
   /** What was actually done, so a plan that has been carried out stops being counted. */
   const [completedActivities, setCompletedActivities] = useState<CompletedActivity[]>([]);
   const [readinessByDay, setReadinessByDay] = useState<Record<string, ReadinessEntry>>({});
+  /** Completeness flags over the whole calibration window, not just this week. */
+  const [thirtyDayStates, setThirtyDayStates] = useState<{ date: string; is_complete: boolean }[]>([]);
   // Threshold power for costing a planned ride. Resolved from real rides rather than
   // the profile field, which defaults to 220 W and nobody has changed - see
   // resolveCurrentFtp.
@@ -522,14 +524,26 @@ function App() {
     return map;
   }, [weeklyFoodLogs]);
 
-  // Complete status map
+  /**
+   * Which days the athlete has explicitly marked incomplete.
+   *
+   * fuel_days records EXCLUSIONS: a day with no row is a normal day and counts, which
+   * is why every reader here is `map[date] ?? true`.
+   *
+   * This used to be built from weeklyDayStates - the current week only - and then
+   * handed to a THIRTY-day retrain. Every day excluded before this week looked like a
+   * day nobody had said anything about, so it was trained on regardless. This athlete
+   * has nine such days between 3 and 30 August; eight of them were being used to fit
+   * the daily burn model after being explicitly ruled out.
+   */
   const dailyCompletionMap = useMemo(() => {
     const map: { [date: string]: boolean } = {};
-    weeklyDayStates.forEach(s => {
-      map[s.date] = s.is_complete;
-    });
+    for (const s of thirtyDayStates) map[s.date] = s.is_complete;
+    // The current week is fetched separately and is fresher: a day toggled a moment
+    // ago is here before the 30-day read catches up.
+    for (const s of weeklyDayStates) map[s.date] = s.is_complete;
     return map;
-  }, [weeklyDayStates]);
+  }, [thirtyDayStates, weeklyDayStates]);
 
   const selectedDateActiveCalories = useMemo(() => activeCaloriesMap[selectedDateStr] || 0, [activeCaloriesMap, selectedDateStr]);
   const selectedDateGymVolume = useMemo(() => gymVolumeMap[selectedDateStr] || 0, [gymVolumeMap, selectedDateStr]);
@@ -674,6 +688,8 @@ function App() {
           logsMap[dStr].fat = (logsMap[dStr].fat || 0) + Number(f.fat || 0);
         }
       });
+
+      setThirtyDayStates((daysHist ?? []) as { date: string; is_complete: boolean }[]);
 
       daysHist?.forEach(d => {
         if (logsMap[d.date]) {

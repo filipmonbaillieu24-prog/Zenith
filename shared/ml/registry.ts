@@ -121,7 +121,7 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     storageKey: 'zenith_fusion_net_weights_v5',
     mlp: ZenithFusionNet.getInstance().mlpForDiagnostics,
     training: {
-      sample: 'a fully logged day, costed against the measured weight trend around it',
+      sample: 'a day with food logged, costed against the measured weight trend around it',
       tables: ['fuel_days', 'fuel_logs', 'vigor_weight'],
       minimumUseful: 21,
       count: countFuelSamples
@@ -347,29 +347,49 @@ async function countReadinessSamples(supabase: any, userId: string): Promise<Tra
   };
 }
 
-/** Fully logged days, costed against the measured weight trend around them. */
+/**
+ * Days with food logged, minus the ones explicitly marked incomplete.
+ *
+ * fuel_days records EXCLUSIONS, not inclusions: a day the athlete never touched has no
+ * row at all and is perfectly usable, which is why the app reads it as
+ * `dailyCompletionMap[date] ?? true`. A first version of this counter asked for
+ * `is_complete === true` and reported zero usable days out of twenty-three logged -
+ * the table holds nine rows and every one of them is false. The count was wrong, not
+ * the data.
+ */
 async function countFuelSamples(supabase: any, userId: string): Promise<TrainingDataCount> {
-  const [daysRes, weightRes] = await Promise.all([
+  const [logsRes, daysRes, weightRes] = await Promise.all([
+    supabase.from('fuel_logs').select('logged_at').eq('user_id', userId),
     supabase.from('fuel_days').select('date, is_complete').eq('user_id', userId),
     supabase.from('vigor_weight').select('logged_at').eq('user_id', userId)
   ]);
+  const logs = (logsRes?.data ?? []) as any[];
   const days = (daysRes?.data ?? []) as any[];
   const weights = (weightRes?.data ?? []) as any[];
 
-  const complete = days.filter(d => d.is_complete);
-  const sorted = complete.map(d => String(d.date)).sort();
+  const excluded = new Set(
+    days.filter(d => d.is_complete === false).map(d => String(d.date))
+  );
+
+  const loggedDays = new Set<string>();
+  for (const log of logs) {
+    if (!log?.logged_at) continue;
+    loggedDays.add(String(log.logged_at).slice(0, 10));
+  }
+
+  const usableDays = [...loggedDays].filter(d => !excluded.has(d)).sort();
 
   return {
-    // Without two weigh-ins there is no weight trend, and so no independent outcome
-    // to train a day against however completely it was logged.
-    usable: weights.length >= 2 ? complete.length : 0,
-    considered: days.length,
-    oldest: sorted[0] ?? null,
-    newest: sorted[sorted.length - 1] ?? null,
+    // Two weigh-ins are the floor: without a weight trend there is no independent
+    // outcome to cost a day against, however completely it was logged.
+    usable: weights.length >= 2 ? usableDays.length : 0,
+    considered: loggedDays.size,
+    oldest: usableDays[0] ?? null,
+    newest: usableDays[usableDays.length - 1] ?? null,
     note: weights.length < 2
       ? 'needs at least two weigh-ins before any day can be costed'
-      : days.length > complete.length
-        ? `${days.length - complete.length} days marked incomplete and excluded`
+      : excluded.size > 0
+        ? `${excluded.size} day${excluded.size === 1 ? '' : 's'} you marked incomplete, excluded`
         : undefined
   };
 }

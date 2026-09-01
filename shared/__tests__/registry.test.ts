@@ -116,3 +116,64 @@ describe('training provenance', () => {
     }
   });
 });
+
+describe('fuel_days records exclusions, not inclusions', () => {
+  /**
+   * A day with no row is a normal day that counts. The table holds nine rows for this
+   * athlete and every one of them is false, so a counter asking for is_complete === true
+   * reported zero usable days out of twenty-three logged.
+   */
+  const client = (logs: string[], days: { date: string; is_complete: boolean }[], weighIns: number) => ({
+    from: (table: string) => ({
+      select: () => ({
+        eq: () => {
+          const rows =
+            table === 'fuel_logs' ? logs.map(d => ({ logged_at: `${d}T12:00:00Z` }))
+            : table === 'fuel_days' ? days
+            : Array.from({ length: weighIns }, () => ({ logged_at: '2026-08-01T00:00:00Z' }));
+          const result = { data: rows, error: null };
+          return { ...result, order: async () => result, then: (r: any) => r(result) };
+        }
+      })
+    })
+  }) as any;
+
+  const fuelEntry = BRAIN_REGISTRY.find(e => e.id === 'fusion')!;
+
+  it('counts a logged day with no fuel_days row as usable', () => {
+    return fuelEntry.training!.count(
+      client(['2026-08-10', '2026-08-11', '2026-08-12'], [], 5),
+      'u'
+    ).then(count => {
+      expect(count.usable).toBe(3);
+    });
+  });
+
+  it('excludes only the days explicitly marked incomplete', async () => {
+    const count = await fuelEntry.training!.count(
+      client(
+        ['2026-08-10', '2026-08-11', '2026-08-12'],
+        [{ date: '2026-08-11', is_complete: false }],
+        5
+      ),
+      'u'
+    );
+    expect(count.usable).toBe(2);
+    expect(count.considered).toBe(3);
+    expect(count.note).toContain('1 day');
+  });
+
+  it('needs a weight trend before any day can be costed', async () => {
+    const count = await fuelEntry.training!.count(client(['2026-08-10'], [], 1), 'u');
+    expect(count.usable).toBe(0);
+    expect(count.note).toContain('weigh-ins');
+  });
+
+  it('does not count the same day twice for several meals', async () => {
+    const count = await fuelEntry.training!.count(
+      client(['2026-08-10', '2026-08-10', '2026-08-10'], [], 5),
+      'u'
+    );
+    expect(count.usable).toBe(1);
+  });
+});
