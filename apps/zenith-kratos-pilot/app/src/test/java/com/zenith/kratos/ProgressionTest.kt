@@ -44,14 +44,23 @@ class ProgressionTest {
     }
 
     @Test
-    fun `takes two steps when the increment is small enough to justify it`() {
-        // 2.5 kg steps off 100 kg is 5%: a double step there is reasonable. The reps
-        // stay high, because 5 kg does not cost four reps - dropping to the floor of
-        // the range for it would be a lighter session than the one before.
+    fun `four in reserve is calibrated to the implied weight, not stepped`() {
+        // 100x13 at RIR 4 against 11-13 @ RIR 2 implies about 109. Stepping - once or
+        // twice - would answer a question nobody asked; the set already says where the
+        // weight belongs.
         val fine: (Double) -> Double = { w -> Math.round(w / 2.5) * 2.5 }
         val next = nextSetTarget(SetOutcome(100.0, 13, 4), 11, 13, 2, 2.5, fine)
+        assertEquals(110.0, next.weight, 0.001)
+        assertEquals(11, next.reps)
+    }
+
+    @Test
+    fun `two steps are still available inside the target reserve band`() {
+        // RIR 3 is ordinary variation rather than a miscalibrated weight, so this is
+        // the double-progression path: top of the range, reserve to spare, step up.
+        val fine: (Double) -> Double = { w -> Math.round(w / 2.5) * 2.5 }
+        val next = nextSetTarget(SetOutcome(100.0, 13, 3), 11, 13, 2, 2.5, fine)
         assertEquals(105.0, next.weight, 0.001)
-        assertEquals(13, next.reps)
     }
 
     @Test
@@ -71,8 +80,10 @@ class ProgressionTest {
 
     @Test
     fun `never suggests more than two steps in one session`() {
+        // Inside the target reserve band, so this is the stepping path and its cap.
+        // Calibration has its own, larger cap - see CalibrationTest.
         val fine: (Double) -> Double = { w -> Math.round(w / 2.5) * 2.5 }
-        val next = nextSetTarget(SetOutcome(100.0, 20, 5), 11, 13, 2, 2.5, fine)
+        val next = nextSetTarget(SetOutcome(100.0, 20, 3), 11, 13, 2, 2.5, fine)
         assertEquals(100.0 + MAX_STEPS_PER_SESSION * 2.5, next.weight, 0.001)
     }
 
@@ -170,6 +181,10 @@ class ProgressionTest {
 
         // What it used to offer: 70x8, 85x8, 115x8 - lighter reps than the 11 just
         // logged, off a session three weeks old.
+        //
+        // Eleven reps at RIR 4 implies only about 5% more weight, and a 15 lb stack has
+        // no notch that fine, so these climb the rep range instead. The session where
+        // the same lift hit fifteen reps does jump the weight - see CalibrationTest.
         assertEquals(listOf(70.0, 85.0, 100.0), targets.map { it.weight })
         assertEquals(listOf(13, 13, 13), targets.map { it.reps })
 

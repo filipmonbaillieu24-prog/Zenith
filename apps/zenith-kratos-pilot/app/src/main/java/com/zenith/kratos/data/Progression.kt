@@ -94,6 +94,26 @@ const val MAX_STEPS_PER_SESSION = 2
 const val MAX_DOUBLE_STEP_FRACTION = 0.10
 
 /**
+ * Reserve this far above target means the weight is not settled yet.
+ *
+ * The athlete's own reading of it: a set at four reps in reserve against a target of two
+ * is not a training outcome to progress from, it is a set that was too light, and the
+ * weight is still being found. One reserve rep either side of target is ordinary session
+ * variation and is left alone.
+ */
+const val CALIBRATION_RIR_MARGIN = 2
+
+/**
+ * The most a single session may add while calibrating.
+ *
+ * Calibration solves for a weight rather than stepping to one, so a mistyped reserve -
+ * 8 where 0 was meant - would otherwise move the bar by half. Twenty percent is enough
+ * to close a genuine gap in one or two sessions and not enough to hurt anyone. Snapping
+ * to the stack can carry it slightly past, because the alternative is not moving at all.
+ */
+const val MAX_CALIBRATION_RISE = 0.20
+
+/**
  * Estimated one-rep max, Epley, counting the reps left in reserve as reps not done.
  *
  * The same measure the web logbook uses to decide whether a lift is progressing, so a
@@ -101,6 +121,22 @@ const val MAX_DOUBLE_STEP_FRACTION = 0.10
  */
 fun estimatedOneRepMax(weight: Double, reps: Int, rir: Int): Double =
     weight * (1.0 + (reps + rir) / 30.0)
+
+/**
+ * The weight this set says it should have been.
+ *
+ * Takes the estimated max the set demonstrated and asks what load would put the athlete
+ * at the bottom of the rep range with the prescribed reserve left - which is where a
+ * working set is supposed to start before it climbs the range.
+ *
+ * Always heavier than what was lifted whenever the reserve was above target and the
+ * reps at least met the floor, which are exactly the conditions it is called under.
+ */
+private fun impliedWorkingWeight(prev: SetOutcome, floor: Int, targetRir: Int): Double {
+    val denominator = 1.0 + (floor + targetRir) / 30.0
+    if (denominator <= 0.0) return prev.weight
+    return estimatedOneRepMax(prev.weight, prev.reps, prev.rir) / denominator
+}
 
 /**
  * How many reps at the new weight to be worth at least the last session.
@@ -149,7 +185,30 @@ fun nextSetTarget(
     val floor = if (minReps > 0) minReps else 1
     val ceiling = if (maxReps >= floor) maxReps else floor
 
+    // Still finding the weight. Reserve well above target says the load is wrong, not
+    // that the session went well, so stepping one notch at a time answers the wrong
+    // question - the set already contains an estimate of where the weight should be.
+    //
+    // Null when the stack cannot express the difference: a 15 lb machine has no 105, so
+    // an implied 104.65 rounds straight back to 100. Calibrating to the weight already
+    // being used is not calibration, and prescribing the floor of the rep range at that
+    // weight would ask for fewer reps than were just done. In that case the ordinary
+    // rule takes over and climbs the reps instead, which is the only move the hardware
+    // leaves available.
+    val calibrated: Double? =
+        if (prev.reps >= floor && prev.rir >= targetRir + CALIBRATION_RIR_MARGIN) {
+            val implied = impliedWorkingWeight(prev, floor, targetRir)
+            val capped = implied.coerceAtMost(prev.weight * (1.0 + MAX_CALIBRATION_RISE))
+            snap(capped).takeIf { it > prev.weight }
+        } else null
+
     val raw: SetTarget = when {
+        calibrated != null -> SetTarget(
+            weight = calibrated,
+            reps = floor,
+            reason = "${prev.rir} in reserve against a target of $targetRir - still light, so this is the weight your set points at."
+        )
+
         // Fell short of the range. Hold the weight and ask for the floor again - the
         // answer to a hard day is to repeat it, not to lighten the bar.
         prev.reps < floor -> SetTarget(
@@ -357,4 +416,97 @@ fun startingWeightFor(
     val step = if (isPerSide) incrementWeight * 2.0 else incrementWeight
     val effective = if (step <= 0.0) 2.5 else step
     return effective * 2.0
+}
+
+/** The template's prescription for one working set. */
+data class SetSpec(
+    val minReps: Int,
+    val maxReps: Int,
+    val targetRir: Int
+)
+
+/**
+ * Ascending working sets are one exercise, not three independent ones.
+ *
+ * This athlete's Back Extension is 70 / 85 / 100 lb - exactly 70% / 85% / 100% - and the
+ * ramp is deliberate. Progressing each set from its own history pulls that shape apart,
+ * because the lower sets are submaximal by design and so always report reserve to spare.
+ * The top set stalling at 115 while sets one and two keep earning their step turns
+ * 70/85/100 into 100/115/115: the ramp is gone and every set is now a top set.
+ *
+ * It also reads a signal that is not there. Reserve saturates - "4" means "too easy",
+ * not "exactly four" - so on a set chosen to be easy it carries no information at all.
+ * Only the top set is near enough to failure for its reserve to mean anything, which is
+ * why it is the one that decides.
+ *
+ * So: the top set progresses on the ordinary rule, and the rest keep their proportion of
+ * it. If the top set holds, the ramp holds with it.
+ *
+ * `historyBySet` is one list per working set, newest first, in set order.
+ */
+fun nextExerciseTargets(
+    historyBySet: List<List<SetOutcome>>,
+    specs: List<SetSpec>,
+    stepWeight: Double,
+    snap: (Double) -> Double
+): List<SetTarget> {
+    fun specAt(i: Int) = specs.getOrNull(i) ?: specs.lastOrNull() ?: SetSpec(8, 12, 2)
+
+    val independent = historyBySet.mapIndexed { i, h ->
+        val s = specAt(i)
+        nextSetTarget(h, s.minReps, s.maxReps, s.targetRir, stepWeight, snap)
+    }
+
+    val lastWeights = historyBySet.map { it.firstOrNull()?.weight }
+    if (!isRamp(lastWeights)) return independent
+
+    val weights = lastWeights.filterNotNull()
+    val topIdx = weights.lastIndex
+    val topPrev = weights[topIdx]
+    val topTarget = independent[topIdx]
+
+    // The ramp did not move, so nothing below it moves either. Holding a preparation
+    // set at the same weight is not a stalled lift; it is the ramp doing its job.
+    if (topTarget.weight <= topPrev) return independent.mapIndexed { i, t ->
+        if (i == topIdx) t else t.copy(
+            weight = weights[i],
+            reps = maxOf(t.reps, historyBySet[i].firstOrNull()?.reps ?: t.reps),
+            reason = "Holding the ramp - the top set stays at ${fmt(topPrev)}."
+        )
+    }
+
+    var ceilingWeight = topTarget.weight
+    val out = independent.toMutableList()
+    for (i in topIdx - 1 downTo 0) {
+        val prev = historyBySet[i].firstOrNull() ?: continue
+        val spec = specAt(i)
+        val proportion = weights[i] / topPrev
+        // Never below what was lifted last time, never at or above the set above it -
+        // a ramp whose steps collapse into each other has stopped being a ramp.
+        val raw = snap(proportion * topTarget.weight)
+        val bounded = raw.coerceAtLeast(prev.weight).coerceAtMost(ceilingWeight)
+        val reps = if (bounded > prev.weight)
+            repsToMatchLastTime(bounded, prev, spec.targetRir, spec.minReps, maxOf(spec.minReps, spec.maxReps))
+        else
+            maxOf(independent[i].reps, prev.reps)
+
+        out[i] = independent[i].copy(
+            weight = bounded,
+            reps = reps,
+            reason = "Holding its ${Math.round(proportion * 100)}% place in the ramp under ${fmt(topTarget.weight)}."
+        )
+        ceilingWeight = bounded
+    }
+    return out
+}
+
+/**
+ * Strictly ascending working weights, with enough spread to be a deliberate shape rather
+ * than one set that happened to land a notch heavier.
+ */
+private fun isRamp(lastWeights: List<Double?>): Boolean {
+    if (lastWeights.size < 3 || lastWeights.any { it == null }) return false
+    val w = lastWeights.filterNotNull()
+    for (i in 1 until w.size) if (w[i] <= w[i - 1]) return false
+    return w.last() > w.first()
 }

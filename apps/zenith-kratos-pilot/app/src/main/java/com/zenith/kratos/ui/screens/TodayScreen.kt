@@ -323,29 +323,32 @@ fun TodayScreen(
                                                         }
                                                     }
 
+                                                val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
+                                                val snapFor: (Double) -> Double = { w ->
+                                                    snapToHardwareStep(w, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
+                                                }
+
+                                                // The whole exercise is progressed at once, because an ascending
+                                                // ramp is one decision rather than three: only the top set is near
+                                                // enough to failure for its reserve to carry information.
+                                                val perSetHistories = workingSetsInLog.indices.map { idx ->
+                                                    val prevOutcome = workingSetsInLog[idx].let { SetOutcome(it.weight, it.reps, it.rir) }
+                                                    listOf(prevOutcome) +
+                                                        (historyBySetIndex.getOrNull(idx) ?: emptyList())
+                                                            .filterNot { it == prevOutcome }
+                                                }
+                                                val perSetSpecs = workingSetsInLog.indices.map { idx ->
+                                                    val spec = workingTargets.getOrNull(idx) ?: workingTargets.lastOrNull()
+                                                    SetSpec(spec?.minReps ?: 8, spec?.maxReps ?: 12, spec?.targetRir ?: 2)
+                                                }
+                                                val computed = nextExerciseTargets(perSetHistories, perSetSpecs, step, snapFor)
+
                                                 var workIdx = 0
                                                 for (i in ae.sets.indices) {
                                                     val setType = ae.sets[i].type
                                                     if (setType == "working") {
-                                                        val prevSet = workingSetsInLog.getOrNull(workIdx) ?: workingSetsInLog.lastOrNull()
-                                                        if (prevSet != null) {
-                                                            val spec = workingTargets.getOrNull(workIdx) ?: workingTargets.lastOrNull()
-                                                            val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
-                                                            val prevOutcome = SetOutcome(prevSet.weight, prevSet.reps, prevSet.rir)
-                                                            // The baseline session leads the history: progression is
-                                                            // measured from it, and the stall counted behind it.
-                                                            val setHistory = listOf(prevOutcome) +
-                                                                (historyBySetIndex.getOrNull(workIdx) ?: emptyList())
-                                                                    .filterNot { it == prevOutcome }
-
-                                                            val next = nextSetTarget(
-                                                                history = setHistory,
-                                                                minReps = spec?.minReps ?: 8,
-                                                                maxReps = spec?.maxReps ?: 12,
-                                                                targetRir = spec?.targetRir ?: 2,
-                                                                stepWeight = step,
-                                                                snap = { w -> snapToHardwareStep(w, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight) }
-                                                            )
+                                                        val next = computed.getOrNull(workIdx) ?: computed.lastOrNull()
+                                                        if (next != null) {
                                                             ae.sets[i].targetWeight = next.weight
                                                             ae.sets[i].targetReps = next.reps
                                                             ae.sets[i].coachNote = next.advice ?: next.reason

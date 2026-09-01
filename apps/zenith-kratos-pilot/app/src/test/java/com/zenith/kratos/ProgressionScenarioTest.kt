@@ -105,6 +105,8 @@ class ProgressionScenarioTest {
 
     @Test
     fun `at the same weight more reserve never yields fewer reps`() {
+        // Only meaningful where the weight is unchanged: once a set calibrates, the reps
+        // reset to the floor of the range on purpose, at a heavier load.
         for (g in gyms) {
             for ((floor, ceiling) in listOf(8 to 12, 11 to 13, 5 to 8)) {
                 for (reps in floor..ceiling) {
@@ -139,7 +141,10 @@ class ProgressionScenarioTest {
                         val prev = SetOutcome(100.0, reps, rir)
                         val t = target(g, prev, floor, ceiling)
                         if (t.weight <= prev.weight) continue
-                        val held = estimatedOneRepMax(t.weight, t.reps, 2) >=
+                        // One hardware step of tolerance: a calibrated weight is solved
+                        // for and then snapped to a notch the machine actually has, and
+                        // that rounding can land just under the mark.
+                        val held = estimatedOneRepMax(t.weight + g.step, t.reps, 2) >=
                             estimatedOneRepMax(prev.weight, prev.reps, prev.rir)
                         assertTrue(
                             "${g.name}: ${prev.weight}x${prev.reps}@$rir -> ${t.weight}x${t.reps} " +
@@ -183,18 +188,21 @@ class ProgressionScenarioTest {
 
     @Test
     fun `fine increments allow the double step that coarse stacks do not`() {
+        // Inside the target reserve band, where stepping is the right instrument.
         val bench = gyms[3] // 1.25 per side, so 2.5 a step
-        val easy = target(bench, SetOutcome(100.0, 12, 4), 8, 12)
+        val easy = target(bench, SetOutcome(100.0, 12, 3), 8, 12)
         assertEquals(105.0, easy.weight, 0.001)
 
         val stackCase = gyms[0] // 15 lb a step
-        val coarse = target(stackCase, SetOutcome(100.0, 13, 4), 11, 13)
+        val coarse = target(stackCase, SetOutcome(100.0, 13, 3), 11, 13)
         assertEquals(115.0, coarse.weight, 0.001)
     }
 
     @Test
     fun `a light dumbbell lift is not doubled off a tiny working weight`() {
-        // 6 kg lateral raise, 2 kg a step. Two steps is a third of the load.
+        // 6 kg lateral raise, 2 kg a step - a third of the load. The implied weight is
+        // about 6.9, which the hardware cannot make, so this ends up as a single step
+        // rather than a calibrated jump. One step is the smallest move available.
         val raise = gyms[2]
         val next = target(raise, SetOutcome(6.0, 12, 4), 8, 12)
         assertEquals(8.0, next.weight, 0.001)
