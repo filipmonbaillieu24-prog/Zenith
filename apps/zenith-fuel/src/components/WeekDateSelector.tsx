@@ -34,6 +34,10 @@ interface WeekDateSelectorProps {
   showIncompleteFlag?: boolean;
   /** Today, so it can be marked even when another day is selected. */
   todayDateStr?: string;
+  /** Hover text for a day card - the note is nine pixels tall and short on room. */
+  renderDayTitle?: (day: WeekDay) => string;
+  /** A line under the strip explaining what the notes mean. */
+  footnote?: React.ReactNode;
 }
 
 export const WeekDateSelector: React.FC<WeekDateSelectorProps> = ({
@@ -45,7 +49,9 @@ export const WeekDateSelector: React.FC<WeekDateSelectorProps> = ({
   onNextWeek,
   renderDayNote,
   showIncompleteFlag = false,
-  todayDateStr
+  todayDateStr,
+  renderDayTitle,
+  footnote
 }) => (
   <>
     <div
@@ -83,6 +89,7 @@ export const WeekDateSelector: React.FC<WeekDateSelectorProps> = ({
             type="button"
             onClick={() => onSelect(day.dateStr)}
             aria-current={isSelected ? 'date' : undefined}
+            title={renderDayTitle ? renderDayTitle(day) : undefined}
             style={{
               background: isSelected ? 'rgba(255, 159, 67, 0.08)' : 'var(--bg-card)',
               border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--border-color)'}`,
@@ -153,5 +160,14 @@ export const WeekDateSelector: React.FC<WeekDateSelectorProps> = ({
         );
       })}
     </div>
+
+    {footnote && (
+      <div
+        className="col-12"
+        style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: -6, marginBottom: 6, lineHeight: 1.5 }}
+      >
+        {footnote}
+      </div>
+    )}
   </>
 );

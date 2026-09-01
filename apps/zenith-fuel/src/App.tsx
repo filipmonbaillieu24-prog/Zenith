@@ -2339,6 +2339,86 @@ function App() {
    */
   const effectiveTargets = blendedTargets ?? zaneResult;
 
+  /**
+   * Each day of the week's calorie target, so the strip can show eaten against it.
+   *
+   * No target is stored per day - fuel_days holds only a date and a completeness
+   * flag - so this reconstructs each day's from the same pieces today's is built
+   * from: the athlete's base, that day's activity, gym work, caffeine, sleep and
+   * whether it was a weekend. It is the same generateTargets used for today, given a
+   * different day's expenditure.
+   *
+   * That means it is the target this athlete's CURRENT calibration implies for that
+   * day, not necessarily the number the app displayed at the time - ZANE's
+   * coefficients move as it learns. Worth knowing before reading a red day as a
+   * verdict on a Tuesday three weeks ago.
+   *
+   * Days ZANE has not calibrated for get nothing rather than a guess.
+   */
+  const weekDayTargets = useMemo((): Record<string, number> => {
+    if (!zaneResult.isCalibrated || baseTdee <= 0) return {};
+    const out: Record<string, number> = {};
+
+    for (const day of weekDays) {
+      const d = day.dateStr;
+
+      const dayActive = Math.min(1500, activeCaloriesMap[d] || 0);
+      const dayGymVolume = gymVolumeMap[d] || 0;
+      const dayGym = dayGymVolume > 0 ? Math.round(dayGymVolume * zaneResult.gymVolumeCoeff) : 0;
+
+      const dayCaffeine = supplementsLogs
+        .filter(sup => sup.supplement_type === 'caffeine' && toYYYYMMDD(sup.logged_at) === d)
+        .reduce((sum, sup) => sum + Number(sup.amount || 0), 0);
+      const dayCaffeineKcal = dayCaffeine > 0 ? Math.round(dayCaffeine * zaneResult.caffeineCoeff) : 0;
+
+      const daySleep = sleepLogs.find(sl => sl.logged_at?.split('T')[0] === d);
+      let daySleepAdj = 0;
+      if (daySleep) {
+        const rawQ = Number(daySleep.quality_score);
+        const q = rawQ > 0 ? rawQ : calculateZenithSleepScore(daySleep, sleepLogs).score;
+        const hours = Number(daySleep.duration_minutes) / 60;
+        daySleepAdj = Math.round(
+          zaneResult.sleepQualityCoeff * (q - zaneResult.sleepQualityAvg) +
+          zaneResult.sleepDurationCoeff * (hours - zaneResult.sleepDurationAvg)
+        );
+      }
+
+      const isWeekend = [0, 6].includes(new Date(d + 'T12:00:00').getDay()) ? 1 : 0;
+      const dayWeekend = Math.round((zaneResult.weekendCoeff || 0) * isWeekend);
+
+      const preAdaptation = baseTdee + zaneResult.bmrOffset + dayActive + dayGym
+        + dayCaffeineKcal + daySleepAdj + dayWeekend;
+      const dayTdee = Math.round(preAdaptation * (zaneResult.adaptationFactor ?? 1.0));
+      if (dayTdee <= 0) continue;
+
+      const targets = generateTargets(
+        dayTdee,
+        burnParts.bmr,
+        latestWeight,
+        profile,
+        zaneResult.bmrOffset,
+        zaneResult.sleepQualityCoeff,
+        zaneResult.sleepDurationCoeff,
+        zaneResult.gymVolumeCoeff,
+        zaneResult.caffeineCoeff,
+        zaneResult.weekendCoeff,
+        zaneResult.adaptationFactor,
+        zaneResult.sustainedCutDays,
+        zaneResult.calibrationDays,
+        zaneResult.isCalibrated,
+        zaneResult.trendWeightMap,
+        zaneResult.currentTrendWeight,
+        zaneResult.sleepQualityAvg,
+        zaneResult.sleepDurationAvg,
+        zaneResult.energyPerKgTissue,
+        burnParts
+      );
+      if (targets?.dailyCalorieTarget > 0) out[d] = Math.round(targets.dailyCalorieTarget);
+    }
+
+    return out;
+  }, [weekDays, zaneResult, baseTdee, activeCaloriesMap, gymVolumeMap, supplementsLogs, sleepLogs, burnParts, latestWeight, profile]);
+
   // Progress rings and remaining amounts, all measured against the targets that
   // are actually displayed - which means the blended ones when the learning
   // model is trusted. Placed after effectiveTargets for that reason.
@@ -2642,6 +2722,55 @@ function App() {
             onNextWeek={handleNextWeek}
             showIncompleteFlag
             todayDateStr={todayDateStr}
+            renderDayTitle={day => {
+              const target = day.dateStr === selectedDateStr
+                ? effectiveTargets?.dailyCalorieTarget
+                : weekDayTargets[day.dateStr];
+              if (!target || target <= 0) return `${day.dayLongName}: no target — ZANE has not calibrated for this day`;
+              const eaten = day.calories > 0 ? `${day.calories} kcal logged` : 'nothing logged';
+              const diff = day.calories > 0 ? ` (${day.calories - target >= 0 ? '+' : ''}${day.calories - target})` : '';
+              return `${day.dayLongName}: ${eaten} against a ${target} kcal target${diff}`;
+            }}
+            footnote={
+              Object.keys(weekDayTargets).length > 0 ? (
+                <>Eaten against that day&apos;s target.{' '}
+                  <span style={{ color: '#55efc4', fontWeight: 700 }}>on target</span>,{' '}
+                  <span style={{ color: '#ff7675', fontWeight: 700 }}>over</span>,{' '}
+                  <span style={{ color: '#74b9ff', fontWeight: 700 }}>under</span>.
+                  Past days are recomputed from your current calibration, so they show what
+                  that day would be targeted at today &mdash; not necessarily the number shown at
+                  the time.</>
+              ) : null
+            }
+            renderDayNote={day => {
+              // The selected day's target is the live one, which accounts for planned
+              // work and the model blend; other days are reconstructed. Using the
+              // reconstruction for today too would show a different number from the
+              // one on the card immediately below it.
+              const target = day.dateStr === selectedDateStr
+                ? effectiveTargets?.dailyCalorieTarget
+                : weekDayTargets[day.dateStr];
+
+              if (!target || target <= 0) {
+                return day.calories > 0 ? `${day.calories} kcal` : '—';
+              }
+              if (day.calories <= 0) {
+                // Nothing logged is not the same as nothing eaten, and colouring it
+                // green for being "under" would congratulate an empty page.
+                return <span style={{ color: 'var(--text-muted)' }}>— / {target}</span>;
+              }
+
+              const over = day.calories - target;
+              // Within 5% is on target; a hundred kilocalories either way is noise in
+              // a figure built from logged portions.
+              const onTarget = Math.abs(over) <= target * 0.05;
+              const colour = onTarget ? '#55efc4' : over > 0 ? '#ff7675' : '#74b9ff';
+              return (
+                <span style={{ color: colour, fontWeight: 800 }}>
+                  {day.calories} / {target}
+                </span>
+              );
+            }}
           />
 
           {/* Hero row: Calorie Balance is the single "am I on track today" number,
