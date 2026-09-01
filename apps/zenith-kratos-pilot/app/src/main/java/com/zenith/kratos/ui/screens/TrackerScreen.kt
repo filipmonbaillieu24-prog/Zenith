@@ -748,140 +748,33 @@ fun TrackerScreen(
                                                         if (setVal.type == "working" && nextSet.type == "working") {
                                                             val nextTargetRir = nextSet.targetRir
                                                             val nextTargetReps = nextSet.targetReps
-                                                            val step = if (exState.incrementPerSide) 2.0 * exState.incrementWeight else exState.incrementWeight
 
-                                                            val epleyW = {
-                                                                val repsToFailure = r + rir
-                                                                val e1RM = w * (1.0 + repsToFailure / 30.0)
-                                                                e1RM / (1.0 + (nextTargetReps + nextTargetRir) / 30.0)
-                                                            }()
-
-                                                            // Scale the safety band by rirDelta so a small overperformance
-                                                            // (e.g. 1 rep in reserve above target) only earns a small bump,
-                                                            // instead of a flat +/-15% swing every time regardless of how
-                                                            // close the actual set was to the prescribed RIR.
-                                                            val rirDelta = rir - nextTargetRir
-                                                            val growthPct = Math.min(0.15, 0.02 + 0.025 * Math.max(0, rirDelta))
-                                                            val shrinkPct = Math.min(0.15, 0.02 + 0.025 * Math.max(0, -rirDelta))
-                                                            // Hard equipment limits (e.g. a machine's actual stack range)
-                                                            // always win over the rirDelta-scaled band above - no amount
-                                                            // of overperformance should suggest a weight the equipment
-                                                            // physically can't provide.
-                                                            var minSafeW = Math.max(w * (1.0 - shrinkPct), epleyW * 0.92)
-                                                            var maxSafeW = Math.min(w * (1.0 + growthPct), epleyW * 1.08)
-
-                                                            // On coarse equipment the percentage band can be narrower
-                                                            // than a single notch, and then it excludes the only weight
-                                                            // the machine can actually provide. A 15 lb stack at 100 lb
-                                                            // has its next position at +15%, while rirDelta 2 allows
-                                                            // +7% - so the band tops out at 107, rounds back to 100, and
-                                                            // the athlete never moves up no matter how easy it gets.
-                                                            // Reps cannot rescue it either, because they cap at
-                                                            // targetReps + 4.
-                                                            //
-                                                            // So once the reps have hit their ceiling and the set is
-                                                            // still at or above the target RIR, let the band reach the
-                                                            // next real notch - but only if Epley says that much has
-                                                            // actually been earned, which keeps a very coarse machine
-                                                            // from launching someone up a stack they are not ready for.
-                                                            if (rirDelta > 0 && r >= nextTargetReps + 4) {
-                                                                val gridBase = exState.minWeight ?: w
-                                                                val notchesUp = Math.ceil((w - gridBase + 1e-6) / step)
-                                                                val nextNotch = gridBase + notchesUp * step
-                                                                if (nextNotch > maxSafeW && nextNotch <= epleyW * 1.08) {
-                                                                    maxSafeW = nextNotch
-                                                                }
-                                                            }
-
-                                                            exState.minWeight?.let { minSafeW = Math.max(minSafeW, it) }
-                                                            exState.maxWeight?.let { maxSafeW = Math.min(maxSafeW, it) }
-                                                            // A hard limit can push minSafeW above maxSafeW (e.g. max_weight
-                                                            // set below the rirDelta band's floor) - coerceIn() below throws
-                                                            // if min > max, so let the hard ceiling win rather than crash.
-                                                            if (minSafeW > maxSafeW) minSafeW = maxSafeW
-
-                                                            // Always clamp, regardless of which estimate produced the raw
-                                                            // number: previously the safety band was only applied to the
-                                                            // ML model's output, so whenever the on-device model wasn't
-                                                            // loaded yet (cold start, weights never fetched), the raw,
-                                                            // unbounded Epley estimate was used as-is and could jump far
-                                                            // beyond what rirDelta actually justified.
-                                                            val rawPredictedW = if (KratosAutoregModel.isLoaded()) {
-                                                                KratosAutoregModel.predictWeight(
-                                                                    setIndex = setIndex,
-                                                                    prevWeight = w,
-                                                                    prevReps = r,
-                                                                    prevRir = rir,
-                                                                    restSeconds = totalRest,
-                                                                    targetReps = nextTargetReps,
-                                                                    targetRir = nextTargetRir
-                                                                )
-                                                            } else {
-                                                                epleyW
-                                                            }
-                                                            val predictedW = rawPredictedW.coerceIn(minSafeW, maxSafeW)
-
-                                                            // Snap to the equipment's real grid. When a known minWeight
-                                                            // exists (the stack's actual lowest pin), anchor the grid to
-                                                            // it rather than to w: w is only guaranteed grid-aligned if it
-                                                            // came from a previous working set snapped this same way - a
-                                                            // warmup weight (computed as a rough percentage, never
-                                                            // snapped) is not, and anchoring to an off-grid w silently
-                                                            // shifts the whole grid, letting through positions the
-                                                            // machine doesn't actually have (e.g. step=15, minWeight=55 ->
-                                                            // real positions are 55/70/85/.../115/130; anchoring to an
-                                                            // off-grid 75 warmup could still produce 120, which never
-                                                            // exists on this machine). Falls back to anchoring on w when
-                                                            // no minWeight is configured, since there's no better
-                                                            // reference (matches the previous behavior for that case).
-                                                            // Snapping rounds to the nearest notch, so it can land back
-                                                            // outside the machine's range after the coerceIn above. The
-                                                            // shared helper re-applies the limits, stepping inward to the
-                                                            // last real position. When no minWeight is configured it
-                                                            // anchors on w, as before, since there's no better reference.
-                                                            val roundedW = if (exState.minWeight != null) {
-                                                                snapToHardwareStep(
-                                                                    predictedW,
-                                                                    exState.incrementWeight,
-                                                                    exState.incrementPerSide,
-                                                                    exState.minWeight,
-                                                                    exState.maxWeight
-                                                                )
-                                                            } else {
-                                                                val gridAnchor = w
-                                                                var snapped = gridAnchor + Math.round((predictedW - gridAnchor) / step) * step
-                                                                exState.maxWeight?.let { hardMax ->
-                                                                    if (snapped > hardMax) {
-                                                                        snapped = gridAnchor + Math.floor((hardMax - gridAnchor) / step) * step
-                                                                    }
-                                                                }
-                                                                snapped
-                                                            }
-                                                            val diff = Math.abs(w - roundedW)
-                                                            if (diff >= 0.5 * step) {
-                                                                nextSet.targetWeight = roundedW
-                                                                nextSet.targetReps = nextTargetReps
-                                                            } else {
-                                                                // The equipment has no notch small enough for the
-                                                                // increase this set earned, so progress the reps at
-                                                                // the same weight instead.
-                                                                nextSet.targetWeight = w
-                                                                // Integer arithmetic, on purpose. This was computed as
-                                                                //
-                                                                //   (30.0 * (w * (1 + (r + rir)/30.0) / w - 1.0) - targetRir).toInt()
-                                                                //
-                                                                // which reduces exactly to r + rir - targetRir, but the
-                                                                // float round-trip lands on 15.999999999999998 where it
-                                                                // should be 16, and toInt() truncates rather than
-                                                                // rounds. That quietly LOST a rep: a 12-rep set at RIR 4
-                                                                // aiming for RIR 3 asked for 12 again instead of 13, so
-                                                                // the rep progression stalled - and on one of these
-                                                                // exercises it went backwards, suggesting 11 after a set
-                                                                // of 12. Two of nine real cases from this athlete's log
-                                                                // were affected.
-                                                                val exactReps = r + rir - nextTargetRir
-                                                                nextSet.targetReps = exactReps.coerceIn(3, nextTargetReps + 4)
-                                                            }
+                                                            // The arithmetic lives in Progression.kt now, where it can be
+                                                            // run without a device and a finished set.
+                                                            val auto = autoregulateNextSet(
+                                                                prevWeight = w,
+                                                                prevReps = r,
+                                                                prevRir = rir,
+                                                                nextTargetReps = nextTargetReps,
+                                                                nextTargetRir = nextTargetRir,
+                                                                incrementWeight = exState.incrementWeight,
+                                                                incrementPerSide = exState.incrementPerSide,
+                                                                minWeight = exState.minWeight,
+                                                                maxWeight = exState.maxWeight,
+                                                                mlPrediction = if (KratosAutoregModel.isLoaded()) {
+                                                                    KratosAutoregModel.predictWeight(
+                                                                        setIndex = setIndex,
+                                                                        prevWeight = w,
+                                                                        prevReps = r,
+                                                                        prevRir = rir,
+                                                                        restSeconds = totalRest,
+                                                                        targetReps = nextTargetReps,
+                                                                        targetRir = nextTargetRir
+                                                                    )
+                                                                } else null
+                                                            )
+                                                            nextSet.targetWeight = auto.weight
+                                                            nextSet.targetReps = auto.reps
                                                         }
 
                                                         // Pre-fill fields silently

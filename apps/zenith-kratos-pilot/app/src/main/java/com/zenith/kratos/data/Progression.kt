@@ -510,3 +510,92 @@ private fun isRamp(lastWeights: List<Double?>): Boolean {
     for (i in 1 until w.size) if (w[i] <= w[i - 1]) return false
     return w.last() > w.first()
 }
+
+/** What the next set of the CURRENT session should be, after the one just finished. */
+data class WithinSessionTarget(
+    val weight: Double,
+    val reps: Int
+)
+
+/**
+ * Autoregulation between sets of a session, as opposed to between sessions.
+ *
+ * This was forty lines inline inside a Composable, which meant the arithmetic that
+ * decides what goes on the bar next could not be run without an Android device and a
+ * finished set. It is the same shape as the between-session rule - take the estimated
+ * max the set demonstrated and solve for the load that lands on the next set's target -
+ * bounded by a band that widens with how far the set landed from its prescribed reserve.
+ *
+ * `mlPrediction` is the on-device model's answer where it has one; the Epley solve
+ * stands in when it does not. Either way the result is clamped to the same band, because
+ * an unbounded estimate from a cold-start model was once used as-is.
+ */
+fun autoregulateNextSet(
+    prevWeight: Double,
+    prevReps: Int,
+    prevRir: Int,
+    nextTargetReps: Int,
+    nextTargetRir: Int,
+    incrementWeight: Double,
+    incrementPerSide: Boolean,
+    minWeight: Double?,
+    maxWeight: Double?,
+    mlPrediction: Double? = null
+): WithinSessionTarget {
+    val step = if (incrementPerSide) 2.0 * incrementWeight else incrementWeight
+    val effectiveStep = if (step <= 0.0) 2.5 else step
+
+    val epleyW = estimatedOneRepMax(prevWeight, prevReps, prevRir) /
+        (1.0 + (nextTargetReps + nextTargetRir) / 30.0)
+
+    // The band widens with the distance from target reserve, so one rep of
+    // overperformance earns a small bump rather than a flat swing.
+    val rirDelta = prevRir - nextTargetRir
+    val growthPct = Math.min(0.15, 0.02 + 0.025 * Math.max(0, rirDelta))
+    val shrinkPct = Math.min(0.15, 0.02 + 0.025 * Math.max(0, -rirDelta))
+    var minSafeW = Math.max(prevWeight * (1.0 - shrinkPct), epleyW * 0.92)
+    var maxSafeW = Math.min(prevWeight * (1.0 + growthPct), epleyW * 1.08)
+
+    // On coarse equipment the band can be narrower than a single notch, which excludes
+    // the only weight the machine can make: a 15 lb stack at 100 lb has its next
+    // position at +15% while a rirDelta of 2 allows +7%, so the athlete never moves up
+    // however easy it gets. Once the reps have topped out and reserve is still above
+    // target, let the band reach the next real notch - but only as far as Epley says
+    // has actually been earned.
+    if (rirDelta > 0 && prevReps >= nextTargetReps + 4) {
+        val gridBase = minWeight ?: prevWeight
+        val notchesUp = Math.ceil((prevWeight - gridBase + 1e-6) / effectiveStep)
+        val nextNotch = gridBase + notchesUp * effectiveStep
+        if (nextNotch > maxSafeW && nextNotch <= epleyW * 1.08) {
+            maxSafeW = nextNotch
+        }
+    }
+
+    minWeight?.let { minSafeW = Math.max(minSafeW, it) }
+    maxWeight?.let { maxSafeW = Math.min(maxSafeW, it) }
+    if (minSafeW > maxSafeW) minSafeW = maxSafeW
+
+    val predictedW = (mlPrediction ?: epleyW).coerceIn(minSafeW, maxSafeW)
+
+    val roundedW = if (minWeight != null) {
+        snapToHardwareStep(predictedW, incrementWeight, incrementPerSide, minWeight, maxWeight)
+    } else {
+        var snapped = prevWeight + Math.round((predictedW - prevWeight) / effectiveStep) * effectiveStep
+        maxWeight?.let { hardMax ->
+            if (snapped > hardMax) {
+                snapped = prevWeight + Math.floor((hardMax - prevWeight) / effectiveStep) * effectiveStep
+            }
+        }
+        snapped
+    }
+
+    // No notch small enough for what this set earned, so progress the reps instead.
+    return if (Math.abs(prevWeight - roundedW) >= 0.5 * effectiveStep) {
+        WithinSessionTarget(roundedW, nextTargetReps)
+    } else {
+        // Integer arithmetic on purpose: the float round-trip this replaced landed on
+        // 15.999999999999998 and truncated, quietly losing a rep.
+        val exactReps = prevReps + prevRir - nextTargetRir
+        WithinSessionTarget(prevWeight, exactReps.coerceIn(3, nextTargetReps + 4))
+    }
+}
