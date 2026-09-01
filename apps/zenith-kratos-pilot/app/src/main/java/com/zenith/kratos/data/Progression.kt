@@ -600,7 +600,14 @@ fun autoregulateNextSet(
     plannedNextWeight: Double? = null,
     /** What the set just finished was asked for, to tell a good set from a bad one. */
     prevTargetReps: Int? = null,
-    prevTargetRir: Int? = null
+    prevTargetRir: Int? = null,
+    /**
+     * The top of the next set's prescribed rep range.
+     *
+     * Without it the rep bump capped at targetReps + 4, which is a constant with nothing
+     * behind it: on a set whose range is 9-11 it prescribed 13.
+     */
+    nextMaxReps: Int? = null
 ): WithinSessionTarget {
     val step = if (incrementPerSide) 2.0 * incrementWeight else incrementWeight
     val effectiveStep = if (step <= 0.0) 2.5 else step
@@ -668,6 +675,7 @@ fun autoregulateNextSet(
         // Integer arithmetic on purpose: the float round-trip this replaced landed on
         // 15.999999999999998 and truncated, quietly losing a rep.
         val exactReps = prevReps + prevRir - nextTargetRir
-        WithinSessionTarget(prevWeight, exactReps.coerceIn(3, nextTargetReps + 4))
+        val ceiling = nextMaxReps ?: (nextTargetReps + 4)
+        WithinSessionTarget(prevWeight, exactReps.coerceIn(3, maxOf(3, ceiling)))
     }
 }

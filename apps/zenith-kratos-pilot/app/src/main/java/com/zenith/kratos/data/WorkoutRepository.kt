@@ -366,7 +366,8 @@ class WorkoutRepository(
                                 repsInput = ps.repsInput,
                                 rirInput = ps.rirInput,
                                 isCompleted = ps.isCompleted,
-                                isNewPR = ps.isNewPR
+                                isNewPR = ps.isNewPR,
+                                maxReps = ps.maxReps
                             )
                         })
                     }
@@ -416,7 +417,8 @@ class WorkoutRepository(
                             repsInput = as_.repsInput,
                             rirInput = as_.rirInput,
                             isCompleted = as_.isCompleted,
-                            isNewPR = as_.isNewPR
+                            isNewPR = as_.isNewPR,
+                            maxReps = as_.maxReps
                         )
                     }
                 )

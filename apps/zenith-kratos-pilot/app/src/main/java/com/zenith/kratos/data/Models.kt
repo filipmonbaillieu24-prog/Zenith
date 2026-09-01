@@ -101,6 +101,15 @@ class ActiveSetState(
     rirInput: String = "",
     isCompleted: Boolean = false,
     isNewPR: Boolean = false,
+    /**
+     * The top of this set's prescribed rep range.
+     *
+     * Carried because the between-set adjustment used to cap a rep bump at
+     * targetReps + 4, a constant with nothing behind it. On a set whose template range
+     * is 9-11 that prescribed 13 - two reps past a ceiling the athlete had deliberately
+     * set lower than the sets before it.
+     */
+    maxReps: Int? = null,
     /** Why this target, in words - shown in the routine preview. */
     coachNote: String? = null,
     /** True when this lift has stopped moving and the note says what is stuck. */
@@ -115,6 +124,7 @@ class ActiveSetState(
     var rirInput by mutableStateOf(rirInput)
     var isCompleted by mutableStateOf(isCompleted)
     var isNewPR by mutableStateOf(isNewPR)
+    var maxReps by mutableStateOf(maxReps)
     var coachNote by mutableStateOf(coachNote)
     var stalled by mutableStateOf(stalled)
 }
@@ -154,7 +164,9 @@ data class PersistedActiveSet(
     val repsInput: String,
     val rirInput: String,
     val isCompleted: Boolean,
-    val isNewPR: Boolean
+    val isNewPR: Boolean,
+    // Defaulted so sessions persisted before this field existed still deserialize.
+    val maxReps: Int? = null
 )
 
 @Serializable

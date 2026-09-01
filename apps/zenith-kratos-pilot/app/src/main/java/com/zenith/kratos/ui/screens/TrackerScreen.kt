@@ -774,7 +774,8 @@ fun TrackerScreen(
                                                                 } else null,
                                                                 plannedNextWeight = nextSet.targetWeight,
                                                                 prevTargetReps = setVal.targetReps,
-                                                                prevTargetRir = setVal.targetRir
+                                                                prevTargetRir = setVal.targetRir,
+                                                                nextMaxReps = nextSet.maxReps
                                                             )
                                                             nextSet.targetWeight = auto.weight
                                                             nextSet.targetReps = auto.reps

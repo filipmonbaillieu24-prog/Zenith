@@ -264,7 +264,8 @@ fun TodayScreen(
                                                             type = ts.type,
                                                             targetWeight = 0.0,
                                                             targetReps = ts.minReps,
-                                                            targetRir = ts.targetRir
+                                                            targetRir = ts.targetRir,
+                                                            maxReps = ts.maxReps
                                                         )
                                                     }
                                                 )

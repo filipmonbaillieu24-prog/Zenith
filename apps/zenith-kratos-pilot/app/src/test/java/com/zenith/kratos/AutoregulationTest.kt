@@ -74,6 +74,35 @@ class AutoregulationTest {
     }
 
     @Test
+    fun `a rep bump never exceeds the set's own rep range`() {
+        // Rear Delt Flye's third set is 9-11 where the first two are 11-13 - a lower
+        // range chosen on purpose. Capping at targetReps + 4 prescribed 13 for it.
+        val next = autoregulateNextSet(
+            prevWeight = 100.0, prevReps = 12, prevRir = 3,
+            nextTargetReps = 11, nextTargetRir = 2,
+            incrementWeight = 15.0, incrementPerSide = false,
+            minWeight = 55.0, maxWeight = null, mlPrediction = null,
+            plannedNextWeight = 100.0, prevTargetReps = 11, prevTargetRir = 2,
+            nextMaxReps = 11
+        )
+        assertEquals(100.0, next.weight, 0.001)
+        assertEquals(11, next.reps)
+    }
+
+    @Test
+    fun `without a known range the old cap still applies`() {
+        val next = autoregulateNextSet(
+            prevWeight = 100.0, prevReps = 12, prevRir = 3,
+            nextTargetReps = 11, nextTargetRir = 2,
+            incrementWeight = 15.0, incrementPerSide = false,
+            minWeight = 55.0, maxWeight = null, mlPrediction = null,
+            plannedNextWeight = 100.0, prevTargetReps = 11, prevTargetRir = 2,
+            nextMaxReps = null
+        )
+        assertEquals(13, next.reps)
+    }
+
+    @Test
     fun `an unknown plan is simply not used`() {
         val withPlan = backExtension(85.0, 11, 4, planned = null)
         assertEquals(85.0, withPlan.weight, 0.001)
