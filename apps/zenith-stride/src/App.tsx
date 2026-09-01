@@ -539,7 +539,27 @@ export function App() {
   const formatPace = (decimalPace: number) => {
     const mins = Math.floor(decimalPace);
     const secs = Math.round((decimalPace - mins) * 60);
+    // 59.6 s rounds to 60, which would print "5:60".
+    if (secs === 60) return `${mins + 1}:00`;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  /**
+   * Pace from the two numbers that were actually recorded.
+   *
+   * avg_pace_min_km is stored rounded to two decimals, so this run's 351.4 s/km came
+   * back as 5.86 and printed 5:52, while the fastest-runs card - which divides duration
+   * by distance itself - printed 5:51 for the same run on the same screen. A second is
+   * not much, but two different paces for one run is the kind of thing that makes an
+   * athlete stop believing the rest of the numbers.
+   */
+  const runPace = (run: { distanceKm?: number; durationSec?: number; avgPaceMinKm?: number }) => {
+    const km = Number(run.distanceKm);
+    const sec = Number(run.durationSec);
+    if (Number.isFinite(km) && km > 0 && Number.isFinite(sec) && sec > 0) {
+      return formatPace(sec / 60 / km);
+    }
+    return formatPace(Number(run.avgPaceMinKm) || 0);
   };
 
   const formatDuration = (totalSec: number) => {
@@ -879,7 +899,7 @@ export function App() {
               </div>
 
               <div className="col-pace">
-                <span className="pace-num">{formatPace(run.avgPaceMinKm)} /km</span>
+                <span className="pace-num">{runPace(run)} /km</span>
                 <span className="duration-small">{formatDuration(run.durationSec)}</span>
               </div>
 
@@ -940,7 +960,7 @@ export function App() {
                 </div>
                 <div className="detail-stat-box">
                   <span className="stat-label">Avg Pace</span>
-                  <span className="stat-val">{selectedRunDetail.avgPaceMinKm > 0 ? `${formatPace(selectedRunDetail.avgPaceMinKm)} /km` : '0:00 /km'}</span>
+                  <span className="stat-val">{selectedRunDetail.distanceKm > 0 ? `${runPace(selectedRunDetail)} /km` : '0:00 /km'}</span>
                 </div>
                 <div className="detail-stat-box">
                   <span className="stat-label">{selectedRunDetail.isTreadmill ? 'Treadmill Incline' : 'Elevation Gain'}</span>
