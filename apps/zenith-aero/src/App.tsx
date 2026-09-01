@@ -24,7 +24,7 @@ import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { ProPaywallModal } from './components/common/ProPaywallModal';
 import { calibrateSummaryModels, calibrateFullModels, analyzeCardiacDrift, initializeModels } from './utils/localNeuralNet';
 import { supabase } from './utils/supabaseClient';
-import { isTrustedZenithOrigin, ExtensionSessionGate, ZenithPageHeader, ZenithHeaderTab } from '@zenith/shared';
+import { isTrustedZenithOrigin, ExtensionSessionGate, ZenithPageHeader, ZenithHeaderTab, resolveCurrentFtp} from '@zenith/shared';
 import { planWorkoutInCalendar } from './utils/trainingHelpers';
 import './index.css';
 
@@ -366,6 +366,25 @@ function App() {
 
   // Rides & fysiologische recalculate state
   const [rides, setRides] = useState<RideSummaryWithBests[]>([]);
+  /**
+   * The threshold to cost predictions against.
+   *
+   * profiles.ftp_watts DEFAULTS to 220 and this athlete has never edited it, so
+   * `fitnessProfile.ftp ?? 220` handed 220 W to the route and exertion models while
+   * their rides measure 158. Checking the route model against their own seven rides
+   * found the two errors cancelling: the constants were too steep AND the input was
+   * too high, so the prediction came out roughly right for entirely the wrong reasons.
+   *
+   * Measured wins, with the profile as the fallback rather than the authority.
+   */
+  const currentFtp = useMemo(
+    () => resolveCurrentFtp(
+      rides.map(r => ({ date: r.date, metadata: (r as any).metadata ?? { eFTP: (r as any).eFTP } })),
+      fitnessProfile.ftp
+    ),
+    [rides, fitnessProfile.ftp]
+  );
+
   const [kratosWorkouts, setKratosWorkouts] = useState<any[]>([]);
   const [recalculating, setRecalculating] = useState<boolean>(false);
   const [gearWarnings, setGearWarnings] = useState<string[]>([]);
@@ -974,6 +993,7 @@ function App() {
                             rideId={selectedRide}
                             onBack={() => setSelectedRide(null)}
                             profile={fitnessProfile}
+                            currentFtpWatts={currentFtp.watts}
                             onChange={reloadRides}
                           />
                         </ErrorBoundary>
@@ -1031,6 +1051,7 @@ function App() {
               <div style={{ display: 'flex', flexDirection: 'row', flex: 1, minHeight: 0 }}>
                 <RoutePage
                   fitnessProfile={fitnessProfile}
+                  currentFtpWatts={currentFtp.watts}
                   savedLocations={savedLocations}
                   onSaveLocation={saveLocation}
                   onDeleteLocation={deleteLocation}

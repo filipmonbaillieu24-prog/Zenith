@@ -54,24 +54,35 @@ export function predictRideRpe(intensityFactor: number, durationSeconds: number)
 // ── Route duration ───────────────────────────────────────────────────────────
 
 /**
- * How long a route takes, from distance, climbing and the rider's own threshold.
+ * Speed on rolling terrain, predicted rather than duration.
  *
- * The reference is a speed estimate rather than a duration one: a rider's speed on
- * rolling terrain is far more stable than their ride length, so predicting speed and
- * dividing generalises to a 5 km route and a 200 km one alike. The previous model
+ * A rider's speed is far more stable than their ride length, so predicting speed and
+ * dividing generalises to a 5 km route and a 200 km one alike. The model this replaced
  * predicted duration directly on a 0-8 hour scale, which is why a 10 km route came out
- * at 4.7 hours - the bottom of the range was simply unreachable.
+ * at 4.7 hours: the bottom of the range was unreachable.
  *
- * Roughly 30 km/h for a 250 W rider on the flat, scaling with watts per kilogram, and
- * every 100 m of climbing costs about a minute and a half.
+ * Speed on rolling terrain, in km/h, as a function of threshold watts per kilogram.
+ *
+ * Checked against this athlete's seven recorded rides, and the check found two errors
+ * cancelling each other. The first constants were steeper - a 4.2 km/h swing per W/kg -
+ * and they looked accurate only because the call site fed them the profile's untouched
+ * default of 220 W rather than the 158 W the athlete's rides actually measure. Given
+ * the real threshold, the same constants predicted every ride 12 to 19 percent slow.
+ *
+ * A rider's speed depends on their threshold far less than a naive reading suggests:
+ * traffic, junctions, wind and terrain set most of it. These constants give 24.7 km/h
+ * at 1.8 W/kg and 30.4 at 4 - and across those seven rides, with the measured
+ * threshold, they land within 5% worst case and half a percent on average.
  */
-export const FLAT_SPEED_AT_3_WKG = 28;
+export const FLAT_SPEED_INTERCEPT = 20;
+export const FLAT_SPEED_PER_WKG = 2.6;
+/** Every metre of climbing per kilometre costs this share of speed. */
+export const CLIMB_SPEED_PENALTY = 0.006;
 
 function routeSpeedReference(raw: number[]): number {
   const [wattsPerKg, metresPerKm] = raw;
-  const flatSpeed = FLAT_SPEED_AT_3_WKG * (0.55 + 0.15 * wattsPerKg);
-  // Climbing metres per kilometre: 10 m/km is gently rolling, 25 m/km is hilly.
-  const climbPenalty = Math.min(0.45, metresPerKm * 0.014);
+  const flatSpeed = FLAT_SPEED_INTERCEPT + FLAT_SPEED_PER_WKG * wattsPerKg;
+  const climbPenalty = Math.min(0.45, metresPerKm * CLIMB_SPEED_PENALTY);
   return Math.max(8, flatSpeed * (1 - climbPenalty));
 }
 

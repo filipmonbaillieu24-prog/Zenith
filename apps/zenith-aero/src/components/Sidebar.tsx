@@ -19,6 +19,12 @@ import { predictRouteDurationSeconds } from '@zenith/shared';
 
 interface SidebarProps {
   fitnessProfile: FitnessProfile;
+  /**
+   * Measured threshold, not the profile's untouched 220 W default. Route timing is
+   * costed against it; feeding the default made every prediction wrong in a way that
+   * happened to cancel against constants that were also wrong.
+   */
+  currentFtpWatts?: number;
   routes: { stats: RouteStats }[];
   activeRouteIndex: number;
   onSelectRoute: (idx: number) => void;
@@ -82,6 +88,7 @@ function getWindArrow(deg: number): string {
 
 export const Sidebar: React.FC<SidebarProps> = ({
   fitnessProfile,
+  currentFtpWatts,
   routes, activeRouteIndex, onSelectRoute,
   routeType, setRouteType, onGenerate,
   onDownloadGPX, onDownloadTCX,
@@ -535,7 +542,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         const aiDur = predictRouteDurationSeconds(
                           rt.stats.distance,
                           rt.stats.elevationGain,
-                          fitnessProfile.ftp ?? 220,
+                          currentFtpWatts ?? fitnessProfile.ftp ?? 220,
                           fitnessProfile.weight ?? 75
                         );
                         return (
@@ -587,14 +594,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               const activeAIDurationSec = predictRouteDurationSeconds(
                 activeRoute.stats.distance,
                 activeRoute.stats.elevationGain,
-                fitnessProfile.ftp ?? 220,
+                currentFtpWatts ?? fitnessProfile.ftp ?? 220,
                 fitnessProfile.weight ?? 75
               );
               const fuelPlan = calculateFuel(
                 activeAIDurationSec,
                 2, // Zone 2 (Endurance ride)
                 fitnessProfile.weight ?? 75,
-                fitnessProfile.ftp ?? 220,
+                currentFtpWatts ?? fitnessProfile.ftp ?? 220,
                 20
               );
               return (

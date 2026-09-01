@@ -27,6 +27,8 @@ interface Props {
   rideId:         string;
   onBack:         () => void;
   profile:        FitnessProfile;
+  /** Measured threshold. profiles.ftp_watts defaults to 220 and is rarely edited. */
+  currentFtpWatts?: number;
   compareRideId?: string;
   onChange?:      () => void;
 }
@@ -47,7 +49,7 @@ function formatRideDuration(s: number): string {
 
 // ─── Main page ─────────────────────────────────────────────
 
-const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onChange }) => {
+const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, compareRideId, onChange }) => {
   const [ride,        setRide]        = useState<Ride | null>(null);
   const [compareRide, setCompareRide] = useState<Ride | null>(null);
   const [weather,     setWeather]     = useState<RideWeather | null>(null);
@@ -89,7 +91,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
 
       // Perform offline AI predictions if values are missing
       const vi = (r.normPower && r.avgPower) ? (r.normPower / r.avgPower) : 1.0;
-      const ifVal = (r.normPower ?? r.avgPower ?? 0) / (profile.ftp ?? 220);
+      const ifVal = (r.normPower ?? r.avgPower ?? 0) / (currentFtpWatts ?? profile.ftp ?? 220);
 
       if (r.rpe === undefined) {
         // Intensity and duration, which is what session RPE is built from. The old
@@ -137,7 +139,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
 
     if (val && ride) {
       const vi = (ride.normPower && ride.avgPower) ? (ride.normPower / ride.avgPower) : 1.0;
-      const ifVal = (ride.normPower ?? ride.avgPower ?? 0) / (profile.ftp ?? 220);
+      const ifVal = (ride.normPower ?? ride.avgPower ?? 0) / (currentFtpWatts ?? profile.ftp ?? 220);
       trainLabelModel(ifVal, vi, ride.duration, ride.elevGain, ride.hasPower, ride.avgHR ?? 0, val);
       setAiPredictedLabel(null);
     }

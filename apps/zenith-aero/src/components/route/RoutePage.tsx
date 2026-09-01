@@ -12,6 +12,8 @@ import {
 
 export interface RoutePageProps {
   fitnessProfile: FitnessProfile;
+  /** Measured threshold, preferred over the profile's untouched 220 W default. */
+  currentFtpWatts?: number;
   savedLocations: SavedLocation[];
   onSaveLocation: (name: string, lat: number, lng: number) => void;
   onDeleteLocation: (id: string) => void;
@@ -53,6 +55,7 @@ export interface RoutePageProps {
 
 export function RoutePage({
   fitnessProfile,
+  currentFtpWatts,
   savedLocations,
   onSaveLocation,
   onDeleteLocation,
@@ -103,6 +106,7 @@ export function RoutePage({
     <>
       <Sidebar
         fitnessProfile={fitnessProfile}
+        currentFtpWatts={currentFtpWatts}
         routes={routes}
         activeRouteIndex={activeRouteIndex}
         onSelectRoute={onSelectRoute}
