@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from './utils/supabaseClient';
+import {
+  runsInPeriod, summarisePeriod, runningForm, intensityMix, estimateMaxHr,
+  distanceBests, shoeStatuses, STRIDE_PERIOD_LABELS, StridePeriod,
+  runningEconomyTrend, interpretTSB
+} from '@zenith/shared';
 import { ZenithHeroStat, ZenithEmptyState, ZenithPageHeader, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, zenithConfirm, zenithAlert } from '@zenith/shared';
 import { RunActivity, RunningShoe } from './types/stride';
 import { RunModal } from './components/RunModal';
@@ -145,10 +150,18 @@ export function App() {
             avgCadenceSpm: act.avg_cadence_spm,
             calories: act.calories,
             rpe: act.rpe,
-            shoeName: act.shoe_name || 'Samsung Fit',
+            // shoe_id was never read back, so a run reloaded from the server had no
+            // shoe attached however carefully one was picked - and the edit path's
+            // mileage accounting then read every save as a change of shoe.
+            shoeId: act.shoe_id ?? undefined,
+            // `|| 'Samsung Fit'` put a shoe nobody selected on every run that had
+            // none, and that name then appeared in the table and in search results
+            // as though the athlete had recorded it.
+            shoeName: act.shoe_name ?? undefined,
             source: (act.source as any) || 'health_connect',
             notes: act.notes,
-            splits: act.splits
+            splits: act.splits,
+            routeCoordinates: act.route_coordinates ?? undefined
           }));
           setRuns(dbRuns);
         }
@@ -171,6 +184,71 @@ export function App() {
   }, [shoes, userId]);
 
   // Aggregate stats
+  // ── The period being looked at ──────────────────────────────────────────────
+  //
+  // Every headline figure was all-time. A total that can only grow says nothing about
+  // how the athlete is running now, which is the question the dashboard exists to
+  // answer.
+  const [period, setPeriod] = useState<StridePeriod>('30d');
+  const periodRuns = useMemo(() => runsInPeriod(runs as any[], period), [runs, period]);
+  const periodSummary = useMemo(() => summarisePeriod(periodRuns), [periodRuns]);
+
+  /** Fitness, fatigue and form from running alone, not diluted by riding. */
+  const form = useMemo(() => runningForm(runs as any[]), [runs]);
+
+  const maxHr = useMemo(() => estimateMaxHr(runs as any[]), [runs]);
+  const mix = useMemo(() => intensityMix(periodRuns, maxHr), [periodRuns, maxHr]);
+
+  /** Pace compared only between runs at a similar heart rate. */
+  const economy = useMemo(
+    () => runningEconomyTrend(
+      (runs as any[]).map(r => ({
+        date: r.date,
+        avg_pace_min_km: r.avgPaceMinKm,
+        avg_heart_rate: r.avgHeartRate
+      }))
+    ),
+    [runs]
+  );
+
+  const bests = useMemo(() => distanceBests(runs as any[]), [runs]);
+  const shoeWarnings = useMemo(() => shoeStatuses(shoes as any[]).filter(s => s.state !== 'ok'), [shoes]);
+
+  /**
+   * Filter chips for the run types this athlete actually has.
+   *
+   * The list was hardcoded to All / Treadmill / Long Run / Intervals / Easy / Trail,
+   * and the imported runs are typed easy, tempo, treadmill, walk or hike. Three of the
+   * six chips could never match anything: clicking them emptied the table and looked
+   * like a bug in the search.
+   */
+  const availableFilters = useMemo(() => {
+    const LABELS: Record<string, string> = {
+      easy: 'Easy Run',
+      tempo: 'Tempo',
+      long_run: 'Long Run',
+      intervals: 'Intervals',
+      treadmill: 'Treadmill',
+      trail: 'Trail',
+      walk: 'Walk',
+      hike: 'Hike',
+      race: 'Race',
+      recovery: 'Recovery'
+    };
+    const present = Array.from(new Set(runs.map(r => r.type).filter(Boolean)));
+    present.sort((a, b) => (LABELS[a] ?? a).localeCompare(LABELS[b] ?? b));
+    return [
+      { id: 'all', label: 'All Runs' },
+      ...present.map(type => ({ id: type, label: LABELS[type] ?? type }))
+    ];
+  }, [runs]);
+
+  // A chip that vanishes because its last run was deleted must not leave the table
+  // filtered to nothing with no visible reason.
+  useEffect(() => {
+    if (!availableFilters.some(f => f.id === filterType)) setFilterType('all');
+  }, [availableFilters, filterType]);
+
   const totalKm = useMemo(() => runs.reduce((acc, r) => acc + r.distanceKm, 0), [runs]);
   const totalDurationSec = useMemo(() => runs.reduce((acc, r) => acc + r.durationSec, 0), [runs]);
   const totalTreadmillKm = useMemo(() => runs.filter(r => r.isTreadmill).reduce((acc, r) => acc + r.distanceKm, 0), [runs]);
@@ -229,7 +307,17 @@ export function App() {
         avg_cadence_spm: newRun.avgCadenceSpm,
         calories: newRun.calories,
         rpe: newRun.rpe,
+        // shoe_id was never written, only the name - so nothing could be joined back
+        // to a pair, and every run in this database has a null shoe_id however
+        // carefully the shoe was picked in the form.
+        shoe_id: newRun.shoeId ?? null,
         shoe_name: newRun.shoeName,
+        // The GPX importer parses a route and per-kilometre splits, hands them to
+        // this function, and they were dropped here. The columns exist and every row
+        // in them is empty; the detail view's map and splits table had nothing to
+        // render because nothing ever saved them.
+        route_coordinates: newRun.routeCoordinates ?? null,
+        splits: newRun.splits ?? null,
         source: newRun.source || 'manual',
         notes: newRun.notes
       }).select('id').single();
@@ -284,6 +372,7 @@ export function App() {
         avg_cadence_spm: updated.avgCadenceSpm,
         calories: updated.calories,
         rpe: updated.rpe,
+        shoe_id: updated.shoeId ?? null,
         shoe_name: updated.shoeName,
         notes: updated.notes,
         // Tells the Health Connect ingest to leave this row alone from here on. A
@@ -461,52 +550,206 @@ export function App() {
       />
 
       <div style={{ padding: '0 24px 24px' }}>
+      {/* Which period the headline figures cover. */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        {(['7d', '30d', '90d', 'all'] as StridePeriod[]).map(p => (
+          <button
+            key={p}
+            type="button"
+            className={`filter-chip ${period === p ? 'active' : ''}`}
+            onClick={() => setPeriod(p)}
+          >
+            {STRIDE_PERIOD_LABELS[p]}
+          </button>
+        ))}
+      </div>
+
+      {/* A shoe past its stated life was tracked and never mentioned. */}
+      {shoeWarnings.length > 0 && (
+        <div style={{
+          background: 'rgba(245,158,11,0.08)',
+          border: '1px solid rgba(245,158,11,0.3)',
+          borderRadius: 12,
+          padding: '12px 16px',
+          marginBottom: 16,
+          fontSize: 12,
+          color: '#fcd34d'
+        }}>
+          {shoeWarnings.map(w => (
+            <div key={w.shoe.id}>
+              <strong>{w.shoe.brand} {w.shoe.model}</strong>{' '}
+              {w.state === 'due'
+                ? `is ${Math.abs(w.remainingKm).toFixed(0)} km past its ${w.shoe.maxDistanceKm} km life — worth replacing.`
+                : `has ${w.remainingKm.toFixed(0)} km left of its ${w.shoe.maxDistanceKm} km life.`}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Hero Metric + Supporting Stats */}
       <div className="zenith-grid-12" style={{ marginBottom: 20 }}>
         <div className="zenith-span-8">
           <ZenithHeroStat
-            eyebrow="Total Distance"
-            value={<>{totalKm.toFixed(1)} <small>km</small></>}
-            sub={`Including ${totalTreadmillKm.toFixed(1)} km on treadmill`}
+            eyebrow={`Distance · ${STRIDE_PERIOD_LABELS[period]}`}
+            value={<>{periodSummary.distanceKm.toFixed(1)} <small>km</small></>}
+            sub={
+              period === 'all'
+                ? `Including ${totalTreadmillKm.toFixed(1)} km on treadmill`
+                : `${periodSummary.runs} run${periodSummary.runs === 1 ? '' : 's'} · ${totalKm.toFixed(1)} km all time`
+            }
           />
         </div>
         <div className="zenith-span-4" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', flex: 1 }}>
-            <div className="zenith-label">Total Running Time</div>
-            <div className="zenith-stat-value" style={{ marginTop: 4 }}>{formatDuration(totalDurationSec)}</div>
-            <span className="kpi-subtext">{runs.length} total recorded sessions</span>
+            <div className="zenith-label">Running Time</div>
+            <div className="zenith-stat-value" style={{ marginTop: 4 }}>{formatDuration(periodSummary.durationSec)}</div>
+            <span className="kpi-subtext">{periodSummary.runs} session{periodSummary.runs === 1 ? '' : 's'} in this period &middot; {runs.length} all time</span>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', flex: 1 }}>
             <div className="zenith-label">Average Pace</div>
-            <div className="zenith-stat-value" style={{ marginTop: 4 }}>{avgPace !== null ? <>{formatPace(avgPace)} <small>/km</small></> : '–:––'}</div>
+            <div className="zenith-stat-value" style={{ marginTop: 4 }}>{periodSummary.avgPaceMinKm !== null ? <>{formatPace(periodSummary.avgPaceMinKm)} <small>/km</small></> : '–:––'}</div>
             {/* "Strong aerobic efficiency" was printed here whatever the pace was -
                 a compliment with nothing behind it. What is useful is which runs the
                 average covers, since the ones without a distance are left out. */}
             <span className="kpi-subtext">
-              {avgPace === null
-                ? 'No run has recorded a distance yet'
-                : `Across ${pacedRuns.length} run${pacedRuns.length === 1 ? '' : 's'} with a distance` +
-                  (runs.length > pacedRuns.length
-                    ? `, ${runs.length - pacedRuns.length} without one excluded`
+              {periodSummary.avgPaceMinKm === null
+                ? 'No run in this period recorded a distance'
+                : `Across ${periodSummary.runs - periodSummary.runsWithoutDistance} run${periodSummary.runs - periodSummary.runsWithoutDistance === 1 ? '' : 's'} with a distance` +
+                  (periodSummary.runsWithoutDistance > 0
+                    ? `, ${periodSummary.runsWithoutDistance} without one excluded`
                     : '')}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Treadmill Volume */}
+      {/* Analysis. Stride was a logbook - totals, a table, a detail modal - while
+          every other app here answers a question about whether things are going
+          well. These are the running equivalents, and each says nothing rather
+          than guessing when the data cannot support it. */}
       <div className="stride-kpi-grid" style={{ marginBottom: 32 }}>
         <div className="kpi-card">
-          <div className="kpi-icon-wrapper purple">
-            <Layers size={20} />
+          <div className="kpi-icon-wrapper purple"><Activity size={20} /></div>
+          <div>
+            <span className="kpi-label">Running Form</span>
+            {form === null ? (
+              <>
+                <span className="kpi-value">&mdash;</span>
+                <span className="kpi-subtext">Log a run to start building this</span>
+              </>
+            ) : (
+              <>
+                <span className="kpi-value" style={{ color: interpretTSB(form.form).color }}>
+                  {form.form > 0 ? '+' : ''}{form.form}
+                </span>
+                <span className="kpi-subtext">
+                  {interpretTSB(form.form).label} &middot; fitness {form.fitness}, fatigue {form.fatigue}
+                  {form.daysOfHistory < 28 ? ` · only ${form.daysOfHistory} days of history so far` : ''}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="kpi-card">
+          <div className="kpi-icon-wrapper" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
+            <Zap size={20} />
           </div>
           <div>
-            <span className="kpi-label">Treadmill Volume</span>
-            <span className="kpi-value">{runs.filter(r => r.isTreadmill).length} <small>sessions</small></span>
-            <span className="kpi-subtext">Incline indoor training</span>
+            <span className="kpi-label">Pace at Steady Effort</span>
+            {economy.value === null ? (
+              <>
+                <span className="kpi-value">&mdash;</span>
+                <span className="kpi-subtext">{economy.note}</span>
+              </>
+            ) : (
+              <>
+                <span className="kpi-value">{formatPace(economy.value)} <small>/km</small></span>
+                <span
+                  className="kpi-subtext"
+                  style={{ color: economy.direction === 'up' ? '#22c55e' : economy.direction === 'down' ? '#f87171' : undefined }}
+                >
+                  {economy.changePct === null
+                    ? economy.note
+                    : `${economy.changePct > 0 ? 'Faster' : 'Slower'} by ${Math.abs(economy.changePct).toFixed(1)}% than the ${economy.windowDays} days before, at the same heart rate`}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="kpi-card">
+          <div className="kpi-icon-wrapper" style={{ background: 'rgba(56,189,248,0.12)', color: '#38bdf8' }}>
+            <Heart size={20} />
+          </div>
+          <div>
+            <span className="kpi-label">Easy vs Hard</span>
+            {mix.easyShare === null ? (
+              <>
+                <span className="kpi-value">&mdash;</span>
+                <span className="kpi-subtext">
+                  {mix.unknownRuns > 0
+                    ? `${mix.unknownRuns} run${mix.unknownRuns === 1 ? '' : 's'} here recorded no heart rate`
+                    : 'No runs in this period'}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="kpi-value">{Math.round(mix.easyShare * 100)}<small>% easy</small></span>
+                <span className="kpi-subtext">
+                  {mix.easyRuns} easy, {mix.hardRuns} hard{mix.unknownRuns > 0 ? `, ${mix.unknownRuns} unknown` : ''}
+                  {' '}&middot; under {Math.round(mix.maxHrUsed * 0.8)} bpm counts as easy
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="kpi-card">
+          <div className="kpi-icon-wrapper purple"><Layers size={20} /></div>
+          <div>
+            <span className="kpi-label">Treadmill</span>
+            <span className="kpi-value">{periodRuns.filter(r => r.isTreadmill).length} <small>of {periodSummary.runs}</small></span>
+            <span className="kpi-subtext">Indoor sessions in this period</span>
           </div>
         </div>
       </div>
+
+      {/* Fastest whole runs. Deliberately not called a 5 km personal best: without
+          splits the fastest 5 km inside a longer run is unknowable, and calling a
+          whole-run average a PB would flatter every long run ever logged. */}
+      {bests.length > 0 && (
+        <div className="stride-content-section" style={{ marginBottom: 32 }}>
+          <h3 style={{ fontSize: 13, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Award size={14} style={{ color: '#f59e0b' }} /> Fastest runs by distance
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            {bests.map(best => (
+              <div
+                key={best.minimumKm}
+                style={{
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: 12,
+                  padding: '14px 16px'
+                }}
+              >
+                <div className="zenith-label">{best.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, margin: '4px 0' }}>
+                  {formatPace(best.paceMinKm)} <small style={{ fontSize: 12 }}>/km</small>
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                  {best.run.title || 'Run'} &middot; {best.run.distanceKm.toFixed(1)} km &middot; {best.run.date}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 10, color: 'var(--text-muted)', margin: '10px 0 0' }}>
+            Average pace across a whole run of at least that distance &mdash; not a
+            split-based personal best, which needs per-kilometre data no run here carries yet.
+          </p>
+        </div>
+      )}
 
       {/* Activity History & Filter Controls */}
       <div className="stride-content-section">
@@ -522,14 +765,7 @@ export function App() {
           </div>
 
           <div className="filter-chips">
-            {[
-              { id: 'all', label: 'All Runs' },
-              { id: 'treadmill', label: 'Treadmill' },
-              { id: 'long_run', label: 'Long Run' },
-              { id: 'intervals', label: 'Intervals' },
-              { id: 'easy', label: 'Easy Run' },
-              { id: 'trail', label: 'Trail' }
-            ].map(chip => (
+            {availableFilters.map(chip => (
               <button 
                 key={chip.id} 
                 className={`filter-chip ${filterType === chip.id ? 'active' : ''}`}
