@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.PermissionController
 import com.zenith.pulse.data.HealthConnectManager
 import com.zenith.pulse.data.ScaleBleManager
+import com.zenith.pulse.data.ZenithProfileStore
+import com.zenith.pulse.data.BodyComposition
 import com.zenith.pulse.sync.ZenithSyncManager
 import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.graphicsLayer
@@ -131,6 +133,13 @@ fun ZenithPulseScreen(
     // off one app and retyped into another every day. Entered here they go into Health
     // Connect once and the normal sync carries them the rest of the way.
     var hasWriteAccess by remember { mutableStateOf(false) }
+    // Age, sex and height. The scale measures weight and impedance; body fat is
+    // calculated from impedance together with these, so without them the field could
+    // only ever stay empty.
+    var zenithProfile by remember { mutableStateOf(ZenithProfileStore.cached(context)) }
+    LaunchedEffect(Unit) { zenithProfile = ZenithProfileStore.refresh(context) }
+
+    var bodyCompositionNote by remember { mutableStateOf<String?>(null) }
     var weightInput by remember { mutableStateOf("") }
     var bodyFatInput by remember { mutableStateOf("") }
     var bodyStatsMessage by remember { mutableStateOf<String?>(null) }
@@ -193,6 +202,23 @@ fun ZenithPulseScreen(
         scaleReading?.let { r ->
             r.weightKg?.let { weightInput = String.format(java.util.Locale.US, "%.1f", it) }
             r.bodyFatPercent?.let { bodyFatInput = String.format(java.util.Locale.US, "%.1f", it) }
+
+            // The scale does not send a body fat figure. It sends impedance, and this
+            // is where that becomes one - the same step the manufacturer's own app
+            // takes, with an equation that has been published rather than a private one.
+            val weight = r.weightKg
+            val ohms = r.impedanceOhms
+            val height = zenithProfile.heightCm
+            val male = zenithProfile.isMale
+            if (r.bodyFatPercent == null && weight != null && ohms != null && height != null && male != null) {
+                BodyComposition.estimate(weight, height, ohms, male)?.let { est ->
+                    bodyFatInput = String.format(java.util.Locale.US, "%.1f", est.bodyFatPercent)
+                    bodyCompositionNote =
+                        "Body fat estimated from ${ohms.toInt()} Ω, your height and age (Sun 2003) — " +
+                        "fat-free mass ${est.fatFreeMassKg} kg. Your scale's own app uses a different, " +
+                        "unpublished equation, so expect a few points of difference."
+                }
+            }
             if (r.hasAnything) {
                 bodyStatsSavedOk = false
                 // Filled in, not saved. A scale reports mid-step and settles a second
@@ -935,9 +961,22 @@ fun ZenithPulseScreen(
                                 // from impedance with age, sex and height - by the app,
                                 // not the scale - so saying so beats an empty field the
                                 // athlete reads as a failure.
-                                scaleReading?.impedanceOhms?.let { ohms ->
+                                bodyCompositionNote?.let { note ->
                                     Text(
-                                        text = "Impedance ${ohms.toInt()} Ω measured. Body fat needs your age, sex and height as well — not yet set up here, so enter it by hand for now.",
+                                        text = note,
+                                        fontSize = 10.sp,
+                                        color = ZenithTextMuted,
+                                        modifier = Modifier.padding(top = 6.dp)
+                                    )
+                                }
+
+                                // Says which input is missing rather than leaving an
+                                // empty box that reads as a failed measurement.
+                                if (bodyCompositionNote == null && scaleReading?.impedanceOhms != null && !zenithProfile.isComplete) {
+                                    Text(
+                                        text = "Impedance ${scaleReading?.impedanceOhms?.toInt()} Ω measured, but your Zenith profile is missing " +
+                                            (if (zenithProfile.heightCm == null) "your height" else "your sex") +
+                                            " — set it there and body fat will fill itself in.",
                                         fontSize = 10.sp,
                                         color = ZenithTextMuted,
                                         modifier = Modifier.padding(top = 6.dp)
