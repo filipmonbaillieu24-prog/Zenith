@@ -15,7 +15,7 @@ import { Bike } from 'lucide-react';
 // Import extracted modular components
 import { fmtDur } from '../components/workout/ZoneBar';
 import { MiniRoutePreview } from '../components/workout/MiniRoutePreview';
-import { computePMC, interpretTSB } from '../utils/pmc';
+import { computePMC, interpretTSB, buildTrainingLoadPool } from '../utils/pmc';
 import { DashboardStatsHeader } from '../components/dashboard/DashboardStatsHeader';
 // Extracted helpers & modules
 import {
@@ -39,6 +39,7 @@ interface Props {
   profile:         FitnessProfile;
   rides:           RideSummaryWithBests[];
   kratosWorkouts?: any[];
+  strideRuns?: any[];
   reloadRides:     () => void;
   globaleFTP:      number;
   recalculating:   boolean;
@@ -66,6 +67,7 @@ const WorkoutDashboard: React.FC<Props> = ({
   profile,
   rides,
   kratosWorkouts = [],
+  strideRuns = [],
   reloadRides,
   globaleFTP,
   recalculating,
@@ -175,22 +177,18 @@ const WorkoutDashboard: React.FC<Props> = ({
     .map(r => ({ date: fmtShortDate(r.date), rpm: r.avgCadence }));
 
   // PMC
-  const pmcPoints = useMemo(() => {
-    const tssList: { date: number; tss: number }[] = rides
-      .filter(r => (r.tss ?? r.hrTSS) != null)
-      .map(r => ({ date: r.date, tss: (r.tss ?? r.hrTSS)! }));
-
-    kratosWorkouts.forEach((k: any) => {
-      if (k.completed_at && k.volume) {
-        const ts = new Date(k.completed_at).getTime();
-        const volume = Number(k.volume);
-        const sTSS = Math.min(80, Math.max(15, Math.round(volume * 0.012)));
-        tssList.push({ date: ts, tss: sTSS });
-      }
-    });
-
-    return computePMC(tssList);
-  }, [rides, kratosWorkouts]);
+  //
+  // Built from the shared pool so this card cannot disagree with the same card in
+  // Hub and Kratos. It previously charged a gym session `volume * 0.012` clamped to
+  // [15, 80] - a formula that lived only here and knew nothing about reps in reserve -
+  // and left running out of Form altogether.
+  const pmcPoints = useMemo(
+    () => computePMC(buildTrainingLoadPool(
+      { rides, kratosWorkouts, strideRuns },
+      'all'
+    )),
+    [rides, kratosWorkouts, strideRuns]
+  );
 
   const latestPMC = pmcPoints[pmcPoints.length - 1] ?? { ctl: 0, atl: 0, tsb: 0 };
   const tsbStatus = interpretTSB(latestPMC.tsb);

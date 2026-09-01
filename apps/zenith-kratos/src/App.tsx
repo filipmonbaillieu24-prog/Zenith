@@ -379,6 +379,10 @@ export default function App() {
     // with room to spare.
     const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
     const oneYearAgoMs = Date.now() - 365 * 24 * 60 * 60 * 1000;
+    // stride_activities.date is a DATE column, so it needs a day key rather than
+    // an ISO timestamp or epoch millis - and the shared helper, because toISOString
+    // would key it in UTC.
+    const oneYearAgoDate = toDateKeyFromDate(new Date(oneYearAgoMs));
 
     // All of these reads are independent of each other. The separate "latest sleep
     // log" query that used to run here (for todaySleepQuality) was a pure duplicate
@@ -402,6 +406,10 @@ export default function App() {
       () => supabase.from('rides').select('date, metadata').eq('user_id', uid).gte('date', oneYearAgoMs).order('date', { ascending: true }),
       () => supabase.from('vigor_sleep').select('logged_at, duration_minutes, quality_score, hrv_ms').eq('user_id', uid).gte('logged_at', ninetyDaysAgo).order('logged_at', { ascending: true }),
       () => supabase.from('vigor_profile').select('target_sleep_hours').eq('user_id', uid).maybeSingle(),
+      // Runs belong in Form. Kratos already used the shared pool but passed it only
+      // rides and gym, so its Form card sat a few points off Hub's for no reason the
+      // athlete could see.
+      () => supabase.from('stride_activities').select('date, duration_sec, avg_heart_rate').eq('user_id', uid).gte('date', oneYearAgoDate),
     ];
 
     const results: any[] = [];
@@ -416,7 +424,7 @@ export default function App() {
     const queryNames = [
       'kratos_exercises', 'kratos_templates', 'kratos_workouts', 'vigor_weight',
       'vigor_body_measurements', 'profiles', 'vigor_steps', 'rides',
-      'vigor_sleep', 'vigor_profile',
+      'vigor_sleep', 'vigor_profile', 'stride_activities',
     ];
     const failed = results
       .map((r, i) => (r?.error ? queryNames[i] : null))
@@ -445,6 +453,7 @@ export default function App() {
       { data: rideData },
       { data: sleepDataAll },
       { data: vigorProfile },
+      { data: strideData },
     ] = results;
 
     if (exData) setExercises(exData);
@@ -504,7 +513,7 @@ export default function App() {
     }
 
     if (rideData) {
-      computeCombinedStress(rideData, localWorkouts, sleepDataAll || [], targetSleep);
+      computeCombinedStress(rideData, localWorkouts, sleepDataAll || [], targetSleep, strideData || []);
     }
 
     if (localWorkouts.length > 0) {
@@ -523,9 +532,10 @@ export default function App() {
     rideData: any[],
     woData: Workout[],
     sleepData: any[],
-    targetSleep: number
+    targetSleep: number,
+    strideRuns: any[] = []
   ) => {
-    if (rideData.length === 0 && woData.length === 0) return;
+    if (rideData.length === 0 && woData.length === 0 && strideRuns.length === 0) return;
 
     // Parse Cycling TSS
     const parsedRides = rideData.map(r => {
@@ -554,7 +564,7 @@ export default function App() {
     // cannot be the shared definition today. Folding relative intensity together
     // with the RIR weighting is the obvious next improvement.
     const combinedTssList = buildTrainingLoadPool(
-      { rides: parsedRides, kratosWorkouts: woData },
+      { rides: parsedRides, kratosWorkouts: woData, strideRuns },
       'all'
     );
 
@@ -1717,9 +1727,13 @@ export default function App() {
                 <Sparkles size={16} style={{ color: '#38bdf8' }} />
                 <div style={{ fontSize: '11px', color: '#e2e8f0', lineHeight: '1.4' }}>
                   <strong style={{ color: '#38bdf8' }}>HRV ANS State Sync:</strong> {ansToneInsight}
-                  <span style={{ marginLeft: '6px', color: ansIntensityMultiplier < 1.0 ? '#ff7675' : '#55efc4', fontWeight: 800 }}>
-                    (Workout targets auto-scaled by {ansIntensityMultiplier}x)
-                  </span>
+                  {/* Saying "auto-scaled by 1x" is saying nothing was scaled, at the
+                      length of a warning. Only speak when a target actually moved. */}
+                  {ansIntensityMultiplier !== 1.0 && (
+                    <span style={{ marginLeft: '6px', color: ansIntensityMultiplier < 1.0 ? '#ff7675' : '#55efc4', fontWeight: 800 }}>
+                      (Workout targets auto-scaled by {ansIntensityMultiplier}x)
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (!hasRealHrvData && sleepLogs.length > 0) ? (
@@ -1922,11 +1936,21 @@ export default function App() {
                     const ex = exerciseMap.get(exId);
                     const sparkData = getSparklineData(exId);
                     const latest1RM = sparkData[sparkData.length - 1]?.estimated1RM ?? 0;
+                    // Each card used to print its exercise's own unit, so this grid
+                    // showed "8.5 kg" beside "146.5 lbs" under one heading, with no
+                    // common scale to read them on. Everything else in Zenith displays
+                    // kilograms, and toKg is the same conversion the load maths uses.
+                    const native1RM = Math.round(latest1RM * 10) / 10;
+                    const shown1RM = Math.round(toKg(latest1RM, ex?.weight_unit) * 10) / 10;
+                    const converted = shown1RM !== native1RM;
                     return (
                       <div key={exId} className="kratos-sparkline-card">
                         <span className="kratos-sparkline-title">{ex?.name}</span>
-                        <span className="kratos-sparkline-value">
-                          {latest1RM} <span className="kratos-sparkline-unit">{ex?.weight_unit}</span>
+                        <span
+                          className="kratos-sparkline-value"
+                          title={converted ? `Logged as ${native1RM} ${ex?.weight_unit}` : undefined}
+                        >
+                          {shown1RM} <span className="kratos-sparkline-unit">kg</span>
                         </span>
                         {/* A number on its own does not say whether it is going
                             anywhere. The verdict comes from the same analysis the

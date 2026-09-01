@@ -40,7 +40,7 @@ import {
 import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
 import { ProPaywallModal } from '../components/ProPaywallModal';
-import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore, localDateToISO } from '@zenith/shared';
+import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore, roughCalorieBalance, localDateToISO, formatDisplayDate } from '@zenith/shared';
 
 interface VigorDashboardProps {
   session: any;
@@ -127,6 +127,9 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
   // Health logs
   const [weights, setWeights] = useState<any[]>([]);
   const [sleeps, setSleeps] = useState<any[]>([]);
+  // Today's logged intake, so the Recovery Score here is served the same inputs
+  // as the identical card in Hub. Passing a hardcoded 0 made the two disagree.
+  const [caloriesConsumedToday, setCaloriesConsumedToday] = useState<number | null>(null);
   const [steps, setSteps] = useState<any[]>([]);
 
   // Loading
@@ -267,6 +270,25 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         (a: any, b: any) => new Date(a.logged_at).getTime() - new Date(b.logged_at).getTime()
       );
       setSteps(sortedSteps);
+
+      // 3b. Today's logged food, for the recovery model's calorie-balance input.
+      const dayStart = new Date();
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date();
+      dayEnd.setHours(23, 59, 59, 999);
+      const { data: fuelData, error: fuelError } = await supabase
+        .from('fuel_logs')
+        .select('calories')
+        .eq('user_id', user.id)
+        .gte('logged_at', dayStart.toISOString())
+        .lte('logged_at', dayEnd.toISOString());
+      // Nothing logged and a failed read are different things: null keeps the model's
+      // input neutral rather than reporting a day of eating nothing.
+      setCaloriesConsumedToday(
+        fuelError || !fuelData
+          ? null
+          : fuelData.reduce((sum: number, row: any) => sum + (Number(row.calories) || 0), 0)
+      );
 
       // 4. Fetch Body Measurements Logs
       const { data: measureData, error: mError } = await supabase
@@ -880,7 +902,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           sleepDurationHours: homeSleepAnalysis.metrics.totalHours,
           gymEffort7d,
           dailySteps: currentDailySteps,
-          calorieBalance: 0,
+          calorieBalance: roughCalorieBalance(
+            caloriesConsumedToday,
+            latestWeight ? latestWeight.weight : (profile.target_weight || 75)
+          ),
           bodyWeight: latestWeight ? latestWeight.weight : (profile.target_weight || 75)
         })
       : null;
@@ -1082,7 +1107,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               <Calendar size={12} />
               <span>
                 {latestWeight
-                  ? `Weighed on ${new Date(latestWeight.logged_at).toLocaleDateString('en-US')}`
+                  ? `Weighed on ${formatDisplayDate(latestWeight.logged_at)}`
                   : 'No measurement'}
               </span>
             </div>
@@ -1117,8 +1142,8 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               <Sparkles size={12} style={{ color: '#5c7cfa' }} />
               <span style={{ fontSize: 10 }}>
                 {isTodayStepsPresent
-                  ? `Today (${new Date().toLocaleDateString('en-US')})`
-                  : `Today: 0 steps ${latestStepsItem ? `(Last: ${latestStepsItem.step_count.toLocaleString('en-US')} on ${new Date(latestStepsItem.logged_at).toLocaleDateString('en-US')})` : ''}`}
+                  ? `Today (${formatDisplayDate(new Date())})`
+                  : `Today: 0 steps ${latestStepsItem ? `(Last: ${latestStepsItem.step_count.toLocaleString('en-US')} on ${formatDisplayDate(latestStepsItem.logged_at)})` : ''}`}
               </span>
             </div>
           </div>

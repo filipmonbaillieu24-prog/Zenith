@@ -118,6 +118,9 @@ object ZenithSyncManager {
                 put("resting_heart_rate_bpm", data.restingHeartRate)
                 put("hrv_rmssd", data.latestHrvRmssd)
                 put("sleep_minutes", data.sleepDurationMinutes)
+                // The night's own date. The ingest prefers this over local_date so a
+                // night is never filed under the day it was uploaded.
+                put("sleep_local_date", data.sleepLocalDate)
                 put("sleep_deep_minutes", data.sleepDeepMinutes)
                 put("sleep_light_minutes", data.sleepLightMinutes)
                 put("sleep_rem_minutes", data.sleepRemMinutes)

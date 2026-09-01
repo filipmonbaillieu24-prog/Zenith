@@ -386,6 +386,7 @@ function App() {
   );
 
   const [kratosWorkouts, setKratosWorkouts] = useState<any[]>([]);
+  const [strideRuns, setStrideRuns] = useState<any[]>([]);
   const [recalculating, setRecalculating] = useState<boolean>(false);
   const [gearWarnings, setGearWarnings] = useState<string[]>([]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -470,6 +471,28 @@ function App() {
     calibrateSummaryModels(data, fitnessProfile.ftp ?? 220, fitnessProfile.weight ?? 75);
   }, [fitnessProfile.ftp, fitnessProfile.weight, session]);
 
+  // Runs count toward Form.
+  //
+  // Aero's Form card was built from rides plus gym, with running left out entirely
+  // and gym costed by a local `volume * 0.012` that existed nowhere else. Hub used
+  // the shared estimator and included runs. So on 2026-09-01 the same athlete read
+  // TSB -1 in Aero and -4 in Hub, with Kratos showing +0 - three answers to "how
+  // fresh am I", none of them labelled as scoped to one sport.
+  const reloadStrideRuns = useCallback(async () => {
+    if (!session?.user) return;
+    try {
+      const { data, error } = await supabase
+        .from('stride_activities')
+        .select('date, duration_sec, avg_heart_rate')
+        .eq('user_id', session.user.id);
+      if (!error && data) {
+        setStrideRuns(data);
+      }
+    } catch (err) {
+      console.error('Could not load Stride runs into Aero:', err);
+    }
+  }, [session]);
+
   const reloadKratosWorkouts = useCallback(async () => {
     if (!session?.user) return;
     try {
@@ -489,8 +512,9 @@ function App() {
     if (session) {
       reloadRides();
       reloadKratosWorkouts();
+      reloadStrideRuns();
     }
-  }, [reloadRides, reloadKratosWorkouts, session]);
+  }, [reloadRides, reloadKratosWorkouts, reloadStrideRuns, session]);
 
   const profileAge = useMemo(() => {
     if (!fitnessProfile.birthDate) return undefined;
@@ -1006,6 +1030,7 @@ function App() {
                     rideIsOpen={!!selectedRide}
                     rides={rides}
                     kratosWorkouts={kratosWorkouts}
+                    strideRuns={strideRuns}
                     reloadRides={reloadRides}
                     globaleFTP={globaleFTP ?? 220}
                     recalculating={recalculating}

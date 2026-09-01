@@ -29,6 +29,20 @@ data class HealthDataPayload(
     val restingHeartRate: Int = 0,
     val latestHrvRmssd: Double = 0.0,
     val sleepDurationMinutes: Long = 0,
+    /**
+     * The local date of the morning the latest sleep session ended.
+     *
+     * The stages and HRV below describe one specific night, but the sync stamped them
+     * with whatever "today" was on the phone. Sync on a morning before the new night
+     * has been written to Health Connect and the previous night was stored a second
+     * time as today's sleep - the same duration, stages and rMSSD to fourteen decimal
+     * places on two consecutive dates. Downstream that read as an overnight collapse
+     * in HRV, which put Vigor and Kratos into "sympathetic overdrive" and quietly
+     * scaled the athlete's lifting targets to 0.8x off a record that was a copy.
+     *
+     * Empty when no session was found, in which case there is no sleep to write.
+     */
+    val sleepLocalDate: String = "",
     val latestWeightKg: Double = 0.0,
     val heightCm: Double = 0.0,
     val bodyFatPercent: Double = 0.0,
@@ -264,6 +278,7 @@ class HealthConnectManager(private val context: Context) {
         var restingHr = 0
         var latestHrv = 0.0
         var sleepMinutes: Long = 0
+        var sleepLocalDate: String = ""
         var sleepDeepMin: Long = 0
         var sleepLightMin: Long = 0
         var sleepRemMin: Long = 0
@@ -544,6 +559,10 @@ class HealthConnectManager(private val context: Context) {
 
             val latestSession = sleepRes.records.maxByOrNull { it.endTime }
             if (latestSession != null) {
+                // Date this by the morning the session ended, exactly as dailySleepList
+                // above already does, rather than letting the server assume it belongs
+                // to whatever day the sync happens to run on.
+                sleepLocalDate = latestSession.endTime.atZone(systemZone).toLocalDate().toString()
                 val durSec = ChronoUnit.SECONDS.between(latestSession.startTime, latestSession.endTime)
                 sleepMinutes = durSec / 60
 
@@ -901,6 +920,7 @@ class HealthConnectManager(private val context: Context) {
             restingHeartRate = restingHr,
             latestHrvRmssd = latestHrv,
             sleepDurationMinutes = sleepMinutes,
+            sleepLocalDate = sleepLocalDate,
             latestWeightKg = latestWeight,
             heightCm = heightValueCm,
             bodyFatPercent = bodyFatPct,

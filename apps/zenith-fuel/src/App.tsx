@@ -3459,9 +3459,23 @@ function App() {
                 justifyContent: 'space-between',
                 gap: '10px'
               }}>
+                {/* The projection starts from the 7-day trend weight, so this has to
+                    show the trend weight too. Showing the last scale reading here
+                    while projecting from the trend made the card contradict its own
+                    sentence: 87.5 kg "now", 84.4 kg in four weeks, and a stated rate
+                    of 0.49 kg/week - which spans 1.96 kg, not 3.1. The trend is the
+                    right basis for a forecast; a single morning's reading carries a
+                    kilo of water either way. */}
                 <div>
-                  <div style={{ fontSize: '10px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Now</div>
-                  <div style={{ fontSize: '22px', fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>{latestWeight} kg</div>
+                  <div style={{ fontSize: '10px', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                    Trend now
+                  </div>
+                  <div
+                    style={{ fontSize: '22px', fontWeight: 800, color: '#fff', lineHeight: 1.1 }}
+                    title={`Last scale reading: ${latestWeight} kg`}
+                  >
+                    {startingWeightForProjection.toFixed(1)} kg
+                  </div>
                 </div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '18px' }}>&rarr;</div>
                 <div style={{ textAlign: 'right' }}>

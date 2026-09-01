@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, cardioFreshness, recoveryModel, fetchReadiness, saveReadiness, summariseAccuracy, FELT_OPTIONS, FELT_LABELS, FELT_DESCRIPTIONS, ReadinessEntry, FeltRating, toDateKeyFromDate, calculateZenithSleepScore, buildTrainingLoadPool, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, calendarDaysAgo, runMuscleImpact, rideMuscleImpact, runningLoad, activityTimestampMs } from '@zenith/shared';
+import { predictRecoveryScore, roughCalorieBalance, cardioFreshness, recoveryModel, fetchReadiness, saveReadiness, summariseAccuracy, FELT_OPTIONS, FELT_LABELS, FELT_DESCRIPTIONS, ReadinessEntry, FeltRating, toDateKeyFromDate, calculateZenithSleepScore, buildTrainingLoadPool, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, calendarDaysAgo, runMuscleImpact, rideMuscleImpact, runningLoad, activityTimestampMs } from '@zenith/shared';
 import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
@@ -374,20 +374,24 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       lastTrainedMs: number;
       exercisesWithDates: { name: string; dateMs: number }[];
     }> = {
-      chest: { name: 'Borstspieren (Pectoralis Major)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      // One language, then the anatomical name. Eleven of these were Dutch and three
+      // were English, so hovering across the silhouette moved between "Borstspieren
+      // (Pectoralis Major)" and "Shoulders (Deltoids)" with nothing to explain the
+      // switch. The rest of Zenith is in English, so these are too.
+      chest: { name: 'Chest (Pectoralis Major)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
       deltoids: { name: 'Shoulders (Deltoids)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
       biceps: { name: 'Biceps (Biceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
       triceps: { name: 'Triceps (Triceps Brachii)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      abs: { name: 'Buikspieren (Rectus Abdominis)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      obliques: { name: 'Schuine Buikspieren (Obliques)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      quadriceps: { name: 'Dijspieren (Quadriceps Femoris)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      upperBack: { name: 'Bovenrug (Rhomboids & Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      lowerBack: { name: 'Lendenrug (Erector Spinae)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      gluteal: { name: 'Zitvlakspieren (Gluteus Maximus)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      hamstring: { name: 'Achterdijbeen (Hamstrings)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      calves: { name: 'Kuitspieren (Gastrocnemius & Soleus)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      forearm: { name: 'Onderarmen (Forearms)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
-      trapezius: { name: 'Monnikskapspier (Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] }
+      abs: { name: 'Abs (Rectus Abdominis)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      obliques: { name: 'Obliques', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      quadriceps: { name: 'Quads (Quadriceps Femoris)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      upperBack: { name: 'Upper back (Rhomboids & Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      lowerBack: { name: 'Lower back (Erector Spinae)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      gluteal: { name: 'Glutes (Gluteus Maximus)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      hamstring: { name: 'Hamstrings', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      calves: { name: 'Calves (Gastrocnemius & Soleus)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      forearm: { name: 'Forearms', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] },
+      trapezius: { name: 'Traps (Trapezius)', fatigueRaw: 0, lastTrainedMs: 0, exercisesWithDates: [] }
     };
 
     const addImpact = (slug: string, fatigueImpact: number, dateMs: number, exerciseName: string) => {
@@ -667,13 +671,12 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
   // scope for this pass. When there's no logged food data for today we return a
   // neutral 0 rather than fabricating a number, same as before, but the value is now
   // wired to real data whenever it exists instead of being permanently hardcoded.
-  const CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY = 24;
-  const calorieBalance = useMemo(() => {
-    if (caloriesConsumedToday === null) return 0;
-    const weightVal = latestWeight?.weight ?? fitnessProfile.weight ?? 75;
-    const roughTdee = weightVal * CALORIE_BALANCE_BMR_KCAL_PER_KG_PER_DAY;
-    return Math.round(caloriesConsumedToday - roughTdee);
-  }, [caloriesConsumedToday, latestWeight, fitnessProfile.weight]);
+  // Shared with Vigor, which renders the same Recovery Score. It used to be inline
+  // here and hardcoded to 0 there, so the two dashboards disagreed by two points.
+  const calorieBalance = useMemo(
+    () => roughCalorieBalance(caloriesConsumedToday, latestWeight?.weight ?? fitnessProfile.weight ?? 75),
+    [caloriesConsumedToday, latestWeight, fitnessProfile.weight]
+  );
 
   // Calculate recovery score (CR11 ML Model)
   const recoveryScore = useMemo(() => {

@@ -65,3 +65,25 @@ export function calendarDaysAgo(ms: number, now: Date = new Date()): number {
   // Round rather than floor: DST shifts make some of these spans 23 or 25 hours.
   return Math.round((today.getTime() - then.getTime()) / 86400000);
 }
+
+/**
+ * A date as a person reads it: "31 Aug 2026", or "31 Aug" within the current year.
+ *
+ * Four screens formatted dates with toLocaleDateString('en-US'), which rendered
+ * "9/1/2026" beside a calendar showing "Sep 01" and a run list showing "2026-08-31" -
+ * three conventions for the same day, one of them ambiguous to most of the world
+ * (is 9/1 September the first, or the ninth of January?).
+ *
+ * Day-month-short-year is unambiguous in every locale and needs no explanation.
+ */
+export function formatDisplayDate(value: string | number | Date | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    ...(sameYear ? {} : { year: 'numeric' })
+  });
+}

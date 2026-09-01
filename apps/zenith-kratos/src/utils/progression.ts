@@ -309,6 +309,18 @@ export function analyseExerciseTrend(sessions: ExerciseSession[]): ExerciseTrend
   }
 
   const hardSets = window.reduce((n, s) => n + s.hardSets, 0);
+
+  // "Same weight" is a claim about the bar, and this verdict is about the estimated
+  // 1RM. On this athlete's lateral raise the two disagreed: 8 kg, then 6 kg, then
+  // 8 kg again, with the e1RM flat across them - and the card said "Same weight for
+  // 3 sessions" directly above a table showing all three different. Only say the
+  // weight is unchanged when it actually is.
+  const weights = window.map(w => w.bestSet?.weight).filter((w): w is number => typeof w === 'number');
+  const weightHeld = weights.length > 0 && weights.every(w => w === weights[0]);
+  const opening = weightHeld
+    ? `Same weight for ${TREND_WINDOW} sessions (${span})`
+    : `Your best set is no stronger than ${TREND_WINDOW} sessions ago (${span})`;
+
   return {
     ...base,
     verdict: 'stalled',
@@ -316,8 +328,8 @@ export function analyseExerciseTrend(sessions: ExerciseSession[]): ExerciseTrend
     lastChangePct,
     headline: 'Not moving',
     detail: hardSets === 0
-      ? `Same weight for ${TREND_WINDOW} sessions (${span}), and no set has gone within one rep of failure. There is probably room to push before adding load.`
-      : `Same weight for ${TREND_WINDOW} sessions (${span}) despite ${hardSets} hard set${hardSets === 1 ? '' : 's'}. Time to change something - load, reps, or the exercise.`
+      ? `${opening}, and no set has gone within one rep of failure. There is probably room to push before adding load.`
+      : `${opening} despite ${hardSets} hard set${hardSets === 1 ? '' : 's'}. Time to change something - load, reps, or the exercise.`
   };
 }
 

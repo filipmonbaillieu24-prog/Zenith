@@ -1,3 +1,4 @@
+import { formatDisplayDate } from '@zenith/shared';
 import React, { useState } from 'react';
 import { Sparkles, Clipboard, AlertTriangle } from 'lucide-react';
 import '../workout/CoachPanel.css';
@@ -127,7 +128,7 @@ export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
 
             const longestRide = [...periodRides].sort((a, b) => b.distance - a.distance)[0];
             const longestRideStr = longestRide
-              ? `${longestRide.distance.toFixed(0)} km (${(longestRide.duration / 3600).toFixed(1)} hours) on ${new Date(longestRide.date).toLocaleDateString('en-US')}`
+              ? `${longestRide.distance.toFixed(0)} km (${(longestRide.duration / 3600).toFixed(1)} hours) on ${formatDisplayDate(longestRide.date)}`
               : 'No rides logged';
 
             let verdict = 'Stable physical condition and maintenance';

@@ -266,3 +266,31 @@ export async function trainRecoveryModel(
   const y = await recoveryModel.train(supabase, userId, x, [target], 0.15);
   return Math.round(y[0] * 100);
 }
+
+/**
+ * A directional calorie-balance signal from today's logged intake.
+ *
+ * Hub computed this inline and Vigor passed a hardcoded 0, so the same model, on the
+ * same day, was served different inputs and the two dashboards showed 73 and 75 for
+ * one number labelled "Recovery Score" in both places. Neither was wrong on its own
+ * terms; they simply disagreed, which is worse than either.
+ *
+ * This is deliberately a rough figure. The calibrated expenditure model lives in
+ * Fuel (apps/zenith-fuel/src/utils/zane.ts) and neither Hub nor Vigor loads it; ~24
+ * kcal per kg of bodyweight per day is the usual resting-metabolic-rate rule of
+ * thumb, and the recovery model only reads the sign and rough size of the gap.
+ *
+ * Returns 0 when nothing has been logged today - a neutral signal, not a deficit.
+ */
+export const ROUGH_BMR_KCAL_PER_KG_PER_DAY = 24;
+
+export function roughCalorieBalance(
+  caloriesConsumedToday: number | null | undefined,
+  bodyWeightKg: number
+): number {
+  if (caloriesConsumedToday === null || caloriesConsumedToday === undefined) return 0;
+  const consumed = Number(caloriesConsumedToday);
+  const weight = Number(bodyWeightKg);
+  if (!Number.isFinite(consumed) || !Number.isFinite(weight) || weight <= 0) return 0;
+  return Math.round(consumed - weight * ROUGH_BMR_KCAL_PER_KG_PER_DAY);
+}
