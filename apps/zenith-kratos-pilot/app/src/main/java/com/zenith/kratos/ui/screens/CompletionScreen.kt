@@ -344,12 +344,7 @@ fun CompletionScreen(
                                                 val existing = te.sets.getOrNull(idx)
                                                     ?: te.sets.lastOrNull { it.type == s.type }
                                                     ?: te.sets.lastOrNull()
-                                                TemplateSet(
-                                                    type = s.type,
-                                                    minReps = existing?.minReps ?: s.reps,
-                                                    maxReps = existing?.maxReps ?: (s.reps + 2),
-                                                    targetRir = existing?.targetRir ?: s.rir
-                                                )
+                                                templateSetFor(existing, s.type)
                                             // Only completed sets reach the log, so a skipped set would
                                             // otherwise delete itself from the routine - run out of time
                                             // once and the set is gone for good. Any template sets beyond
@@ -397,12 +392,7 @@ fun CompletionScreen(
                                                         val existing = rte.sets.getOrNull(idx)
                                                             ?: rte.sets.lastOrNull { it.type == ls.type }
                                                             ?: rte.sets.lastOrNull()
-                                                        TemplateSet(
-                                                            type = ls.type,
-                                                            minReps = existing?.minReps ?: ls.reps,
-                                                            maxReps = existing?.maxReps ?: (ls.reps + 2),
-                                                            targetRir = existing?.targetRir ?: ls.rir
-                                                        )
+                                                        templateSetFor(existing, ls.type)
                                                     } + rte.sets.drop(log.sets.size))
                                                 } else rte
                                             }

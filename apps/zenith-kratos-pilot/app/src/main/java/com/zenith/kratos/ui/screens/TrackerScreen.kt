@@ -692,6 +692,20 @@ fun TrackerScreen(
                                                         exState.firstCompletedAtMs = System.currentTimeMillis()
                                                     }
 
+                                                    // What this set was ASKED for, read before the
+                                                    // lines below overwrite it with what was done.
+                                                    //
+                                                    // Those lines are why the next set could never tell
+                                                    // a good set from a bad one: by the time the
+                                                    // autoregulation below compared performance against
+                                                    // target, the target had already been replaced by
+                                                    // the performance, so they always matched and a set
+                                                    // that fell apart looked like a set that went to
+                                                    // plan. Same shape as the template ratchet, one
+                                                    // layer in.
+                                                    val askedReps = setVal.targetReps
+                                                    val askedRir = setVal.targetRir
+
                                                     // Update target parawithers upon confirmation
                                                     setVal.targetWeight = w
                                                     setVal.targetReps = r
@@ -773,8 +787,8 @@ fun TrackerScreen(
                                                                     )
                                                                 } else null,
                                                                 plannedNextWeight = nextSet.targetWeight,
-                                                                prevTargetReps = setVal.targetReps,
-                                                                prevTargetRir = setVal.targetRir,
+                                                                prevTargetReps = askedReps,
+                                                                prevTargetRir = askedRir,
                                                                 nextMaxReps = nextSet.maxReps
                                                             )
                                                             nextSet.targetWeight = auto.weight

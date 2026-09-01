@@ -32,6 +32,36 @@ data class TemplateSet(
     @SerialName("target_rir") val targetRir: Int
 )
 
+/**
+ * What a set of a routine prescribes when nothing exists to inherit from.
+ *
+ * Stated constants rather than anything measured. A default is a default and should look
+ * like one; the moment a fallback is computed from what the athlete just lifted, the
+ * template stops being what they intend to do and becomes a record of what happened.
+ */
+val DEFAULT_WORKING_SET = TemplateSet(type = "working", minReps = 8, maxReps = 12, targetRir = 2)
+val DEFAULT_WARMUP_SET = TemplateSet(type = "warmup", minReps = 6, maxReps = 8, targetRir = 4)
+
+/**
+ * The template set to keep for a given position, given whatever the routine already had
+ * there.
+ *
+ * Deliberately has no access to the performed set. Rep ranges and target reserve are the
+ * athlete's intent, and this whole function exists because they were once overwritten by
+ * performance: a set that came back easy at RIR 4 rewrote its own target to 4, the next
+ * session aimed for 4, hit 4, and wrote 4 again - a ratchet with no way back up, since
+ * nothing in the app raises a target. That was fixed by preserving `existing`, but the
+ * fallback still read the log, and ten of this athlete's rep ranges still carry the marks
+ * of it - "9-11" on a set whose siblings say 11-13, matching a session where nine reps
+ * were managed.
+ *
+ * Taking no log parameter is the point: the mistake is not available to make here.
+ */
+fun templateSetFor(existing: TemplateSet?, type: String): TemplateSet {
+    existing?.let { return it.copy(type = type) }
+    return if (type == "warmup") DEFAULT_WARMUP_SET else DEFAULT_WORKING_SET.copy(type = type)
+}
+
 @Serializable
 data class TemplateExercise(
     @SerialName("exercise_id") val exerciseId: String,

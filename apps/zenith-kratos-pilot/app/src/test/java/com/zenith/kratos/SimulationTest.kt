@@ -63,5 +63,16 @@ class SimulationTest {
         println("=== WITHIN SESSION: set 2 asked 100x11@2, did 100x12@3; set 3 planned 100 (range 9-11) ===")
         afterSet(rearDelt, w = 100.0, r = 12, rir = 3, nextReps = 11, nextRir = 2,
             plannedNext = 100.0, prevTargetReps = 11, prevTargetRir = 2, nextMaxReps = 11)
+
+        println("=== NEXT WORKOUT after logging 115x10@0, 100x12@3, 100x11@2 ===")
+        betweenSessions(
+            rearDelt,
+            listOf(
+                listOf(SetOutcome(115.0, 10, 0), SetOutcome(100.0, 15, 2)),
+                listOf(SetOutcome(100.0, 12, 3), SetOutcome(100.0, 15, 1)),
+                listOf(SetOutcome(100.0, 11, 2), SetOutcome(100.0, 11, 0))
+            ),
+            specs
+        )
     }
 }
