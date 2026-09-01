@@ -63,6 +63,20 @@ export interface BuildSamplesArgs {
 const TREND_WINDOW_DAYS = 7;
 const MIN_TREND_POINTS = 3;
 const MIN_COMPLETE_DAYS_IN_WINDOW = 3;
+/**
+ * How much of the weight window the intake days have to actually cover.
+ *
+ * The weight slope is measured across the whole window - up to a fortnight - while the
+ * intake average was taken over however many days inside it happened to be logged, and
+ * three was enough to qualify. Those are not the same period, and energy balance only
+ * works when they are: the weight change reflects everything the athlete ate, including
+ * the days they did not log.
+ *
+ * This athlete logged 21 days of 30. If the nine unlogged ones ran higher - which is
+ * usually why a day goes unlogged - then every window mixing them in understated the
+ * intake side and so understated the expenditure it implies.
+ */
+const MIN_WINDOW_COVERAGE = 0.6;
 
 /**
  * Trend points to ignore at the very start of the series.
@@ -95,6 +109,40 @@ const MAX_PLAUSIBLE_KG_PER_DAY = 0.15;
  */
 const MIN_PLAUSIBLE_TDEE = 1200;
 const MAX_PLAUSIBLE_TDEE = 5000;
+
+/**
+ * The standard error of that slope, in kg/day.
+ *
+ * Worth having because a month of this athlete's weigh-ins gives a slope of -0.015
+ * kg/day with a standard error of 0.021 - a 95% interval running from -0.057 to +0.027,
+ * which in energy terms is a TDEE anywhere between 1760 and 2405 kcal. The point
+ * estimate alone is presented as "the most reliable number we have for you", and on
+ * data this noisy that is a considerably stronger claim than the arithmetic supports.
+ *
+ * Day-to-day body weight moves by 0.6 kg on the median in this series and by 2.8 kg at
+ * the extreme - hydration and gut content, not tissue - so a real trend takes weeks to
+ * emerge from it.
+ */
+export function slopeStandardError(points: [number, number][]): number | null {
+  const n = points.length;
+  if (n < MIN_TREND_POINTS + 1) return null;
+  const slope = leastSquaresSlope(points);
+  if (slope === null) return null;
+
+  const meanX = points.reduce((sum, p) => sum + p[0], 0) / n;
+  const meanY = points.reduce((sum, p) => sum + p[1], 0) / n;
+  const intercept = meanY - slope * meanX;
+
+  let residualSum = 0;
+  let spreadX = 0;
+  for (const [x, y] of points) {
+    const residual = y - (intercept + slope * x);
+    residualSum += residual * residual;
+    spreadX += (x - meanX) * (x - meanX);
+  }
+  if (spreadX === 0) return null;
+  return Math.sqrt(residualSum / (n - 2) / spreadX);
+}
 
 /** kg/day slope of a set of (dayOffset, kg) points; null when undefined. */
 export function leastSquaresSlope(points: [number, number][]): number | null {
@@ -179,6 +227,10 @@ export function buildFusionTrainingSamples(args: BuildSamplesArgs): FusionDaySam
     }
     if (intakeDays < MIN_COMPLETE_DAYS_IN_WINDOW) continue;
 
+    // The intake days have to cover the span the weight change was measured over.
+    const windowSpanDays = dayDiff(start, end) + 1;
+    if (windowSpanDays > 0 && intakeDays / windowSpanDays < MIN_WINDOW_COVERAGE) continue;
+
     const avgIntake = intakeSum / intakeDays;
     const actualTdee = Math.round(avgIntake - dailyWeightChangeKg * energyPerKg);
     if (actualTdee < MIN_PLAUSIBLE_TDEE || actualTdee > MAX_PLAUSIBLE_TDEE) continue;
@@ -246,6 +298,33 @@ export function buildFusionTrainingSamples(args: BuildSamplesArgs): FusionDaySam
  *
  * Returns null when there isn't enough spread to fit a line.
  */
+/**
+ * How wide the uncertainty on that weekly rate is, in kg/week at 95%.
+ *
+ * Body weight moves half a kilo a day on hydration alone, so a month of weighing pins
+ * a trend far less tightly than the point estimate suggests. On this athlete's 26
+ * weigh-ins the rate is -0.10 kg/week with a band of roughly +/-0.29 - which spans
+ * zero, and which in energy terms is a daily expenditure anywhere across a 600 kcal
+ * range. Presenting the midpoint of that as "the most reliable number we have" is a
+ * stronger claim than the arithmetic supports.
+ */
+export function measuredWeeklyRateUncertaintyKg(
+  trendWeightMap: Record<string, number>,
+  lookbackDays: number = 28
+): number | null {
+  const dates = Object.keys(trendWeightMap).sort();
+  if (dates.length < MIN_TREND_POINTS + 1) return null;
+
+  const last = dates[dates.length - 1];
+  const windowDates = dates.filter(d => dayDiff(d, last) <= lookbackDays);
+  if (windowDates.length < MIN_TREND_POINTS + 1) return null;
+
+  const error = slopeStandardError(
+    windowDates.map(d => [dayDiff(windowDates[0], d), trendWeightMap[d]] as [number, number])
+  );
+  return error === null ? null : error * 1.96 * 7;
+}
+
 export function measuredWeeklyRateKg(
   trendWeightMap: Record<string, number>,
   lookbackDays: number = 28

@@ -11,7 +11,7 @@ import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, 
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
 import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates';
 import { toDateKey, toDateKeyFromDate } from '@zenith/shared';
-import { buildFusionTrainingSamples, measuredWeeklyRateKg } from './utils/fusionRetrain';
+import { buildFusionTrainingSamples, measuredWeeklyRateKg, measuredWeeklyRateUncertaintyKg } from './utils/fusionRetrain';
 import { WeekDateSelector } from './components/WeekDateSelector';
 
 /** Trims a portion count for display: 1, 1.5, 0.25 - never "1.0000000002". */
@@ -2262,6 +2262,22 @@ function App() {
   // second-guesses it. Skipping meals is a normal eating pattern - intermittent
   // fasting, or simply not being hungry - so a light day that was not flagged
   // incomplete is real data and belongs in the average.
+  /**
+   * The band around that rate, carried through to kilocalories.
+   *
+   * A month of weigh-ins does not pin a trend nearly as tightly as a single number
+   * implies: this athlete's works out at -0.10 kg/week with a 95% band of +/-0.29,
+   * which spans zero. Showing the midpoint alone as the most reliable figure available
+   * overstates what the scale has actually established.
+   */
+  const measuredRateUncertainty = useMemo(
+    () => measuredWeeklyRateUncertaintyKg(zaneResult.trendWeightMap || {}, 28),
+    [zaneResult.trendWeightMap]
+  );
+  const burnUncertaintyKcal = measuredRateUncertainty !== null
+    ? Math.round((measuredRateUncertainty * projectionEnergyPerKg) / 7)
+    : null;
+
   const measuredDailyBalance = measuredWeeklyRate !== null
     ? Math.round((measuredWeeklyRate * projectionEnergyPerKg) / 7)
     : null;
@@ -3215,9 +3231,15 @@ function App() {
                   <span style={{ fontSize: '15px', fontWeight: 700 }}>kcal a day</span>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px', lineHeight: 1.45 }}>
-                  {impliedActualTdee !== null
-                    ? 'Worked out from how your weight has actually changed, so this is the most reliable number we have for you.'
-                    : 'Estimated from your body and activity. It gets more accurate once you have a few weigh-ins.'}
+                  {impliedActualTdee === null
+                    ? 'Estimated from your body and activity. It gets more accurate once you have a few weigh-ins.'
+                    : burnUncertaintyKcal !== null && burnUncertaintyKcal > 150
+                      ? <>Worked back from how your weight has actually changed &mdash; but day-to-day
+                          weight swings mean the scale has only narrowed this to
+                          roughly <strong style={{ color: 'var(--text-main)' }}>
+                            &plusmn;{burnUncertaintyKcal} kcal
+                          </strong> so far. More weigh-ins tighten it.</>
+                      : 'Worked out from how your weight has actually changed, which makes it the most reliable number we have for you.'}
                 </div>
               </div>
 
