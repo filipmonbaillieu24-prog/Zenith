@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, useMap, useMapEvents, LayersControl } from 'react-leaflet';
+import { DARK_BASEMAP_URL, DARK_BASEMAP_ATTRIBUTION, OSM_TILE_URL, OSM_ATTRIBUTION, SATELLITE_TILE_URL, SATELLITE_ATTRIBUTION } from '../utils/basemap';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { RoutePoint, GeneratedRoute } from '../types/route';
@@ -115,23 +116,16 @@ export const MapView: React.FC<MapViewProps> = ({
         zoomControl={false}
       >
         <LayersControl position="topright">
-          <LayersControl.BaseLayer checked name="Ultra Dark">
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            />
+          {/* Layer names in English, like the rest of the app. "Lichte Kaart" and
+              "Satelliet / Hybride" sat in an otherwise English control. */}
+          <LayersControl.BaseLayer checked name="Dark">
+            <TileLayer url={DARK_BASEMAP_URL} attribution={DARK_BASEMAP_ATTRIBUTION} className="zenith-basemap-dark" />
           </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Lichte Kaart">
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
+          <LayersControl.BaseLayer name="Light">
+            <TileLayer url={OSM_TILE_URL} attribution={OSM_ATTRIBUTION} />
           </LayersControl.BaseLayer>
-          <LayersControl.BaseLayer name="Satelliet / Hybride">
-            <TileLayer
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-            />
+          <LayersControl.BaseLayer name="Satellite">
+            <TileLayer url={SATELLITE_TILE_URL} attribution={SATELLITE_ATTRIBUTION} />
           </LayersControl.BaseLayer>
         </LayersControl>
 

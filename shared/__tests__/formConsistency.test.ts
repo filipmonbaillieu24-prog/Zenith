@@ -56,3 +56,30 @@ describe('every Form card is built from the same pool', () => {
     }
   });
 });
+
+/**
+ * CARTO stopped serving its dark basemap without an API key and started stamping
+ * "API KEY REQUIRED" diagonally across every tile. Aero had the URL in four places -
+ * the heatmap, the ride page, the gradient map and the layers control - so the maps
+ * turned into a wall of that text, and each copy had to be found separately.
+ */
+describe('map tiles come from one place, and not from CARTO', () => {
+  it('has no CARTO basemap URLs left', () => {
+    const dir = path.resolve(process.cwd(), 'apps/zenith-aero/src');
+    const offenders: string[] = [];
+    const walk = (d: string) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        if (e.name === 'node_modules' || e.name === 'dist') continue;
+        const full = path.join(d, e.name);
+        if (e.isDirectory()) { walk(full); continue; }
+        if (!/\.tsx?$/.test(e.name)) continue;
+        const src = fs.readFileSync(full, 'utf8');
+        // The config module names it in a comment explaining the move.
+        if (full.endsWith('basemap.ts')) continue;
+        if (src.includes('cartocdn')) offenders.push(path.relative(process.cwd(), full));
+      }
+    };
+    walk(dir);
+    expect(offenders).toEqual([]);
+  });
+});

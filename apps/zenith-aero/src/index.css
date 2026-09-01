@@ -1822,3 +1822,16 @@ body {
   }
 }
 
+
+/* ── Dark basemap ──────────────────────────────────────────────────────────
+   Esri's Dark Gray Canvas replaced CARTO's dark_all, which now stamps
+   "API KEY REQUIRED" across every anonymous tile. Esri's version is a medium
+   grey rather than near-black, and a white route line on medium grey is a lot
+   harder to follow than on the near-black the maps were designed against.
+
+   Darkening the base tiles restores that contrast. The label layer above is
+   deliberately left alone - dimming it too would make the place names, which
+   are the reason for having a second layer at all, unreadable. */
+.zenith-basemap-dark {
+  filter: brightness(0.45) contrast(1.15) saturate(0.85);
+}

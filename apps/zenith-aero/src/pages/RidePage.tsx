@@ -6,6 +6,7 @@ import { estimateLTHR, estimatedMaxHR, getWeightForDate } from '../utils/rideMet
 import { recoveryAdvice } from '../utils/pmc';
 import { fetchRideWeather, weatherIcon, windDirLabel, type RideWeather } from '../utils/weather';
 import { MapContainer, TileLayer, Polyline } from 'react-leaflet';
+import { DARK_BASEMAP_URL, DARK_BASEMAP_LABELS_URL, DARK_BASEMAP_ATTRIBUTION } from '../utils/basemap';
 import 'leaflet/dist/leaflet.css';
 import { Coffee, Brain } from 'lucide-react';
 import { calculateFuel } from '../utils/fueling';
@@ -351,7 +352,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
         ) : mapPositions.length > 2 && (
           <div className="rp-map-wrap rp-map-wrap--bg">
             <MapContainer center={mapCenter} zoom={12} style={{ height: '100%', width: '100%' }}>
-              <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution="© OpenStreetMap © CARTO" />
+              <TileLayer url={DARK_BASEMAP_URL} attribution={DARK_BASEMAP_ATTRIBUTION} className="zenith-basemap-dark" />
+              <TileLayer url={DARK_BASEMAP_LABELS_URL} />
               <MapBoundsUpdater positions={mapPositions} />
               <Polyline positions={mapPositions} color="#94a3b8" weight={3} opacity={0.85} />
             </MapContainer>

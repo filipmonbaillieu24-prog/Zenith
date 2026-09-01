@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import 'leaflet/dist/leaflet.css';
 import './GradientMap.css';
 import { MapContainer, TileLayer, Polyline, useMap, Marker, Tooltip as LeafletTooltip } from 'react-leaflet';
+import { DARK_BASEMAP_URL, DARK_BASEMAP_LABELS_URL, DARK_BASEMAP_ATTRIBUTION } from '../../utils/basemap';
 import L from 'leaflet';
 import { Ride, RidePoint } from '../../types/workout';
 import { detectClimbs } from '../../utils/climbDetector';
@@ -178,7 +179,8 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
       </div>
 
       <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }} zoomControl={false}>
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" attribution="© OpenStreetMap © CARTO" />
+        <TileLayer url={DARK_BASEMAP_URL} attribution={DARK_BASEMAP_ATTRIBUTION} className="zenith-basemap-dark" />
+        <TileLayer url={DARK_BASEMAP_LABELS_URL} />
         <MapBoundsUpdater positions={gpsPts.map(p => [p.lat!, p.lng!])} />
         
         {/* Glow & Core polyline segments */}

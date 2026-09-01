@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
+import { DARK_BASEMAP_URL, DARK_BASEMAP_LABELS_URL, DARK_BASEMAP_ATTRIBUTION } from '../utils/basemap';
 import { Map as MapIcon, Lock } from 'lucide-react';
 import { ZenithEmptyState } from '@zenith/shared';
 import { getRideTracks } from '../utils/db';
@@ -128,10 +129,8 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({ isPro = false, onRequestProMo
           style={{ height: '100%', width: '100%' }}
           zoomControl
         >
-          <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            attribution="© OpenStreetMap © CARTO"
-          />
+          <TileLayer url={DARK_BASEMAP_URL} attribution={DARK_BASEMAP_ATTRIBUTION} className="zenith-basemap-dark" />
+          <TileLayer url={DARK_BASEMAP_LABELS_URL} />
           <FitBounds tracks={tracks} />
           {tracks.map((t, idx) => (
             <Polyline
