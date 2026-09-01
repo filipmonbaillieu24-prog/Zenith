@@ -133,6 +133,62 @@ class CalibrationTest {
     }
 
     @Test
+    fun `a ramp whose top set is still light converges instead of holding its shape`() {
+        // Every set at four in reserve against a target of two: the ramp is not building
+        // toward a working weight, it is three submaximal sets. The template asks for
+        // RIR 2 on all of them and says nothing about weight, so they close on the top.
+        val history = listOf(
+            listOf(SetOutcome(85.0, 11, 4)),
+            listOf(SetOutcome(100.0, 11, 4)),
+            listOf(SetOutcome(115.0, 11, 4))
+        )
+        val t = nextExerciseTargets(history, rampSpecs, 15.0, stack15)
+        assertEquals(listOf(100.0, 115.0, 115.0), t.map { it.weight })
+    }
+
+    @Test
+    fun `a ramp whose top set is on target keeps its shape`() {
+        // Reserve falling 4, 3, 2 across the sets is a ramp doing its job - the top set
+        // lands where the template asks. Nothing to fix.
+        val history = listOf(
+            listOf(SetOutcome(85.0, 9, 4)),
+            listOf(SetOutcome(100.0, 9, 3)),
+            listOf(SetOutcome(115.0, 9, 2))
+        )
+        val specs = listOf(SetSpec(8, 12, 2), SetSpec(8, 12, 2), SetSpec(8, 12, 2))
+        val t = nextExerciseTargets(history, specs, 15.0) { w -> 55.0 + Math.round((w - 55.0) / 15.0) * 15.0 }
+        assertEquals(listOf(85.0, 100.0, 115.0), t.map { it.weight })
+    }
+
+    @Test
+    fun `convergence is capped so a bottom set does not triple overnight`() {
+        val history = listOf(
+            listOf(SetOutcome(55.0, 11, 4)),
+            listOf(SetOutcome(85.0, 11, 4)),
+            listOf(SetOutcome(130.0, 11, 4))
+        )
+        val t = nextExerciseTargets(history, rampSpecs, 15.0, stack15)
+        assertTrue("set 1 jumped from 55 to ${t[0].weight}", t[0].weight <= 55.0 * 1.20 + 15.0)
+        assertTrue("set 1 did not move at all", t[0].weight > 55.0)
+    }
+
+    @Test
+    fun `sets that share a weight share a rep target`() {
+        // The later, more fatigued set must never be asked for more reps than an
+        // earlier one at the same load.
+        val history = listOf(
+            listOf(SetOutcome(85.0, 11, 4)),
+            listOf(SetOutcome(100.0, 11, 4)),
+            listOf(SetOutcome(115.0, 11, 4))
+        )
+        val t = nextExerciseTargets(history, rampSpecs, 15.0, stack15)
+        val byWeight = t.groupBy { it.weight }
+        for ((w, group) in byWeight) {
+            assertEquals("sets at $w disagree on reps", 1, group.map { it.reps }.distinct().size)
+        }
+    }
+
+    @Test
     fun `straight sets are left to progress independently`() {
         // Same weight across sets is not a ramp, and each set keeps its own history.
         val history = listOf(

@@ -464,6 +464,53 @@ fun nextExerciseTargets(
     val topIdx = weights.lastIndex
     val topPrev = weights[topIdx]
     val topTarget = independent[topIdx]
+    val topSpec = specAt(topIdx)
+    val topPrevSet = historyBySet[topIdx].firstOrNull()
+
+    // A ramp is only worth preserving while it is doing its job.
+    //
+    // The template prescribes reps and reserve for every working set - it says nothing
+    // about weight, so the ramp is not something it asks for. It is a shape read off
+    // this athlete's own history, and on Lat Pulldown it works: reserve falls across the
+    // sets and the top one lands on target. On Back Extension it does not. Every set
+    // there sits at four in reserve against a target of two, including the top one, so
+    // the ramp is not building toward a working weight - it is three submaximal sets,
+    // and holding its proportions just preserves that.
+    //
+    // So when even the top set is still being calibrated, the sets converge on the
+    // weight it points at instead of keeping their places below it. Each is held to the
+    // same per-session rise as any other calibration, so a set at the bottom of the ramp
+    // takes a couple of sessions to catch up rather than tripling overnight.
+    val topStillCalibrating = topPrevSet != null &&
+        topPrevSet.reps >= topSpec.minReps &&
+        topPrevSet.rir >= topSpec.targetRir + CALIBRATION_RIR_MARGIN
+    if (topStillCalibrating && topTarget.weight >= topPrev) {
+        val out = independent.toMutableList()
+        for (i in 0 until topIdx) {
+            val prev = historyBySet[i].firstOrNull() ?: continue
+            val spec = specAt(i)
+            val reach = snap(
+                topTarget.weight.coerceAtMost(prev.weight * (1.0 + MAX_CALIBRATION_RISE))
+            ).coerceAtLeast(prev.weight)
+            out[i] = independent[i].copy(
+                weight = reach,
+                // Once a set has caught the top one it asks for the same reps. Leaving
+                // them independent produced 115x11 on set two and 115x13 on set three -
+                // the same weight, with the later and more fatigued set asked for more.
+                reps = when {
+                    reach >= topTarget.weight -> topTarget.reps
+                    reach > prev.weight ->
+                        repsToMatchLastTime(reach, prev, spec.targetRir, spec.minReps, maxOf(spec.minReps, spec.maxReps))
+                    else -> independent[i].reps
+                },
+                reason = if (reach >= topTarget.weight)
+                    "Every set is a working set - up to ${fmt(topTarget.weight)} with the rest."
+                else
+                    "Closing on ${fmt(topTarget.weight)}; this is as far as one session should move it."
+            )
+        }
+        return out
+    }
 
     // The ramp did not move, so nothing below it moves either. Holding a preparation
     // set at the same weight is not a stalled lift; it is the ramp doing its job.

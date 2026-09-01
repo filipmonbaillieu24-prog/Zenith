@@ -54,5 +54,53 @@ class SimulationTest {
         println("=== WITHIN SESSION: set 1 done at 85 x 11 @ RIR 4, set 2 was planned at 100 x 11 ===")
         afterSet(backExtension, w = 85.0, r = 11, rir = 4, nextReps = 11, nextRir = 2,
             plannedNext = 100.0, prevTargetReps = 11, prevTargetRir = 2)
+
+        println("=== WITHIN SESSION: set 2 done at 100 x 11 @ RIR 4, set 3 was planned at 115 x 11 ===")
+        afterSet(backExtension, w = 100.0, r = 11, rir = 4, nextReps = 11, nextRir = 2,
+            plannedNext = 115.0, prevTargetReps = 11, prevTargetRir = 2)
+
+        println("=== NEXT WORKOUT: session just logged was 85/100/115 x 11 @ RIR 4 ===")
+        betweenSessions(
+            backExtension,
+            listOf(
+                listOf(SetOutcome(85.0, 11, 4), SetOutcome(70.0, 15, 4)),
+                listOf(SetOutcome(100.0, 11, 4), SetOutcome(85.0, 15, 4)),
+                listOf(SetOutcome(115.0, 11, 4), SetOutcome(100.0, 15, 4))
+            ),
+            listOf(SetSpec(11, 13, 2), SetSpec(11, 13, 2), SetSpec(11, 13, 2))
+        )
+
+        println("=== THEN, if 100/115/130 x 11 @ RIR 4 gets logged ===")
+        betweenSessions(
+            backExtension,
+            listOf(
+                listOf(SetOutcome(100.0, 11, 4)),
+                listOf(SetOutcome(115.0, 11, 4)),
+                listOf(SetOutcome(130.0, 11, 4))
+            ),
+            listOf(SetSpec(11, 13, 2), SetSpec(11, 13, 2), SetSpec(11, 13, 2))
+        )
+
+        println("=== LAT PULLDOWN: a ramp whose top set IS on target (RIR 2) ===")
+        betweenSessions(
+            Gear(15.0, false, 55.0, "lbs"),
+            listOf(
+                listOf(SetOutcome(85.0, 9, 4)),
+                listOf(SetOutcome(100.0, 9, 3)),
+                listOf(SetOutcome(115.0, 9, 2))
+            ),
+            listOf(SetSpec(8, 12, 2), SetSpec(8, 12, 2), SetSpec(8, 12, 2))
+        )
+
+        println("=== AND THE ONE AFTER, if 85/100/115 x 13 @ RIR 4 gets logged ===")
+        betweenSessions(
+            backExtension,
+            listOf(
+                listOf(SetOutcome(85.0, 13, 4), SetOutcome(85.0, 11, 4)),
+                listOf(SetOutcome(100.0, 13, 4), SetOutcome(100.0, 11, 4)),
+                listOf(SetOutcome(115.0, 13, 4), SetOutcome(115.0, 11, 4))
+            ),
+            listOf(SetSpec(11, 13, 2), SetSpec(11, 13, 2), SetSpec(11, 13, 2))
+        )
     }
 }
