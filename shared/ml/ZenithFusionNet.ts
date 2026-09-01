@@ -112,7 +112,7 @@ export class ZenithFusionNet {
    *
    * The output layer is fitted by least squares against that target on the logit
    * scale, over 20,000 sampled days spanning 45-135 kg, 0-2000 active kcal and
-   * 0-1500 strength kcal: RMSE 25 kcal, worst case 358 at the extremes of the range.
+   * 0-1500 strength kcal: RMSE 33 kcal, worst case 532 at the extremes of the range.
    */
   private generateDefaultWeights() {
     const inputSize = 12;
@@ -130,11 +130,19 @@ export class ZenithFusionNet {
     const B1: number[] = ZenithFusionNet.HIDDEN_KNEES.map(knee => -knee);
 
     // Fitted; see above. Column 0 is TDEE.
+    //
+    // Ridge-regularised rather than a plain least-squares solve, because SimpleMLP
+    // clamps every weight to +/-12 and the unregularised fit wanted -14.58 for one of
+    // them. That coefficient would have been silently truncated on the first training
+    // pass - the retrain log already read "weight scale 12.00 -> 12.00", which is the
+    // clamp, not a coincidence - leaving a model subtly different from the one that
+    // was fitted and verified. A penalty that keeps the largest weight at 8.7 costs
+    // 8 kcal of accuracy and removes the discrepancy entirely.
     const TDEE_W2 = [
-      7.059978, -2.996703, 0.023249, -0.112069, 0.803352, 0.093910,
-      8.225632, -1.637702, -14.578225, 4.240398, -1.601599, 0.816869
+      3.647716, 1.033072, -0.422111, -0.254492, 0.332085, 2.053026,
+      5.591627, -2.558776, -8.673397, -1.388618, 0.149331, 0.057236
     ];
-    const TDEE_B2 = -1.564520;
+    const TDEE_B2 = -1.286350;
 
     // Recovery and capacity are not fitted here - they have no formula to be fitted
     // against - so they keep a modest positive prior and are shaped by training. They

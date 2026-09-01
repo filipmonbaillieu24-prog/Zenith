@@ -157,3 +157,16 @@ describe('training can now move it', () => {
     expect(after).toBeGreaterThan(before + 100);
   });
 });
+
+describe('the fitted weights survive the model\'s own clamp', () => {
+  it('keeps every default weight inside SimpleMLP\'s +/-12 limit', () => {
+    // An unregularised fit wanted -14.58 for one coefficient. SimpleMLP clamps to 12,
+    // so that weight would have been truncated on the first training pass, leaving a
+    // model different from the one that was fitted and checked.
+    const src = readFileSync(join(__dirname, '..', 'ml', 'ZenithFusionNet.ts'), 'utf8');
+    const block = src.slice(src.indexOf('const TDEE_W2'), src.indexOf('const TDEE_B2'));
+    const weights = (block.match(/-?\d+\.\d+/g) ?? []).map(Number);
+    expect(weights.length).toBe(12);
+    for (const w of weights) expect(Math.abs(w)).toBeLessThan(12);
+  });
+});

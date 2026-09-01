@@ -1883,7 +1883,14 @@ function App() {
     [outstandingPlans, latestWeight, currentFtp]
   );
 
-  const preAdaptationTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + gymCalories + caffeineCalories + weekendAdjustment + plannedBurn);
+  // Planned work is deliberately NOT in here. It was, and it did nothing: the line
+  // below prefers ZANE's own todayTdee whenever ZANE is calibrated, which is the
+  // normal case, so the planned figure was dropped on the floor - the card said
+  // "includes 246 kcal for training you have planned" above a total that did not.
+  // And folding it into this side alone would have halved it, because the displayed
+  // burn is the average of this figure and the model's, and the model knows nothing
+  // about a session that has not happened. It is added once, after the blend.
+  const preAdaptationTdee = Math.round(baseTdee + activeCalories + bmrOffset + sleepAdjustment + gymCalories + caffeineCalories + weekendAdjustment);
   const adaptationFactor = zaneResult.adaptationFactor ?? 1.0;
   const adaptationPenalty = Math.round(preAdaptationTdee * (1 - adaptationFactor));
   const totalTdee = preAdaptationTdee - adaptationPenalty;
@@ -2279,7 +2286,10 @@ function App() {
     ? Math.round((goalDerivedFromTdee + fusionPredict.tdeeKcal) / 2)
     : goalDerivedFromTdee;
   const burnIsBlended = blendedBurnToday !== goalDerivedFromTdee;
-  const displayedBurnToday = blendedBurnToday;
+
+  // Added at full value to whichever figure the blend produced. Neither the formula
+  // nor the model has any way to know about a session that has not happened yet.
+  const displayedBurnToday = blendedBurnToday + plannedBurn;
 
   /**
    * Targets re-derived from the blended burn, using ZANE's own generateTargets.
@@ -2295,9 +2305,9 @@ function App() {
    * safety floor here. One implementation, two inputs.
    */
   const blendedTargets = useMemo(() => {
-    if (!burnIsBlended || !zaneResult.isCalibrated) return null;
+    if ((!burnIsBlended && plannedBurn <= 0) || !zaneResult.isCalibrated) return null;
     return generateTargets(
-      blendedBurnToday,
+      displayedBurnToday,
       burnParts.bmr,
       latestWeight,
       profile,
@@ -2318,7 +2328,7 @@ function App() {
       zaneResult.energyPerKgTissue,
       burnParts
     );
-  }, [burnIsBlended, blendedBurnToday, burnParts, latestWeight, profile, zaneResult]);
+  }, [burnIsBlended, displayedBurnToday, burnParts, latestWeight, profile, zaneResult]);
 
   /**
    * The targets actually shown. Falls back to ZANE's own when the model is not
@@ -3144,6 +3154,20 @@ function App() {
                       </span>
                     </div>
                   )}
+                  {plannedBurn > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>
+                        Training planned, not done yet
+                        <span style={{ display: 'block', fontSize: '10px' }}>
+                          drops off as soon as the session is logged
+                        </span>
+                      </span>
+                      <span style={{ fontWeight: 700, color: '#38bdf8' }}>+{plannedBurn} kcal</span>
+                    </div>
+                  )}
+                  {/* The rows above have to add up to this. They did not: the planned
+                      figure was announced in the sentence at the top of the card and
+                      then appeared in none of the lines beneath it, nor in the total. */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '8px', fontWeight: 800 }}>
                     <span style={{ color: 'var(--color-primary)' }}>Today&apos;s total</span>
                     <span style={{ color: 'var(--color-primary)' }}>{displayedBurnToday} kcal</span>
