@@ -45,11 +45,13 @@ class ProgressionTest {
 
     @Test
     fun `takes two steps when the increment is small enough to justify it`() {
-        // 2.5 kg steps off 100 kg is 5%: a double step there is reasonable.
+        // 2.5 kg steps off 100 kg is 5%: a double step there is reasonable. The reps
+        // stay high, because 5 kg does not cost four reps - dropping to the floor of
+        // the range for it would be a lighter session than the one before.
         val fine: (Double) -> Double = { w -> Math.round(w / 2.5) * 2.5 }
         val next = nextSetTarget(SetOutcome(100.0, 13, 4), 11, 13, 2, 2.5, fine)
         assertEquals(105.0, next.weight, 0.001)
-        assertEquals(11, next.reps)
+        assertEquals(13, next.reps)
     }
 
     @Test

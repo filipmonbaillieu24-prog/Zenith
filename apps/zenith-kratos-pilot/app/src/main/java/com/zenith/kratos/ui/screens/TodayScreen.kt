@@ -331,14 +331,14 @@ fun TodayScreen(
                                                             ae.sets[i].targetWeight = next.weight
                                                             ae.sets[i].targetReps = next.reps
                                                         } else {
-                                                            ae.sets[i].targetWeight = 20.0
+                                                            ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
                                                         }
                                                         workIdx++
                                                     }
                                                 }
                                             } else {
                                                 for (i in ae.sets.indices) {
-                                                    ae.sets[i].targetWeight = 20.0
+                                                    ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
                                                 }
                                             }
                                             val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
@@ -347,7 +347,7 @@ fun TodayScreen(
                                     } else {
                                         for (ae in active) {
                                             for (i in ae.sets.indices) {
-                                                ae.sets[i].targetWeight = 20.0
+                                                ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
                                             }
                                             val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
                                             recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)

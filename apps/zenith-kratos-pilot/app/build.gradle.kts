@@ -13,8 +13,8 @@ android {
         applicationId = "com.zenith.kratos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 51
-        versionName = "1.50"
+        versionCode = 52
+        versionName = "1.51"
     }
 
     buildTypes {

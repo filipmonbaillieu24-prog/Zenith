@@ -63,8 +63,46 @@ const val MAX_STEPS_PER_SESSION = 2
 const val MAX_DOUBLE_STEP_FRACTION = 0.10
 
 /**
- * Double progression: climb the rep range at a fixed weight, then add weight and drop
- * back to the floor of the range.
+ * Estimated one-rep max, Epley, counting the reps left in reserve as reps not done.
+ *
+ * The same measure the web logbook uses to decide whether a lift is progressing, so a
+ * session judged as progress here is judged as progress there.
+ */
+fun estimatedOneRepMax(weight: Double, reps: Int, rir: Int): Double =
+    weight * (1.0 + (reps + rir) / 30.0)
+
+/**
+ * How many reps at the new weight to be worth at least the last session.
+ *
+ * Resetting to the bottom of the rep range after every weight rise is the textbook move,
+ * and it is right when the rise is big: 100 to 115 lb on a pin stack is 15%, and nobody
+ * holds their reps through that. But on a lift that goes up 2.5 kg at a time it charged
+ * a 33% drop in reps for a 2% rise in load - 100x12 became 102x8 - which is less work
+ * than the session it was meant to progress from.
+ *
+ * So the target is the fewest reps that keep the estimated max at or above last time,
+ * held inside the prescribed range. A big jump still lands on the floor of the range; a
+ * small one barely moves the reps at all.
+ */
+private fun repsToMatchLastTime(
+    newWeight: Double,
+    prev: SetOutcome,
+    targetRir: Int,
+    floor: Int,
+    ceiling: Int
+): Int {
+    if (newWeight <= 0.0) return floor
+    val toMatch = estimatedOneRepMax(prev.weight, prev.reps, prev.rir)
+    var reps = floor
+    while (reps < ceiling && estimatedOneRepMax(newWeight, reps, targetRir) < toMatch) {
+        reps++
+    }
+    return reps
+}
+
+/**
+ * Double progression: climb the rep range at a fixed weight, then add weight and take
+ * the reps back only as far as the heavier bar actually costs.
  *
  * `snap` turns a raw weight into one the hardware can actually make, so this stays
  * honest about pin stacks and plate loading.
@@ -101,9 +139,10 @@ fun nextSetTarget(
                 val canDouble = prev.rir >= WELL_CLEAR_RIR &&
                     MAX_STEPS_PER_SESSION * stepWeight <= prev.weight * MAX_DOUBLE_STEP_FRACTION
                 val steps = if (canDouble) MAX_STEPS_PER_SESSION else 1
+                val heavier = snap(prev.weight + steps * stepWeight)
                 SetTarget(
-                    weight = snap(prev.weight + steps * stepWeight),
-                    reps = floor,
+                    weight = heavier,
+                    reps = repsToMatchLastTime(heavier, prev, targetRir, floor, ceiling),
                     reason = if (steps > 1)
                         "Topped the range with ${prev.rir} in reserve - up two steps."
                     else
@@ -183,4 +222,28 @@ fun <T> chooseBaselineSession(
         workingSetsOf(session).withIndex().any { (idx, s) -> s.reps >= repFloorFor(idx) }
     }
     return qualifying ?: withWork.firstOrNull()
+}
+
+/**
+ * Where to start an exercise with no history behind it.
+ *
+ * This was a bare 20.0 in three places, which is neither a weight nor a unit: on this
+ * athlete's Chest Fly, Lat Pulldown and Rear Delt Flye the stack starts at 55 lb, so 20
+ * is not a position the machine has. On a 1 kg-per-side lateral raise starting at 2 kg
+ * it is the opposite problem.
+ *
+ * The bottom of the stack is the honest answer - it is the only weight we know the
+ * hardware can make, and the first session then measures the athlete rather than
+ * guessing at them. Where no minimum is configured, a couple of steps up from nothing
+ * is the least-wrong stand-in.
+ */
+fun startingWeightFor(
+    minWeight: Double?,
+    incrementWeight: Double,
+    isPerSide: Boolean
+): Double {
+    minWeight?.let { if (it > 0.0) return it }
+    val step = if (isPerSide) incrementWeight * 2.0 else incrementWeight
+    val effective = if (step <= 0.0) 2.5 else step
+    return effective * 2.0
 }
