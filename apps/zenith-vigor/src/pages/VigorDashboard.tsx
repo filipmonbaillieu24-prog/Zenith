@@ -756,7 +756,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     const withHrv = sleeps.filter(s => s.hrv_ms);
     const rollingWindow: number[] = [];
     return withHrv.map(s => {
-      const hrv = Number(s.hrv_ms);
+      // Health Connect stores rMSSD at full float precision (54.74284105248328), and
+      // the axis was plotting it unrounded: the domain came out as
+      // 'dataMax + 5' = 167.34676224667888, which Recharts printed in full and the
+      // negative left margin then clipped to "67888". A millisecond of HRV to
+      // fourteen decimal places is noise in any case.
+      const hrv = Math.round(Number(s.hrv_ms) * 10) / 10;
       rollingWindow.push(hrv);
       if (rollingWindow.length > 7) rollingWindow.shift();
       const rollingMean = rollingWindow.reduce((sum, v) => sum + v, 0) / rollingWindow.length;
@@ -2321,10 +2326,19 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartHrvData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <LineChart data={chartHrvData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                   <CartesianGrid {...ZENITH_CHART_GRID} />
                   <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
-                  <YAxis stroke="var(--text-muted)" domain={['dataMin - 5', 'dataMax + 5']} tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                  <YAxis
+                    stroke="var(--text-muted)"
+                    domain={['dataMin - 5', 'dataMax + 5']}
+                    // Belt and braces: even a rounded series can produce a fractional
+                    // tick, and this axis is in milliseconds where a decimal says
+                    // nothing.
+                    tickFormatter={(v: number) => `${Math.round(v)}`}
+                    tick={ZENITH_CHART_AXIS_TICK}
+                    tickLine={false}
+                  />
                   <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
                   <Line type="monotone" name="HRV (rMSSD)" dataKey="hrv" stroke="rgba(168, 85, 247, 0.35)" strokeWidth={1.5} dot={false} />
                   <Line type="monotone" name="7-night avg" dataKey="hrvTrend" stroke="#a855f7" strokeWidth={2.5} dot={false} activeDot={{ r: 6 }} isAnimationActive={false} />
