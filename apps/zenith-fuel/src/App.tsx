@@ -5,7 +5,7 @@ import {
   AlertTriangle, Pill
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
-import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, CompletedActivity, plannedEnergyKcal, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout, resolveCurrentFtp, FTP_ESTIMATE_WINDOW_DAYS, FTP_FALLBACK_WATTS } from '@zenith/shared';
+import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, CompletedActivity, plannedEnergyKcal, KCAL_PER_MIN_RUNNING_FALLBACK, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout, resolveCurrentFtp, FTP_ESTIMATE_WINDOW_DAYS, FTP_FALLBACK_WATTS } from '@zenith/shared';
 import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep, creatineWaterRetentionKg, isCorrelationMeaningful, CREATINE_BASELINE_SATURATION, CAFFEINE_KCAL_PER_MG_PRIOR } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
@@ -419,10 +419,16 @@ function App() {
 
       strideData?.forEach((s: any) => {
         const dStr = s.date;
-        if (activeCalMap[dStr] !== undefined) {
-          const cal = Number(s.calories || 0) || Math.round(((s.duration_sec || 1231) / 60) * 11.5);
-          activeCalMap[dStr] += cal;
-        }
+        if (activeCalMap[dStr] === undefined) return;
+        // `s.duration_sec || 1231` invented a twenty-minute run for any record
+        // missing a duration - and 1231 is not a neutral guess, it is the length of
+        // one particular treadmill session that happened to be in the data. A run
+        // with neither a calorie figure nor a duration is unknown, and unknown adds
+        // nothing rather than adding a number lifted from somebody's Tuesday.
+        const kcal = Number(s.calories) > 0
+          ? Number(s.calories)
+          : Math.round(((Number(s.duration_sec) || 0) / 60) * KCAL_PER_MIN_RUNNING_FALLBACK);
+        if (kcal > 0) activeCalMap[dStr] += kcal;
       });
 
       const gymVolMap: { [date: string]: number } = {};
@@ -630,18 +636,24 @@ function App() {
       startOf30Days.setDate(startOf30Days.getDate() - 30);
       const startOf30DaysMs = startOf30Days.getTime();
 
-      // These 4 reads are independent of each other (each only feeds its own slice
-      // of logsMap below) — fired together instead of as 4 sequential round trips.
+      // These 5 reads are independent of each other (each only feeds its own slice
+      // of logsMap below) — fired together instead of as 5 sequential round trips.
       const [
         { data: foodHist },
         { data: daysHist },
         { data: ridesHist },
         { data: gymHist },
+        { data: runsHist },
       ] = await Promise.all([
         supabase.from('fuel_logs').select('logged_at, calories, caffeine_mg, protein, carbs, fat').eq('user_id', userId).gte('logged_at', startOf30Days.toISOString()),
         supabase.from('fuel_days').select('date, is_complete').eq('user_id', userId).gte('date', toDateKeyFromDate(startOf30Days)),
         supabase.from('rides').select('date, metadata').eq('user_id', userId).gte('date', startOf30DaysMs),
         supabase.from('kratos_workouts').select('volume, completed_at').eq('user_id', userId).gte('completed_at', startOf30Days.toISOString()),
+        // Runs. This history is what the adaptive burn is regressed against, and it
+        // has never contained a single run - only rides and gym sessions. So every
+        // day the athlete ran was fed to the model as a day they did nothing, and the
+        // model duly concluded they burn less than they do.
+        supabase.from('stride_activities').select('date, calories, duration_sec').eq('user_id', userId).gte('date', toDateKeyFromDate(startOf30Days)),
       ]);
 
       setThirtyDayFoodLogs(foodHist || []);
@@ -672,6 +684,17 @@ function App() {
           }
           logsMap[dStr].activeCalories += Number(witha?.calories ?? 0);
         }
+      });
+
+      runsHist?.forEach(r => {
+        const dStr = String(r.date);
+        if (!logsMap[dStr]) return;
+        // The same fallback the weekly view uses: a run with no calorie figure is
+        // costed from its duration rather than counted as zero.
+        const kcal = Number(r.calories) > 0
+          ? Number(r.calories)
+          : Math.round(((Number(r.duration_sec) || 0) / 60) * KCAL_PER_MIN_RUNNING_FALLBACK);
+        if (kcal > 0) logsMap[dStr].activeCalories += kcal;
       });
 
       setGymLogs(gymHist || []);
