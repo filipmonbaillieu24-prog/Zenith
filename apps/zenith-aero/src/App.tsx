@@ -14,6 +14,7 @@ import { autoSaveRideToGDrive } from './utils/export';
 
 import { RideSummaryWithBests } from './types/workout';
 import { computeRide, getWeightForDate, estimateGlobalFTP } from './utils/rideMetrics';
+import { computeGlobalBests } from './utils/dashboardHelpers';
 import { lazy, Suspense } from 'react';
 
 const WorkoutDashboard = lazy(() => import('./pages/WorkoutDashboard'));
@@ -384,6 +385,15 @@ function App() {
     ),
     [rides, fitnessProfile.ftp]
   );
+
+  // The same five-minute best the dashboard's VO2max card uses, so Settings cannot
+  // show a different VO2max for the same rider. Recent form first, all-time as backup.
+  const best5MinPower = useMemo(() => {
+    const cutoff90 = Date.now() - 90 * 24 * 3600 * 1000;
+    const recent = computeGlobalBests(rides.filter(r => r.date >= cutoff90) as any, 'bestEfforts');
+    const allTime = computeGlobalBests(rides as any, 'bestEfforts');
+    return Number(recent?.m5 || allTime?.m5 || 0);
+  }, [rides]);
 
   const [kratosWorkouts, setKratosWorkouts] = useState<any[]>([]);
   const [strideRuns, setStrideRuns] = useState<any[]>([]);
@@ -1096,6 +1106,8 @@ function App() {
                   profile={fitnessProfile}
                   onProfileChange={handleProfileChange}
                   globaleFTP={globaleFTP}
+                  measuredFtp={currentFtp}
+                  best5MinPower={best5MinPower}
                   onRecalculate={handleRecalculate}
                   recalculating={recalculating}
                 />

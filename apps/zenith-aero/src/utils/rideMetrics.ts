@@ -249,9 +249,18 @@ export function getWeightForDate(profile: any, dateMs: number): number | undefin
  *   VO₂max ≈ (eFTP / weight) × 10.8 + 7      [Hawley & Noakes 1992]
  * Typical values: untrained 30–40, amateur 45–55, elite 60–75, pro >75 ml/kg/min.
  */
-export function estimateVO2max(ftpW: number, weightKg: number): number {
-  return parseFloat(((ftpW / weightKg) * 10.8 + 7).toFixed(1));
-}
+/**
+ * One VO2max estimate, not two.
+ *
+ * This file had its own copy taking threshold power while localNeuralNet's took the
+ * rider's best five-minute power. Same ACSM formula, different input, both labelled
+ * "VO2max" - the Settings panel read 26.5 and Progression read 30 on the same day.
+ *
+ * The five-minute effort is the right input: VO2max is a maximal quantity and an
+ * hour-long threshold power understates it. Re-exported here so the old import path
+ * keeps working, but there is now only one definition.
+ */
+export { estimateVO2max } from './localNeuralNet';
 
 /**
  * Cycling W/kg performance category (based on peak 5-min W/kg):

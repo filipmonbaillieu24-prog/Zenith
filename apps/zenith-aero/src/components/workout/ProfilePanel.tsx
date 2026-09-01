@@ -14,6 +14,10 @@ export interface ProfilePanelProps {
   profile: FitnessProfile;
   onChange: (p: FitnessProfile) => void;
   globaleFTP?: number;
+  /** The threshold resolved measured-first, as the models already use. */
+  measuredFtp?: { watts: number; source: 'measured' | 'profile' | 'default' };
+  /** Best five-minute power, the input the VO2max estimate wants. */
+  best5MinPower?: number;
   onRecalculate: () => void;
   recalculating: boolean;
   subSection?: 'zones' | 'connections';
@@ -23,6 +27,8 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
   profile,
   onChange,
   globaleFTP,
+  measuredFtp,
+  best5MinPower,
   onRecalculate,
   recalculating,
   subSection
@@ -73,13 +79,22 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
   const estMaxHR = profile.maxHR ?? (age ? estimatedMaxHR(age) : undefined);
   const bmi      = profile.weight && profile.height
     ? (profile.weight / ((profile.height / 100) ** 2)).toFixed(1) : null;
-  const vo2max   = (globaleFTP ?? profile.ftp) && profile.weight
-    ? estimateVO2max(globaleFTP ?? profile.ftp!, profile.weight) : null;
+  // Same input as the Progression page's card: the best five-minute effort. This
+  // used to take threshold power, so the two screens showed 26.5 and 30.
+  const vo2max   = best5MinPower && best5MinPower > 0 && profile.weight
+    ? estimateVO2max(best5MinPower, profile.weight) : null;
   const vo2cat   = vo2max && age && profile.gender && profile.gender !== 'other'
     ? classifyVO2max(vo2max, age, profile.gender) : null;
   const cat5min  = globaleFTP && profile.weight ? cyclingCategory(globaleFTP / profile.weight) : null;
 
-  const activeFTP = profile.ftp ?? globaleFTP ?? 250;
+  // Measured threshold first, exactly as the models are calibrated (resolveCurrentFtp
+  // in App.tsx). The stored 220 W is the untouched column default, not something the
+  // athlete typed, and building zones on it put this rider's "threshold" band at
+  // 200-231 W when their rides measure a threshold near 152 - training prescribed
+  // roughly 45% too hard.
+  const activeFTP = measuredFtp?.source === 'measured'
+    ? measuredFtp.watts
+    : (profile.ftp ?? globaleFTP ?? 250);
   const activeLTHR = profile.lthr ?? (estMaxHR ? Math.round(estMaxHR * 0.9) : 160);
 
   const zonesPower = [
@@ -139,6 +154,15 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
         <div className="wd-profile-section__title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Zap size={13} style={{ color: '#cbd5e1' }} />
           Your Personalized Training Zones
+        </div>
+        {/* Which threshold these are built on. Silence here is how a stale 220 W sat
+            behind every zone while the rides measured something 45% lower. */}
+        <div style={{ fontSize: 10.5, color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.5 }}>
+          {measuredFtp?.source === 'measured'
+            ? <>Built on {activeFTP} W, measured from your recent rides.</>
+            : profile.ftp
+              ? <>Built on {activeFTP} W from your profile &mdash; not enough recent rides to measure it yet.</>
+              : <>Built on {activeFTP} W, a default &mdash; set your threshold above, or ride enough for it to be measured.</>}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginTop: 10 }}>
           <div>

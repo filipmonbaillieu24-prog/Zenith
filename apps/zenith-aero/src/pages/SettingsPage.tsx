@@ -9,6 +9,8 @@ interface SettingsPageProps {
   profile: FitnessProfile;
   onProfileChange: (p: FitnessProfile) => void;
   globaleFTP?: number;
+  measuredFtp?: { watts: number; source: 'measured' | 'profile' | 'default' };
+  best5MinPower?: number;
   onRecalculate: () => void;
   recalculating: boolean;
 }
@@ -19,6 +21,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   profile,
   onProfileChange,
   globaleFTP,
+  measuredFtp,
+  best5MinPower,
   onRecalculate,
   recalculating,
 }) => {
@@ -75,6 +79,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               profile={profile}
               onChange={onProfileChange}
               globaleFTP={globaleFTP}
+              measuredFtp={measuredFtp}
+              best5MinPower={best5MinPower}
               onRecalculate={onRecalculate}
               recalculating={recalculating}
               subSection="zones"
