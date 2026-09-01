@@ -125,8 +125,8 @@ describe('the call sites agree with each other', () => {
 
   it('abandons weights fitted against the old inputs', () => {
     const src = read('shared/ml/ZenithFusionNet.ts');
-    expect(src).not.toMatch(/'zenith_fusion_net_weights_v[123]'/);
-    expect(src).toMatch(/'zenith_fusion_net_weights_v[4-9]'/);
+    expect(src).not.toMatch(/'zenith_fusion_net_weights_v[1234]'/);
+    expect(src).toMatch(/'zenith_fusion_net_weights_v[5-9]'/);
   });
 });
 

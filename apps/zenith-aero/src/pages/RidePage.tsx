@@ -9,7 +9,8 @@ import { MapContainer, TileLayer, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Coffee, Brain } from 'lucide-react';
 import { calculateFuel } from '../utils/fueling';
-import { analyzeNotesLocally, trainOnCorrection, predictRPE, trainRPEModel, predictRideLabel, trainLabelModel, predictOptimalCadence, trainOptimalCadence } from '../utils/localNeuralNet';
+import { analyzeNotesLocally, trainOnCorrection, predictRideLabel, trainLabelModel } from '../utils/localNeuralNet';
+import { predictRideRpe, predictCadence } from '@zenith/shared';
 
 // Import extracted modular components
 import { StatCard } from '../components/workout/StatCard';
@@ -89,10 +90,11 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
       // Perform offline AI predictions if values are missing
       const vi = (r.normPower && r.avgPower) ? (r.normPower / r.avgPower) : 1.0;
       const ifVal = (r.normPower ?? r.avgPower ?? 0) / (profile.ftp ?? 220);
-      const tssVal = r.tss ?? r.hrTSS ?? 0;
 
       if (r.rpe === undefined) {
-        const predRpe = predictRPE(r.duration, r.distance, ifVal, tssVal, vi, r.avgHR ?? 0);
+        // Intensity and duration, which is what session RPE is built from. The old
+        // model took six inputs and returned 9 or 10 for every ride it ever saw.
+        const predRpe = predictRideRpe(ifVal, r.duration);
         setAiPredictedRpe(predRpe);
       } else {
         setAiPredictedRpe(null);
@@ -114,15 +116,10 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
     getRide(compareRideId).then(r => setCompareRide(r ?? null));
   }, [compareRideId]);
 
-  // Auto-train cadence model when ride is loaded
-  useEffect(() => {
-    if (ride && ride.hasPower && ride.avgPower && ride.avgCadence) {
-      const cost = ride.cardiacCost ?? 0.5;
-      if (cost < 0.8) {
-        trainOptimalCadence(ride.avgPower, ride.avgCadence);
-      }
-    }
-  }, [ride]);
+  // The cadence model used to be trained here on every ride view, from the ride's own
+  // average cadence - teaching it to predict what the rider already does, which is a
+  // definition rather than a prediction. It is now a stated reference (cadence rises
+  // modestly with watts per kilogram) and this loop has nothing useful to add to it.
 
   // Auto-save notes after 1s of inactivity
   const saveNotes = useCallback((val: string) => {
@@ -162,13 +159,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
       onChange?.();
     });
 
-    if (val && ride) {
-      const vi = (ride.normPower && ride.avgPower) ? (ride.normPower / ride.avgPower) : 1.0;
-      const ifVal = (ride.normPower ?? ride.avgPower ?? 0) / (profile.ftp ?? 220);
-      const tssVal = ride.tss ?? ride.hrTSS ?? 0;
-      trainRPEModel(ride.duration, ride.distance, ifVal, tssVal, vi, ride.avgHR ?? 0, val);
-      setAiPredictedRpe(null);
-    }
+    // Once the athlete has given their own RPE, the estimate steps aside.
+    if (val && ride) setAiPredictedRpe(null);
   }, [rideId, ride, profile.ftp, onChange]);
 
   // Fetch historical weather lazily (free API, no key needed)
@@ -397,7 +389,12 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, compareRideId, onC
                 sub={Math.abs(ride.decoupling) < 5 ? 'Good aerobic base' : 'Light fatigue'} />
             )}
             {ride.vam              && <StatCard label="VAM"             value={ride.vam}              unit="m/h" sub="Climb speed" typeClass="rp-stat-card--gps" />}
-            {ride.avgCadence       && <StatCard label="Avg. Cadence"     value={ride.avgCadence}       unit="rpm" typeClass="rp-stat-card--power" sub={ride.avgPower ? `AI advice: ${predictOptimalCadence(ride.avgPower)} rpm 🤖` : undefined} />}
+            {ride.avgCadence       && <StatCard label="Avg. Cadence"     value={ride.avgCadence}       unit="rpm" typeClass="rp-stat-card--power" sub={(() => {
+              // Needs a weight: cadence advice scales with watts per kilogram, and the
+              // old model gave 96 rpm to a rider at 100 W because it had neither.
+              const rpm = predictCadence(ride.avgPower ?? 0, getWeightForDate(profile, ride.date) ?? 0);
+              return rpm === null ? undefined : `Typical at this power: ${rpm} rpm`;
+            })()} />}
             {(ride as any).variabilityIndex && <StatCard
               label="Variability Index"
               value={(ride as any).variabilityIndex}

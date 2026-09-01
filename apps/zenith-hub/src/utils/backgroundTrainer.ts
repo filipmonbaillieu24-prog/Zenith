@@ -1,4 +1,4 @@
-import { SimpleMLP, kratosOverloadModel, dualSportFatigueModel, recoveryModel, buildRecoveryFeatureVector, recoveryHeuristic, fetchReadiness, feltToTarget, cardioFreshness, kratosEffortVolume, GYM_VOLUME_HARD_WEEK_KG, toDateKeyFromDate } from '@zenith/shared';
+import { SimpleMLP, recoveryModel, buildRecoveryFeatureVector, recoveryHeuristic, fetchReadiness, feltToTarget, kratosEffortVolume, toDateKeyFromDate } from '@zenith/shared';
 import { computePMC } from './pmc';
 
 // ==========================================================
@@ -117,9 +117,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
 
     // Load weights
     await Promise.all([
-      kratosOverloadModel.loadFromSupabase(supabase, userId),
       vo2maxModel.loadFromSupabase(supabase, userId),
-      dualSportFatigueModel.loadFromSupabase(supabase, userId),
       recoveryModel.loadFromSupabase(supabase, userId)
     ]);
 
@@ -137,61 +135,21 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
 
     const pmcPoints = computePMC(rideTSSList);
 
-    const getCardioTsbForDate = (dateStr: string): number => {
-      const targetTime = new Date(dateStr).setHours(0,0,0,0);
-      const point = pmcPoints.find(p => {
-        const pDate = new Date(p.date);
-        pDate.setHours(0,0,0,0);
-        return pDate.getTime() === targetTime;
-      });
-      return point?.tsb ?? 0;
-    };
-
-    // 3. Train Kratos Progressive Overload Model
-    // Every model in this file is fitted with retrainFromScratch: samples are
-    // collected first, then the model is reset to its priors and fitted to all of
-    // them in one deterministic pass. Each of these used to apply its gradient
-    // updates on top of whatever the previous run had left behind. Since this whole
-    // routine re-runs on every page load AND on every realtime insert, replaying the
-    // same history over and over kept nudging the weights further with no new
-    // information - which is what made the dashboard's scores drift on their own
-    // between refreshes, with nothing having been logged.
+    // 3. Progressive overload: no longer a model.
     //
-    // Batching also collapses the network writes: 8 models persisting up to 31
-    // times per run was the single largest contributor to Supabase API usage.
-    if (workouts && workouts.length > 1) {
-      const overloadSamples: { x: number[]; targets: number[] }[] = [];
-      // Find successive workouts of the same routine/exercises and train the overload MLP
-      for (let i = 0; i < workouts.length - 1; i++) {
-        const currentW = workouts[i];
-        const prevW = workouts[i + 1];
-
-        // Fetch sleep quality logged on the day of current workout
-        const wDate = toDateKeyFromDate(new Date(currentW.started_at));
-        const daySleep = sleep?.find((s: any) => toDateKeyFromDate(new Date(s.logged_at)) === wDate);
-        const sleepQuality = daySleep?.quality || 75;
-
-        // Use real cardio TSB calculated from rides PMC history (CR1)
-        const cardioTsb = getCardioTsbForDate(currentW.started_at);
-
-        // Parse volume progression
-        const volumeDiff = Number(currentW.volume) - Number(prevW.volume);
-        const increment = Math.max(0, volumeDiff / 100); // proxy to kg increment
-
-        // Input: [pastSetsVolume/5000, weightProgression/10, sleepQuality/1.0, cardioTsbScaled/1.0, targetReps/20]
-        const x = [
-          Math.min(1.5, Number(prevW.volume) / 5000),
-          Math.min(1.5, Math.max(-1.5, increment / 10)),
-          Math.min(1.0, sleepQuality / 100),
-          Math.max(0, Math.min(1, (cardioTsb + 50) / 100)),
-          0.5 // default targetReps (10/20)
-        ];
-
-        const target = Math.max(0, Math.min(1, increment / 10));
-        overloadSamples.push({ x, targets: [target] });
-      }
-      await kratosOverloadModel.retrainFromScratch(supabase, userId, overloadSamples);
-    }
+    // It was trained here on samples whose target was `volumeDiff / 100`, described in
+    // the code as a "proxy to kg increment" - the difference in total session tonnage,
+    // relabelled as kilograms on the bar. Two sessions 500 kg apart became "add 5 kg",
+    // though that difference is just as likely to be an extra set or more reps at the
+    // same load. The inputs were scaled one way here and another way in the prediction
+    // path, and the sleep quality read `daySleep?.quality` where the column is
+    // `quality_score`, so every sample it ever saw carried a constant 75.
+    //
+    // Whether to add load is a decision rule with an interaction in it - clear the rep
+    // target AND have reps in reserve - and these networks are a function of one
+    // weighted sum. It could not have been represented however it was trained. It is
+    // now progressionSteps() in shared/ml/models/strengthModels.ts, which is eight
+    // lines anyone can read and disagree with.
 
     // 4. Smart Coach: trained by Aero, not here.
     //
@@ -239,58 +197,13 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
 
     // 5. Train Dual-Sport Fatigue Model (CR14)
     // Train on a 30-day daily stats window
-    const fatigueSamples: { x: number[]; targets: number[] }[] = [];
-    for (let dayOffset = 30; dayOffset >= 0; dayOffset--) {
-      const d = new Date();
-      d.setDate(d.getDate() - dayOffset);
-      const dStr = toDateKeyFromDate(d);
-      const dTime = d.setHours(0,0,0,0);
-      
-      const pmcOnDay = pmcPoints.find(p => {
-        const pDate = new Date(p.date);
-        pDate.setHours(0,0,0,0);
-        return pDate.getTime() === dTime;
-      });
-      const cCTL = pmcOnDay?.ctl ?? 0;
-      const cATL = pmcOnDay?.atl ?? 0;
-
-      const start7d = new Date(d);
-      start7d.setDate(start7d.getDate() - 7);
-      const end7d = d;
-      const recentWorkouts = workouts?.filter((w: any) => {
-        const wDate = new Date(w.started_at);
-        return wDate >= start7d && wDate <= end7d;
-      }) || [];
-      // Effort kg, not raw tonnage - the same discount the prediction path applies
-      // (see kratosEffortVolume). Training on tonnage while serving on effort would
-      // be a train/serve mismatch of exactly the kind this file has already had.
-      const gymEffort7d = recentWorkouts.reduce((sum: number, w: any) => sum + kratosEffortVolume(w.volume, w.sets), 0);
-
-      const daySleep = sleep?.find((s: any) => toDateKeyFromDate(new Date(s.logged_at)) === dStr);
-      const sleepQuality = daySleep?.quality_score || daySleep?.quality || 75;
-
-      const dayRides = rides?.filter((r: any) => toDateKeyFromDate(new Date(Number(r.date))) === dStr) || [];
-      const activeCalories = dayRides.reduce((sum: number, r: any) => {
-        let witha = r.metadata;
-        if (typeof witha === 'string') try { witha = JSON.parse(witha); } catch { witha = {}; }
-        return sum + Number(witha?.calories ?? 0);
-      }, 0);
-
-      const dailySteps = getStepsForDate(dStr); // real logged steps for this day, 0 if unlogged (no fabricated baseline)
-
-      const x = [
-        cardioFreshness(cCTL, cATL),
-        Math.min(1.5, cATL / 100),
-        Math.min(1.5, gymEffort7d / GYM_VOLUME_HARD_WEEK_KG),
-        Math.min(1.0, sleepQuality / 100),
-        Math.min(1.0, (dailySteps * 7) / 100000),
-        Math.min(1.5, activeCalories / 5000)
-      ];
-
-      const fatigueTarget = Math.max(0, Math.min(1.0, (cATL / 80 + (100 - sleepQuality) / 100 + gymEffort7d / GYM_VOLUME_HARD_WEEK_KG) / 3));
-      fatigueSamples.push({ x, targets: [fatigueTarget] });
-    }
-    await dualSportFatigueModel.retrainFromScratch(supabase, userId, fatigueSamples);
+    // 5. Combined fatigue: removed.
+    //
+    // This model was retrained on every login and its prediction was read by nothing -
+    // no app, no page, no component. It also learned from a target computed as a
+    // formula over its own inputs, which teaches a network to recite rather than to
+    // observe. Hub already answers "how recovered am I" with the recovery score, which
+    // trains against how the athlete said they actually felt.
 
     // 6. Train Unified Recovery Score Model (CR11)
     //

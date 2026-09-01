@@ -5,7 +5,7 @@ import {
   AlertTriangle, Pill
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
-import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, CompletedActivity, plannedEnergyKcal, KCAL_PER_MIN_RUNNING_FALLBACK, strengthCaloriesFromVolume, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout, resolveCurrentFtp, FTP_ESTIMATE_WINDOW_DAYS, FTP_FALLBACK_WATTS } from '@zenith/shared';
+import { calculateZenithSleepScore, ZenithFusionNet, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchPlannedWorkouts, outstandingPlansForDate, CompletedActivity, fetchReadiness, feltToTarget, ReadinessEntry, plannedEnergyKcal, KCAL_PER_MIN_RUNNING_FALLBACK, strengthCaloriesFromVolume, plannedCarbShiftGrams, DISCIPLINE_LABELS, PlannedWorkout, resolveCurrentFtp, FTP_ESTIMATE_WINDOW_DAYS, FTP_FALLBACK_WATTS } from '@zenith/shared';
 import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogData, saveZaneCoefficients, loadZaneCoefficients, calculateMifflinBmr, calculateKatchMcArdleBmr, calculateAge, creatineSaturationStep, creatineWaterRetentionKg, isCorrelationMeaningful, CREATINE_BASELINE_SATURATION, CAFFEINE_KCAL_PER_MG_PRIOR } from './utils/zane';
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
@@ -147,6 +147,7 @@ function App() {
   const [plannedWorkouts, setPlannedWorkouts] = useState<PlannedWorkout[]>([]);
   /** What was actually done, so a plan that has been carried out stops being counted. */
   const [completedActivities, setCompletedActivities] = useState<CompletedActivity[]>([]);
+  const [readinessByDay, setReadinessByDay] = useState<Record<string, ReadinessEntry>>({});
   // Threshold power for costing a planned ride. Resolved from real rides rather than
   // the profile field, which defaults to 220 W and nobody has changed - see
   // resolveCurrentFtp.
@@ -389,6 +390,10 @@ function App() {
       const planFrom = formatDateString(addDays(startOfWeek, -14));
       const planTo = formatDateString(addDays(startOfWeek, 14));
       setPlannedWorkouts(await fetchPlannedWorkouts(supabase, userId, planFrom, planTo));
+
+      // How the athlete said they felt. The only independent read on recovery this
+      // app has - everything else it could use is already one of the model's inputs.
+      setReadinessByDay(await fetchReadiness(supabase, userId, 60));
 
       // Rides over the FTP window, purely to resolve a current threshold. The weekly
       // ride query above is too narrow: a week with no riding would drop the estimate
@@ -911,11 +916,28 @@ function App() {
           }
         }
 
-        const actualRecovery = todaySleepQuality !== null ? todaySleepQuality : 80;
-        const actualCapacity = todaySleepQuality !== null ? Math.min(100, Math.max(30, todaySleepQuality + 5)) : 75;
+        // Recovery and capacity: only where the athlete has actually said.
+        //
+        // These were `todaySleepQuality` and `todaySleepQuality + 5`. Sleep quality is
+        // input 3 of this same network, so two of its three outputs were being trained
+        // to return one of their own inputs, and one of them plus a constant. A model
+        // can learn that perfectly and has learned nothing - whatever "recovery" and
+        // "athletic capacity" were presented as, they were sleep quality wearing two
+        // other labels.
+        //
+        // The readiness answers the athlete gives in Hub are a real, independent
+        // observation of how they felt. Where a day has one, it is the target. Where it
+        // does not, the outputs are left untrained for that day rather than fed a
+        // stand-in, because a stand-in derived from the inputs is exactly what was
+        // wrong before.
+        const feltToday = readinessByDay[selectedDateStr]?.felt;
+        const observedRecovery = feltToday === undefined ? null : feltToTarget(feltToday);
 
         if (actualTdee !== null && actualTdee > 0) {
-          await net.train(supabase, userId, inputVec, actualTdee, actualRecovery, actualCapacity);
+          await net.train(
+            supabase, userId, inputVec, actualTdee,
+            observedRecovery, observedRecovery
+          );
           console.log("[ZenithFusionNet] Backpropagation online training loop complete for user:", userId);
         } else {
           console.log("[ZenithFusionNet] Skipping training this cycle: not enough measured weight-trend history yet to derive a genuine independent TDEE outcome.");
@@ -1957,6 +1979,11 @@ function App() {
     setRetrainState({ running: true, message: 'Reading your logged history…', error: false });
     try {
       const samples = buildFusionTrainingSamples({
+        readinessScoreByDay: Object.fromEntries(
+          Object.entries(readinessByDay)
+            .map(([day, entry]) => [day, feltToTarget(entry.felt)])
+            .filter(([, score]) => score !== null) as [string, number][]
+        ),
         dailyCaloriesMap: thirtyDayCaloriesMap,
         dailyCompletionMap,
         gymVolumeMap,

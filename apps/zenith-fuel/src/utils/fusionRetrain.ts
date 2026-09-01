@@ -18,8 +18,9 @@ export interface FusionDaySample {
   date: string;
   rawInputs: number[];
   actualTdee: number;
-  actualRecovery: number;
-  actualCapacity: number;
+  /** Null on a day with no readiness answer: the output then receives no gradient. */
+  actualRecovery: number | null;
+  actualCapacity: number | null;
 }
 
 export interface BuildSamplesArgs {
@@ -38,6 +39,8 @@ export interface BuildSamplesArgs {
   /** YYYY-MM-DD -> EMA of measured scale weight. */
   trendWeightMap: Record<string, number>;
   /** Sleep rows, used for quality/duration/stage ratios and HRV. */
+  /** How the athlete said they felt, by day. The only independent read on recovery. */
+  readinessScoreByDay?: Record<string, number>;
   sleepLogs: {
     logged_at: string;
     quality_score?: number | null;
@@ -115,7 +118,7 @@ const dayDiff = (a: string, b: string): number =>
 
 export function buildFusionTrainingSamples(args: BuildSamplesArgs): FusionDaySample[] {
   const {
-    dailyCaloriesMap, dailyCompletionMap, gymVolumeMap, activeCaloriesMap,
+    dailyCaloriesMap, dailyCompletionMap, gymVolumeMap, activeCaloriesMap, readinessScoreByDay,
     caffeineMap, creatineMap, trendWeightMap, sleepLogs, energyPerKgTissue,
   } = args;
 
@@ -219,8 +222,12 @@ export function buildFusionTrainingSamples(args: BuildSamplesArgs): FusionDaySam
         trendWeightMap[date] ?? trendWeightMap[end],
       ],
       actualTdee,
-      actualRecovery: quality,
-      actualCapacity: Math.min(100, Math.max(30, quality + 5)),
+      // Sleep quality is input 3 of the same network; using it as the recovery and
+      // capacity target trained two outputs to reproduce one of their own inputs.
+      // Without a readiness answer for the day there is no independent observation,
+      // and these stay null so the outputs receive no gradient.
+      actualRecovery: readinessScoreByDay?.[date] ?? null,
+      actualCapacity: readinessScoreByDay?.[date] ?? null,
     });
   }
 

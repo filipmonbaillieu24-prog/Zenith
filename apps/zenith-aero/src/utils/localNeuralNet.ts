@@ -291,73 +291,6 @@ export function trainCoachModel(
 
 // ─── MODEL 3: RPE PREDICTOR ──────────────────────────────────────────────────
 
-function generateRPEDefaultWeights() {
-  // Input: [duration/36000, distance/200, IF, tss/500, VI-1.0, avgHR/220] (6 features)
-  // Hidden: 6, Output: 1
-  const W1: number[][] = Array.from({ length: 6 }, () => new Array(6).fill(0));
-  const B1: number[] = new Array(6).fill(0.0);
-  const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
-  const B2: number[] = [-0.2];
-
-  // Set default mappings so high stats map to higher hidden activations, which map to output
-  for (let i = 0; i < 6; i++) {
-    W1[0][i] = 0.4; // duration
-    W1[1][i] = 0.3; // distance
-    W1[2][i] = 0.9; // IF
-    W1[3][i] = 0.8; // TSS
-    W1[4][i] = 0.4; // VI
-    W1[5][i] = 0.6; // HR
-    W2[i][0] = 0.4;
-  }
-
-  return { W1, B1, W2, B2 };
-}
-
-const rpeModel = new SimpleMLP(6, 6, 1, 'cyclo_rpe_nn_weights', generateRPEDefaultWeights);
-
-export function predictRPE(
-  duration: number,
-  _distance: number,
-  intensityFactor: number,
-  _tss: number,
-  variabilityIndex: number,
-  _avgHR: number
-): number {
-  const x = [
-    Math.min(1.5, duration / 36000),
-    Math.min(1.5, _distance / 200),
-    Math.min(1.5, intensityFactor),
-    Math.min(1.5, _tss / 500),
-    Math.max(0, Math.min(1.0, variabilityIndex - 1.0)),
-    Math.min(1.5, _avgHR / 220)
-  ];
-  const y = rpeModel.predict(x);
-  return Math.max(1, Math.min(10, Math.round(1 + y[0] * 9)));
-}
-
-export function trainRPEModel(
-  _duration: number,
-  _distance: number,
-  _intensityFactor: number,
-  _tss: number,
-  _variabilityIndex: number,
-  _avgHR: number,
-  _actualRpe: number
-): void {
-  const x = [
-    Math.min(1.5, _duration / 36000),
-    Math.min(1.5, _distance / 200),
-    Math.min(1.5, _intensityFactor),
-    Math.min(1.5, _tss / 500),
-    Math.max(0, Math.min(1.0, _variabilityIndex - 1.0)),
-    Math.min(1.5, _avgHR / 220)
-  ];
-  const target = Math.max(0, Math.min(1, (_actualRpe - 1) / 9));
-  rpeModel.trainLocal(x, [target], 0.15);
-}
-
-// ─── MODEL 4: RIDE CATEGORIZATION (LABEL CLASSIFIER) ──────────────────────────────
-
 const RIDE_LABELS_KEYS = ['duurride', 'interval', 'wedstrijd', 'herstel', 'groepsride', 'pendel', 'berg'] as const;
 
 function generateLabelDefaultWeights() {
@@ -752,125 +685,6 @@ export function predictPacingStrategy(
 
 // ─── MODEL 8: CADENCE EFFICIENCY TUNER ────────────────────────────────────────
 
-function generateCadenceDefaultWeights() {
-  // Input: [power / 500] (1 feature)
-  // Hidden: 6, Output: 1
-  const W1: number[][] = Array.from({ length: 1 }, () => new Array(6).fill(0));
-  const B1: number[] = new Array(6).fill(0.0);
-  const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
-  const B2: number[] = [0.2]; // base output
-
-  for (let i = 0; i < 6; i++) {
-    W1[0][i] = 0.5; // higher power increases optimal cadence
-    W2[i][0] = 0.4;
-  }
-
-  return { W1, B1, W2, B2 };
-}
-
-const cadenceModel = new SimpleMLP(1, 6, 1, 'cyclo_cadence_weights', generateCadenceDefaultWeights);
-
-export function predictOptimalCadence(power: number): number {
-  const x = [Math.min(1.5, power / 500)];
-  const y = cadenceModel.predict(x);
-  // Scale output 0..1 to cadence range 60..120 rpm
-  return Math.round(60 + y[0] * 60);
-}
-
-export function trainOptimalCadence(power: number, bestCadence: number): void {
-  const x = [Math.min(1.5, power / 500)];
-  const target = Math.max(0, Math.min(1, (bestCadence - 60) / 60));
-  cadenceModel.trainLocal(x, [target], 0.15);
-}
-
-// ─── MODEL 9: GPX ROUTE RIDE DURATION PREDICTOR ─────────────────────────────────────
-
-function generateRouteDurationDefaultWeights() {
-  // Input: [distanceKm/200, elevGainM/3000, ftp/500, weightKg/150] (4 features)
-  // Hidden: 6, Output: 1
-  const W1: number[][] = Array.from({ length: 4 }, () => new Array(6).fill(0));
-  const B1: number[] = new Array(6).fill(0.05);
-  const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
-  const B2: number[] = [-0.15];
-
-  for (let i = 0; i < 6; i++) {
-    W1[0][i] = 1.2;  // distance increases duration
-    W1[1][i] = 0.8;  // elevation gain increases duration
-    W1[2][i] = -0.4; // higher FTP decreases duration
-    W1[3][i] = 0.3;  // higher weight increases duration
-    W2[i][0] = 0.6;
-  }
-
-  return { W1, B1, W2, B2 };
-}
-
-const routeDurationModel = new SimpleMLP(4, 6, 1, 'cyclo_route_duration_weights', generateRouteDurationDefaultWeights);
-
-export function predictRouteDuration(
-  distanceKm: number,
-  elevGainM: number,
-  ftp: number,
-  weightKg: number,
-  windSpeedKmh: number = 0,
-  windAngleRad?: number
-): number {
-  const x = [
-    Math.min(1.5, distanceKm / 200),
-    Math.min(1.5, elevGainM / 3000),
-    Math.min(1.5, (ftp || 220) / 500),
-    Math.min(1.5, (weightKg || 75) / 150)
-  ];
-
-  const y = routeDurationModel.predict(x);
-  // Scale output 0..1 to duration range 0..28800s (8 hours)
-  // Let's set a logical minimum based on a maximum speed of 45km/h
-  const minTime = (distanceKm / 45) * 3600;
-  const predicted = y[0] * 28800;
-  const baseDuration = Math.round(Math.max(minTime, predicted));
-
-  if (windSpeedKmh <= 0) return baseDuration;
-
-  let windMultiplier = 1.0;
-  if (windAngleRad != null) {
-    // Point-to-point wind angle: headwind slows down, tailwind speeds up
-    const headwindAlignment = Math.cos(windAngleRad); // -1 = pure headwind, +1 = pure tailwind
-    const windEffect = (windSpeedKmh / 36) * 0.12 * (-headwindAlignment);
-    windMultiplier = Math.max(0.75, Math.min(1.35, 1 + windEffect));
-  } else {
-    // Loop route wind penalty: headwind portion costs more time than tailwind saves
-    const windEffect = (windSpeedKmh / 36) * 0.04;
-    windMultiplier = 1 + windEffect;
-  }
-
-  return Math.round(baseDuration * windMultiplier);
-}
-
-export function trainRouteDurationModel(
-  distanceKm: number,
-  elevGainM: number,
-  ftp: number,
-  weightKg: number,
-  actualDurationSeconds: number
-): void {
-  const x = [
-    Math.min(1.5, distanceKm / 200),
-    Math.min(1.5, elevGainM / 3000),
-    Math.min(1.5, (ftp || 220) / 500),
-    Math.min(1.5, (weightKg || 75) / 150)
-  ];
-
-  const target = Math.max(0, Math.min(1, actualDurationSeconds / 28800));
-  routeDurationModel.trainLocal(x, [target], 0.15);
-}
-
-// ─── MODEL 10: SUBMAXIMAL VO2MAX ESTIMATOR ─────────────────────────────────────
-//
-// This used to route real inputs (or worse, hardcoded fake ones) through an
-// under-trained MLP whose own training target was just this closed-form ACSM-style
-// formula. Since the net never has any signal beyond what the formula already encodes,
-// it added noise, not insight, over just computing the formula directly. We now compute
-// VO2max straight from the rider's real best 5-minute power effort and real weight.
-
 export function estimateVO2max(best5MinPower: number, weightKg: number): number {
   const power = best5MinPower || 0;
   const weight = weightKg || 75;
@@ -1105,23 +919,6 @@ export function analyzeTrainingProfile(
  * training run unrepeatable even from identical data. The same idiom was already
  * corrected in Kratos's autoregulation trainer and was left standing here.
  */
-function seededShuffle<T>(items: T[], seed = 1337): T[] {
-  const out = [...items];
-  let state = seed;
-  const next = () => {
-    // Mulberry32
-    state |= 0; state = (state + 0x6D2B79F5) | 0;
-    let t = Math.imul(state ^ (state >>> 15), 1 | state);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(next() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
 /**
  * Fits Aero's summary models to the full ride history.
  *
@@ -1142,25 +939,21 @@ function seededShuffle<T>(items: T[], seed = 1337): T[] {
  */
 export function calibrateSummaryModels(
   rides: { date: number; distance: number; elevGain: number; duration: number; eFTP?: number; ctl?: number; atl?: number; tss?: number; hrTSS?: number }[],
-  ftp: number,
-  weight: number
+  // Kept in the signature for callers; route duration no longer trains here and the
+  // FTP model reads its own inputs from the rides.
+  _ftp: number,
+  _weight: number
 ): void {
   const validRides = rides.filter(r => r.distance > 0 && r.duration > 0);
   if (validRides.length === 0) return;
 
-  routeDurationModel.resetToDefaults();
   ftpModel.resetToDefaults();
 
-  // 1. Train Route Duration Model (100 epochs)
-  const epochs = 100;
-  for (let epoch = 0; epoch < epochs; epoch++) {
-    // Reseeded per epoch so the order still varies between epochs, but the whole
-    // run is reproducible.
-    const shuffled = seededShuffle(validRides, 1337 + epoch);
-    for (const r of shuffled) {
-      trainRouteDurationModel(r.distance, r.elevGain, ftp, weight, r.duration);
-    }
-  }
+  // Route duration used to be replayed here across every ride. It is now
+  // predictRouteDurationSeconds in shared, which estimates SPEED from the rider's own
+  // watts per kilogram and the route's climbing and divides - a 10 km route no longer
+  // comes out at 4.7 hours because the bottom of a 0-8 hour output range was
+  // unreachable.
 
   // 2. Train FTP Model (chronological transitions)
   const sortedRides = [...rides].sort((a, b) => a.date - b.date);
@@ -1259,7 +1052,7 @@ export function calibrateFullModels(
 // fetched in one query and handed to each model directly (loadFromPreloaded), instead
 // of each model querying for itself.
 export async function initializeModels(supabase: any, userId: string): Promise<void> {
-  const models = [notesModel, coachModel, rpeModel, labelModel, ftpModel, cadenceModel, routeDurationModel];
+  const models = [notesModel, coachModel, labelModel, ftpModel];
   const modelNames = models.map(m => m.modelName);
 
   const byModel = new Map<string, any>();
@@ -1283,10 +1076,7 @@ export async function initializeModels(supabase: any, userId: string): Promise<v
 export function resetAllWeights() {
   notesModel.reset();
   coachModel.reset();
-  rpeModel.reset();
   labelModel.reset();
   ftpModel.reset();
-  cadenceModel.reset();
-  routeDurationModel.reset();
   resetClimbCalibration();
 }

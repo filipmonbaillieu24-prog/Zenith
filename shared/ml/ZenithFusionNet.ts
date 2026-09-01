@@ -55,7 +55,10 @@ export class ZenithFusionNet {
       // "activity happened" where the input now says "how much" - so the old ones are
       // abandoned rather than retrained. Everything under the v2 key was fitted on a
       // feature that never varied.
-      'zenith_fusion_net_weights_v4',
+      // v4 -> v5: the recovery and capacity outputs were trained against sleep quality,
+      // which is input 3 of this same network. Whatever they learned is the identity
+      // function on a feature they were already given, and it has to go.
+      'zenith_fusion_net_weights_v5',
       this.generateDefaultWeights
     );
   }
@@ -268,8 +271,16 @@ export class ZenithFusionNet {
     userId: string,
     rawInputs: number[],
     actualTdee: number,
-    actualRecovery: number,
-    actualCapacity: number
+    /**
+     * Null when the athlete has not said how they felt that day.
+     *
+     * These used to be sleep quality, and sleep quality plus five - and sleep quality
+     * is an INPUT to this same network, so two outputs were being trained to return
+     * one of their own inputs. A network learns that perfectly and learns nothing.
+     * Where there is no independent observation, the output is left alone.
+     */
+    actualRecovery: number | null,
+    actualCapacity: number | null
   ): Promise<void> {
     if (rawInputs.length !== 12) {
       throw new Error(`ZenithFusionNet.train expects 12 raw inputs, received ${rawInputs.length}`);
@@ -280,11 +291,14 @@ export class ZenithFusionNet {
       rawInputs[6], rawInputs[7], rawInputs[8], rawInputs[9], rawInputs[10], rawInputs[11]
     );
 
-    // Map targets to 0..1 scale
+    // An output with no observation is given the model's own current prediction as
+    // its target, so backpropagation moves it by nothing. That is the honest way to
+    // train one output of three: not a placeholder value, but no gradient at all.
+    const current = this.mlp.predict(x);
     const targets = [
       Math.min(1.0, Math.max(0.0, (actualTdee - 1000) / 4000)),
-      Math.min(1.0, Math.max(0.0, actualRecovery / 100)),
-      Math.min(1.0, Math.max(0.0, actualCapacity / 100))
+      actualRecovery === null ? current[1] : Math.min(1.0, Math.max(0.0, actualRecovery / 100)),
+      actualCapacity === null ? current[2] : Math.min(1.0, Math.max(0.0, actualCapacity / 100))
     ];
 
     await this.mlp.train(supabase, userId, x, targets, 0.15);
@@ -310,25 +324,32 @@ export class ZenithFusionNet {
     days: {
       rawInputs: number[];
       actualTdee: number;
-      actualRecovery: number;
-      actualCapacity: number;
+      /** Null on a day with no readiness answer - see train() above. */
+      actualRecovery: number | null;
+      actualCapacity: number | null;
     }[],
     epochs: number = 25
   ): Promise<{ epochs: number; samples: number; finalMse: number }> {
     const samples = days
       .filter(d => d.rawInputs.length === 12 && Number.isFinite(d.actualTdee) && d.actualTdee > 0)
-      .map(d => ({
-        x: this.buildFeatureVector(
+      .map(d => {
+        const x = this.buildFeatureVector(
           d.rawInputs[0], d.rawInputs[1], d.rawInputs[2], d.rawInputs[3], d.rawInputs[4],
           d.rawInputs[5], d.rawInputs[6], d.rawInputs[7], d.rawInputs[8], d.rawInputs[9],
           d.rawInputs[10], d.rawInputs[11]
-        ),
-        targets: [
-          Math.min(1.0, Math.max(0.0, (d.actualTdee - 1000) / 4000)),
-          Math.min(1.0, Math.max(0.0, d.actualRecovery / 100)),
-          Math.min(1.0, Math.max(0.0, d.actualCapacity / 100))
-        ]
-      }));
+        );
+        // Same rule as train(): an output with no observation is targeted at what the
+        // model already says, so it receives no gradient rather than a stand-in.
+        const current = this.mlp.predict(x);
+        return {
+          x,
+          targets: [
+            Math.min(1.0, Math.max(0.0, (d.actualTdee - 1000) / 4000)),
+            d.actualRecovery === null ? current[1] : Math.min(1.0, Math.max(0.0, d.actualRecovery / 100)),
+            d.actualCapacity === null ? current[2] : Math.min(1.0, Math.max(0.0, d.actualCapacity / 100))
+          ]
+        };
+      });
 
     return this.mlp.trainBatch(supabase, userId, samples, epochs, 0.15);
   }

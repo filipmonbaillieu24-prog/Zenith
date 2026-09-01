@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect, useMemo } from 'react';
 import type { Exercise, TemplateSet, TemplateExercise, Template, WorkoutExerciseLog, Workout, PMCPoint } from './types';
-import { predictProgressiveOverload, predictAutoregWeight, trainAutoregModel, kratosAutoregModel, buildAutoregFeatureVector, computeAutoregRestRatio, computeAutoregE1RMTarget, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, buildTrainingLoadPool, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm, fetchSoreness, saveSoreness, sorenessAdjustment, overallSoreness, SORENESS_GROUPS, SEVERITY_LABELS, SEVERITY_DESCRIPTIONS, Severity, toKg } from '@zenith/shared';
+import { autoregNextWeight, autoregModel, effortSurplus, progressionSteps, progressionWeight, computeAutoregRestRatio, HrvAnsTracker, AcwrForecaster, ExtensionSessionGate, ZenithStatusPill, ZenithHeroStat, ZenithPageHeader, ZenithHeaderTab, ZenithEmptyState, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, computePMC, buildTrainingLoadPool, interpretTSB, tsbContext, toDateKey, toDateKeyFromDate, zenithConfirm, fetchSoreness, saveSoreness, sorenessAdjustment, overallSoreness, SORENESS_GROUPS, SEVERITY_LABELS, SEVERITY_DESCRIPTIONS, Severity, toKg } from '@zenith/shared';
 import { supabase } from './utils/supabaseClient';
 import {
   Dumbbell,
@@ -152,6 +152,81 @@ export default function App() {
 
   // 2. Load data from Supabase
 
+  /**
+   * The top of each exercise's prescribed rep range, from the template.
+   *
+   * A logged set records what happened; only the template says what was asked for. The
+   * progression rule needs both, and comparing reps against a guessed target is how a
+   * rule that reads correctly still gives the wrong answer.
+   */
+  const topRepsByExercise = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const t of templates) {
+      if (!Array.isArray(t?.exercises)) continue;
+      for (const ex of t.exercises as any[]) {
+        if (!ex?.exercise_id || !Array.isArray(ex.sets)) continue;
+        const working = ex.sets.filter((st: any) => st?.type === 'working');
+        const top = Math.max(...working.map((st: any) => Number(st.max_reps) || 0), 0);
+        if (top > 0) out[ex.exercise_id] = top;
+      }
+    }
+    return out;
+  }, [templates]);
+
+  /**
+   * The last working set of each exercise, and how it compared with its prescription.
+   *
+   * The routine table used to call the overload model with a literal 1500 for session
+   * volume and 0 for progression, identically for every exercise on the page - so even
+   * a working model could only ever have given one answer. What the rule needs is what
+   * this particular lift actually did, which is sitting in the same workout history
+   * the page already loads.
+   */
+  const lastPerformanceByExercise = useMemo(() => {
+    const out: Record<string, { repsBeyondTarget: number; repsInReserve: number; sessionsAtThisLoad: number }> = {};
+    const byExercise: Record<string, { at: number; weight: number; reps: number; rir: number; target: number }[]> = {};
+
+    for (const w of workouts) {
+      if (!w?.completed_at || (w as any).is_off_day || !Array.isArray(w.sets)) continue;
+      const at = new Date(w.completed_at).getTime();
+      for (const exLog of w.sets) {
+        const exId = exLog?.exercise_id;
+        if (!exId || !Array.isArray(exLog.sets)) continue;
+        const working = exLog.sets.filter((st: any) => st?.type === 'working' && Number(st.weight) > 0);
+        if (working.length === 0) continue;
+        const best = working[working.length - 1];
+        (byExercise[exId] ||= []).push({
+          at,
+          weight: Number(best.weight),
+          reps: Number(best.reps) || 0,
+          // A missing RIR is not zero. Zero means taken to failure, which would read
+          // as "no room to progress" for every set nobody rated.
+          rir: best.rir === null || best.rir === undefined ? 2 : Number((best as any).rir),
+          // A logged set records what happened, not what was asked; the prescription
+          // lives on the template. Twelve is the top of the rep range this athlete's
+          // routines use, and it is the fallback only when the template is unknown.
+          target: Number(topRepsByExercise[exId] ?? 12)
+        });
+      }
+    }
+
+    for (const [exId, sessions] of Object.entries(byExercise)) {
+      sessions.sort((a, b) => b.at - a.at);
+      const latest = sessions[0];
+      let stuck = 0;
+      for (const s of sessions) {
+        if (Math.abs(s.weight - latest.weight) < 0.01) stuck++;
+        else break;
+      }
+      out[exId] = {
+        repsBeyondTarget: latest.reps - latest.target,
+        repsInReserve: latest.rir,
+        sessionsAtThisLoad: stuck
+      };
+    }
+    return out;
+  }, [workouts, topRepsByExercise]);
+
   const retrainAutoregModel = async (
     uid: string,
     historyWorkouts: any[],
@@ -170,7 +245,7 @@ export default function App() {
         .from('ml_weights')
         .select('weights')
         .eq('user_id', uid)
-        .eq('model_name', kratosAutoregModel.modelName)
+        .eq('model_name', autoregModel.mlp.modelName)
         .maybeSingle();
       const lastTrainedAtMs = cursorRow?.weights?._retrainedUpTo
         ? new Date(cursorRow.weights._retrainedUpTo).getTime()
@@ -194,8 +269,11 @@ export default function App() {
 
       for (const w of newWorkouts) {
         if (!w.sets || !Array.isArray(w.sets)) continue;
-        const dayKey = w.completed_at ? toDateKey(new Date(w.completed_at).getTime()) : '';
-        const sleepQualityForDay = sleepQualityByDay.get(dayKey) ?? 80;
+        // Sleep is no longer an input here. The declaration has three: how much
+        // easier the last set was than asked, how deep into the exercise it was, and
+        // how long the rest ran. Sleep affects whether to progress the LOAD between
+        // sessions, which is the progression rule's job, not this one's - and an input
+        // that was a constant 80 for every unlogged night taught the model nothing.
 
         for (const exLog of w.sets) {
           if (!exLog.sets || exLog.sets.length < 2) continue;
@@ -212,11 +290,26 @@ export default function App() {
             // training use, via the single shared builder — so the persisted
             // weights are never trained on one feature distribution and served on
             // an incompatible one.
-            const rirDelta = (prev.rir ?? targetRir) - targetRir;
+            // One definition of the feature vector, from the declaration, used here
+            // and by every prediction. The pair it used to build went through a
+            // separate builder and a separate target function, which is how a model
+            // ends up trained on one representation and served with another.
             const restRatio = computeAutoregRestRatio(prev.rest_seconds ?? 90, 120);
-            const x = buildAutoregFeatureVector(i - 1, prev.weight, prev.reps, rirDelta, restRatio, sleepQualityForDay);
-            const target = computeAutoregE1RMTarget(curr.weight, curr.reps, curr.rir ?? targetRir);
-            trainingPairs.push({ x, y: target });
+            const surplus = effortSurplus(
+              prev.reps,
+              prev.rir ?? targetRir,
+              // The target for the set being predicted is the one the athlete was
+              // working to, which is the exercise's own prescription.
+              curr.target_reps ?? prev.reps,
+              targetRir
+            );
+            // What actually happened: the ratio between the two consecutive loads.
+            const observedRatio = curr.weight / prev.weight;
+            const pair = autoregModel.toTrainingPair(
+              [surplus, i - 1, restRatio],
+              observedRatio
+            );
+            trainingPairs.push({ x: pair.x, y: pair.targets[0] });
           }
         }
       }
@@ -230,7 +323,7 @@ export default function App() {
         if (cursorRow?.weights) {
           await supabase.from('ml_weights').upsert({
             user_id: uid,
-            model_name: kratosAutoregModel.modelName,
+            model_name: autoregModel.mlp.modelName,
             weights: { ...cursorRow.weights, _retrainedUpTo: newCursor },
             updated_at: new Date().toISOString()
           }, { onConflict: 'user_id,model_name' });
@@ -238,7 +331,7 @@ export default function App() {
         return;
       }
 
-      await kratosAutoregModel.loadFromSupabase(supabase, uid);
+      await autoregModel.mlp.loadFromSupabase(supabase, uid);
       const lr = 0.05;
       for (let epoch = 0; epoch < 50; epoch++) {
         // Fisher-Yates shuffle (unbiased) instead of sort-by-random-comparator.
@@ -249,19 +342,19 @@ export default function App() {
         for (const pair of trainingPairs) {
           // Train locally (synchronous, no network call) for every sample/epoch;
           // only the final result needs to be persisted to Supabase.
-          kratosAutoregModel.trainLocal(pair.x, [pair.y], lr);
+          autoregModel.mlp.trainLocal(pair.x, [pair.y], lr);
         }
       }
 
       // Persist weights AND the advanced "trained up to" cursor together.
       await supabase.from('ml_weights').upsert({
         user_id: uid,
-        model_name: kratosAutoregModel.modelName,
+        model_name: autoregModel.mlp.modelName,
         weights: {
-          W1: kratosAutoregModel.W1,
-          B1: kratosAutoregModel.B1,
-          W2: kratosAutoregModel.W2,
-          B2: kratosAutoregModel.B2,
+          W1: autoregModel.mlp.W1,
+          B1: autoregModel.mlp.B1,
+          W2: autoregModel.mlp.W2,
+          B2: autoregModel.mlp.B2,
           _retrainedUpTo: newCursor
         },
         updated_at: new Date().toISOString()
@@ -550,21 +643,22 @@ export default function App() {
     primaryMuscle?: string | null,
     secondaryMuscles?: string[] | null
   ) => {
-    const rawRec = predictAutoregWeight(
-      setIndex,
+    // The declared model: it returns a RATIO of the previous set's load, from the
+    // effort surplus, the set index and the rest taken. The old one predicted an
+    // absolute one-rep max, sat at 0.96 of a 0-400 kg scale, and so proposed a
+    // 324-388 kg 1RM for every input it was ever given - the guardrails below were
+    // doing all the work and the network was a constant push at the top of the band.
+    let rawRec = autoregNextWeight(
       prevWeight,
       prevReps,
       prevRir,
-      restSeconds,
       targetReps,
       targetRir,
-      stepWeight,
-      isPerSide,
-      recommendedRestSeconds,
-      todaySleepQuality || 80,
-      hardMinWeight,
-      hardMaxWeight
+      setIndex,
+      computeAutoregRestRatio(restSeconds, recommendedRestSeconds)
     );
+    if (hardMinWeight != null) rawRec = Math.max(rawRec, hardMinWeight);
+    if (hardMaxWeight != null) rawRec = Math.min(rawRec, hardMaxWeight);
 
     // Scale by SOTA HRV Autonomic Tone multiplier, then re-apply the hard equipment
     // limits since this multiplier is applied after predictAutoregWeight's own clamp.
@@ -627,24 +721,27 @@ export default function App() {
     recommendedRestSeconds: number,
     actualNextWeight: number,
     actualNextReps: number,
-    actualNextRir: number
+    // Kept in the signature for the window.kratosAutoreg2 bridge, which passes it.
+    // The model does not use it: what the athlete chose to lift next is the
+    // observation, and their RIR on that set is the outcome of the choice.
+    _actualNextRir: number
   ) => {
     if (!session?.user?.id) return;
-    await trainAutoregModel(
-      supabase,
-      session.user.id,
-      setIndex,
-      prevWeight,
-      prevReps,
-      prevRir,
-      targetRir,
-      restSeconds,
-      recommendedRestSeconds,
-      actualNextWeight,
-      actualNextReps,
-      actualNextRir,
-      todaySleepQuality || 80
+    if (!(prevWeight > 0) || !(actualNextWeight > 0)) return;
+
+    // One observation: given how much easier the last set was than asked, how far
+    // deep into the exercise, and how long the rest actually ran, this is the ratio
+    // the athlete chose. The feature vector comes from the same declaration the
+    // recommendation is served from, so the two cannot drift apart.
+    const pair = autoregModel.toTrainingPair(
+      [
+        effortSurplus(prevReps, prevRir, actualNextReps, targetRir),
+        setIndex,
+        computeAutoregRestRatio(restSeconds, recommendedRestSeconds)
+      ],
+      actualNextWeight / prevWeight
     );
+    await autoregModel.mlp.train(supabase, session.user.id, pair.x, pair.targets, 0.05);
   };
 
   useEffect(() => {
@@ -2311,27 +2408,34 @@ export default function App() {
                     <tbody>
                        {exercises.map(ex => {
                         const step = ex.increment_weight || 1;
-                        const rawAiIncrement = predictProgressiveOverload(
-                          1500, // baseline session volume
-                          0,    // weight progression baseline
-                          todaySleepQuality || 80,
-                          currentPMC?.tsb || 0,
-                          10    // standard target reps
-                        );
 
+                        // What this column said before: "+10 kg" beside every exercise,
+                        // for every athlete, on every day. The model behind it was
+                        // pinned at 0.9655 of a 0-1 range mapped onto 0-10 kg, and the
+                        // two inputs that could have varied were passed as literal
+                        // constants - a baseline volume of 1500 and a progression of 0.
+                        //
+                        // It is now the double-progression rule, applied to what this
+                        // exercise actually did last session. Where there is no last
+                        // session to read, it says so instead of inventing a number.
+                        const lastPerf = lastPerformanceByExercise[ex.id];
                         let aiIncrementText = '';
-                        if (ex.increment_per_side) {
-                          // Per-side hardware increment: raw AI total increment divided by 2
-                          const targetPerSideRaw = rawAiIncrement / 2;
-                          // Round to nearest valid hardware step per side (minimum 1 step)
-                          const multiplier = Math.max(1, Math.round(targetPerSideRaw / step));
-                          const aiIncrementPerSide = multiplier * step;
-                          aiIncrementText = `[AI: +${aiIncrementPerSide} ${ex.weight_unit} per side]`;
+                        if (!lastPerf) {
+                          aiIncrementText = '[log a session first]';
                         } else {
-                          // Total increment: round raw AI total increment to valid hardware step
-                          const multiplier = Math.max(1, Math.round(rawAiIncrement / step));
-                          const aiIncrementTotal = multiplier * step;
-                          aiIncrementText = `[AI: +${aiIncrementTotal} ${ex.weight_unit} total]`;
+                          const decision = progressionSteps({
+                            repsBeyondTarget: lastPerf.repsBeyondTarget,
+                            repsInReserve: lastPerf.repsInReserve,
+                            // Genuinely absent, not zero: an athlete who does not wear a
+                            // watch to bed must not be held back for it.
+                            sleepQuality: todaySleepQuality ?? null,
+                            cardioTsb: currentPMC?.tsb ?? null,
+                            sessionsAtThisLoad: lastPerf.sessionsAtThisLoad
+                          });
+                          const added = progressionWeight(decision, step, !!ex.increment_per_side);
+                          aiIncrementText = added > 0
+                            ? `[+${added} ${ex.weight_unit}${ex.increment_per_side ? ' total' : ''}]`
+                            : '[hold this load]';
                         }
 
                         return (

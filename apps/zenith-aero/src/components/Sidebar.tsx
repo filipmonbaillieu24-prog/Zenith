@@ -13,7 +13,7 @@ import {
 import { searchAddress } from '../utils/routing';
 import { FitnessProfile } from '../types/workout';
 import { calculateFuel } from '../utils/fueling';
-import { predictRouteDuration } from '../utils/localNeuralNet';
+import { predictRouteDurationSeconds } from '@zenith/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -528,19 +528,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span>{rt.stats.elevationGain} m ↑</span>
                       <span>max {rt.stats.maxGradient}%</span>
                       {(() => {
-                        let windAngleRad: number | undefined = undefined;
-                        if (routeType === 'point-to-point' && startPoint && endPoint && windData) {
-                          const travelAngleRad = Math.atan2(endPoint[0] - startPoint[0], endPoint[1] - startPoint[1]);
-                          const windDirectionRad = (windData.direction * Math.PI) / 180;
-                          windAngleRad = Math.abs(travelAngleRad - (windDirectionRad + Math.PI)) % (2 * Math.PI);
-                        }
-                        const aiDur = predictRouteDuration(
+                        // Wind was computed here and handed to a route-duration model that was
+                        // saturated regardless of it. The replacement predicts speed from the
+                        // rider's own watts per kilogram and the route's climbing, and does not
+                        // claim to model wind at all.
+                        const aiDur = predictRouteDurationSeconds(
                           rt.stats.distance,
                           rt.stats.elevationGain,
                           fitnessProfile.ftp ?? 220,
-                          fitnessProfile.weight ?? 75,
-                          windData?.speed ?? 0,
-                          windAngleRad
+                          fitnessProfile.weight ?? 75
                         );
                         return (
                           <span style={{ color: '#cbd5e1', display: 'inline-flex', alignItems: 'center', gap: 3 }} title="AI Estimated Ride Duration (incl. wind effect)">
@@ -584,19 +580,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
 
             {activeRoute && (() => {
-              let windAngleRad: number | undefined = undefined;
-              if (routeType === 'point-to-point' && startPoint && endPoint && windData) {
-                const travelAngleRad = Math.atan2(endPoint[0] - startPoint[0], endPoint[1] - startPoint[1]);
-                const windDirectionRad = (windData.direction * Math.PI) / 180;
-                windAngleRad = Math.abs(travelAngleRad - (windDirectionRad + Math.PI)) % (2 * Math.PI);
-              }
-              const activeAIDurationSec = predictRouteDuration(
+              // Wind was computed here and handed to a route-duration model that was
+              // saturated regardless of it. The replacement predicts speed from the
+              // rider's own watts per kilogram and the route's climbing, and does not
+              // claim to model wind at all.
+              const activeAIDurationSec = predictRouteDurationSeconds(
                 activeRoute.stats.distance,
                 activeRoute.stats.elevationGain,
                 fitnessProfile.ftp ?? 220,
-                fitnessProfile.weight ?? 75,
-                windData?.speed ?? 0,
-                windAngleRad
+                fitnessProfile.weight ?? 75
               );
               const fuelPlan = calculateFuel(
                 activeAIDurationSec,
