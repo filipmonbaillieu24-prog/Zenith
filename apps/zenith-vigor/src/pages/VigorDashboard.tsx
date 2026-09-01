@@ -40,7 +40,7 @@ import {
 import { ManualLogModal } from '../components/ManualLogModal';
 import { ProfileSettings } from '../components/ProfileSettings';
 import { ProPaywallModal } from '../components/ProPaywallModal';
-import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore, roughCalorieBalance, localDateToISO, formatDisplayDate } from '@zenith/shared';
+import { calculateZenithSleepScore, HrvAnsTracker, AcwrForecaster, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, fetchRecentDailyTrainingLoads, DailyTrainingLoad, computePMC, recoveryModel, predictRecoveryScore, roughCalorieBalance, localDateToISO, formatDisplayDate, buildTrendWeightMap, measuredWeeklyRateKg } from '@zenith/shared';
 
 interface VigorDashboardProps {
   session: any;
@@ -618,35 +618,33 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     }
     progressPct = Math.min(100, Math.max(0, Math.round(progressPct * 10) / 10));
 
-    // Calculate actual historical rate of change
-    const timeDiffMs = new Date(newest.logged_at).getTime() - new Date(oldest.logged_at).getTime();
+    // The rate, measured the same way Fuel measures it.
+    //
+    // This used to be (newest - oldest) / weeks: two single mornings, each carrying a
+    // kilo of water, standing in for a month of data. It read 0.24 kg/wk where Fuel's
+    // regression on the same body read 0.49, and since this number sets the target
+    // date the two apps promised dates five months apart.
+    //
+    // The fallback was worse than the estimator. When the rate came out small, or in
+    // the "wrong" direction, it substituted -0.5 kg/wk - a constant labelled "standard
+    // healthy pace" - and the forecast date was then built on a number the athlete's
+    // scale had never supported. A date has to come from the weigh-ins or not at all.
     const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
-    let ratePerWeek = 0;
-    let isFallbackRate = false;
+    const trendMap = buildTrendWeightMap(
+      weights.map((w: any) => ({ date: getLocalDateKey(w.logged_at) ?? '', weightKg: parseFloat(w.weight) }))
+    );
+    const rate = measuredWeeklyRateKg(trendMap, 28);
+    const ratePerWeek = rate ?? 0;
+    const measurable = rate !== null && Math.abs(rate) >= 0.05;
+    // Moving away from the goal is a real answer, and pretending otherwise is how the
+    // old fallback got there. It just cannot be turned into an arrival date.
+    const towardGoal = measurable && (isWeightLoss ? rate! < 0 : rate! > 0);
 
-    if (timeDiffMs >= 24 * 60 * 60 * 1000 && weights.length >= 2) {
-      // At least 1 day has passed and we have multiple logs
-      const weeksDiff = timeDiffMs / oneWeekMs;
-      ratePerWeek = (newestWeight - oldestWeight) / weeksDiff;
-    }
-
-    // Fallback if rate is 0 or direction is wrong (e.g. they need to lose weight but are gaining, or vice versa)
-    const isIncorrectDirection = isWeightLoss ? ratePerWeek >= 0 : ratePerWeek <= 0;
-    if (Math.abs(ratePerWeek) < 0.05 || isIncorrectDirection) {
-      isFallbackRate = true;
-      ratePerWeek = isWeightLoss ? -0.5 : 0.25; // standard healthy pace
-    }
-
-    // Estimate weeks needed to reach goal
-    const weeksNeeded = remainingWeight / ratePerWeek;
-    
-    // Target date forecast
-    const forecastDate = new Date(new Date(newest.logged_at).getTime() + weeksNeeded * oneWeekMs);
-    const forecastDateStr = forecastDate.toLocaleDateString('en-US', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    });
+    const forecastDateStr = towardGoal
+      ? new Date(
+          new Date(newest.logged_at).getTime() + (remainingWeight / ratePerWeek) * oneWeekMs
+        ).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      : null;
 
     return {
       oldestWeight,
@@ -655,8 +653,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       remainingWeight: Math.abs(remainingWeight),
       isWeightLoss,
       progressPct,
-      ratePerWeek: Math.round(Math.abs(ratePerWeek) * 100) / 100,
-      isFallbackRate,
+      ratePerWeek: measurable ? Math.round(Math.abs(ratePerWeek) * 100) / 100 : null,
       forecastDateStr,
     };
   }, [weights, profile]);
@@ -1247,15 +1244,28 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 <span className="zenith-eyebrow" style={{ color: 'var(--color-primary)' }}>
                   Goal Progress
                 </span>
-                {goalProgress.isFallbackRate && (
+                {goalProgress.forecastDateStr === null && (
                   <span style={{ fontSize: 9, padding: '3px 8px', borderRadius: 6, background: 'var(--color-primary-dim)', color: 'var(--color-primary)', border: '1px solid rgba(203, 213, 225, 0.2)', fontWeight: 600 }}>
-                    Estimate (Default rate)
+                    Not enough weigh-ins yet
                   </span>
                 )}
               </div>
               <h2 style={{ fontSize: 24, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.3px', lineHeight: 1.2 }}>
-                Estimated target date:<br />
-                <span style={{ color: 'var(--color-primary-bright)', fontSize: 28, display: 'inline-block', marginTop: 4 }}>{goalProgress.forecastDateStr}</span>
+                {goalProgress.forecastDateStr !== null ? (
+                  <>
+                    Estimated target date:<br />
+                    <span style={{ color: 'var(--color-primary-bright)', fontSize: 28, display: 'inline-block', marginTop: 4 }}>{goalProgress.forecastDateStr}</span>
+                  </>
+                ) : (
+                  <>
+                    No target date yet<br />
+                    <span style={{ color: 'var(--text-muted)', fontSize: 14, fontWeight: 500, display: 'inline-block', marginTop: 8, lineHeight: 1.5 }}>
+                      {goalProgress.ratePerWeek === null
+                        ? 'A few more weigh-ins across a couple of weeks and your own rate can be measured.'
+                        : 'Your weight is moving away from the target at the moment, so there is no arrival date to give.'}
+                    </span>
+                  </>
+                )}
               </h2>
               <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0, lineHeight: 1.6 }}>
                 {goalProgress.isWeightLoss 
@@ -1277,7 +1287,11 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
               </div>
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.04)', display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'center' }}>
                 <span className="zenith-eyebrow">Rate</span>
-                <strong style={{ fontSize: 16, color: 'var(--color-primary-bright)', fontWeight: 800 }}>{goalProgress.ratePerWeek} <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)' }}>kg/wk</span></strong>
+                <strong style={{ fontSize: 16, color: 'var(--color-primary-bright)', fontWeight: 800 }}>
+                  {goalProgress.ratePerWeek === null
+                    ? <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>not yet</span>
+                    : <>{goalProgress.ratePerWeek} <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-muted)' }}>kg/wk</span></>}
+                </strong>
               </div>
             </div>
 

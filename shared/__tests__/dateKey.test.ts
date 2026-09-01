@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join, relative } from 'path';
 import { toDateKey, toDateKeyFromDate, calendarDaysAgo } from '../dateKey';
 
@@ -46,14 +46,20 @@ describe('no UTC day-keys in date-bucketing code', () => {
   ];
 
   const offenders: string[] = [];
+  let visited = 0;
   const pattern = /\.toISOString\(\)\s*\.\s*(?:slice\(0,\s*10\)|split\('T'\)\[0\])/;
 
+  // withFileTypes rather than a statSync per entry - see the note in
+  // rulesOfHooks.test.ts. Both walks were ~4.5s against a 5s timeout.
+  const SKIP = new Set(['node_modules', 'dist', 'build', '.git', '.gradle', 'gradle', '.idea', 'coverage']);
   const walk = (dir: string) => {
-    for (const entry of readdirSync(dir)) {
-      if (entry === 'node_modules' || entry === 'dist' || entry === 'build' || entry === '.git') continue;
+    for (const dirent of readdirSync(dir, { withFileTypes: true })) {
+      const entry = dirent.name;
+      if (SKIP.has(entry)) continue;
       const full = join(dir, entry);
-      if (statSync(full).isDirectory()) { walk(full); continue; }
+      if (dirent.isDirectory()) { walk(full); continue; }
       if (!/\.tsx?$/.test(entry)) continue;
+      visited++;
       if (ALLOWED.some(a => entry === a)) continue;
       const src = readFileSync(full, 'utf8');
       src.split('\n').forEach((line, i) => {
@@ -64,6 +70,9 @@ describe('no UTC day-keys in date-bucketing code', () => {
 
   it('every app buckets days with the shared helper', () => {
     walk(APPS);
+    // A walk that quietly stops walking passes this test with zero offenders, which
+    // is the one failure mode a greppy guard cannot survive. Hold the floor.
+    expect(visited, 'the walk stopped finding source files').toBeGreaterThan(100);
     expect(offenders).toEqual([]);
   });
 });

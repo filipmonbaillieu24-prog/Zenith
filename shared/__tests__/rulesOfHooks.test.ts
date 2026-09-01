@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join, relative } from 'path';
 
 /**
@@ -65,18 +65,29 @@ describe('no hooks after an early return', () => {
     }
   };
 
+  // withFileTypes rather than a statSync per entry. This walk crosses two Android
+  // projects as well as the web apps, and on Windows the extra syscall per file took
+  // the test to ~4.5s against vitest's 5s default - so it passed on an idle machine
+  // and failed as a timeout whenever anything else was running. That is what the
+  // intermittent "2 failed" runs were.
+  const SKIP = new Set(['node_modules', 'dist', 'build', '.git', '__tests__', '.gradle', 'gradle', '.idea', 'coverage']);
+  let visited = 0;
   const walk = (dir: string) => {
-    for (const entry of readdirSync(dir)) {
-      if (['node_modules', 'dist', 'build', '.git', '__tests__'].includes(entry)) continue;
-      const full = join(dir, entry);
-      if (statSync(full).isDirectory()) { walk(full); continue; }
-      if (!/\.tsx$/.test(entry)) continue;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (SKIP.has(entry.name)) continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) { walk(full); continue; }
+      if (!/\.tsx$/.test(entry.name)) continue;
+      visited++;
       check(full, readFileSync(full, 'utf8'));
     }
   };
 
   it('every hook runs on every render', () => {
     walk(APPS);
+    // A walk that quietly stops walking passes with zero offenders, which is the one
+    // failure mode a greppy guard cannot survive. Hold the floor.
+    expect(visited, 'the walk stopped finding components').toBeGreaterThan(60);
     expect(offenders).toEqual([]);
   });
 

@@ -325,23 +325,8 @@ export function measuredWeeklyRateUncertaintyKg(
   return error === null ? null : error * 1.96 * 7;
 }
 
-export function measuredWeeklyRateKg(
-  trendWeightMap: Record<string, number>,
-  lookbackDays: number = 28
-): number | null {
-  const dates = Object.keys(trendWeightMap).sort();
-  if (dates.length < MIN_TREND_POINTS) return null;
+// measuredWeeklyRateKg now lives in shared/services/weightTrend.ts and is re-exported
+// below. Vigor showed a different weekly rate for the same body - 0.24 against 0.49 -
+// because it had its own two-endpoint version, and that number sets a target date.
+export { measuredWeeklyRateKg } from '@zenith/shared';
 
-  const last = dates[dates.length - 1];
-  const windowDates = dates.filter(d => dayDiff(d, last) <= lookbackDays);
-  if (windowDates.length < MIN_TREND_POINTS) return null;
-
-  const span = dayDiff(windowDates[0], windowDates[windowDates.length - 1]);
-  // A few days of spread can't distinguish a trend from a hydration swing.
-  if (span < 7) return null;
-
-  const slope = leastSquaresSlope(
-    windowDates.map(d => [dayDiff(windowDates[0], d), trendWeightMap[d]] as [number, number])
-  );
-  return slope === null ? null : slope * 7;
-}
