@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Brain, ArrowRight, CircleCheck, CircleDashed, Wrench } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { BRAIN_REGISTRY, statusFor, BrainStatus, countAllTrainingData, TrainingDataCount } from '@zenith/shared';
+import { BRAIN_REGISTRY, statusFor, BrainStatus, countAllTrainingData, TrainingDataCount, DATA_SOURCES } from '@zenith/shared';
 import { ModelFlowDiagram, modelState, STATE_LABEL, STATE_COLOUR } from './ModelFlowDiagram';
 import './MachineLearningPage.css';
 
@@ -114,27 +114,42 @@ export const MachineLearningPage: React.FC<{ userId: string }> = ({ userId }) =>
         </div>
       </div>
 
-      {statuses.filter(s => s.entry.kind !== 'rule').map(status => (
-        <ModelCard key={status.entry.id} status={status} relativeDate={relativeDate} loading={loading} />
-      ))}
+      <div className="zh-ml-cards">
+        {statuses.filter(s => s.entry.kind !== 'rule').map(status => (
+          <ModelCard key={status.entry.id} status={status} relativeDate={relativeDate} loading={loading} />
+        ))}
+      </div>
 
       <h3 className="zh-ml-section">Deliberately not models</h3>
       <p className="zh-ml-section-note">
         These answer their question with arithmetic anyone can read. Two of them used to be
         networks and were worse for it.
       </p>
-      {rules.map(status => (
-        <RuleCard key={status.entry.id} status={status} />
-      ))}
+      <div className="zh-ml-cards">
+        {rules.map(status => (
+          <RuleCard key={status.entry.id} status={status} />
+        ))}
+      </div>
     </div>
   );
 };
 
-const Flow: React.FC<{ feeds: string[]; surfaces: string[] }> = ({ feeds, surfaces }) => (
+const Flow: React.FC<{ reads: BrainStatus['entry']['reads']; surfaces: string[] }> = ({ reads, surfaces }) => (
   <div className="zh-ml-flow">
     <div className="zh-ml-flow-col">
       <span className="zh-ml-flow-label">Reads</span>
-      {feeds.map(f => <span key={f} className="zh-ml-pill">{f}</span>)}
+      {reads.map(r => {
+        const src = DATA_SOURCES[r.source];
+        return (
+          <span key={r.source} className="zh-ml-read">
+            <strong>{src.label}</strong>
+            <em>{src.table}</em>
+            {/* What exactly is taken from it - the difference between "reads sleep"
+                and "reads the deep and REM share of it". */}
+            <span>{r.fields}</span>
+          </span>
+        );
+      })}
     </div>
     <ArrowRight size={16} className="zh-ml-arrow" />
     <div className="zh-ml-flow-col">
@@ -170,7 +185,7 @@ const ModelCard: React.FC<{
         </span>
       </div>
 
-      <Flow feeds={entry.feeds} surfaces={entry.surfaces} />
+      <Flow reads={entry.reads} surfaces={entry.surfaces} />
 
       <div className="zh-ml-metrics">
         <div>
@@ -291,7 +306,7 @@ const RuleCard: React.FC<{ status: BrainStatus }> = ({ status }) => (
       </div>
       <span className="zh-ml-state rule"><Wrench size={13} /> Rule</span>
     </div>
-    <Flow feeds={status.entry.feeds} surfaces={status.entry.surfaces} />
+    <Flow reads={status.entry.reads} surfaces={status.entry.surfaces} />
     {status.entry.whyNotAModel && (
       <p className="zh-ml-why">{status.entry.whyNotAModel}</p>
     )}

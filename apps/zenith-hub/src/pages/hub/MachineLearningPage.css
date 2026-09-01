@@ -1,6 +1,9 @@
 .zh-ml-page {
   padding: 24px;
-  max-width: 1000px;
+  /* The diagram is the reason this page is wide: three columns of nodes and the lines
+     between them need the room, and there is plenty of it beside the menu. Prose
+     inside still holds itself to a readable measure. */
+  max-width: 1600px;
 }
 
 /* ── Head ─────────────────────────────────────────────────────────────────── */
@@ -72,6 +75,20 @@
 }
 
 /* ── Cards ────────────────────────────────────────────────────────────────── */
+
+/* One column on a laptop, two once the page has the room - a card stretched across
+   1500px puts its three flow columns so far apart the eye loses the row. */
+.zh-ml-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 0 16px;
+}
+
+@media (min-width: 1280px) {
+  .zh-ml-cards { grid-template-columns: 1fr 1fr; }
+}
+
 .zh-ml-card {
   background: rgba(28, 28, 35, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -331,9 +348,74 @@
 
 .zh-ml-diagram {
   width: 100%;
-  min-width: 720px;
+  min-width: 900px;
   height: auto;
   display: block;
+}
+
+.zh-ml-col-head {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  fill: #64748b;
+}
+
+.zh-ml-group-head {
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  opacity: 0.85;
+}
+
+.zh-ml-node-sub {
+  font-size: 8.5px;
+  fill: #7c8797;
+  font-family: inherit;
+}
+
+/* Nothing in the diagram should feel inert: every node is a filter. */
+.zh-ml-diagram g[style*="cursor"] { transition: opacity 0.15s ease; }
+
+.zh-ml-legend-hint {
+  margin-left: auto;
+  font-style: italic;
+  color: #64748b;
+}
+
+/* ── Per-card inputs ──────────────────────────────────────────────────────── */
+.zh-ml-read {
+  display: block;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 7px;
+  padding: 7px 10px;
+  line-height: 1.45;
+}
+
+.zh-ml-read strong {
+  font-size: 11.5px;
+  color: #e2e8f0;
+  font-weight: 700;
+  margin-right: 7px;
+}
+
+.zh-ml-read em {
+  font-size: 9.5px;
+  font-style: normal;
+  color: #64748b;
+  font-family: ui-monospace, monospace;
+}
+
+.zh-ml-read > span {
+  display: block;
+  font-size: 10.5px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Two columns of cards once there is room, since each is now taller. */
+@media (min-width: 1180px) {
+  .zh-ml-flow-col { min-width: 220px; }
 }
 
 .zh-ml-node-text {

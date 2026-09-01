@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BRAIN_REGISTRY, statusFor, measureLearnedShift } from '../ml/registry';
+import { BRAIN_REGISTRY, statusFor, measureLearnedShift, DATA_SOURCES } from '../ml/registry';
 
 /**
  * The registry is what the status page reads, so it has to stay true as models change.
@@ -10,8 +10,25 @@ describe('the model registry describes what actually exists', () => {
   it('gives every entry a question it answers, inputs and a surface', () => {
     for (const entry of BRAIN_REGISTRY) {
       expect(entry.answers.length).toBeGreaterThan(15);
-      expect(entry.feeds.length).toBeGreaterThan(0);
+      expect(entry.reads.length).toBeGreaterThan(0);
       expect(entry.surfaces.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('reads only from sources that exist, and says what it takes from each', () => {
+    // The diagram indexes DATA_SOURCES by these ids and draws a line from whatever comes
+    // back. A typo used to be invisible in the type system and produced a node labelled
+    // "undefined" with a line running out of it.
+    for (const entry of BRAIN_REGISTRY) {
+      for (const read of entry.reads) {
+        expect(DATA_SOURCES[read.source], `${entry.id} reads unknown source ${read.source}`)
+          .toBeDefined();
+        // "sleep" is the source; "quality score and hours" is what makes the diagram
+        // worth reading. A bare restatement of the label teaches nothing.
+        expect(read.fields.length).toBeGreaterThan(8);
+      }
+      const sources = entry.reads.map(r => r.source);
+      expect(new Set(sources).size, `${entry.id} lists a source twice`).toBe(sources.length);
     }
   });
 

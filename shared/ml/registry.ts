@@ -18,6 +18,57 @@ import { SimpleMLP } from './SimpleMLP';
  * reads, which is the only kind that stays true.
  */
 
+/**
+ * The data a model can read, named once.
+ *
+ * The first version of this let each model describe its own inputs in free text, and
+ * the connection diagram drew whatever it was given: "Sleep", "Sleep quality" and
+ * "Sleep duration" appeared as three separate boxes, all of them vigor_sleep. Nineteen
+ * source nodes for what are really seven places data comes from, which made the picture
+ * harder to read than the code it was meant to explain.
+ *
+ * Naming them once fixes the diagram and, more usefully, makes the question "what else
+ * breaks if this table changes" answerable.
+ */
+export type SourceDomain = 'training' | 'body' | 'nutrition' | 'subjective';
+
+export interface DataSource {
+  id: string;
+  label: string;
+  /** Where it lives, so a schema change can be traced to what it moves. */
+  table: string;
+  domain: SourceDomain;
+}
+
+export const DATA_SOURCES: Record<string, DataSource> = {
+  rides:      { id: 'rides',      label: 'Rides',            table: 'rides',              domain: 'training' },
+  runs:       { id: 'runs',       label: 'Runs',             table: 'stride_activities',  domain: 'training' },
+  gym:        { id: 'gym',        label: 'Gym sessions',     table: 'kratos_workouts',    domain: 'training' },
+  templates:  { id: 'templates',  label: 'Gym routines',     table: 'kratos_templates',   domain: 'training' },
+  load:       { id: 'load',       label: 'Training load',    table: 'derived from rides, runs and gym', domain: 'training' },
+  sleep:      { id: 'sleep',      label: 'Sleep',            table: 'vigor_sleep',        domain: 'body' },
+  weight:     { id: 'weight',     label: 'Weight',           table: 'vigor_weight',       domain: 'body' },
+  profile:    { id: 'profile',    label: 'Your profile',     table: 'profiles',           domain: 'body' },
+  intake:     { id: 'intake',     label: 'Food logged',      table: 'fuel_logs',          domain: 'nutrition' },
+  supplements:{ id: 'supplements',label: 'Supplements',      table: 'fuel_supplements_log', domain: 'nutrition' },
+  readiness:  { id: 'readiness',  label: 'How you felt',     table: 'vigor_readiness',    domain: 'subjective' },
+  soreness:   { id: 'soreness',   label: 'Soreness',         table: 'vigor_soreness',     domain: 'subjective' }
+};
+
+export const DOMAIN_LABEL: Record<SourceDomain, string> = {
+  training: 'Training',
+  body: 'Body',
+  nutrition: 'Nutrition',
+  subjective: 'What you tell it'
+};
+
+/** One input: which source, and precisely what is taken from it. */
+export interface ModelInput {
+  source: keyof typeof DATA_SOURCES;
+  /** The specific fields, in the athlete's language. */
+  fields: string;
+}
+
 export type BrainKind =
   /** A declared model: reference function, fitted defaults, learns from history. */
   | 'model'
@@ -32,8 +83,8 @@ export interface BrainEntry {
   kind: BrainKind;
   /** One sentence: the question it answers. */
   answers: string;
-  /** Where its inputs come from, in the athlete's language. */
-  feeds: string[];
+  /** What it reads, by canonical source. */
+  reads: ModelInput[];
   /** Where the answer is shown. */
   surfaces: string[];
   /** Storage key in ml_weights, when it has one. */
@@ -84,7 +135,11 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     name: 'Recovery score',
     kind: 'legacy-model',
     answers: 'How recovered is the athlete today, 0 to 100?',
-    feeds: ['Cardio freshness (CTL vs ATL)', 'Sleep quality', 'Sleep duration', 'Gym load'],
+    reads: [
+      { source: 'load', fields: 'cardio freshness - chronic load against acute' },
+      { source: 'sleep', fields: 'quality score and hours' },
+      { source: 'gym', fields: 'effort-weighted tonnage' }
+    ],
     surfaces: ['Hub dashboard', 'Kratos readiness'],
     storageKey: 'unified_recovery_score_v3',
     mlp: recoveryModel,
@@ -100,7 +155,15 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     name: 'Daily burn model',
     kind: 'legacy-model',
     answers: 'What does the athlete actually expend on a given day?',
-    feeds: ['Intake', 'Strength calories', 'Cardio calories', 'Sleep', 'HRV', 'Caffeine', 'Trend weight'],
+    reads: [
+      { source: 'intake', fields: 'calories logged that day' },
+      { source: 'gym', fields: 'session tonnage, as calories' },
+      { source: 'rides', fields: 'ride calories' },
+      { source: 'runs', fields: 'run calories' },
+      { source: 'sleep', fields: 'quality, hours, deep and REM share, HRV' },
+      { source: 'supplements', fields: 'caffeine and creatine' },
+      { source: 'weight', fields: 'trend weight, and the change it implies' }
+    ],
     surfaces: ['Fuel daily burn', 'Fuel calorie and macro targets'],
     storageKey: 'zenith_fusion_net_weights_v5',
     mlp: ZenithFusionNet.getInstance().mlpForDiagnostics,
@@ -116,7 +179,10 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     name: 'Set-to-set load',
     kind: 'model',
     answers: 'What should the next set weigh, given how the last one went?',
-    feeds: ['Reps and reps-in-reserve last set', 'Target reps', 'Set index', 'Rest taken'],
+    reads: [
+      { source: 'gym', fields: 'the last set: reps, reps in reserve, rest taken, position in the exercise' },
+      { source: 'templates', fields: 'the reps and reps-in-reserve you were aiming for' }
+    ],
     surfaces: ['Kratos Pilot during a workout', 'Kratos web'],
     storageKey: autoregModel.declaration.key,
     declared: autoregModel,
@@ -133,7 +199,12 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     name: 'Load progression',
     kind: 'rule',
     answers: 'Should this lift go up next session, and by how many hardware steps?',
-    feeds: ['Last session reps vs target', 'Reps in reserve', 'Sleep', 'Cardio form', 'Sessions at this load'],
+    reads: [
+      { source: 'gym', fields: 'last session on this lift, and how long it has sat at this load' },
+      { source: 'templates', fields: 'the top of its prescribed rep range, and the equipment step' },
+      { source: 'sleep', fields: 'quality, to decide whether to take the step' },
+      { source: 'load', fields: 'cardio form' }
+    ],
     surfaces: ['Kratos routine table'],
     whyNotAModel:
       'It was a network, pinned at the top of a 0-10 kg range, so it printed "+10 kg" '
@@ -148,7 +219,10 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     name: 'Perceived exertion',
     kind: 'model',
     answers: 'How hard did that ride feel, 1 to 10?',
-    feeds: ['Intensity factor', 'Duration'],
+    reads: [
+      { source: 'rides', fields: 'normalised power against threshold, and how long it lasted' },
+      { source: 'profile', fields: 'threshold power, measured from recent rides' }
+    ],
     surfaces: ['Aero ride page'],
     storageKey: rpeModel.declaration.key,
     declared: rpeModel,
@@ -165,7 +239,10 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     name: 'Route speed',
     kind: 'model',
     answers: 'How fast will this route be ridden, and so how long will it take?',
-    feeds: ['Threshold power per kilogram', 'Climbing metres per kilometre'],
+    reads: [
+      { source: 'rides', fields: 'the speed you averaged, against the climbing per kilometre' },
+      { source: 'profile', fields: 'threshold power and weight' }
+    ],
     surfaces: ['Aero route planner'],
     storageKey: routeSpeedModel.declaration.key,
     declared: routeSpeedModel,
@@ -182,7 +259,10 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     name: 'Cadence',
     kind: 'model',
     answers: 'What cadence would a rider naturally choose at this power?',
-    feeds: ['Watts per kilogram'],
+    reads: [
+      { source: 'rides', fields: 'the cadence you chose at a given power' },
+      { source: 'profile', fields: 'weight, for watts per kilogram' }
+    ],
     surfaces: ['Aero ride page'],
     storageKey: cadenceModel.declaration.key,
     declared: cadenceModel,
@@ -199,7 +279,11 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     name: 'Muscle fatigue map',
     kind: 'rule',
     answers: 'How much fatigue did each session leave in each muscle?',
-    feeds: ['Ride TSS', 'Running load from duration and heart rate', 'Gym sets per exercise'],
+    reads: [
+      { source: 'rides', fields: 'training stress' },
+      { source: 'runs', fields: 'duration and heart rate' },
+      { source: 'gym', fields: 'sets per exercise, and which muscles each trains' }
+    ],
     surfaces: ['Hub muscle heatmap'],
     whyNotAModel:
       'Per-muscle shares of a session\'s load. It scaled from raw kilometres until '
@@ -211,7 +295,13 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     name: 'ZANE metabolic calibration',
     kind: 'rule',
     answers: 'How does this athlete\'s weight actually respond to what they eat?',
-    feeds: ['Logged intake', 'Measured weight trend', 'Activity', 'Sleep'],
+    reads: [
+      { source: 'intake', fields: 'everything logged, on days not marked incomplete' },
+      { source: 'weight', fields: 'the measured trend across the window' },
+      { source: 'rides', fields: 'ride calories' },
+      { source: 'gym', fields: 'session tonnage' },
+      { source: 'sleep', fields: 'quality and duration against your own average' }
+    ],
     surfaces: ['Fuel daily burn', 'Fuel targets'],
     storageKey: 'zane_metabolic_coefficients',
     whyNotAModel:
