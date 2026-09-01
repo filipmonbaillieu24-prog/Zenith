@@ -78,22 +78,6 @@ export interface TrainingDataCount {
 
 const EMPTY: TrainingDataCount = { usable: 0, considered: 0, oldest: null, newest: null };
 
-/**
- * A model with no training path at all.
- *
- * Three of these exist, and saying so is the point: they answer their stated reference
- * and nothing about this athlete moves them. That is a defensible state - the reference
- * is a real formula, checked against real rides - but it is not the same as "still
- * learning", and a status page that blurred the two would be exactly the sort of thing
- * this whole exercise was about.
- */
-const NOT_TRAINED: TrainingSource = {
-  sample: 'nothing yet - this model has no training path and answers its reference',
-  tables: [],
-  minimumUseful: 0,
-  count: async () => EMPTY
-};
-
 export const BRAIN_REGISTRY: BrainEntry[] = [
   {
     id: 'recovery',
@@ -105,10 +89,10 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     storageKey: 'unified_recovery_score_v3',
     mlp: recoveryModel,
     training: {
-      sample: 'a day the athlete answered how they felt',
-      tables: ['vigor_readiness'],
-      minimumUseful: 20,
-      count: countReadinessSamples
+      sample: 'a day with sleep recorded, targeted on your readiness answer where there is one',
+      tables: ['vigor_sleep', 'vigor_readiness'],
+      minimumUseful: 21,
+      count: countRecoverySamples
     }
   },
   {
@@ -169,7 +153,12 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     storageKey: rpeModel.declaration.key,
     declared: rpeModel,
     mlp: rpeModel.mlp,
-    training: NOT_TRAINED
+    training: {
+      sample: 'a ride you gave a perceived-exertion rating to',
+      tables: ['rides'],
+      minimumUseful: 8,
+      count: countRidesWith('rpe')
+    }
   },
   {
     id: 'route-speed',
@@ -181,7 +170,12 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     storageKey: routeSpeedModel.declaration.key,
     declared: routeSpeedModel,
     mlp: routeSpeedModel.mlp,
-    training: NOT_TRAINED
+    training: {
+      sample: 'a ride over 5 km, with the speed you actually averaged on it',
+      tables: ['rides'],
+      minimumUseful: 8,
+      count: countRidesWith('speed')
+    }
   },
   {
     id: 'cadence',
@@ -193,7 +187,12 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
     storageKey: cadenceModel.declaration.key,
     declared: cadenceModel,
     mlp: cadenceModel.mlp,
-    training: NOT_TRAINED
+    training: {
+      sample: 'a ride recording the cadence you chose at a given power',
+      tables: ['rides'],
+      minimumUseful: 8,
+      count: countRidesWith('avgCadence')
+    }
   },
   {
     id: 'muscle-load',
@@ -329,24 +328,6 @@ async function countAutoregSamples(supabase: any, userId: string): Promise<Train
   };
 }
 
-/** Days the athlete said how they felt: the recovery model's only independent target. */
-async function countReadinessSamples(supabase: any, userId: string): Promise<TrainingDataCount> {
-  const { data, error } = await supabase
-    .from('vigor_readiness')
-    .select('date, felt')
-    .eq('user_id', userId)
-    .order('date');
-  if (error || !data) return EMPTY;
-
-  const rows = (data as any[]).filter(r => r.felt !== null && r.felt !== undefined);
-  return {
-    usable: rows.length,
-    considered: (data as any[]).length,
-    oldest: rows.length ? String(rows[0].date) : null,
-    newest: rows.length ? String(rows[rows.length - 1].date) : null
-  };
-}
-
 /**
  * Days with food logged, minus the ones explicitly marked incomplete.
  *
@@ -391,6 +372,94 @@ async function countFuelSamples(supabase: any, userId: string): Promise<Training
       : excluded.size > 0
         ? `${excluded.size} day${excluded.size === 1 ? '' : 's'} you marked incomplete, excluded`
         : undefined
+  };
+}
+
+/**
+ * Rides carrying whichever field a cycling model learns from.
+ *
+ * These three were listed as having no training path at all, which was wrong: every
+ * ride this athlete has recorded carries a logged RPE, an average cadence and a
+ * distance with a duration. The pipeline had been deleted along with the saturated
+ * networks it fed, and the registry repeated the mistake rather than catching it.
+ */
+function countRidesWith(
+  field: 'rpe' | 'avgCadence' | 'speed'
+): (supabase: any, userId: string) => Promise<TrainingDataCount> {
+  return async (supabase: any, userId: string) => {
+    const { data, error } = await supabase
+      .from('rides')
+      .select('date, distance, duration, metadata')
+      .eq('user_id', userId);
+    if (error || !data) return EMPTY;
+
+    let usable = 0;
+    let oldest: number | null = null;
+    let newest: number | null = null;
+
+    for (const r of data as any[]) {
+      let meta = r.metadata;
+      if (typeof meta === 'string') {
+        try { meta = JSON.parse(meta); } catch { meta = {}; }
+      }
+
+      let ok = false;
+      if (field === 'speed') {
+        ok = Number(r.distance) >= 5 && Number(r.duration) > 540;
+      } else {
+        const raw = meta?.[field];
+        ok = raw !== null && raw !== undefined && raw !== '' && Number.isFinite(Number(raw));
+      }
+      if (!ok) continue;
+
+      usable++;
+      const at = Number(r.date);
+      if (Number.isFinite(at)) {
+        if (oldest === null || at < oldest) oldest = at;
+        if (newest === null || at > newest) newest = at;
+      }
+    }
+
+    const iso = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString().slice(0, 10));
+    return {
+      usable,
+      considered: (data as any[]).length,
+      oldest: iso(oldest),
+      newest: iso(newest)
+    };
+  };
+}
+
+/**
+ * Days the recovery model can build a sample for, and how many carry a real answer.
+ *
+ * It trains over the last 31 days whether or not the athlete rated them, standing the
+ * heuristic in where they did not - so counting only the readiness answers reported
+ * "2 usable" for a model with a month of samples. Both numbers matter: a day with a
+ * rating teaches it something, a day without teaches it to repeat the formula.
+ */
+async function countRecoverySamples(supabase: any, userId: string): Promise<TrainingDataCount> {
+  const [sleepRes, readinessRes] = await Promise.all([
+    supabase.from('vigor_sleep').select('logged_at').eq('user_id', userId),
+    supabase.from('vigor_readiness').select('date, felt').eq('user_id', userId)
+  ]);
+
+  const sleep = (sleepRes?.data ?? []) as any[];
+  const readiness = ((readinessRes?.data ?? []) as any[]).filter(
+    r => r.felt !== null && r.felt !== undefined
+  );
+
+  const nights = new Set(sleep.map(s => String(s.logged_at).slice(0, 10)));
+  const sorted = [...nights].sort();
+
+  return {
+    usable: nights.size,
+    considered: nights.size,
+    oldest: sorted[0] ?? null,
+    newest: sorted[sorted.length - 1] ?? null,
+    note: readiness.length === 0
+      ? 'none of these days has a readiness answer, so it is learning the formula rather than you'
+      : `${readiness.length} of them carry your own readiness answer; the rest fall back to the formula`
   };
 }
 

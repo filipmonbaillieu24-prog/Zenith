@@ -80,15 +80,12 @@ describe('training provenance', () => {
     }
   });
 
-  it('marks the models with no training path as such, not as waiting', () => {
-    // "Has not learned anything yet" and "has nothing to learn from" look identical on
-    // a status page and call for opposite responses. A minimum of zero means the
-    // second, and the page says "fixed formula" rather than implying a queue.
+  it('has no model left claiming it cannot learn', () => {
+    // Three models used to carry a "no training path" marker. Every one of them had
+    // data available all along - the pipeline had been deleted with the saturated
+    // network it fed, and this registry repeated the claim rather than checking it.
     const noPath = BRAIN_REGISTRY.filter(e => e.training?.minimumUseful === 0);
-    expect(noPath.length).toBeGreaterThan(0);
-    for (const entry of noPath) {
-      expect(entry.training!.tables).toHaveLength(0);
-    }
+    expect(noPath).toHaveLength(0);
   });
 
   it('names the tables a trainable model actually reads', () => {
@@ -175,5 +172,83 @@ describe('fuel_days records exclusions, not inclusions', () => {
       'u'
     );
     expect(count.usable).toBe(1);
+  });
+});
+
+describe('every model with data available has a path to use it', () => {
+  /**
+   * Three models were listed as having no training path at all. Every one of this
+   * athlete's rides carries a logged RPE, an average cadence and a duration - the
+   * signal was there, and the pipeline had been deleted along with the saturated
+   * network it used to feed. The registry repeated the mistake instead of catching it.
+   */
+  it('leaves no model claiming it cannot learn', () => {
+    for (const entry of BRAIN_REGISTRY.filter(e => e.kind !== 'rule')) {
+      expect(entry.training, entry.name).toBeDefined();
+      expect(entry.training!.minimumUseful, entry.name).toBeGreaterThan(0);
+      expect(entry.training!.tables.length, entry.name).toBeGreaterThan(0);
+    }
+  });
+
+  it('counts rides for the three that learn from them', async () => {
+    const rides = [
+      { date: 1, distance: 77, duration: 11460, metadata: { rpe: 7, avgCadence: 84 } },
+      { date: 2, distance: 3,  duration: 600,   metadata: { avgCadence: 80 } },
+      { date: 3, distance: 42, duration: 6180,  metadata: {} }
+    ];
+    const client = {
+      from: () => ({ select: () => ({ eq: async () => ({ data: rides, error: null }) }) })
+    } as any;
+
+    const counts: Record<string, number> = {};
+    for (const id of ['rpe', 'cadence', 'route-speed']) {
+      const entry = BRAIN_REGISTRY.find(e => e.id === id)!;
+      counts[id] = (await entry.training!.count(client, 'u')).usable;
+    }
+
+    expect(counts.rpe).toBe(1);          // only the first has a rating
+    expect(counts.cadence).toBe(2);      // two recorded a cadence
+    expect(counts['route-speed']).toBe(2); // the 3 km one is too short to pace from
+  });
+});
+
+describe('recovery counts the days it actually trains on', () => {
+  it('reports the month of samples, and how many carry a real answer', async () => {
+    // It trains over the last 31 days whether or not the athlete rated them, standing
+    // the heuristic in where they did not - so counting only readiness answers said
+    // "2 usable" for a model with a month of samples.
+    const client = {
+      from: (table: string) => ({
+        select: () => ({
+          eq: async () => ({
+            data: table === 'vigor_sleep'
+              ? Array.from({ length: 22 }, (_, i) => ({ logged_at: `2026-08-${String(i + 1).padStart(2, '0')}T22:00:00Z` }))
+              : [{ date: '2026-08-30', felt: 3 }, { date: '2026-08-31', felt: 4 }],
+            error: null
+          })
+        })
+      })
+    } as any;
+
+    const entry = BRAIN_REGISTRY.find(e => e.id === 'recovery')!;
+    const count = await entry.training!.count(client, 'u');
+    expect(count.usable).toBe(22);
+    expect(count.note).toContain('2 of them');
+  });
+
+  it('says plainly when it is learning the formula rather than the athlete', async () => {
+    const client = {
+      from: (table: string) => ({
+        select: () => ({
+          eq: async () => ({
+            data: table === 'vigor_sleep' ? [{ logged_at: '2026-08-01T22:00:00Z' }] : [],
+            error: null
+          })
+        })
+      })
+    } as any;
+    const entry = BRAIN_REGISTRY.find(e => e.id === 'recovery')!;
+    const count = await entry.training!.count(client, 'u');
+    expect(count.note).toContain('formula rather than you');
   });
 });

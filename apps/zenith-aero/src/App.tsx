@@ -24,7 +24,7 @@ import { CommandPalette, CommandItem } from './components/CommandPalette';
 import { ProPaywallModal } from './components/common/ProPaywallModal';
 import { calibrateSummaryModels, calibrateFullModels, analyzeCardiacDrift, initializeModels } from './utils/localNeuralNet';
 import { supabase } from './utils/supabaseClient';
-import { isTrustedZenithOrigin, ExtensionSessionGate, ZenithPageHeader, ZenithHeaderTab, resolveCurrentFtp} from '@zenith/shared';
+import { isTrustedZenithOrigin, ExtensionSessionGate, ZenithPageHeader, ZenithHeaderTab, resolveCurrentFtp, trainCyclingModelsFromRides} from '@zenith/shared';
 import { planWorkoutInCalendar } from './utils/trainingHelpers';
 import './index.css';
 
@@ -605,10 +605,41 @@ function App() {
       const freshSummaries = await getAllRideSummaries();
       setRides(freshSummaries);
       
-      const activeFTP = fitnessProfile.ftp ?? globaleFTP ?? 220;
+      // Measured threshold first. `fitnessProfile.ftp ?? globaleFTP ?? 220` gave
+      // everyone 220 W, which is the untouched column default rather than anything an
+      // athlete typed - and the models costed against it are the ones this recalculates.
+      const measured = resolveCurrentFtp(
+        freshSummaries.map(r => ({ date: r.date, metadata: (r as any).metadata ?? { eFTP: (r as any).eFTP } })),
+        fitnessProfile.ftp
+      );
+      const activeFTP = measured.source === 'measured' ? measured.watts : (fitnessProfile.ftp ?? globaleFTP ?? 220);
       const activeWeight = fitnessProfile.weight ?? 75;
       calibrateSummaryModels(freshSummaries, activeFTP, activeWeight);
       calibrateFullModels(freshSummaries, allRides, activeFTP, activeWeight);
+
+      // Perceived exertion, cadence and route speed learn from the rides themselves.
+      // Their training loops were deleted along with the saturated networks they used
+      // to feed, and the registry then reported them as having no training path at
+      // all - while every ride here carries a logged RPE, a cadence and a duration.
+      const uid = (await supabase.auth.getUser()).data.user?.id;
+      if (uid) {
+        await trainCyclingModelsFromRides(
+          supabase,
+          uid,
+          freshSummaries.map(r => ({
+            date: r.date,
+            distanceKm: r.distance,
+            durationSeconds: r.duration,
+            elevationGainM: r.elevGain ?? 0,
+            avgPowerWatts: r.avgPower,
+            normalisedPowerWatts: r.normPower,
+            avgCadenceRpm: r.avgCadence,
+            rpe: r.rpe
+          })),
+          activeWeight,
+          activeFTP
+        );
+      }
     } catch (e) {
       console.error("Error while recalculating rides:", e);
       alert("An error occurred while processing rides: " + (e instanceof Error ? e.message : String(e)));
