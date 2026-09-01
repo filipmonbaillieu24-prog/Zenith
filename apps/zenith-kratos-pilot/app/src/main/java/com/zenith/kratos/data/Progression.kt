@@ -540,7 +540,20 @@ fun autoregulateNextSet(
     incrementPerSide: Boolean,
     minWeight: Double?,
     maxWeight: Double?,
-    mlPrediction: Double? = null
+    mlPrediction: Double? = null,
+    /**
+     * What the next set was already planned to be, before this one was performed.
+     *
+     * Needed because this function reasons from the set just finished, and in an
+     * ascending ramp the next set is deliberately heavier than that one. Without it, a
+     * first set of 85 that came in easy rewrote a planned second set of 100 down to 85 -
+     * the ramp collapsed mid-session, and the athlete was asked for less than the plan
+     * they had walked in with.
+     */
+    plannedNextWeight: Double? = null,
+    /** What the set just finished was asked for, to tell a good set from a bad one. */
+    prevTargetReps: Int? = null,
+    prevTargetRir: Int? = null
 ): WithinSessionTarget {
     val step = if (incrementPerSide) 2.0 * incrementWeight else incrementWeight
     val effectiveStep = if (step <= 0.0) 2.5 else step
@@ -589,9 +602,21 @@ fun autoregulateNextSet(
         snapped
     }
 
+    // A set that met what was asked of it never makes the next set lighter than the
+    // plan. The estimate above is drawn from the set just finished, which in a ramp is
+    // deliberately submaximal - so it underestimates every set above it, and letting it
+    // overwrite a heavier planned weight walks the session backwards. It may still raise
+    // the next set past the plan; only lowering is held back.
+    val underperformed =
+        (prevTargetReps != null && prevReps < prevTargetReps) ||
+        (prevTargetRir != null && prevRir < prevTargetRir)
+    val floored = if (!underperformed && plannedNextWeight != null) {
+        Math.max(roundedW, plannedNextWeight)
+    } else roundedW
+
     // No notch small enough for what this set earned, so progress the reps instead.
-    return if (Math.abs(prevWeight - roundedW) >= 0.5 * effectiveStep) {
-        WithinSessionTarget(roundedW, nextTargetReps)
+    return if (Math.abs(prevWeight - floored) >= 0.5 * effectiveStep) {
+        WithinSessionTarget(floored, nextTargetReps)
     } else {
         // Integer arithmetic on purpose: the float round-trip this replaced landed on
         // 15.999999999999998 and truncated, quietly losing a rep.

@@ -25,9 +25,17 @@ class SimulationTest {
         }
     }
 
-    private fun afterSet(g: Gear, w: Double, r: Int, rir: Int, nextReps: Int, nextRir: Int) {
-        val a = autoregulateNextSet(w, r, rir, nextReps, nextRir, g.increment, g.perSide, g.min, null)
-        println("  did ${w} x $r @ RIR $rir  ->  next set: ${a.weight} ${g.unit} x ${a.reps}")
+    private fun afterSet(
+        g: Gear, w: Double, r: Int, rir: Int,
+        nextReps: Int, nextRir: Int,
+        plannedNext: Double? = null, prevTargetReps: Int? = null, prevTargetRir: Int? = null
+    ) {
+        val a = autoregulateNextSet(
+            w, r, rir, nextReps, nextRir, g.increment, g.perSide, g.min, null, null,
+            plannedNext, prevTargetReps, prevTargetRir
+        )
+        println("  did ${w} x $r @ RIR $rir (asked ${prevTargetReps ?: "-"} @ ${prevTargetRir ?: "-"}), " +
+            "plan for next was ${plannedNext ?: "-"}  ->  next set: ${a.weight} ${g.unit} x ${a.reps}")
     }
 
     @Test
@@ -42,5 +50,9 @@ class SimulationTest {
             ),
             listOf(SetSpec(11, 13, 2), SetSpec(11, 13, 2), SetSpec(11, 13, 2))
         )
+
+        println("=== WITHIN SESSION: set 1 done at 85 x 11 @ RIR 4, set 2 was planned at 100 x 11 ===")
+        afterSet(backExtension, w = 85.0, r = 11, rir = 4, nextReps = 11, nextRir = 2,
+            plannedNext = 100.0, prevTargetReps = 11, prevTargetRir = 2)
     }
 }
