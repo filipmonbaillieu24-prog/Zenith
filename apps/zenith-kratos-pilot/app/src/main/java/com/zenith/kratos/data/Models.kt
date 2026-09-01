@@ -100,7 +100,11 @@ class ActiveSetState(
     repsInput: String = "",
     rirInput: String = "",
     isCompleted: Boolean = false,
-    isNewPR: Boolean = false
+    isNewPR: Boolean = false,
+    /** Why this target, in words - shown in the routine preview. */
+    coachNote: String? = null,
+    /** True when this lift has stopped moving and the note says what is stuck. */
+    stalled: Boolean = false
 ) {
     var type by mutableStateOf(type)
     var targetWeight by mutableStateOf(targetWeight)
@@ -111,6 +115,8 @@ class ActiveSetState(
     var rirInput by mutableStateOf(rirInput)
     var isCompleted by mutableStateOf(isCompleted)
     var isNewPR by mutableStateOf(isNewPR)
+    var coachNote by mutableStateOf(coachNote)
+    var stalled by mutableStateOf(stalled)
 }
 
 data class ActiveExerciseState(

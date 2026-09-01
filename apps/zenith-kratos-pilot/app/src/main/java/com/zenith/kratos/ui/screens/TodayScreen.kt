@@ -311,6 +311,18 @@ fun TodayScreen(
                                             if (log != null && log.sets.isNotEmpty()) {
                                                 val workingSetsInLog = log.sets.filter { it.type == "working" }
 
+                                                // The same set across the recent sessions, newest first, so a lift
+                                                // that has stopped moving can be told apart from one bad day.
+                                                val historyBySetIndex: List<List<SetOutcome>> =
+                                                    workingSetsInLog.indices.map { idx ->
+                                                        recentWorkouts.mapNotNull { w ->
+                                                            w.sets.find { it.exerciseId == ae.exerciseId }
+                                                                ?.sets?.filter { it.type == "working" }
+                                                                ?.getOrNull(idx)
+                                                                ?.let { SetOutcome(it.weight, it.reps, it.rir) }
+                                                        }
+                                                    }
+
                                                 var workIdx = 0
                                                 for (i in ae.sets.indices) {
                                                     val setType = ae.sets[i].type
@@ -319,9 +331,15 @@ fun TodayScreen(
                                                         if (prevSet != null) {
                                                             val spec = workingTargets.getOrNull(workIdx) ?: workingTargets.lastOrNull()
                                                             val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
+                                                            val prevOutcome = SetOutcome(prevSet.weight, prevSet.reps, prevSet.rir)
+                                                            // The baseline session leads the history: progression is
+                                                            // measured from it, and the stall counted behind it.
+                                                            val setHistory = listOf(prevOutcome) +
+                                                                (historyBySetIndex.getOrNull(workIdx) ?: emptyList())
+                                                                    .filterNot { it == prevOutcome }
 
                                                             val next = nextSetTarget(
-                                                                prev = SetOutcome(prevSet.weight, prevSet.reps, prevSet.rir),
+                                                                history = setHistory,
                                                                 minReps = spec?.minReps ?: 8,
                                                                 maxReps = spec?.maxReps ?: 12,
                                                                 targetRir = spec?.targetRir ?: 2,
@@ -330,6 +348,8 @@ fun TodayScreen(
                                                             )
                                                             ae.sets[i].targetWeight = next.weight
                                                             ae.sets[i].targetReps = next.reps
+                                                            ae.sets[i].coachNote = next.advice ?: next.reason
+                                                            ae.sets[i].stalled = next.stall != StallState.NONE
                                                         } else {
                                                             ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
                                                         }
@@ -420,34 +440,50 @@ fun TodayScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(previewExercises) { ex ->
-                            Row(
+                            // A lift that has stopped moving is the one thing on this
+                            // sheet worth reading before the session rather than after.
+                            val stalledNote = ex.sets.firstOrNull { it.stalled }?.coachNote
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(Color(0x0DFFFFFF), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = ex.name,
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        val weightLabel = if (ex.incrementPerSide) "per side" else "total"
+                                        Text(
+                                            text = "${ex.category} • ($weightLabel)",
+                                            color = ZenithSecondary,
+                                            fontSize = 9.sp
+                                        )
+                                    }
                                     Text(
-                                        text = ex.name,
-                                        color = Color.White,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    val weightLabel = if (ex.incrementPerSide) "per side" else "total"
-                                    Text(
-                                        text = "${ex.category} • ($weightLabel)",
-                                        color = ZenithSecondary,
-                                        fontSize = 9.sp
+                                        text = "${ex.sets.size} sets",
+                                        color = ZenithAccentNeon,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
-                                Text(
-                                    text = "${ex.sets.size} sets",
-                                    color = ZenithAccentNeon,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                if (stalledNote != null) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = stalledNote,
+                                        color = Color(0xFFF5A623),
+                                        fontSize = 10.sp,
+                                        lineHeight = 14.sp
+                                    )
+                                }
                             }
                         }
                     }

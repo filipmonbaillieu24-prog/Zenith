@@ -2,6 +2,8 @@ package com.zenith.kratos.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -104,7 +106,17 @@ fun CompletionScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text("Volume", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = ZenithSecondary)
-                        Text("$volume kg", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
+                        // "5231.38007575 kg" was the raw double, eight decimals of it,
+                        // wrapping onto two lines. Nobody needs a hundredth of a gram of
+                        // lifted volume, and the total is in kilograms because sets logged
+                        // in pounds are converted before they are summed.
+                        Text(
+                            text = String.format(java.util.Locale.getDefault(), "%,.0f kg", volume),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            maxLines = 1
+                        )
                     }
                 }
 
@@ -117,7 +129,7 @@ fun CompletionScreen(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Duur", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = ZenithSecondary)
+                        Text("Duration", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = ZenithSecondary)
                         Text("$durationMinutes min", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color.White)
                     }
                 }
@@ -163,11 +175,13 @@ fun CompletionScreen(
                                         modifier = Modifier.padding(bottom = 8.dp)
                                     )
 
-                                    // Display sets as a clean horizontal row of chips
-                                    Row(
+                                    // Chips wrap onto the next line rather than being
+                                    // squeezed: four sets in a fixed Row turned
+                                    // "3: 100.0kg x 15" into four stacked characters wide.
+                                    FlowRow(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         workingSets.forEachIndexed { sIdx, s ->
                                             val label = if (s.type == "warmup") {
@@ -183,10 +197,14 @@ fun CompletionScreen(
                                                     .padding(horizontal = 6.dp, vertical = 4.dp)
                                             ) {
                                                 Text(
-                                                    text = "$label: ${s.weightInput}kg x ${s.repsInput}",
+                                                    // The exercise's own unit. These two
+                                                    // machines are logged in pounds and the
+                                                    // screen labelled every set "kg".
+                                                    text = "$label: ${trimWeight(s.weightInput)} ${ex.weightUnit} x ${s.repsInput}",
                                                     color = ZenithSecondary,
                                                     fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1
                                                 )
                                             }
                                         }
@@ -433,4 +451,11 @@ fun CompletionScreen(
             }
         }
     }
+}
+
+/** "70.0" reads better as "70" on a stack that only makes whole numbers. */
+private fun trimWeight(raw: String): String {
+    val value = raw.trim().toDoubleOrNull() ?: return raw.trim()
+    return if (value == Math.floor(value)) value.toLong().toString()
+    else value.toString().trimEnd('0').trimEnd('.')
 }

@@ -38,12 +38,43 @@ data class SetOutcome(
     val rir: Int
 )
 
+/**
+ * A lift that has stopped moving, and which way it is stuck.
+ *
+ * Worth separating because the two call for opposite responses. Grinding out the top of
+ * the rep range with nothing in reserve, week after week, means the weight should go up
+ * even though the usual rule says hold. Missing the bottom of the range week after week
+ * means the opposite, and is the athlete's call to make rather than the app's.
+ */
+enum class StallState {
+    NONE,
+
+    /** Topping the range at zero reserve, session after session, going nowhere. */
+    GRINDING,
+
+    /** Falling short of the rep floor, session after session. */
+    MISSING_TARGET
+}
+
+/** Sessions stuck the same way before it is called a stall rather than a bad day. */
+const val SESSIONS_BEFORE_STALL = 3
+
 /** What to aim for next time. */
 data class SetTarget(
     val weight: Double,
     val reps: Int,
     /** Plain-language why, for the preview sheet. */
-    val reason: String
+    val reason: String,
+    val stall: StallState = StallState.NONE,
+    /**
+     * What the athlete might do about a stall, when the app should not decide alone.
+     *
+     * Null unless something is genuinely stuck. Dropping the weight is never done
+     * silently: it is the one change that makes the next session easier than the last,
+     * and an app that does that on its own is an app that quietly walks a lift
+     * backwards - which is where this whole rule started.
+     */
+    val advice: String? = null
 )
 
 /** Reserve at or above this means the set had real room left in it. */
@@ -199,6 +230,86 @@ private fun atLeastLastTime(target: SetTarget, prev: SetOutcome): SetTarget {
         else target.reason
     )
 }
+
+/**
+ * How many of the most recent sessions were stuck the same way at the same weight.
+ *
+ * `history` is that one set across recent sessions, newest first. Counting only the
+ * leading run matters: a lift that stalled in July, moved in August and is moving now
+ * is not stalled, and a rule that counted every stuck session anywhere in the window
+ * would say it was.
+ */
+private fun leadingRun(
+    history: List<SetOutcome>,
+    weight: Double,
+    predicate: (SetOutcome) -> Boolean
+): Int {
+    var run = 0
+    for (s in history) {
+        if (s.weight != weight || !predicate(s)) break
+        run++
+    }
+    return run
+}
+
+/**
+ * The same decision as nextSetTarget, with the set's recent history so a lift that has
+ * stopped moving can be recognised as stuck rather than answered the same way forever.
+ *
+ * `history` is newest first and starts with the session being progressed from.
+ */
+fun nextSetTarget(
+    history: List<SetOutcome>,
+    minReps: Int,
+    maxReps: Int,
+    targetRir: Int,
+    stepWeight: Double,
+    snap: (Double) -> Double
+): SetTarget {
+    val prev = history.firstOrNull() ?: return SetTarget(snap(0.0), minReps, "No history for this set yet.")
+    val base = nextSetTarget(prev, minReps, maxReps, targetRir, stepWeight, snap)
+
+    val floor = if (minReps > 0) minReps else 1
+    val ceiling = if (maxReps >= floor) maxReps else floor
+
+    // Grinding: topping the range with nothing left, and the weight has not moved.
+    val grinding = leadingRun(history, prev.weight) { it.reps >= ceiling && it.rir < 1 }
+    if (grinding >= SESSIONS_BEFORE_STALL) {
+        val heavier = snap(prev.weight + stepWeight)
+        // Only if the hardware can actually make a heavier notch; on a stack whose
+        // step rounds back to where it started, saying so is better than pretending.
+        if (heavier > prev.weight) {
+            return SetTarget(
+                weight = heavier,
+                reps = repsToMatchLastTime(heavier, prev, targetRir, floor, ceiling),
+                reason = "$grinding sessions at ${fmt(prev.weight)} with nothing in reserve - the reps are not coming, so the weight goes up.",
+                stall = StallState.GRINDING
+            )
+        }
+        return base.copy(
+            stall = StallState.GRINDING,
+            advice = "Stuck at the top of the range for $grinding sessions with nothing in reserve."
+        )
+    }
+
+    // Missing the floor: the prescription is not being met and repeating it is not
+    // working. Flag it; do not quietly lighten the bar.
+    val missing = leadingRun(history, prev.weight) { it.reps < floor }
+    if (missing >= SESSIONS_BEFORE_STALL) {
+        return base.copy(
+            stall = StallState.MISSING_TARGET,
+            advice = "Short of $floor reps at ${fmt(prev.weight)} for $missing sessions. " +
+                "Worth dropping a step and building back, or checking rest and sleep - " +
+                "your call, not the app's."
+        )
+    }
+
+    return base
+}
+
+/** Weights read better without a trailing .0 on a stack that only makes whole numbers. */
+private fun fmt(w: Double): String =
+    if (w == Math.floor(w)) w.toLong().toString() else w.toString()
 
 /**
  * The session to progress from.

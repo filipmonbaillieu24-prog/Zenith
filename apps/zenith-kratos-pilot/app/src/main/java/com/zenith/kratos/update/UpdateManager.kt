@@ -19,6 +19,17 @@ object UpdateManager {
     private const val TAG = "KratosUpdateManager"
     private const val VERSION_URL = "https://raw.githubusercontent.com/filipmonbaillieu24-prog/Zenith/main/apk/kratos-version.json"
 
+    /**
+     * A URL the CDN has not seen before, so it cannot answer from cache.
+     *
+     * Appended with the right separator - the release URLs carry no query string today,
+     * but a "?" bolted onto one that did would silently corrupt it.
+     */
+    private fun cacheBusted(raw: String): String {
+        val separator = if (raw.contains('?')) '&' else '?'
+        return "$raw${separator}t=${System.currentTimeMillis()}"
+    }
+
     suspend fun checkForUpdates(currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
@@ -26,7 +37,7 @@ object UpdateManager {
             // URL - a static URL here could keep returning a stale versionCode long after
             // a new release lands on main, silently hiding every update from this device.
             // Cache-bust with a timestamp query param and disable caching explicitly.
-            val url = URL("$VERSION_URL?t=${System.currentTimeMillis()}")
+            val url = URL(cacheBusted(VERSION_URL))
             connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -71,8 +82,19 @@ object UpdateManager {
     ) = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
-            val url = URL(downloadUrl)
+            // Cache-bust the APK too, not just the manifest.
+            //
+            // checkForUpdates has done this since the version JSON started coming back
+            // stale, but the download was left on a plain URL - so the device could read
+            // a fresh manifest (1.51, and its digest) and then be handed the previous
+            // APK out of the CDN cache. The bytes then fail the digest check and the
+            // athlete is told the update failed its integrity check, which is true but
+            // reads like tampering when it is a cache serving yesterday's file.
+            val url = URL(cacheBusted(downloadUrl))
             connection = url.openConnection() as HttpURLConnection
+            connection.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate")
+            connection.setRequestProperty("Pragma", "no-cache")
+            connection.instanceFollowRedirects = true
             connection.connectTimeout = 15000
             connection.readTimeout = 15000
             connection.connect()
@@ -113,7 +135,13 @@ object UpdateManager {
                 cacheFile.delete()
                 Log.e(TAG, "APK digest mismatch: expected $expectedSha256, got $actualSha256")
                 withContext(Dispatchers.Main) {
-                    onError("This update failed its integrity check and was not installed.")
+                    // Say what was done and what to do. The file is discarded either
+                    // way; the athlete still needs to know whether to worry.
+                    onError(
+                        "The downloaded file did not match the published version, so it " +
+                        "was discarded. This is usually a cached copy of the previous " +
+                        "release - try again in a minute."
+                    )
                 }
                 return@withContext
             }
