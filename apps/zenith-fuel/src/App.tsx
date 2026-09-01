@@ -10,7 +10,7 @@ import { runZaneCalibration, generateTargets, ZaneProfile, ZaneOutput, DailyLogD
 import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Legend } from 'recharts';
 import type { Ingredient, Recipe, FoodLog, DayState } from './types';
 import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates';
-import { toDateKey, toDateKeyFromDate } from '@zenith/shared';
+import { toDateKey, toDateKeyFromDate, buildTrendWeightMap } from '@zenith/shared';
 import { buildFusionTrainingSamples, measuredWeeklyRateKg, measuredWeeklyRateUncertaintyKg } from './utils/fusionRetrain';
 import { WeekDateSelector } from './components/WeekDateSelector';
 
@@ -2248,9 +2248,21 @@ function App() {
   // the formula-derived projection above. When the two disagree materially the
   // formula's inputs are usually at fault - typically under-logged days, which
   // understate intake and so overstate the deficit.
+  // Built from the weigh-ins themselves, with the shared EMA, so this is literally
+  // the same computation on the same input as Vigor's. Regressing ZANE's own
+  // trendWeightMap instead was subtly different - that map is keyed on days with a
+  // food log and carries the EMA across days without a weigh-in - and the two apps
+  // reported 0.49 and 0.32 kg/wk for one body.
+  const weighInTrendMap = useMemo(
+    () => buildTrendWeightMap(
+      weightLogs.map((w: any) => ({ date: toDateKey(new Date(w.logged_at).getTime()), weightKg: Number(w.weight) }))
+    ),
+    [weightLogs]
+  );
+
   const measuredWeeklyRate = useMemo(
-    () => measuredWeeklyRateKg(zaneResult.trendWeightMap || {}, 28),
-    [zaneResult.trendWeightMap]
+    () => measuredWeeklyRateKg(weighInTrendMap, 28),
+    [weighInTrendMap]
   );
 
   // Expenditure worked back from the measurement: what the athlete must actually
@@ -2271,7 +2283,7 @@ function App() {
    * overstates what the scale has actually established.
    */
   const measuredRateUncertainty = useMemo(
-    () => measuredWeeklyRateUncertaintyKg(zaneResult.trendWeightMap || {}, 28),
+    () => measuredWeeklyRateUncertaintyKg(weighInTrendMap, 28),
     [zaneResult.trendWeightMap]
   );
   const burnUncertaintyKcal = measuredRateUncertainty !== null
