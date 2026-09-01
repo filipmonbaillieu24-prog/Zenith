@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Plus, Trash2, Edit, BookOpen, ChefHat, Sparkles, Check,
-  ShieldAlert, Clock, Barcode, Activity, ChevronLeft, ChevronRight,
+  ShieldAlert, Clock, Barcode, Activity,
   AlertTriangle, Pill
 } from 'lucide-react';
 import { supabase } from './utils/supabaseClient';
@@ -12,6 +12,7 @@ import type { Ingredient, Recipe, FoodLog, DayState } from './types';
 import { getMonday, addDays, formatDateString, toYYYYMMDD } from './utils/dates';
 import { toDateKey, toDateKeyFromDate } from '@zenith/shared';
 import { buildFusionTrainingSamples, measuredWeeklyRateKg } from './utils/fusionRetrain';
+import { WeekDateSelector } from './components/WeekDateSelector';
 
 /** Trims a portion count for display: 1, 1.5, 0.25 - never "1.0000000002". */
 function formatPortions(n: number): string {
@@ -2025,6 +2026,8 @@ function App() {
   );
 
   // Build the list of 7 days in the viewed week
+  const todayDateStr = toDateKeyFromDate(new Date());
+
   const weekDays = useMemo(() => {
     const days = [];
     const weekdaysLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -2627,6 +2630,20 @@ function App() {
       {/* DASHBOARD VIEW */}
       {activeTab === 'dashboard' && (
         <div className="fuel-grid">
+          {/* The dashboard is where most of the reading happens and it had no date
+              control at all: every figure on it is for the selected day, and the only
+              way to change that day was to go to another tab and come back. */}
+          <WeekDateSelector
+            weekDays={weekDays}
+            selectedDateStr={selectedDateStr}
+            onSelect={setSelectedDateStr}
+            formattedWeekRange={formattedWeekRange}
+            onPrevWeek={handlePrevWeek}
+            onNextWeek={handleNextWeek}
+            showIncompleteFlag
+            todayDateStr={todayDateStr}
+          />
+
           {/* Hero row: Calorie Balance is the single "am I on track today" number,
               so it gets the tinted zenith-hero-card treatment and the wider span;
               Macronutrients is demoted to a narrower supporting column beside it. */}
@@ -3407,54 +3424,16 @@ function App() {
       {/* LOGBOOK VIEW */}
       {activeTab === 'logbook' && (
         <div className="fuel-grid animate-fade-in">
-          {/* Week Selector Header */}
-          <div className="fuel-card col-12" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row' }}>
-            <button className="fuel-nav-btn" onClick={handlePrevWeek} style={{ padding: '8px 14px' }}>
-              <ChevronLeft size={16} /> Previous Week
-            </button>
-            <strong style={{ fontSize: 14, color: 'var(--text-main)', letterSpacing: '0.5px' }}>
-              {formattedWeekRange}
-            </strong>
-            <button className="fuel-nav-btn" onClick={handleNextWeek} style={{ padding: '8px 14px' }}>
-              Next Week <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {/* 7 Days Selector cards row */}
-          <div className="col-12" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12 }}>
-            {weekDays.map(day => {
-              const isSelected = day.dateStr === selectedDateStr;
-              return (
-                <div 
-                  key={day.dateStr}
-                  onClick={() => setSelectedDateStr(day.dateStr)}
-                  style={{
-                    background: isSelected ? 'rgba(255, 159, 67, 0.08)' : 'var(--bg-card)',
-                    border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--border-color)'}`,
-                    borderRadius: '12px',
-                    padding: '12px 10px',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    position: 'relative'
-                  }}
-                >
-                  {!day.isComplete && (
-                    <div style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: '50%', background: '#ff9f43' }} title="Zenith Excluded (Incomplete)" />
-                  )}
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>
-                    {day.dayShortName}
-                  </span>
-                  <strong style={{ fontSize: 20, color: isSelected ? 'var(--color-primary)' : 'var(--text-main)', display: 'block', margin: '4px 0', fontFamily: 'Outfit, sans-serif' }}>
-                    {day.dayNum}
-                  </strong>
-                  <span style={{ fontSize: 9, color: 'var(--text-muted)', display: 'block', fontWeight: 600 }}>
-                    {day.calories > 0 ? `${day.calories} kcal` : '—'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          <WeekDateSelector
+            weekDays={weekDays}
+            selectedDateStr={selectedDateStr}
+            onSelect={setSelectedDateStr}
+            formattedWeekRange={formattedWeekRange}
+            onPrevWeek={handlePrevWeek}
+            onNextWeek={handleNextWeek}
+            showIncompleteFlag
+            todayDateStr={todayDateStr}
+          />
 
           {/* Timeline of Logs for Selected Date */}
           <div className="fuel-card col-12">
@@ -3777,60 +3756,28 @@ function App() {
       {/* SUPPLEMENTEN VIEW */}
       {activeTab === 'supplements' && (
         <div className="fuel-grid animate-fade-in">
-          {/* Week Selector Header */}
-          <div className="fuel-card col-12" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'row', marginBottom: 0 }}>
-            <button className="fuel-nav-btn" onClick={handlePrevWeek} style={{ padding: '8px 14px' }}>
-              <ChevronLeft size={16} /> Previous Week
-            </button>
-            <strong style={{ fontSize: 14, color: 'var(--text-main)', letterSpacing: '0.5px' }}>
-              {formattedWeekRange}
-            </strong>
-            <button className="fuel-nav-btn" onClick={handleNextWeek} style={{ padding: '8px 14px' }}>
-              Next Week <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {/* 7 Days Selector cards row */}
-          <div className="col-12" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12, marginBottom: 12 }}>
-            {weekDays.map(day => {
-              const isSelected = day.dateStr === selectedDateStr;
-              const daySupps = supplementsLogs.filter(s => toYYYYMMDD(s.logged_at) === day.dateStr);
-              const dayCreatine = daySupps.filter(s => s.supplement_type === 'creatine').reduce((sum, s) => sum + Number(s.amount), 0);
-              const dayCaffeine = daySupps.filter(s => s.supplement_type === 'caffeine').reduce((sum, s) => sum + Number(s.amount), 0);
+          <WeekDateSelector
+            weekDays={weekDays}
+            selectedDateStr={selectedDateStr}
+            onSelect={setSelectedDateStr}
+            formattedWeekRange={formattedWeekRange}
+            onPrevWeek={handlePrevWeek}
+            onNextWeek={handleNextWeek}
+            todayDateStr={todayDateStr}
+            renderDayNote={day => {
+              const daySupps = supplementsLogs.filter(sup => toYYYYMMDD(sup.logged_at) === day.dateStr);
+              const dayCreatine = daySupps.filter(sup => sup.supplement_type === 'creatine').reduce((sum, sup) => sum + Number(sup.amount), 0);
+              const dayCaffeine = daySupps.filter(sup => sup.supplement_type === 'caffeine').reduce((sum, sup) => sum + Number(sup.amount), 0);
+              if (dayCreatine <= 0 && dayCaffeine <= 0) return '—';
               return (
-                <div 
-                  key={day.dateStr}
-                  onClick={() => setSelectedDateStr(day.dateStr)}
-                  style={{
-                    background: isSelected ? 'rgba(255, 159, 67, 0.08)' : 'var(--bg-card)',
-                    border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--border-color)'}`,
-                    borderRadius: '12px',
-                    padding: '12px 10px',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    position: 'relative'
-                  }}
-                >
-                  <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 800, display: 'block' }}>
-                    {day.dayShortName}
-                  </span>
-                  <strong style={{ fontSize: 20, color: isSelected ? 'var(--color-primary)' : 'var(--text-main)', display: 'block', margin: '4px 0', fontFamily: 'Outfit, sans-serif' }}>
-                    {day.dayNum}
-                  </strong>
-                  <span style={{ fontSize: 9, color: 'var(--text-muted)', display: 'block', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {dayCreatine > 0 || dayCaffeine > 0 ? (
-                      <span style={{ color: 'var(--color-primary)', fontWeight: 800 }}>
-                        {dayCreatine > 0 ? `${dayCreatine}g` : ''}
-                        {dayCreatine > 0 && dayCaffeine > 0 ? ' | ' : ''}
-                        {dayCaffeine > 0 ? `${dayCaffeine}mg` : ''}
-                      </span>
-                    ) : '—'}
-                  </span>
-                </div>
+                <span style={{ color: 'var(--color-primary)', fontWeight: 800 }}>
+                  {dayCreatine > 0 ? `${dayCreatine}g` : ''}
+                  {dayCreatine > 0 && dayCaffeine > 0 ? ' | ' : ''}
+                  {dayCaffeine > 0 ? `${dayCaffeine}mg` : ''}
+                </span>
               );
-            })}
-          </div>
+            }}
+          />
 
           {/* QUICK LOG SUPPLEMENTS */}
           <div className="fuel-card col-4">
