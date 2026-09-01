@@ -4,6 +4,7 @@ import { supabase } from './utils/supabaseClient';
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const ZenithHubPage = lazy(() => import('./pages/hub/ZenithHubPage').then(m => ({ default: m.ZenithHubPage })));
 const CalendarPage = lazy(() => import('./pages/hub/CalendarPage').then(m => ({ default: m.CalendarPage })));
+const MachineLearningPage = lazy(() => import('./pages/hub/MachineLearningPage').then(m => ({ default: m.MachineLearningPage })));
 const PilotPanel = lazy(() => import('./pages/hub/PilotPanel').then(m => ({ default: m.PilotPanel })));
 const ProfilePage = lazy(() => import('./pages/hub/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const SystemConsolePage = lazy(() => import('./pages/hub/SystemConsolePage').then(m => ({ default: m.SystemConsolePage })));
@@ -768,6 +769,12 @@ ${logsMarkdown}
               }}
             />
           )}
+          {activeTab === 'ml' && (
+            <div className="zenith-page-transition">
+              <MachineLearningPage userId={session.user.id} />
+            </div>
+          )}
+
           {activeTab === 'mobiel' && (
             <PilotPanel
               userName={userName}

@@ -11,6 +11,9 @@ export class ZenithFusionNet {
   private static instance: ZenithFusionNet | null = null;
   private mlp: SimpleMLP;
 
+  /** For the status page: read-only access to the underlying network. */
+  public get mlpForDiagnostics(): SimpleMLP { return this.mlp; }
+
   // Input min-max scalers
   private intakeScaler = new MinMaxScaler(1000, 5000);
   /**

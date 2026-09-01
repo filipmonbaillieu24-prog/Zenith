@@ -1,0 +1,422 @@
+.zh-ml-page {
+  padding: 24px;
+  max-width: 1000px;
+}
+
+/* ── Head ─────────────────────────────────────────────────────────────────── */
+.zh-ml-head { margin-bottom: 22px; }
+
+.zh-ml-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-primary, #38bdf8);
+}
+
+.zh-ml-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #e2e8f0;
+  letter-spacing: -0.01em;
+}
+
+.zh-ml-head p {
+  margin: 8px 0 0;
+  color: #94a3b8;
+  font-size: 13px;
+  max-width: 68ch;
+  line-height: 1.6;
+}
+
+.zh-ml-error {
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: #fca5a5;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+/* ── Tally ────────────────────────────────────────────────────────────────── */
+.zh-ml-tally {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 26px;
+}
+
+.zh-ml-tally > div {
+  background: rgba(28, 28, 35, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.zh-ml-tally strong {
+  display: block;
+  font-size: 26px;
+  font-weight: 800;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.zh-ml-tally span {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
+.zh-ml-card {
+  background: rgba(28, 28, 35, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+
+.zh-ml-card.zh-ml-rule { border-style: dashed; }
+
+.zh-ml-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.zh-ml-card-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+.zh-ml-answers {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.zh-ml-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.zh-ml-state.learned { background: rgba(34, 197, 94, 0.12); color: #4ade80; }
+.zh-ml-state.stored  { background: rgba(234, 179, 8, 0.12);  color: #facc15; }
+.zh-ml-state.fresh   { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+.zh-ml-state.rule    { background: rgba(167, 139, 250, 0.14); color: #c4b5fd; }
+
+/* ── Flow ─────────────────────────────────────────────────────────────────── */
+.zh-ml-flow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.zh-ml-flow-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.zh-ml-flow-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.zh-ml-arrow { color: #475569; flex-shrink: 0; }
+
+.zh-ml-pill {
+  display: inline-block;
+  font-size: 11px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 3px 9px;
+  width: fit-content;
+}
+
+.zh-ml-pill-out {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+}
+
+/* ── Metrics ──────────────────────────────────────────────────────────────── */
+.zh-ml-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.zh-ml-metric-label {
+  display: block;
+  position: relative;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+  cursor: help;
+}
+
+.zh-ml-metrics strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.zh-ml-legacy { color: #facc15 !important; font-size: 13px !important; }
+
+/* The explanation appears on hover rather than crowding the card. */
+.zh-ml-hint {
+  display: none;
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  width: 260px;
+  margin-top: 6px;
+  padding: 9px 11px;
+  background: #10141b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: #cbd5e1;
+}
+
+.zh-ml-metric-label:hover .zh-ml-hint { display: block; }
+
+/* ── Examples ─────────────────────────────────────────────────────────────── */
+.zh-ml-examples {
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 10px;
+}
+
+.zh-ml-examples summary {
+  cursor: pointer;
+  font-size: 11.5px;
+  color: #7dd3fc;
+  font-weight: 700;
+}
+
+.zh-ml-examples table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 11.5px;
+}
+
+.zh-ml-examples th {
+  text-align: left;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  padding-bottom: 5px;
+}
+
+.zh-ml-examples td {
+  padding: 5px 10px 5px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+}
+
+.zh-ml-examples td.num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.zh-ml-key {
+  margin: 12px 0 0;
+  font-size: 10.5px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.zh-ml-key code {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.zh-ml-why {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.6;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  padding: 11px 13px;
+}
+
+.zh-ml-section {
+  margin: 34px 0 4px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+.zh-ml-section-note {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  max-width: 68ch;
+  line-height: 1.6;
+}
+
+/* ── Connection map ───────────────────────────────────────────────────────── */
+.zh-ml-map {
+  background: rgba(28, 28, 35, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 22px;
+}
+
+.zh-ml-map h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+
+.zh-ml-map > p {
+  margin: 5px 0 14px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  max-width: 68ch;
+  line-height: 1.55;
+}
+
+/* Wide on a phone: scrolls inside its own box rather than the page. */
+.zh-ml-diagram-wrap { overflow-x: auto; }
+
+.zh-ml-diagram {
+  width: 100%;
+  min-width: 720px;
+  height: auto;
+  display: block;
+}
+
+.zh-ml-node-text {
+  font-size: 10.5px;
+  fill: #cbd5e1;
+  font-family: inherit;
+}
+
+.zh-ml-node-text.strong {
+  fill: #e2e8f0;
+  font-weight: 700;
+}
+
+.zh-ml-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.zh-ml-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.zh-ml-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ── Training data ────────────────────────────────────────────────────────── */
+.zh-ml-training {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.zh-ml-training-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 9px;
+}
+
+.zh-ml-training-head > span:last-child {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.zh-ml-progress {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.zh-ml-progress > div {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.zh-ml-training-note {
+  margin: 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.zh-ml-training-note.warn { color: #facc15; margin-top: 4px; }
+
+.zh-ml-training-note code {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10.5px;
+}

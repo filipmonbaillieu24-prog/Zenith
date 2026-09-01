@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { 
+import {
+  Brain, 
   LayoutDashboard, 
   Calendar, 
   Bike, 
@@ -19,7 +20,7 @@ import {
   Link2
 } from 'lucide-react';
 
-export type TabKey = 'hub' | 'calendar' | 'aero' | 'vigor' | 'kratos' | 'fuel' | 'stride' | 'mobiel' | 'integrations' | 'profile' | 'logs' | 'prijzen' | 'roadmap';
+export type TabKey = 'hub' | 'calendar' | 'ml' | 'aero' | 'vigor' | 'kratos' | 'fuel' | 'stride' | 'mobiel' | 'integrations' | 'profile' | 'logs' | 'prijzen' | 'roadmap';
 
 interface SidebarProps {
   activeTab: TabKey;
@@ -64,6 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       items: [
         { key: 'hub' as TabKey, label: 'Dashboard', icon: LayoutDashboard },
         { key: 'calendar' as TabKey, label: 'Calendar', icon: Calendar },
+        { key: 'ml' as TabKey, label: 'Machine Learning', icon: Brain },
       ],
     },
     {

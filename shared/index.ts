@@ -20,6 +20,7 @@ export * from './ml/calibration';
 export * from './ml/declareModel';
 export * from './ml/models/strengthModels';
 export * from './ml/models/cyclingModels';
+export * from './ml/registry';
 export * from './ml/RecoveryScore';
 export * from './ml/HrvAnsTracker';
 export * from './ml/AcwrForecaster';
