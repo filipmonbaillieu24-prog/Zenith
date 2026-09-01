@@ -252,8 +252,11 @@ const WorkoutDashboard: React.FC<Props> = ({
         const getLatestRideAISummary = (r: RideSummaryWithBests) => {
           const isHeavy = (r.tss ?? r.hrTSS ?? 0) > 150;
           const labelLower = RIDE_LABELS.find(rl => rl.key === r.label)?.label.toLowerCase();
-          const labelStr = labelLower ? `a ${labelLower}${labelLower.includes('ride') ? '' : ' ride'}` : 'a cycling workout';
-          return `Your last ride was ${labelStr} of ${r.distance.toFixed(0)} km with ${r.elevGain}m elevation meters. ${isHeavy ? 'This was a heavy workload for your body - make sure to get adequate recovery!' : 'This was an excellent active workout.'}`;
+          // "a endurance ride" - the article was hardcoded, and every label starting
+          // with a vowel read wrong.
+          const article = labelLower && /^[aeiou]/.test(labelLower) ? 'an' : 'a';
+          const labelStr = labelLower ? `${article} ${labelLower}${labelLower.includes('ride') ? '' : ' ride'}` : 'a cycling workout';
+          return `Your last ride was ${labelStr} of ${r.distance.toFixed(0)} km with ${r.elevGain} m of climbing. ${isHeavy ? 'This was a heavy workload for your body - make sure to get adequate recovery!' : 'This was an excellent active workout.'}`;
         };
         return (
           <div className="wd-main-grid animate-slide-up">

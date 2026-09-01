@@ -20,6 +20,8 @@ export type ModelState =
   | 'trained-no-change'
   | 'ready'
   | 'waiting'
+  | 'corrected'
+  | 'uncorrected'
   | 'rule';
 
 export const STATE_LABEL: Record<ModelState, string> = {
@@ -27,6 +29,8 @@ export const STATE_LABEL: Record<ModelState, string> = {
   'trained-no-change': 'Trained, answers unchanged',
   ready: 'Enough data, not trained yet',
   waiting: 'Waiting for data',
+  corrected: 'Learning from your corrections',
+  uncorrected: 'Waiting to be corrected',
   rule: 'Rule, not a model'
 };
 
@@ -35,12 +39,18 @@ export const STATE_COLOUR: Record<ModelState, string> = {
   'trained-no-change': '#facc15',
   ready: '#38bdf8',
   waiting: '#94a3b8',
+  corrected: '#4ade80',
+  uncorrected: '#94a3b8',
   rule: '#c4b5fd'
 };
 
 export function modelState(status: BrainStatus): ModelState {
   const { entry, hasStoredWeights, learnedShift, data } = status;
   if (entry.kind === 'rule') return 'rule';
+  // Nothing counts examples for these - the correction is applied to the weights and
+  // never stored - so the only thing that can honestly be said is whether any
+  // correction has landed.
+  if (entry.kind === 'feedback') return hasStoredWeights ? 'corrected' : 'uncorrected';
   // Order matters. learnedShift measures how far the model's answers sit from its
   // starting point, and a freshly calibrated model reads a percent or so off its own
   // reference purely from fit error. Checking that first labelled a model that had

@@ -200,10 +200,35 @@ describe('every model with data available has a path to use it', () => {
    * network it used to feed. The registry repeated the mistake instead of catching it.
    */
   it('leaves no model claiming it cannot learn', () => {
-    for (const entry of BRAIN_REGISTRY.filter(e => e.kind !== 'rule')) {
+    for (const entry of BRAIN_REGISTRY.filter(e => e.kind !== 'rule' && e.kind !== 'feedback')) {
       expect(entry.training, entry.name).toBeDefined();
       expect(entry.training!.minimumUseful, entry.name).toBeGreaterThan(0);
       expect(entry.training!.tables.length, entry.name).toBeGreaterThan(0);
+    }
+  });
+
+  it('gives every correction-trained model a key its status can be read from', () => {
+    // These have no dataset to count, so the storage key is the only evidence that a
+    // correction ever landed. Without one the page could say nothing true about them.
+    // A training block would be a lie: the corrections are never written down.
+    for (const entry of BRAIN_REGISTRY.filter(e => e.kind === 'feedback')) {
+      expect(entry.storageKey, entry.name).toBeTruthy();
+      expect(entry.training, entry.name).toBeUndefined();
+    }
+  });
+
+  it('accounts for every set of weights the apps actually persist', () => {
+    // The registry claimed to cover "every model in Zenith" while four of Aero's
+    // networks were missing from it, and the page said so on screen. This pins the
+    // keys that exist in code so a new model cannot be added without appearing here.
+    const keys = BRAIN_REGISTRY.map(e => e.storageKey).filter(Boolean);
+    for (const key of [
+      'cyclo_ftp_nn_weights_v2',
+      'cyclo_label_nn_weights',
+      'cyclo_coach_nn_weights',
+      'cyclo_local_nn_weights'
+    ]) {
+      expect(keys, `${key} is persisted but not described`).toContain(key);
     }
   });
 

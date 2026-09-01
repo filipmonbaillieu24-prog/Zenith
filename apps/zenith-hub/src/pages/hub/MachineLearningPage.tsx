@@ -57,7 +57,8 @@ export const MachineLearningPage: React.FC<{ userId: string }> = ({ userId }) =>
     [weightRows, dataCounts]
   );
 
-  const models = statuses.filter(s => s.entry.kind !== 'rule');
+  const models = statuses.filter(s => s.entry.kind !== 'rule' && s.entry.kind !== 'feedback');
+  const feedback = statuses.filter(s => s.entry.kind === 'feedback');
   const rules = statuses.filter(s => s.entry.kind === 'rule');
   const trained = models.filter(s => s.hasStoredWeights).length;
   const learning = models.filter(s => (s.learnedShift ?? 0) > 0.01).length;
@@ -109,13 +110,30 @@ export const MachineLearningPage: React.FC<{ userId: string }> = ({ userId }) =>
           <span>{learning === 1 ? 'has moved off its starting point' : 'have moved off their starting point'}</span>
         </div>
         <div>
+          <strong>{feedback.length}</strong>
+          <span>{feedback.length === 1 ? 'learns when you correct it' : 'learn when you correct them'}</span>
+        </div>
+        <div>
           <strong>{rules.length}</strong>
           <span>are rules, not models</span>
         </div>
       </div>
 
       <div className="zh-ml-cards">
-        {statuses.filter(s => s.entry.kind !== 'rule').map(status => (
+        {models.map(status => (
+          <ModelCard key={status.entry.id} status={status} relativeDate={relativeDate} loading={loading} />
+        ))}
+      </div>
+
+      <h3 className="zh-ml-section">Learn when you correct them</h3>
+      <p className="zh-ml-section-note">
+        These adjust the moment you disagree with them &mdash; relabel a ride, pick a different
+        session than the one suggested, fix what it read in your notes. There is no training
+        set to count, because the correction is applied to the weights and never written down
+        as a row. So the only honest status is whether they have been corrected at all.
+      </p>
+      <div className="zh-ml-cards">
+        {feedback.map(status => (
           <ModelCard key={status.entry.id} status={status} relativeDate={relativeDate} loading={loading} />
         ))}
       </div>

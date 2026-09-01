@@ -75,7 +75,16 @@ export type BrainKind =
   /** A network predating the declaration format. Still hand-weighted. */
   | 'legacy-model'
   /** Deliberately not a model - a rule someone can read and disagree with. */
-  | 'rule';
+  | 'rule'
+  /**
+   * Learns online, from the athlete correcting it, rather than from a stored dataset.
+   *
+   * Worth its own kind because the status page cannot answer "how much data does it
+   * have" for these: the corrections are applied to the weights as they happen and
+   * never written down as rows. Counting zero would read as "no data", which is a
+   * different and more alarming claim than "there is nothing here to count".
+   */
+  | 'feedback';
 
 export interface BrainEntry {
   id: string;
@@ -308,6 +317,68 @@ export const BRAIN_REGISTRY: BrainEntry[] = [
       'A regression on the athlete\'s own weight trend against intake, which is a '
       + 'measurement rather than a prediction. It is the independent outcome the daily '
       + 'burn model is trained against.'
+  },
+
+  // ── Aero's own networks ───────────────────────────────────────────────────
+  //
+  // These four live in apps/zenith-aero/src/utils/localNeuralNet.ts and were missing
+  // from this registry entirely, while the page above them claimed to describe "every
+  // model in Zenith". They are listed by storage key rather than by object because
+  // shared cannot import from an app; statusFor only ever needed the key, so nothing
+  // is lost but the learned-shift measurement, which needs a declaration.
+  {
+    id: 'ftp_forecast',
+    name: 'Threshold forecast',
+    kind: 'legacy-model',
+    answers: 'Where will this rider\'s threshold power be in eight weeks?',
+    reads: [
+      { source: 'rides', fields: 'estimated threshold per ride, and how often you rode' },
+      { source: 'load', fields: 'chronic and acute load at the time of each ride' },
+      { source: 'weight', fields: 'weight change across the window' }
+    ],
+    surfaces: ['Aero progression'],
+    storageKey: 'cyclo_ftp_nn_weights_v2',
+    training: {
+      sample: 'two rides 14 to 30 days apart that both produced a threshold estimate',
+      tables: ['rides'],
+      minimumUseful: 8,
+      count: countFtpTransitions
+    }
+  },
+  {
+    id: 'ride_label',
+    name: 'Ride labelling',
+    kind: 'feedback',
+    answers: 'What kind of ride was that - recovery, endurance, intervals?',
+    reads: [
+      { source: 'rides', fields: 'intensity, how steady the power was, duration and climbing' }
+    ],
+    surfaces: ['Aero ride page'],
+    storageKey: 'cyclo_label_nn_weights'
+  },
+  {
+    id: 'workout_suggestion',
+    name: 'Workout suggestion',
+    kind: 'feedback',
+    answers: 'What should this rider do next, given how fresh they are?',
+    reads: [
+      { source: 'load', fields: 'form, chronic and acute load' },
+      { source: 'rides', fields: 'how hard the last three rides felt' },
+      { source: 'profile', fields: 'the goal you set' }
+    ],
+    surfaces: ['Aero dashboard'],
+    storageKey: 'cyclo_coach_nn_weights'
+  },
+  {
+    id: 'ride_notes',
+    name: 'Ride notes reader',
+    kind: 'feedback',
+    answers: 'Do these ride notes describe fatigue, recovery, or illness?',
+    reads: [
+      { source: 'rides', fields: 'the words you wrote in the note' }
+    ],
+    surfaces: ['Aero ride list'],
+    storageKey: 'cyclo_local_nn_weights'
   }
 ];
 
@@ -556,6 +627,56 @@ async function countRecoverySamples(supabase: any, userId: string): Promise<Trai
     note: readiness.length === 0
       ? 'none of these days has a readiness answer, so it is learning the formula rather than you'
       : `${readiness.length} of them carry your own readiness answer; the rest fall back to the formula`
+  };
+}
+
+/**
+ * Ride pairs the threshold forecast can learn a transition from.
+ *
+ * One example is a ride, and another 14 to 30 days later, where both produced an
+ * estimated threshold - that gap being the window over which a change in threshold
+ * is attributable to the training in between.
+ */
+async function countFtpTransitions(supabase: any, userId: string): Promise<TrainingDataCount> {
+  const { data, error } = await supabase
+    .from('rides')
+    .select('date, metadata')
+    .eq('user_id', userId);
+  if (error || !data) return EMPTY;
+
+  const withFtp: number[] = [];
+  for (const r of data as any[]) {
+    let meta = r.metadata;
+    if (typeof meta === 'string') {
+      try { meta = JSON.parse(meta); } catch { meta = {}; }
+    }
+    const eftp = Number(meta?.eFTP ?? meta?.eftp);
+    const at = Number(r.date);
+    if (Number.isFinite(eftp) && eftp > 0 && Number.isFinite(at)) withFtp.push(at);
+  }
+  withFtp.sort((a, b) => a - b);
+
+  const DAY = 24 * 3600 * 1000;
+  let pairs = 0;
+  let oldest: number | null = null;
+  let newest: number | null = null;
+  for (let i = 0; i < withFtp.length; i++) {
+    const partner = withFtp.find(t => t - withFtp[i] >= 14 * DAY && t - withFtp[i] <= 30 * DAY);
+    if (partner === undefined) continue;
+    pairs++;
+    if (oldest === null || withFtp[i] < oldest) oldest = withFtp[i];
+    if (newest === null || partner > newest) newest = partner;
+  }
+
+  const iso = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString().slice(0, 10));
+  return {
+    usable: pairs,
+    considered: withFtp.length,
+    oldest: iso(oldest),
+    newest: iso(newest),
+    note: withFtp.length > 0 && pairs === 0
+      ? 'your rides carry threshold estimates, but none are 14 to 30 days apart yet'
+      : undefined
   };
 }
 

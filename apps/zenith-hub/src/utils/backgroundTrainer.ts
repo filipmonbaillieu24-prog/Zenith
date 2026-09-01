@@ -1,4 +1,4 @@
-import { SimpleMLP, recoveryModel, buildRecoveryFeatureVector, recoveryHeuristic, fetchReadiness, feltToTarget, kratosEffortVolume, toDateKeyFromDate } from '@zenith/shared';
+import { recoveryModel, buildRecoveryFeatureVector, recoveryHeuristic, fetchReadiness, feltToTarget, kratosEffortVolume, toDateKeyFromDate } from '@zenith/shared';
 import { computePMC } from './pmc';
 
 // ==========================================================
@@ -8,26 +8,24 @@ import { computePMC } from './pmc';
 
 
 // ==========================================================
-// 2. VO2MAX MODEL DEFINITION
+// 2. VO2MAX MODEL - REMOVED
 // ==========================================================
-function generateVO2maxDefaultWeights() {
-  const W1: number[][] = Array.from({ length: 4 }, () => new Array(6).fill(0));
-  const B1: number[] = new Array(6).fill(0.0);
-  const W2: number[][] = Array.from({ length: 6 }, () => new Array(1).fill(0));
-  const B2: number[] = [0.2];
+//
+// It was trained, stored, and read by nothing.
+//
+// Its single training sample targeted (10.8 * best5MinPower / weight) + 7 - the ACSM
+// estimate - from a feature vector that already contained power and weight. So it was
+// a network fitted to a closed-form formula over its own inputs, which it can only
+// ever reproduce less exactly than the formula does. It was also retrained from
+// scratch on ONE example per run, which is not training in any useful sense.
+//
+// Meanwhile the VO2max shown on Aero's Progression page comes from estimateVO2max()
+// in localNeuralNet.ts, which applies that same ACSM formula directly and states it
+// on screen. The network's output reached no display, no target and no forecast.
+//
+// Same reasoning as the injury model removed below: a model that approximates a rule
+// over its own inputs should be the rule.
 
-  for (let i = 0; i < 6; i++) {
-    W1[0][i] = 0.8;
-    W1[1][i] = -0.5;
-    W1[2][i] = 0.7;
-    W1[3][i] = -0.4;
-    W2[i][0] = 0.5;
-  }
-
-  return { W1, B1, W2, B2 };
-}
-
-export const vo2maxModel = new SimpleMLP(4, 6, 1, 'cyclo_vo2max_weights', generateVO2maxDefaultWeights);
 
 // ==========================================================
 // 3. INJURY RISK MODEL DEFINITION
@@ -58,7 +56,6 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
       .maybeSingle();
 
     const weight = profile?.weight_kg || 75;
-    const ftp = profile?.ftp_watts || 220;
 
     // 2. Fetch recent datasets
     const { data: rides } = await supabase
@@ -116,10 +113,7 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     };
 
     // Load weights
-    await Promise.all([
-      vo2maxModel.loadFromSupabase(supabase, userId),
-      recoveryModel.loadFromSupabase(supabase, userId)
-    ]);
+    await recoveryModel.loadFromSupabase(supabase, userId);
 
     // Pre-calculate cardio TSB history from rides (CR1)
     const rideTSSList = (rides || []).map((r: any) => {
@@ -172,28 +166,6 @@ export async function runBackgroundTraining(supabase: any, userId: string): Prom
     // up numbers.
     //
     // One owner per model. Aero owns this one.
-
-    if (rides && rides.length > 0) {
-      const validRide = rides.find((r: any) => r.avg_power && r.avg_hr);
-      if (validRide) {
-        let witha = validRide.metadata;
-        if (typeof witha === 'string') {
-          try { witha = JSON.parse(witha); } catch { witha = {}; }
-        }
-        const best5mPower = Number(witha?.best_efforts?.m5 ?? ftp * 1.2);
-        const actualVO2max = (10.8 * best5mPower / weight) + 7;
-
-        const x = [
-          Math.min(1.5, Number(validRide.avg_power || 180) / 500),
-          Math.min(1.5, Number(validRide.avg_hr || 135) / 220),
-          0.3, // HR recovery baseline
-          Math.min(1.5, weight / 150)
-        ];
-
-        const target = Math.max(0, Math.min(1, (actualVO2max - 20) / 70));
-        await vo2maxModel.retrainFromScratch(supabase, userId, [{ x, targets: [target] }]);
-      }
-    }
 
     // 5. Train Dual-Sport Fatigue Model (CR14)
     // Train on a 30-day daily stats window
