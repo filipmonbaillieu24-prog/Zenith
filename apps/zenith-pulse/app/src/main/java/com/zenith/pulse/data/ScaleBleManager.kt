@@ -279,7 +279,25 @@ class ScaleBleManager(private val context: Context) {
 
     fun isBluetoothOn(): Boolean = adapter?.isEnabled == true
 
+    private var lastCapturedLine: String? = null
+    private var lastCapturedRepeats = 0
+
     private fun capture(line: String) {
+        // A scale nobody is standing on streams 0.00 kg several times a second. Sixty
+        // of those pushed the actual weigh-in out of a sixty-line buffer, so the one
+        // report that finally contained a real measurement did not show it. Repeats
+        // now collapse in place instead of scrolling history away.
+        if (line == lastCapturedLine) {
+            lastCapturedRepeats++
+            val lines = _capturedFrames.value.toMutableList()
+            if (lines.isNotEmpty()) {
+                lines[lines.lastIndex] = "$line   (x${lastCapturedRepeats + 1})"
+                _capturedFrames.value = lines
+            }
+            return
+        }
+        lastCapturedLine = line
+        lastCapturedRepeats = 0
         // Bounded: this is a diagnostic buffer, not a log file.
         _capturedFrames.value = (_capturedFrames.value + line).takeLast(60)
     }
@@ -721,10 +739,21 @@ class ScaleBleManager(private val context: Context) {
         var kg = raw / qnWeightScaleFactor
         // The divisor announced in the greeting is not always the one used. A value
         // outside any human range means it was out by a factor of ten.
-        if (kg <= 5.0 || kg >= 250.0) kg /= 10.0
+        if (kg > 0.0 && (kg <= 5.0 || kg >= 250.0)) kg /= 10.0
+
+        // Impedance, which is what the scale actually measures besides weight. Body
+        // fat, water and muscle are not sent by the scale at all - they are computed
+        // from this together with age, sex and height, which is why the fields are
+        // still empty.
+        val impedance = if (es30m) u16be(data[7], data[8]) else u16be(data[6], data[7])
+
+        // Nobody is standing on it. Not a reading in progress, and saying "hold still"
+        // at an empty scale is telling the athlete to keep doing something they are
+        // not doing.
+        if (kg <= 0.05) return
 
         measurementSeen = true
-        capture("  QN weight %.2f kg%s".format(kg, if (stable) " (settled)" else " (settling)"))
+        capture("  QN weight %.2f kg%s, impedance %d".format(kg, if (stable) " (settled)" else " (settling)", impedance))
 
         if (!stable) {
             _status.value = "Weighing — hold still (%.1f kg)".format(kg)
@@ -734,7 +763,11 @@ class ScaleBleManager(private val context: Context) {
         qnPublishedThisSession = true
         probeHandler.removeCallbacksAndMessages(null)
         _status.value = "Got it — check the reading and confirm"
-        publish(Reading(weightKg = Math.round(kg * 100) / 100.0, source = "QN protocol"))
+        publish(Reading(
+            weightKg = Math.round(kg * 100) / 100.0,
+            impedanceOhms = if (impedance in 100..1500) impedance.toDouble() else null,
+            source = "QN protocol"
+        ))
     }
 
     /** A measurement the scale had stored from before we connected. */

@@ -930,6 +930,20 @@ fun ZenithPulseScreen(
                                 // On screen as well, and selectable. If sharing is
                                 // awkward this can still be read or screenshotted.
                                 Spacer(modifier = Modifier.height(10.dp))
+                                // The scale measures weight and impedance and nothing
+                                // else. Body fat, water, muscle and bone are computed
+                                // from impedance with age, sex and height - by the app,
+                                // not the scale - so saying so beats an empty field the
+                                // athlete reads as a failure.
+                                scaleReading?.impedanceOhms?.let { ohms ->
+                                    Text(
+                                        text = "Impedance ${ohms.toInt()} Ω measured. Body fat needs your age, sex and height as well — not yet set up here, so enter it by hand for now.",
+                                        fontSize = 10.sp,
+                                        color = ZenithTextMuted,
+                                        modifier = Modifier.padding(top = 6.dp)
+                                    )
+                                }
+
                                 Text(
                                     text = if (showDiagnostics) "Hide details" else "Show details",
                                     fontSize = 11.sp,

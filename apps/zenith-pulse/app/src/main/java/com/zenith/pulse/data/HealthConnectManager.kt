@@ -143,7 +143,14 @@ class HealthConnectManager(private val context: Context) {
         if (!hasWritePermissions()) return "Allow Zenith Pulse to write to Health Connect first"
 
         val zone = ZoneId.systemDefault()
-        val at = date.atTime(12, 0).atZone(zone).toInstant()
+        // Noon is the canonical stamp for a day's reading, so re-saving replaces it
+        // rather than adding a second record beside it. But Health Connect refuses a
+        // record dated in the future, and anyone weighing themselves in the morning
+        // is asking it to accept one several hours ahead - which is exactly what it
+        // rejected at 07:08 with "record time must not be in the future".
+        val noon = date.atTime(12, 0).atZone(zone).toInstant()
+        val now = Instant.now()
+        val at = if (noon.isAfter(now)) now else noon
         val offset = zone.rules.getOffset(at)
 
         return try {
