@@ -174,10 +174,21 @@ export function App() {
   const totalKm = useMemo(() => runs.reduce((acc, r) => acc + r.distanceKm, 0), [runs]);
   const totalDurationSec = useMemo(() => runs.reduce((acc, r) => acc + r.durationSec, 0), [runs]);
   const totalTreadmillKm = useMemo(() => runs.filter(r => r.isTreadmill).reduce((acc, r) => acc + r.distanceKm, 0), [runs]);
+  /**
+   * Average pace across the runs that actually recorded a distance.
+   *
+   * It divided TOTAL duration by TOTAL distance, and a treadmill session imported
+   * with no distance contributes minutes to the numerator and nothing to the
+   * denominator. Two of those alongside one 6.05 km run at 5:51/km produced an
+   * average pace of 12:38/km - slower than every run it was averaging.
+   */
+  const pacedRuns = useMemo(() => runs.filter(r => r.distanceKm > 0 && r.durationSec > 0), [runs]);
   const avgPace = useMemo(() => {
-    if (runs.length === 0 || totalKm === 0) return null;
-    return (totalDurationSec / 60) / totalKm;
-  }, [runs, totalKm, totalDurationSec]);
+    const km = pacedRuns.reduce((acc, r) => acc + r.distanceKm, 0);
+    const sec = pacedRuns.reduce((acc, r) => acc + r.durationSec, 0);
+    if (km <= 0) return null;
+    return (sec / 60) / km;
+  }, [pacedRuns]);
 
   const handleSaveRun = async (newRun: RunActivity) => {
     setRuns(prev => [newRun, ...prev]);
@@ -468,7 +479,17 @@ export function App() {
           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '16px 18px', flex: 1 }}>
             <div className="zenith-label">Average Pace</div>
             <div className="zenith-stat-value" style={{ marginTop: 4 }}>{avgPace !== null ? <>{formatPace(avgPace)} <small>/km</small></> : '–:––'}</div>
-            <span className="kpi-subtext">{avgPace !== null ? 'Strong aerobic efficiency' : 'No data yet'}</span>
+            {/* "Strong aerobic efficiency" was printed here whatever the pace was -
+                a compliment with nothing behind it. What is useful is which runs the
+                average covers, since the ones without a distance are left out. */}
+            <span className="kpi-subtext">
+              {avgPace === null
+                ? 'No run has recorded a distance yet'
+                : `Across ${pacedRuns.length} run${pacedRuns.length === 1 ? '' : 's'} with a distance` +
+                  (runs.length > pacedRuns.length
+                    ? `, ${runs.length - pacedRuns.length} without one excluded`
+                    : '')}
+            </span>
           </div>
         </div>
       </div>
