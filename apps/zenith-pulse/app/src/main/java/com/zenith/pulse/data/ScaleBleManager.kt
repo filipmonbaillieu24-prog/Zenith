@@ -421,9 +421,11 @@ class ScaleBleManager(private val context: Context) {
         _status.value = "Connecting…"
         // Each connection gets one probe. Without this reset a reconnect would stay
         // silent because the previous connection had already used it up.
-        probeRan = false
-        handshakeAccepted = false
         measurementSeen = false
+        qnConfigured = false
+        qnPublishedThisSession = false
+        qnProtocolType = 0
+        qnWeightScaleFactor = 10.0
         gatt = try {
             device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
         } catch (e: SecurityException) {
@@ -442,8 +444,6 @@ class ScaleBleManager(private val context: Context) {
         }
         gatt = null
         probeHandler.removeCallbacksAndMessages(null)
-        probeRan = false
-        handshakeAccepted = false
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
@@ -576,16 +576,7 @@ class ScaleBleManager(private val context: Context) {
     // unlocks the measurement stream the diagnostics will show the frames changing.
     // If none do, the report says exactly what was tried.
     private val writable = mutableListOf<BluetoothGattCharacteristic>()
-    private var probeRan = false
 
-    /**
-     * Set once the scale replies to a probe write.
-     *
-     * The first probe found the answer on its first attempt: writing 0x13 to fff2 got
-     * a 0x14 back and the endless hello stopped. Every write after that is noise sent
-     * to a scale that has already moved on, so the sweep stops here.
-     */
-    private var handshakeAccepted = false
     /** Set when the connected device speaks a profile whose payload is encrypted. */
     private var encryptedProfile = false
     /** Set once anything that could be a measurement arrives, to stop the probing. */
@@ -606,157 +597,155 @@ class ScaleBleManager(private val context: Context) {
     }
     private val probeHandler = Handler(Looper.getMainLooper())
 
-    /** Appends the frame checksum: the sum of every preceding byte, mod 256. */
-    private fun withChecksum(body: ByteArray): ByteArray {
+    // ── The QN protocol, implemented rather than probed ──────────────────────────
+    //
+    // Searching for prior art found this scale's family documented, and three things
+    // in what the probe had been sending were wrong:
+    //
+    //  * Byte 2 of the config frame is the protocol type the scale announced in its
+    //    greeting, not a constant. This scale says 0xFF; we were sending 0x15. It
+    //    replied anyway, which is why the probe looked like it had succeeded.
+    //  * The 0x14 reply is not an acknowledgement to file away. It is a request, and
+    //    the answer is a 0x20 time frame. We received it and did nothing, which is
+    //    exactly where every session has stalled.
+    //  * The weight divisor is not fixed. The greeting carries it: byte 10 of the
+    //    0x12 frame is 1 for hundredths of a kilogram and anything else for tenths.
+    //    This scale says 0x03, so tenths.
+    //
+    // Writes go to FFF2 and notifications arrive on FFF1 - the "type 2" layout. AE01
+    // was tried first last release on the strength of a bug report about a different
+    // scale, and got no reply at all, which settles that.
+
+    /** Announced by the scale in its greeting; echoed back in everything we send. */
+    private var qnProtocolType: Byte = 0
+    /** 100 for hundredths of a kilogram, 10 for tenths. From the greeting. */
+    private var qnWeightScaleFactor = 10.0
+    private var qnConfigured = false
+    private var qnPublishedThisSession = false
+
+    private fun qnChecksum(buf: ByteArray, from: Int, toInclusive: Int): Byte {
         var sum = 0
-        for (b in body) sum += (b.toInt() and 0xFF)
-        return body + (sum and 0xFF).toByte()
+        for (i in from..toInclusive) sum = (sum + (buf[i].toInt() and 0xFF)) and 0xFF
+        return sum.toByte()
     }
 
-    /**
-     * The QN handshake, as documented rather than guessed.
-     *
-     * `13 09 15 01 10 00 00 00 42` is the published magic frame for this protocol,
-     * fixed and complete - which is why the probe got an answer from it on the first
-     * attempt. I had briefly read the trailing zeros as an unfilled timestamp and
-     * started substituting a real clock into them; that was wrong, and it would have
-     * broken the one frame known to work. The time is a SEPARATE write.
-     */
-    private val QN_MAGIC = byteArrayOf(0x13, 0x09, 0x15, 0x01, 0x10, 0x00, 0x00, 0x00, 0x42)
+    /** Seconds since the scale's own epoch. Not the round 2000-01-01 UTC value. */
+    private fun qnSeconds(): Long = (System.currentTimeMillis() / 1000L) - 946_702_800L
 
-    /**
-     * The time write: 0x02 followed by four little-endian seconds.
-     *
-     * The epoch is Unix minus 946,702,800, the constant this firmware family counts
-     * from. It is not the round 2000-01-01 UTC value and there is no point tidying it
-     * into one - the scale is the authority on its own clock.
-     */
-    private fun qnTimeFrame(): ByteArray {
-        val seconds = (System.currentTimeMillis() / 1000L) - 946_702_800L
+    private fun qnTimeBytes(): ByteArray {
+        val t = qnSeconds()
         return byteArrayOf(
-            0x02,
-            (seconds and 0xFF).toByte(),
-            ((seconds shr 8) and 0xFF).toByte(),
-            ((seconds shr 16) and 0xFF).toByte(),
-            ((seconds shr 24) and 0xFF).toByte()
+            (t and 0xFF).toByte(),
+            ((t shr 8) and 0xFF).toByte(),
+            ((t shr 16) and 0xFF).toByte(),
+            ((t shr 24) and 0xFF).toByte()
         )
     }
 
-    private fun handshakeFrames(): List<ByteArray> = listOf(QN_MAGIC, qnTimeFrame())
-
-    private fun probeFrames(): List<ByteArray> = handshakeFrames() + listOf(
-        // Acknowledge the hello. 0x13, total length 9, then a unit selector.
-        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x01, 0x10, 0x00, 0x00, 0x00)),
-        withChecksum(byteArrayOf(0x13, 0x09, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00)),
-        // Ask for state, the usual follow-up in this frame family.
-        withChecksum(byteArrayOf(0x14, 0x09, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00)),
-        withChecksum(byteArrayOf(0x14, 0x05, 0x10, 0x00)),
-        // Acknowledge using the same command byte the scale sent, in case it wants
-        // its own hello echoed back.
-        withChecksum(byteArrayOf(0x12, 0x05, 0x00, 0x00))
-    )
-
     @SuppressLint("MissingPermission")
-    private fun runHandshakeProbe() {
-        if (probeRan) return
+    private fun writeQn(frame: ByteArray, label: String) {
         val g = gatt ?: return
-        val targets = writable.toList()
-        if (targets.isEmpty()) {
-            capture("PROBE skipped - no writable characteristic")
+        val target = writable.firstOrNull { it.uuid == FFF2 } ?: writable.firstOrNull() ?: return
+        try {
+            @Suppress("DEPRECATION")
+            target.writeType = if (target.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0) {
+                BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            } else {
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            }
+            @Suppress("DEPRECATION")
+            target.value = frame
+            @Suppress("DEPRECATION")
+            val ok = g.writeCharacteristic(target)
+            capture("TX $label ${frame.toHex()}${if (ok) "" else "  (write refused)"}")
+        } catch (e: Exception) {
+            capture("TX $label failed: ${e.message}")
+        }
+    }
+
+    /** The greeting: protocol type, weight divisor, then configure. */
+    private fun onQnScaleInfo(data: ByteArray) {
+        if (data.size <= 10) return
+        qnProtocolType = (data[2].toInt() and 0xFF).toByte()
+        qnWeightScaleFactor = if ((data[10].toInt() and 0xFF) == 1) 100.0 else 10.0
+        if (qnConfigured) return
+        qnConfigured = true
+        capture("QN info - protocol type 0x%02X, weight divisor ${qnWeightScaleFactor.toInt()}".format(qnProtocolType))
+
+        val config = byteArrayOf(0x13, 0x09, qnProtocolType, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00)
+        config[config.lastIndex] = qnChecksum(config, 0, config.lastIndex - 1)
+        writeQn(config, "config")
+
+        probeHandler.postDelayed({ writeQn(byteArrayOf(0x02) + qnTimeBytes(), "time") }, 400)
+        _status.value = "Scale is listening — step on it now"
+    }
+
+    /** The scale asks for the time by sending 0x14. Answer it. */
+    private fun onQnConfigAck() {
+        val msg = byteArrayOf(0x20, 0x08, qnProtocolType, 0, 0, 0, 0, 0)
+        qnTimeBytes().copyInto(msg, 3)
+        msg[msg.lastIndex] = qnChecksum(msg, 0, msg.lastIndex - 1)
+        writeQn(msg, "time-sync")
+    }
+
+    /** Some firmware asks for this pair before it will report. */
+    private fun onQnHandshake0x21() {
+        val a = byteArrayOf(0xa0.toByte(), 0x0d, 0x04, 0xfe.toByte(), 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        a[a.lastIndex] = qnChecksum(a, 0, a.lastIndex - 1)
+        writeQn(a, "handshake-a")
+
+        val b = byteArrayOf(0xa0.toByte(), 0x0d, 0x02, 0x01, 0x00, 0x08, 0x00, 0x21, 0x06, 0xb8.toByte(), 0x04, 0x02, 0)
+        b[b.lastIndex] = qnChecksum(b, 0, b.lastIndex - 1)
+        probeHandler.postDelayed({ writeQn(b, "handshake-b") }, 300)
+    }
+
+    private fun u16be(hi: Byte, lo: Byte): Int =
+        ((hi.toInt() and 0xFF) shl 8) or (lo.toInt() and 0xFF)
+
+    /** Live weight. Two layouts, told apart by byte 4 and the divisor. */
+    private fun onQnLiveWeight(data: ByteArray) {
+        if (data.size < 7) return
+        val byte4 = data[4].toInt() and 0xFF
+        val es30m = byte4 <= 0x02 && qnWeightScaleFactor == 10.0
+
+        val stable: Boolean
+        val raw: Int
+        if (es30m) {
+            stable = byte4 == 0x01 || byte4 == 0x02
+            raw = u16be(data[5], data[6])
+        } else {
+            stable = (data[5].toInt() and 0xFF) == 1
+            raw = u16be(data[3], data[4])
+        }
+
+        var kg = raw / qnWeightScaleFactor
+        // The divisor announced in the greeting is not always the one used. A value
+        // outside any human range means it was out by a factor of ten.
+        if (kg <= 5.0 || kg >= 250.0) kg /= 10.0
+
+        measurementSeen = true
+        capture("  QN weight %.2f kg%s".format(kg, if (stable) " (settled)" else " (settling)"))
+
+        if (!stable) {
+            _status.value = "Weighing — hold still (%.1f kg)".format(kg)
             return
         }
-        probeRan = true
-        // AE01 first. A scale exposing both AE00 and FFF0 is a QN device, and the
-        // measurement stream is on AE02 however politely FFF1 answers.
-        val ordered = targets.sortedByDescending { it.uuid == QN_WRITE }
-        capture("PROBE start - ${ordered.size} writable characteristic(s), AE01 first")
-
-        var delay = 0L
-        for (target in ordered) {
-            for (frame in probeFrames()) {
-                delay += 700
-                probeHandler.postDelayed({
-                    try {
-                        val noResponse = target.properties and
-                            BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0
-                        @Suppress("DEPRECATION")
-                        target.writeType = if (noResponse) {
-                            BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-                        } else {
-                            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-                        }
-                        @Suppress("DEPRECATION")
-                        target.value = frame
-                        @Suppress("DEPRECATION")
-                        if (handshakeAccepted) return@postDelayed
-                        val ok = g.writeCharacteristic(target)
-                        capture("TX ${target.uuid} ${frame.toHex()}${if (ok) "" else "  (write refused)"}")
-                    } catch (e: Exception) {
-                        capture("TX ${target.uuid} failed: ${e.message}")
-                    }
-                }, delay)
-            }
-        }
+        if (qnPublishedThisSession || kg <= 5.0 || kg >= 250.0) return
+        qnPublishedThisSession = true
+        probeHandler.removeCallbacksAndMessages(null)
+        _status.value = "Got it — check the reading and confirm"
+        publish(Reading(weightKg = Math.round(kg * 100) / 100.0, source = "QN protocol"))
     }
 
-    /**
-     * A short sweep of neighbouring command bytes, run only after the scale has proved
-     * it answers well-formed frames.
-     *
-     * Every one is minimal and correctly framed. The scale ignored 0x14 and 0x12
-     * writes in the first probe without complaint, so an unrecognised command costs
-     * nothing; what is being looked for is another reply like the 0x14, which would
-     * say which command it understood.
-     */
-    private fun requestMeasurement() {
-        val g = gatt ?: return
-        val target = writable.firstOrNull { it.uuid == QN_WRITE }
-            ?: writable.firstOrNull { it.uuid == FFF2 }
-            ?: writable.firstOrNull() ?: return
-        capture("PROBE stage 2 - asking for a measurement")
-
-        val asks = handshakeFrames() + listOf(
-            withChecksum(byteArrayOf(0x15, 0x05, 0x00, 0x00)),
-            withChecksum(byteArrayOf(0x16, 0x05, 0x00, 0x00)),
-            withChecksum(byteArrayOf(0x1F, 0x05, 0x00, 0x00)),
-            withChecksum(byteArrayOf(0x20, 0x05, 0x00, 0x00)),
-            withChecksum(byteArrayOf(0x10, 0x05, 0x00, 0x00))
-        )
-
-        var delay = 0L
-        for (frame in asks) {
-            delay += 700
-            probeHandler.postDelayed({
-                if (measurementSeen) return@postDelayed
-                try {
-                    @Suppress("DEPRECATION")
-                    target.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-                    @Suppress("DEPRECATION")
-                    target.value = frame
-                    @Suppress("DEPRECATION")
-                    val ok = g.writeCharacteristic(target)
-                    capture("TX2 ${target.uuid} ${frame.toHex()}${if (ok) "" else "  (write refused)"}")
-                } catch (e: Exception) {
-                    capture("TX2 failed: ${e.message}")
-                }
-            }, delay)
-        }
-    }
-
-    /**
-     * Listen to the advertisement as well as the connection.
-     *
-     * Plenty of scales put the live weight in their broadcast and use the connection
-     * only for configuration. Every diagnostics report so far says "devices seen: 0"
-     * because no scan was ever running during a weigh-in, so that whole channel has
-     * gone unexamined. Android is content to scan while connected.
-     */
-    @SuppressLint("MissingPermission")
-    private fun onSilentAfterHandshake() {
-        if (measurementSeen) return
-        capture("PROBE stage 3 - nothing over the connection; listening for broadcasts too")
-        _status.value = "Listening for a broadcast — stay on the scale"
-        startScan()
+    /** A measurement the scale had stored from before we connected. */
+    private fun onQnStoredMeasurement(data: ByteArray) {
+        if (data.size < 12) return
+        val kg = u16be(data[10], data[11]) / 100.0
+        capture("  QN stored measurement %.2f kg".format(kg))
+        if (qnPublishedThisSession || kg <= 5.0 || kg >= 250.0) return
+        qnPublishedThisSession = true
+        _status.value = "Found a stored reading — check it and confirm"
+        publish(Reading(weightKg = Math.round(kg * 100) / 100.0, source = "QN protocol (stored)"))
     }
 
     private data class WeightCandidate(val kg: Double, val description: String)
@@ -808,57 +797,15 @@ class ScaleBleManager(private val context: Context) {
 
         val command = if (value.isNotEmpty()) value[0].toInt() and 0xFF else -1
 
-        // A frame that carries no weight and repeats unchanged is a greeting, not a
-        // measurement. Answer it once per connection.
-        if (command == 0x12) {
-            probeHandler.postDelayed({ runHandshakeProbe() }, 1200)
-        }
-
-        // The scale answered. Stop writing at it and tell the athlete it is their turn.
-        if (command == 0x14 && !handshakeAccepted) {
-            handshakeAccepted = true
-            probeHandler.removeCallbacksAndMessages(null)
-            capture("PROBE accepted - scale replied 0x14, remaining writes cancelled")
-            _status.value = "Scale is listening — step on it now"
-
-            // The handshake completes and then nothing follows, while the counter in
-            // the greeting climbs with every weigh-in - 5, 7, 8, 10 across four
-            // sessions. The scale is recording measurements and not volunteering
-            // them, so two things are tried, neither of them a guess about weight:
-            // asking for them, and listening to the airwaves instead of the socket.
-            probeHandler.postDelayed({ requestMeasurement() }, 2500)
-            probeHandler.postDelayed({ onSilentAfterHandshake() }, 9000)
-        }
-
-        // Anything that is neither the greeting nor the handshake reply is a candidate
-        // measurement. Rather than guess a field offset, every 16-bit window is tried
-        // and the ones landing in a human weight range are reported. A single
-        // candidate is offered as a reading - which the athlete confirms before it is
-        // saved anywhere - and the rest of the arithmetic goes into the diagnostics so
-        // the guess can be checked rather than trusted.
-        // ── The QN measurement frame ────────────────────────────────────────────
-        //
-        // A documented format, not a search: command 0x10, weight in bytes 3 and 4 as
-        // a big-endian hundredth of a kilogram, and byte 5 saying whether the reading
-        // has settled. Live values are shown as they change; only the settled one is
-        // offered for confirmation, because a scale reads low for the first second or
-        // two while the load spreads.
-        if (command == 0x10 && value.size >= 6) {
-            val kg = (((value[3].toInt() and 0xFF) shl 8) or (value[4].toInt() and 0xFF)) / 100.0
-            val settled = (value[5].toInt() and 0xFF) == 0x01
-            if (kg in 2.0..300.0) {
-                measurementSeen = true
-                capture("  QN weight ${kg} kg${if (settled) " (settled)" else " (still settling)"}")
-                if (settled) {
-                    probeHandler.removeCallbacksAndMessages(null)
-                    _status.value = "Got it — check the reading and confirm"
-                    publish(Reading(weightKg = Math.round(kg * 100) / 100.0, source = "QN protocol"))
-                } else {
-                    _status.value = "Weighing — hold still (${String.format(java.util.Locale.US, "%.1f", kg)} kg)"
-                }
-                return
-            }
-            capture("  QN frame but ${kg} kg is out of range - not offered")
+        // Opcode dispatch, per the QN protocol. The probe that got us here tried
+        // commands until one answered; this answers the ones the scale asks.
+        when (command) {
+            0x12 -> { onQnScaleInfo(value); return }
+            0x14 -> { capture("  QN config acknowledged - sending the time"); onQnConfigAck(); return }
+            0x21 -> { capture("  QN handshake requested"); onQnHandshake0x21(); return }
+            0x10 -> { onQnLiveWeight(value); return }
+            0x23 -> { onQnStoredMeasurement(value); return }
+            0xA1, 0xA3 -> { capture("  QN acknowledged"); return }
         }
 
         if (encryptedProfile) {
