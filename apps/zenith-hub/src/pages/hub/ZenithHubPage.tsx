@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Scale, Moon, Footprints, Dumbbell, Bike, Activity, Heart, AlertTriangle, Trophy, ThumbsUp, Loader2 } from 'lucide-react';
 import { supabase } from '../../utils/supabaseClient';
-import { predictRecoveryScore, cardioFreshness, recoveryModel, fetchReadiness, saveReadiness, summariseAccuracy, FELT_OPTIONS, FELT_LABELS, FELT_DESCRIPTIONS, ReadinessEntry, FeltRating, toDateKeyFromDate, calculateZenithSleepScore, buildTrainingLoadPool, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, calendarDaysAgo } from '@zenith/shared';
+import { predictRecoveryScore, cardioFreshness, recoveryModel, fetchReadiness, saveReadiness, summariseAccuracy, FELT_OPTIONS, FELT_LABELS, FELT_DESCRIPTIONS, ReadinessEntry, FeltRating, toDateKeyFromDate, calculateZenithSleepScore, buildTrainingLoadPool, kratosEffortVolume, tsbContext, ZenithHeroStat, ZENITH_CHART_GRID, ZENITH_CHART_AXIS_TICK, ZENITH_CHART_TOOLTIP_STYLE, ZENITH_CHART_TOOLTIP_LABEL_STYLE, calendarDaysAgo, runMuscleImpact, rideMuscleImpact, runningLoad, activityTimestampMs } from '@zenith/shared';
 import { computeSimulatedPMC, computePMC, PlannedWorkoutItem, interpretTSB } from '../../utils/pmc';
 import {
   ResponsiveContainer,
@@ -549,51 +549,48 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
       });
     });
 
-    // Process Aero cycling rides
+    // ── Endurance work ────────────────────────────────────────────────────────
+    //
+    // Both sports scale from the same TSS-equivalent load. They used to scale from
+    // raw kilometres, which are not comparable between them: an 82 km ride charged
+    // the quadriceps 85 - the maximum - while a hard 6 km run charged them 8. Running
+    // is by far the more muscularly damaging per kilometre, and the mapping had it
+    // backwards by a factor of ten.
     allRides.forEach((r: any) => {
       if (!r.date) return;
       const dateMs = Number(r.date);
-      const distKm = Number(r.distance || 0);
-      const tss = Number(r.tss || 0);
-      const impactScale = distKm > 0 ? distKm : (tss > 0 ? tss * 0.5 : 20);
 
-      const quadImpact = Math.min(85, Math.round(impactScale * 1.3));
-      const calfImpact = Math.min(60, Math.round(impactScale * 0.8));
-      const gluteImpact = Math.min(50, Math.round(impactScale * 0.6));
-      const hamstringImpact = Math.min(45, Math.round(impactScale * 0.5));
+      let meta = r.metadata;
+      if (typeof meta === 'string') {
+        try { meta = JSON.parse(meta); } catch { meta = {}; }
+      }
+      const tss = Number(meta?.tss ?? meta?.hrTSS ?? r.tss ?? 0);
+      const distKm = Number(r.distance || 0);
+      // A ride with no TSS still happened; distance is the fallback, at the roughly
+      // 2 TSS per kilometre these rides average.
+      const load = tss > 0 ? tss : distKm * 2;
 
       const rideTitle = distKm > 0 ? `Cycling Ride (${distKm.toFixed(1)} km)` : 'Cycling Ride';
-
-      addImpact('quadriceps', quadImpact, dateMs, rideTitle);
-      addImpact('calves', calfImpact, dateMs, rideTitle);
-      addImpact('gluteal', gluteImpact, dateMs, rideTitle);
-      addImpact('hamstring', hamstringImpact, dateMs, rideTitle);
+      for (const [muscle, impact] of Object.entries(rideMuscleImpact(load))) {
+        addImpact(muscle, impact, dateMs, rideTitle);
+      }
     });
 
-    // Process Stride running activities
     allStride.forEach((s: any) => {
-      if (!s.date && !s.created_at) return;
-      const dateMs = s.date ? new Date(s.date).getTime() : new Date(s.created_at).getTime();
-      const distKm = Number(s.distance_km || s.distance || 0);
-      const durationMin = Number(s.duration_sec || 0) / 60;
-      const rpe = Number(s.rpe || 5);
-      
-      const impactScale = distKm > 0 ? distKm : (durationMin > 0 ? durationMin * 0.15 : 15);
-      const intensityFactor = Math.max(0.8, rpe / 5.0);
+      // The day AND the clock time. Reading only the day put a 17:25 run at midnight
+      // UTC, seventeen hours early - and at 3.5% decay an hour that is 46% of its
+      // fatigue gone before it was ever counted.
+      const dateMs = activityTimestampMs(s.date, s.time_of_day);
+      if (!Number.isFinite(dateMs)) return;
 
-      const calfImpact = Math.min(90, Math.round(impactScale * 1.6 * intensityFactor));
-      const quadImpact = Math.min(85, Math.round(impactScale * 1.4 * intensityFactor));
-      const hamstringImpact = Math.min(75, Math.round(impactScale * 1.1 * intensityFactor));
-      const gluteImpact = Math.min(65, Math.round(impactScale * 0.9 * intensityFactor));
-      const absImpact = Math.min(40, Math.round(impactScale * 0.4 * intensityFactor));
+      const load = runningLoad(s.duration_sec, s.avg_heart_rate);
+      if (load <= 0) return;
 
+      const distKm = Number(s.distance_km || 0);
       const runTitle = s.title || (distKm > 0 ? `Run Session (${distKm.toFixed(1)} km)` : 'Run Session');
-
-      addImpact('calves', calfImpact, dateMs, runTitle);
-      addImpact('quadriceps', quadImpact, dateMs, runTitle);
-      addImpact('hamstring', hamstringImpact, dateMs, runTitle);
-      addImpact('gluteal', gluteImpact, dateMs, runTitle);
-      addImpact('abs', absImpact, dateMs, runTitle);
+      for (const [muscle, impact] of Object.entries(runMuscleImpact(load))) {
+        addImpact(muscle, impact, dateMs, runTitle);
+      }
     });
 
     const finalMap: Record<string, any> = {};
@@ -649,7 +646,9 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
     });
 
     return finalMap;
-  }, [allRides, allKratos, kratosExercises]);
+    // allStride was missing from here, so the heatmap did not recompute when runs
+    // finished loading - whether a run showed up at all came down to render order.
+  }, [allRides, allKratos, allStride, kratosExercises]);
 
   const ctl = Math.round(todayPoint.ctl);
   const atl = Math.round(todayPoint.atl);

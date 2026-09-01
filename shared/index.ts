@@ -12,6 +12,7 @@ export * from './services/soreness';
 export * from './services/injuryRisk';
 export * from './services/plannedWorkouts';
 export * from './services/progressTrends';
+export * from './services/muscleLoad';
 export * from './ml/SimpleMLP';
 export * from './ml/MinMaxScaler';
 export * from './ml/AnomalyFilter';
