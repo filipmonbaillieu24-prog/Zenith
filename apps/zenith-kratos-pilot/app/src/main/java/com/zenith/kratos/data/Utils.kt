@@ -84,11 +84,27 @@ fun recalculateWarmupTargets(
             // 100kg on a 55kg-minimum stack). Passing the limits through means the
             // suggestion is the lightest real position instead of an impossible one.
             set.targetWeight = snapToHardwareStep(rawTarget, incrementWeight, isPerSide, minWeight, maxWeight)
-            set.targetReps = when {
-                count <= 1 -> 6
-                warmupIndex == 0 -> 10
-                warmupIndex == count - 1 -> 2
-                else -> 5
+
+            // Reps belong to the template; only the weight is derived here.
+            //
+            // This used to assign a fixed scheme - 6 reps for a single warmup, 10/5/2
+            // across a ramp of three - which silently outranked whatever the athlete had
+            // written. They set every ARMS warmup to 10 reps on the web, watched it sync,
+            // and still saw 6, because this line ran afterwards and put 6 back.
+            //
+            // The weight is a different matter: a warmup weight is a percentage of the
+            // working weight and the template has no field for it, so it is genuinely
+            // this function's to decide.
+            //
+            // The fallback stays for a warmup that arrived without a prescription at all,
+            // where something has to be chosen.
+            if (set.targetReps <= 0) {
+                set.targetReps = when {
+                    count <= 1 -> 6
+                    warmupIndex == 0 -> 10
+                    warmupIndex == count - 1 -> 2
+                    else -> 5
+                }
             }
             warmupIndex++
         }
