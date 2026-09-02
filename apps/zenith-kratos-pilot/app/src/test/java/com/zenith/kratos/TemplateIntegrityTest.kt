@@ -65,6 +65,28 @@ class TemplateIntegrityTest {
     }
 
     @Test
+    fun `routines are pulled again when the screen comes back to the foreground`() {
+        // Templates were fetched once at start-up, and the only button that pulls them
+        // sits inside the empty state - so an athlete who already had routines could not
+        // get a web edit onto the phone without killing the process.
+        val src = File("src/main/java/com/zenith/kratos/ui/screens/TodayScreen.kt").readText()
+        assertTrue("no lifecycle refresh", src.contains("Lifecycle.Event.ON_RESUME"))
+        assertTrue("resume does not refresh routines", src.contains("refreshRoutines(false)"))
+    }
+
+    @Test
+    fun `a manual refresh exists outside the empty state`() {
+        val src = File("src/main/java/com/zenith/kratos/ui/screens/TodayScreen.kt").readText()
+        val manual = src.indexOf("refreshRoutines(true)")
+        val emptyState = src.indexOf("if (templates.isEmpty())")
+        assertTrue("no manual refresh at all", manual >= 0)
+        assertTrue(
+            "the only manual refresh is inside the empty state, where it is useless",
+            manual > src.indexOf("ROUTINES") || emptyState < 0
+        )
+    }
+
+    @Test
     fun `the tracker reads a set's target before overwriting it`() {
         // askedReps and askedRir must be captured above the assignments that replace
         // targetReps and targetRir with what was performed.

@@ -16,6 +16,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.zenith.kratos.data.*
 import com.zenith.kratos.ui.theme.*
 import kotlinx.coroutines.flow.map
@@ -55,6 +58,41 @@ fun TodayScreen(
         val uns = db.workoutDao().getUnsyncedWorkouts()
         unsyncedCount = uns.size
         cardioFactor = repository.calculateCardioStressFactor()
+    }
+
+    /**
+     * Pull routines down again whenever this screen comes back to the foreground.
+     *
+     * Templates were only fetched once, in Navigation's start-up effect, and the one
+     * "Sync Now" button that pulls them lives inside the empty state - so an athlete who
+     * already has routines had no way at all to get an edit made on the web, short of
+     * killing the process. Returning from the background does not re-run a
+     * LaunchedEffect, so backgrounding the app was not enough either.
+     *
+     * `templates` is a Room flow, so refreshing the cache updates the list on its own.
+     */
+    var lastPulledAtMs by remember { mutableStateOf(0L) }
+    val refreshRoutines: (Boolean) -> Unit = { manual ->
+        val now = System.currentTimeMillis()
+        // Start-up already fetched; without this the first resume immediately refetches.
+        if (manual || now - lastPulledAtMs > 10_000L) {
+            lastPulledAtMs = now
+            isSyncing = true
+            scope.launch {
+                repository.fetchAndCacheExercises()
+                repository.fetchAndCacheTemplates()
+                isSyncing = false
+            }
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refreshRoutines(false)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(
@@ -170,14 +208,29 @@ fun TodayScreen(
 
 
             // List of Templates
-            Text(
-                text = "ROUTINES",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Black,
-                color = Color.White,
-                letterSpacing = 1.sp,
-                modifier = Modifier.padding(bottom = 10.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "ROUTINES",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.White,
+                    letterSpacing = 1.sp
+                )
+                // Always present, not only when there are no routines to show.
+                Text(
+                    text = if (isSyncing) "Refreshing..." else "Refresh",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSyncing) ZenithSecondary else ZenithAccentNeon,
+                    modifier = Modifier
+                        .clickable(enabled = !isSyncing) { refreshRoutines(true) }
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                )
+            }
 
             if (templates.isEmpty()) {
                 Box(
