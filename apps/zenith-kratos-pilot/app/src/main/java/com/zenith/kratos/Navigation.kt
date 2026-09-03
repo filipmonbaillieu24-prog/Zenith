@@ -177,10 +177,10 @@ fun MainNavigation() {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFF09090B)),
+                    .background(ZenithScreenBrush),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = ZenithAccentNeon)
+                CircularProgressIndicator(color = ZenithAccent)
             }
         }
         KratosScreen.LOGIN -> {
@@ -254,6 +254,7 @@ fun MainNavigation() {
                 completedTime = activeCompletedTime,
                 volume = activeVolume,
                 cardioStressFactor = cardioStressFactor,
+                bodyWeight = bodyWeight,
                 exercises = activeExercises,
                 repository = repository,
                 onFinish = {
@@ -324,7 +325,7 @@ fun MainNavigation() {
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = ZenithAccentNeon),
                     enabled = downloadProgress == null
                 ) {
-                    androidx.compose.material3.Text("Download", color = Color(0xFF09090B))
+                    androidx.compose.material3.Text("Download", color = ZenithOnAccent)
                 }
             },
             dismissButton = {
@@ -335,7 +336,7 @@ fun MainNavigation() {
                     androidx.compose.material3.Text("Later", color = Color.White)
                 }
             },
-            containerColor = Color(0xFF1C1C23)
+            containerColor = ZenithSurface
         )
     }
 }

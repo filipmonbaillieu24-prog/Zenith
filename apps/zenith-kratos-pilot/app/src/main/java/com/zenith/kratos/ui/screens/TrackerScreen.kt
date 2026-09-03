@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,10 +23,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -261,13 +268,13 @@ fun TrackerScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ZenithBackground)
+            .background(ZenithScreenBrush)
             .then(safeDrawingPadding())
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = if (activeFocusExercise != null) 290.dp else (if (isTimerActive) 90.dp else 16.dp))
+                .padding(bottom = if (activeFocusExercise != null) 290.dp else 16.dp)
         ) {
             // Header
             Row(
@@ -302,6 +309,119 @@ fun TrackerScreen(
                 }
             }
 
+            /*
+             * The rest timer sits under the header rather than over the bottom of the
+             * screen. As a drawer it covered the set you were about to log - exactly
+             * the row you want to read while the clock runs - and the list had to
+             * reserve 90dp of dead space to compensate.
+             */
+            AnimatedVisibility(visible = isTimerActive, enter = fadeIn(), exit = fadeOut()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, end = 12.dp, bottom = 14.dp)
+                        .background(ZenithAccentTint, RoundedCornerShape(12.dp))
+                        .border(1.dp, ZenithAccentBorder, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // The ring is only drawn when the full duration is known. After
+                        // the app is killed and reopened mid-rest the service still
+                        // reports the seconds left but not what it counted down from,
+                        // and a ring drawn against a guessed total would be a lie about
+                        // how much rest is left.
+                        val ringProgress = if (timerDurationSeconds > 0) {
+                            (timerRemainingSeconds.toFloat() / timerDurationSeconds).coerceIn(0f, 1f)
+                        } else null
+
+                        Box(
+                            modifier = Modifier.size(38.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (ringProgress != null) {
+                                Canvas(modifier = Modifier.fillMaxSize()) {
+                                    val stroke = 2.dp.toPx()
+                                    val inset = Offset(stroke / 2f, stroke / 2f)
+                                    val arcSize = Size(size.width - stroke, size.height - stroke)
+                                    drawArc(
+                                        color = ZenithAccentTintStrong,
+                                        startAngle = -90f,
+                                        sweepAngle = 360f,
+                                        useCenter = false,
+                                        topLeft = inset,
+                                        size = arcSize,
+                                        style = Stroke(width = stroke)
+                                    )
+                                    drawArc(
+                                        color = ZenithAccent,
+                                        startAngle = -90f,
+                                        sweepAngle = 360f * ringProgress,
+                                        useCenter = false,
+                                        topLeft = inset,
+                                        size = arcSize,
+                                        style = Stroke(width = stroke, cap = StrokeCap.Round)
+                                    )
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(ZenithAccentTintStrong, CircleShape)
+                                        .border(2.dp, ZenithAccent, CircleShape)
+                                )
+                            }
+                            Text(
+                                text = "${timerRemainingSeconds}s",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ZenithAccentSoft
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(text = "REST TIMER", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            if (cardioStressFactor > 1.0) {
+                                Text(
+                                    text = "▶ +${Math.round((cardioStressFactor - 1) * 100)}% rest (cardio stress)",
+                                    fontSize = 9.sp,
+                                    color = ZenithSecondary,
+                                    modifier = Modifier.padding(top = 1.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = if (isTimerMuted) "🔇" else "🔊",
+                            fontSize = 14.sp,
+                            modifier = Modifier
+                                .clickable { isTimerMuted = !isTimerMuted }
+                                .padding(4.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0x1AFFFFFF), RoundedCornerShape(6.dp))
+                                .clickable {
+                                    val intent = Intent(context, RestTimerService::class.java).apply {
+                                        action = RestTimerService.ACTION_STOP
+                                    }
+                                    context.startService(intent)
+                                }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(text = "SKIP", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
             // Exercise List
             LazyColumn(
                 modifier = Modifier
@@ -313,12 +433,13 @@ fun TrackerScreen(
                     // Find first active (uncompleted) set to highlight
                     val firstUncompletedIndex = exState.sets.indexOfFirst { !it.isCompleted }
 
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = ZenithSurface),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(ZenithGlass, RoundedCornerShape(12.dp))
+                            .border(1.dp, ZenithGlassBorder, RoundedCornerShape(12.dp))
+                            .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
                             // Title row with info button & delete menu dropdown
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -362,6 +483,37 @@ fun TrackerScreen(
                                     }
                                 }
 
+                                // What this exercise has actually produced so far, from
+                                // the sets already ticked off. Absent until there is one -
+                                // an average of nothing is not zero.
+                                val doneWorking = exState.sets.filter { it.isCompleted && it.type == "working" }
+                                val loggedRirs = doneWorking.mapNotNull { it.rirInput.toIntOrNull() }
+                                if (doneWorking.isNotEmpty()) {
+                                    val volumeSoFar = doneWorking.sumOf { s ->
+                                        (s.weightInput.toDoubleOrNull() ?: 0.0) * (s.repsInput.toIntOrNull() ?: 0)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .background(Color(0x0FFFFFFF), RoundedCornerShape(20.dp))
+                                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(
+                                            text = buildString {
+                                                if (loggedRirs.isNotEmpty()) {
+                                                    append("avg RIR ")
+                                                    append(String.format(java.util.Locale.US, "%.1f", loggedRirs.sum().toDouble() / loggedRirs.size))
+                                                    append(" · ")
+                                                }
+                                                append(String.format(java.util.Locale.US, "%,.0f %s", volumeSoFar, exState.weightUnit))
+                                            },
+                                            color = ZenithSecondary,
+                                            fontSize = 8.sp,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+
                                 // Exercise dropdown actions
                                 Box {
                                     IconButton(
@@ -378,7 +530,7 @@ fun TrackerScreen(
                                     DropdownMenu(
                                         expanded = exerciseDropdownExpanded[exIndex] ?: false,
                                         onDismissRequest = { exerciseDropdownExpanded[exIndex] = false },
-                                        modifier = Modifier.background(Color(0xFF1C1C23))
+                                        modifier = Modifier.background(ZenithSurface)
                                     ) {
                                         DropdownMenuItem(
                                             text = { Text("Edit Note", color = Color.White, fontSize = 12.sp) },
@@ -425,20 +577,20 @@ fun TrackerScreen(
                              Row(
                                  modifier = Modifier
                                      .fillMaxWidth()
-                                     .padding(horizontal = 4.dp, vertical = 4.dp),
+                                     .padding(horizontal = 8.dp, vertical = 4.dp),
                                  verticalAlignment = Alignment.CenterVertically
                              ) {
-                                 Text("SET", fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(34.dp), textAlign = TextAlign.Center)
+                                 Text("SET", fontSize = 8.sp, fontWeight = FontWeight.Black, color = ZenithMuted, letterSpacing = 0.3.sp, modifier = Modifier.width(40.dp))
                                  Spacer(modifier = Modifier.width(6.dp))
-                                 Text("PREVIOUS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(72.dp), textAlign = TextAlign.Center)
+                                 Text("PREVIOUS", fontSize = 8.sp, fontWeight = FontWeight.Black, color = ZenithMuted, letterSpacing = 0.3.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
                                  Spacer(modifier = Modifier.width(6.dp))
-                                 Text(exState.weightUnit.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(58.dp), textAlign = TextAlign.Center)
+                                 Text(exState.weightUnit.uppercase(), fontSize = 8.sp, fontWeight = FontWeight.Black, color = ZenithMuted, letterSpacing = 0.3.sp, modifier = Modifier.width(56.dp), textAlign = TextAlign.Center)
                                  Spacer(modifier = Modifier.width(6.dp))
-                                 Text("REPS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(48.dp), textAlign = TextAlign.Center)
+                                 Text("REPS", fontSize = 8.sp, fontWeight = FontWeight.Black, color = ZenithMuted, letterSpacing = 0.3.sp, modifier = Modifier.width(46.dp), textAlign = TextAlign.Center)
                                  Spacer(modifier = Modifier.width(6.dp))
-                                 Text("RIR", fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(42.dp), textAlign = TextAlign.Center)
-                                 Spacer(modifier = Modifier.weight(1f))
-                                 Text("✓", fontSize = 10.sp, fontWeight = FontWeight.Black, color = ZenithSecondary, modifier = Modifier.width(48.dp), textAlign = TextAlign.Center)
+                                 Text("RIR", fontSize = 8.sp, fontWeight = FontWeight.Black, color = ZenithMuted, letterSpacing = 0.3.sp, modifier = Modifier.width(42.dp), textAlign = TextAlign.Center)
+                                 Spacer(modifier = Modifier.width(6.dp))
+                                 Text("DONE", fontSize = 8.sp, fontWeight = FontWeight.Black, color = ZenithMuted, letterSpacing = 0.3.sp, modifier = Modifier.width(38.dp), textAlign = TextAlign.Center)
                              }
 
                             // Sets input list
@@ -457,29 +609,42 @@ fun TrackerScreen(
                                     "${workPreceding + 1}"
                                 }
 
+                                // Exactly one row is lit at a time: the set you are on.
+                                // Everything above it is spent and everything below it
+                                // has not happened yet, so neither competes for the eye.
+                                val rowActive = isActive && !isCompleted
+                                val fieldHeight = if (rowActive) 38.dp else 34.dp
+
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .padding(vertical = if (rowActive) 6.dp else 0.dp)
                                         .background(
-                                            color = when {
-                                                isCompleted -> Color(0x0AFFFFFF) // Dark gray overlay for completed sets
-                                                isActive -> Color(0x1FCBD5E1)    // Silver overlay for active set
-                                                else -> Color.Transparent
-                                            },
-                                            shape = RoundedCornerShape(8.dp)
+                                            color = if (rowActive) ZenithAccentTint else Color.Transparent,
+                                            shape = RoundedCornerShape(10.dp)
                                         )
                                         .border(
-                                            width = if (isActive && !isCompleted) 1.dp else 0.dp,
-                                            color = if (isActive && !isCompleted) ZenithPrimary else Color.Transparent,
-                                            shape = RoundedCornerShape(8.dp)
+                                            width = if (rowActive) 1.dp else 0.dp,
+                                            color = if (rowActive) ZenithAccent else Color.Transparent,
+                                            shape = RoundedCornerShape(10.dp)
                                         )
-                                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                                        .drawBehind {
+                                            if (!rowActive) {
+                                                drawLine(
+                                                    color = ZenithDivider,
+                                                    start = Offset(0f, size.height),
+                                                    end = Offset(size.width, size.height),
+                                                    strokeWidth = 1f
+                                                )
+                                            }
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     // 1. Column SET (Index & Toggle)
                                     Box(
                                         modifier = Modifier
-                                            .width(34.dp)
+                                            .width(40.dp)
                                             .clickable(enabled = !isCompleted) {
                                                 val nextType = if (setVal.type == "warmup") "working" else "warmup"
                                                 setVal.type = nextType
@@ -487,26 +652,40 @@ fun TrackerScreen(
                                                 recalculateWarmupTargets(exState.sets, workWeight, exState.incrementWeight, exState.incrementPerSide, exState.minWeight, exState.maxWeight)
                                                 triggerSave()
                                             },
-                                        contentAlignment = Alignment.Center
+                                        contentAlignment = Alignment.CenterStart
                                     ) {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
-                                                text = setLabel,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = when {
-                                                    isCompleted -> ZenithSecondary
-                                                    setVal.type == "warmup" -> ZenithSecondary
-                                                    else -> Color.White
-                                                }
-                                            )
+                                            val isWarmup = setVal.type == "warmup"
+                                            val badgeFill = when {
+                                                rowActive && !isWarmup -> ZenithAccent
+                                                isCompleted && !isWarmup -> ZenithAccentTintStrong
+                                                else -> Color(0x14FFFFFF)
+                                            }
+                                            val badgeText = when {
+                                                rowActive && !isWarmup -> ZenithOnAccent
+                                                isCompleted && !isWarmup -> ZenithAccentSoft
+                                                isWarmup -> ZenithSecondary
+                                                else -> Color(0x8CF8FAFC)
+                                            }
+                                            Box(
+                                                modifier = Modifier.size(24.dp).background(badgeFill, CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = setLabel,
+                                                    fontSize = if (isWarmup) 8.sp else 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = badgeText
+                                                )
+                                            }
                                             if (setPrFlags[rowKey] == true) {
                                                 Box(
                                                     modifier = Modifier
-                                                        .background(ZenithPrimary, RoundedCornerShape(4.dp))
-                                                        .padding(horizontal = 2.dp, vertical = 1.dp)
+                                                        .padding(top = 2.dp)
+                                                        .background(ZenithWarning, RoundedCornerShape(4.dp))
+                                                        .padding(horizontal = 3.dp, vertical = 1.dp)
                                                 ) {
-                                                    Text("PR", fontSize = 7.sp, fontWeight = FontWeight.Black, color = Color(0xFF09090B))
+                                                    Text("PR", fontSize = 7.sp, fontWeight = FontWeight.Black, color = ZenithOnAccent)
                                                 }
                                             }
                                         }
@@ -516,13 +695,15 @@ fun TrackerScreen(
 
                                     // 2. Column PREVIOUS (Previous Workout)
                                     Box(
-                                        modifier = Modifier.width(72.dp),
+                                        modifier = Modifier.weight(1f),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = if (prevSet != null) "${prevSet.weight} × ${prevSet.reps}" else "—",
-                                            fontSize = 11.sp,
-                                            color = ZenithSecondary,
+                                            text = if (prevSet != null) "${trimDisplayWeight(prevSet.weight)} × ${prevSet.reps}" else "—",
+                                            fontSize = 10.sp,
+                                            color = if (rowActive) ZenithSecondary else ZenithMuted,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Clip,
                                             textAlign = TextAlign.Center
                                         )
                                     }
@@ -533,16 +714,16 @@ fun TrackerScreen(
                                     val isWeightFocused = activeFocusExercise == exIndex && activeFocusSet == setIndex && activeFocusField == "weight"
                                     Box(
                                         modifier = Modifier
-                                            .width(58.dp)
-                                            .height(38.dp)
-                                            .border(
-                                                width = 1.dp,
-                                                color = if (isWeightFocused) ZenithPrimary else Color.Transparent,
-                                                shape = RoundedCornerShape(6.dp)
-                                            )
+                                            .width(56.dp)
+                                            .height(fieldHeight)
                                             .background(
-                                                color = if (isCompleted) Color(0x0AFFFFFF) else Color(0xFF27272E),
-                                                shape = RoundedCornerShape(6.dp)
+                                                color = if (isCompleted) Color(0x0AFFFFFF) else ZenithField,
+                                                shape = RoundedCornerShape(if (rowActive) 7.dp else 6.dp)
+                                            )
+                                            .border(
+                                                width = if (isWeightFocused || rowActive) 1.5.dp else 0.dp,
+                                                color = if (isWeightFocused || rowActive) ZenithAccent else Color.Transparent,
+                                                shape = RoundedCornerShape(if (rowActive) 7.dp else 6.dp)
                                             )
                                             .clickable(enabled = !isCompleted) {
                                                 activeFocusExercise = exIndex
@@ -551,16 +732,17 @@ fun TrackerScreen(
                                             },
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        val displayVal = if (setVal.weightInput.isEmpty()) "${setVal.targetWeight}" else setVal.weightInput
+                                        val displayVal = if (setVal.weightInput.isEmpty()) trimDisplayWeight(setVal.targetWeight) else setVal.weightInput
                                         Text(
                                             text = displayVal,
                                             color = when {
-                                                isCompleted -> ZenithSecondary
+                                                isCompleted -> Color(0x8CF8FAFC)
                                                 setVal.weightInput.isEmpty() -> Color(0x90F8FAFC)
                                                 else -> Color.White
                                             },
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontSize = if (rowActive) 14.sp else 12.sp,
+                                            fontWeight = if (rowActive) FontWeight.Black else FontWeight.Bold,
+                                            maxLines = 1
                                         )
                                     }
 
@@ -570,16 +752,16 @@ fun TrackerScreen(
                                     val isRepsFocused = activeFocusExercise == exIndex && activeFocusSet == setIndex && activeFocusField == "reps"
                                     Box(
                                         modifier = Modifier
-                                            .width(48.dp)
-                                            .height(38.dp)
-                                            .border(
-                                                width = 1.dp,
-                                                color = if (isRepsFocused) ZenithPrimary else Color.Transparent,
-                                                shape = RoundedCornerShape(6.dp)
-                                            )
+                                            .width(46.dp)
+                                            .height(fieldHeight)
                                             .background(
-                                                color = if (isCompleted) Color(0x0AFFFFFF) else Color(0xFF27272E),
-                                                shape = RoundedCornerShape(6.dp)
+                                                color = if (isCompleted) Color(0x0AFFFFFF) else ZenithField,
+                                                shape = RoundedCornerShape(if (rowActive) 7.dp else 6.dp)
+                                            )
+                                            .border(
+                                                width = if (isRepsFocused || rowActive) 1.5.dp else 0.dp,
+                                                color = if (isRepsFocused || rowActive) ZenithAccent else Color.Transparent,
+                                                shape = RoundedCornerShape(if (rowActive) 7.dp else 6.dp)
                                             )
                                             .clickable(enabled = !isCompleted) {
                                                 activeFocusExercise = exIndex
@@ -592,12 +774,13 @@ fun TrackerScreen(
                                         Text(
                                             text = displayVal,
                                             color = when {
-                                                isCompleted -> ZenithSecondary
+                                                isCompleted -> Color(0x8CF8FAFC)
                                                 setVal.repsInput.isEmpty() -> Color(0x90F8FAFC)
                                                 else -> Color.White
                                             },
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontSize = if (rowActive) 14.sp else 12.sp,
+                                            fontWeight = if (rowActive) FontWeight.Black else FontWeight.Bold,
+                                            maxLines = 1
                                         )
                                     }
 
@@ -611,8 +794,16 @@ fun TrackerScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(38.dp)
-                                                .background(if (isCompleted) Color(0x0AFFFFFF) else Color(0xFF27272E), RoundedCornerShape(6.dp))
+                                                .height(fieldHeight)
+                                                .background(
+                                                    if (isCompleted) Color(0x0AFFFFFF) else ZenithField,
+                                                    RoundedCornerShape(if (rowActive) 7.dp else 6.dp)
+                                                )
+                                                .border(
+                                                    width = if (rowActive && setVal.type == "working") 1.5.dp else 0.dp,
+                                                    color = if (rowActive && setVal.type == "working") ZenithAccent else Color.Transparent,
+                                                    shape = RoundedCornerShape(if (rowActive) 7.dp else 6.dp)
+                                                )
                                                 .clickable(enabled = !isCompleted && setVal.type == "working") {
                                                     rirMenuExpanded = true
                                                 },
@@ -621,19 +812,20 @@ fun TrackerScreen(
                                             Text(
                                                 text = if (rirDisplay.isEmpty()) "${setVal.targetRir}" else rirDisplay,
                                                 color = when {
-                                                    isCompleted -> ZenithSecondary
+                                                    setVal.type == "warmup" -> ZenithMuted
+                                                    isCompleted -> Color(0x8CF8FAFC)
                                                     rirDisplay.isEmpty() -> Color(0x90F8FAFC)
                                                     else -> Color.White
                                                 },
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontSize = if (rowActive) 14.sp else 12.sp,
+                                                fontWeight = if (rowActive) FontWeight.Black else FontWeight.Bold
                                             )
                                         }
 
                                         DropdownMenu(
                                             expanded = rirMenuExpanded,
                                             onDismissRequest = { rirMenuExpanded = false },
-                                            modifier = Modifier.background(Color(0xFF1C1C23))
+                                            modifier = Modifier.background(ZenithSurface)
                                         ) {
                                             (0..4).forEach { rirVal ->
                                                 DropdownMenuItem(
@@ -648,21 +840,20 @@ fun TrackerScreen(
                                         }
                                     }
 
-                                    Spacer(modifier = Modifier.weight(1f))
+                                    Spacer(modifier = Modifier.width(6.dp))
 
                                     // 7. Column ✓ (Checkmark Completed Button)
                                     Box(
                                         modifier = Modifier
-                                            .width(48.dp)
-                                            .height(38.dp)
+                                            .size(38.dp)
                                             .background(
-                                                color = if (isCompleted) ZenithPrimary else Color(0x0DFFFFFF),
-                                                shape = RoundedCornerShape(8.dp)
+                                                color = if (isCompleted) ZenithAccent else Color(0x0DFFFFFF),
+                                                shape = RoundedCornerShape(9.dp)
                                             )
                                             .border(
                                                 width = 1.dp,
-                                                color = if (isCompleted) ZenithPrimary else Color(0x26FFFFFF),
-                                                shape = RoundedCornerShape(8.dp)
+                                                color = if (isCompleted) ZenithAccent else Color(0x33FFFFFF),
+                                                shape = RoundedCornerShape(9.dp)
                                             )
                                             .clickable {
                                                 if (isCompleted) {
@@ -734,6 +925,11 @@ fun TrackerScreen(
                                                         if (prevPR > 0.0 && rounded1RM > prevPR) {
                                                             historical1RMs[exState.exerciseId] = rounded1RM
                                                             setPrFlags[rowKey] = true // mark row inline
+                                                            // Carried on the set itself, not only in this
+                                                            // screen's map: the completion screen is handed
+                                                            // the sets and nothing else, so a record marked
+                                                            // only here vanished the moment the session ended.
+                                                            setVal.isNewPR = true
                                                             prExerciseName = exState.name
                                                             prValue = rounded1RM
                                                             prUnit = exState.weightUnit
@@ -824,8 +1020,8 @@ fun TrackerScreen(
                                     ) {
                                         Text(
                                             text = "✓",
-                                            color = if (isCompleted) Color(0xFF09090B) else Color.White,
-                                            fontSize = 16.sp,
+                                            color = if (isCompleted) ZenithOnAccent else Color.White,
+                                            fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -843,6 +1039,7 @@ fun TrackerScreen(
                                 Text(
                                     text = "+ Add Set",
                                     color = ZenithPrimary,
+                                    // unchanged behaviour; styling follows the mockup
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier
@@ -886,7 +1083,6 @@ fun TrackerScreen(
                         }
                     }
                 }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -931,14 +1127,14 @@ fun TrackerScreen(
 
                     onComplete(mutableExercises, totalVolume)
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = ZenithPrimary),
-                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = ZenithAccent),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
                     .height(48.dp)
             ) {
-                Text(text = "TRAINING AFRONDEN", color = ZenithBackground, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Text(text = "TRAINING AFRONDEN", color = ZenithOnAccent, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
 
@@ -949,12 +1145,12 @@ fun TrackerScreen(
 
             if (activeEx != null && activeSet != null) {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF13131A)),
+                    colors = CardDefaults.cardColors(containerColor = ZenithSurface),
                     shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
-                        .border(1.dp, ZenithBorder, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                        .border(1.dp, ZenithGlassBorder, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -969,16 +1165,23 @@ fun TrackerScreen(
                             val activeValText = if (activeFocusField == "weight") activeSet.weightInput else activeSet.repsInput
                             val activePlaceholder = if (activeFocusField == "weight") activeSet.targetWeight.toString() else activeSet.targetReps.toString()
                             
-                            Text(
-                                text = "Set ${activeFocusSet!! + 1} — ${activeFocusField!!.uppercase()}: ${if (activeValText.isEmpty()) "$activePlaceholder (Doel)" else activeValText}",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .background(Color(0x0FFFFFFF), RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = "Set ${activeFocusSet!! + 1} · ${activeFocusField!!.uppercase()} · " +
+                                        if (activeValText.isEmpty()) "target $activePlaceholder" else activeValText,
+                                    color = ZenithSecondary,
+                                    fontSize = 9.sp,
+                                    maxLines = 1
+                                )
+                            }
                             Text(
                                 text = "SLUITEN",
                                 color = ZenithSecondary,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Black,
                                 modifier = Modifier
                                     .clickable {
@@ -997,7 +1200,7 @@ fun TrackerScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text("RIR:", color = ZenithSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text("RIR:", color = ZenithSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 (0..4).forEach { rirVal ->
                                     val isSelected = activeSet.rirInput == rirVal.toString()
                                     Box(
@@ -1005,7 +1208,7 @@ fun TrackerScreen(
                                             .weight(1f)
                                             .height(36.dp)
                                             .background(
-                                                color = if (isSelected) ZenithPrimary else Color(0xFF27272E),
+                                                color = if (isSelected) ZenithAccent else ZenithField,
                                                 shape = RoundedCornerShape(6.dp)
                                             )
                                             .clickable {
@@ -1016,9 +1219,9 @@ fun TrackerScreen(
                                     ) {
                                         Text(
                                             text = "$rirVal",
-                                            color = if (isSelected) Color(0xFF09090B) else Color.White,
+                                            color = if (isSelected) ZenithOnAccent else Color.White,
                                             fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
                                         )
                                     }
                                 }
@@ -1045,7 +1248,7 @@ fun TrackerScreen(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .height(44.dp)
-                                                .background(Color(0xFF27272E), RoundedCornerShape(8.dp))
+                                                .background(ZenithField, RoundedCornerShape(8.dp))
                                                 .clickable {
                                                     val currentText = if (activeFocusField == "weight") {
                                                         activeSet.weightInput
@@ -1095,7 +1298,8 @@ fun TrackerScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(44.dp)
-                                        .background(Color(0x1FCBD5E1), RoundedCornerShape(8.dp))
+                                        .background(ZenithAccentTint, RoundedCornerShape(8.dp))
+                                        .border(1.dp, ZenithAccentBorder, RoundedCornerShape(8.dp))
                                         .clickable {
                                             activeFocusField = if (activeFocusField == "weight") "reps" else "weight"
                                         },
@@ -1103,7 +1307,7 @@ fun TrackerScreen(
                                 ) {
                                     Text(
                                         text = if (activeFocusField == "weight") "☞ ENTER REPS" else "☞ WEIGHT INVOEREN",
-                                        color = ZenithPrimary,
+                                        color = ZenithAccentSoft,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -1113,7 +1317,7 @@ fun TrackerScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(44.dp)
-                                        .background(ZenithPrimary, RoundedCornerShape(8.dp))
+                                        .background(ZenithAccent, RoundedCornerShape(8.dp))
                                         .clickable {
                                             if (activeFocusField == "weight") {
                                                 activeFocusField = "reps"
@@ -1149,103 +1353,14 @@ fun TrackerScreen(
                                 ) {
                                     Text(
                                         text = if (activeFocusField == "weight") "NEXT" else "DONE",
-                                        color = Color(0xFF09090B),
+                                        color = ZenithOnAccent,
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Black
                                     )
                                 }
                             }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-            }
-        }
-
-        // Rest Timer Floating Drawer
-        AnimatedVisibility(
-            visible = isTimerActive,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = ZenithSurface),
-                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, ZenithBorder, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(Color(0x1FCBD5E1), CircleShape)
-                                .border(2.dp, ZenithAccentNeon, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "${timerRemainingSeconds}s",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = ZenithAccentNeon
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column {
-                            Text(text = "REST TIMER", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            if (cardioStressFactor > 1.0) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "▶",
-                                        color = ZenithAccentNeon,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "+${Math.round((cardioStressFactor - 1) * 100)}% rest (cardio stress)",
-                                        fontSize = 9.sp,
-                                        color = ZenithSecondary
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Sound alarm mute / unmute toggle button
-                        IconButton(
-                            onClick = { isTimerMuted = !isTimerMuted },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Text(
-                                text = if (isTimerMuted) "🔇" else "🔊",
-                                fontSize = 16.sp
-                            )
-                        }
-
-                        Button(
-                            onClick = {
-                                val intent = Intent(context, RestTimerService::class.java).apply {
-                                    action = RestTimerService.ACTION_STOP
-                                }
-                                context.startService(intent)
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0x1AFFFFFF)),
-                            shape = RoundedCornerShape(6.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text(text = "SKIP", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
                     }
                 }
             }
@@ -1273,7 +1388,7 @@ fun TrackerScreen(
                         Text("Nee, Doorgaan", color = Color.White)
                     }
                 },
-                containerColor = Color(0xFF1C1C23)
+                containerColor = ZenithSurface
             )
         }
 
@@ -1289,10 +1404,10 @@ fun TrackerScreen(
                         placeholder = { Text("Enter a note...", color = Color.Gray, fontSize = 12.sp) },
                         textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ZenithPrimary,
+                            focusedBorderColor = ZenithAccent,
                             unfocusedBorderColor = Color.Gray,
-                            focusedLabelColor = ZenithPrimary,
-                            cursorColor = ZenithPrimary
+                            focusedLabelColor = ZenithAccent,
+                            cursorColor = ZenithAccent
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = false,
@@ -1310,7 +1425,7 @@ fun TrackerScreen(
                             triggerSave()
                         }
                     ) {
-                        Text("Save", color = ZenithPrimary, fontWeight = FontWeight.Bold)
+                        Text("Save", color = ZenithAccent, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
@@ -1318,7 +1433,7 @@ fun TrackerScreen(
                         Text("Annuleer", color = Color.White)
                     }
                 },
-                containerColor = Color(0xFF1C1C23)
+                containerColor = ZenithSurface
             )
         }
 
@@ -1328,12 +1443,12 @@ fun TrackerScreen(
             modifier = Modifier.align(Alignment.TopCenter)
         ) {
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
-                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = ZenithSurface),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .padding(24.dp)
                     .fillMaxWidth()
-                    .border(1.dp, ZenithPrimary, RoundedCornerShape(8.dp))
+                    .border(1.dp, ZenithWarning, RoundedCornerShape(10.dp))
                     .clickable { showPRToast = false }
             ) {
                 Row(
@@ -1342,7 +1457,7 @@ fun TrackerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "PR GEBROKEN! 🔥", color = ZenithPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        Text(text = "PR GEBROKEN! 🔥", color = ZenithWarning, fontSize = 11.sp, fontWeight = FontWeight.Black)
                         Text(text = "$prExerciseName geschat 1RM: $prValue $prUnit", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                     IconButton(onClick = { showPRToast = false }) {
@@ -1358,3 +1473,12 @@ fun TrackerScreen(
         }
     }
 }
+
+/**
+ * "70.0" reads better as "70" on a stack that only ever makes whole numbers, and the
+ * PREVIOUS column is 66dp wide - two characters of ".0" is the difference between a
+ * figure that fits and one that is clipped.
+ */
+fun trimDisplayWeight(value: Double): String =
+    if (value == Math.floor(value) && !value.isInfinite()) value.toLong().toString()
+    else value.toString().trimEnd('0').trimEnd('.')
