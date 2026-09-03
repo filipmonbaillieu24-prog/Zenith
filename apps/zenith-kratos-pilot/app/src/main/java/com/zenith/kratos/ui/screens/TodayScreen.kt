@@ -149,6 +149,24 @@ fun TodayScreen(
         )
     }
 
+    /**
+     * Which routine is opened out, showing its exercises and its set dots.
+     *
+     * Defaults to the one that is due - the first in the order above - but any routine
+     * can be opened by tapping it. Tapping a collapsed routine used to go straight to
+     * the preview sheet, which meant the detail on this screen was only ever available
+     * for one of them, and the other routines could not be looked at without committing
+     * to opening a sheet over the top.
+     *
+     * Held as an id rather than an index so it survives the list being refreshed and
+     * reordered underneath it, and falls back to the due routine if the one that was
+     * open is no longer there.
+     */
+    var expandedTemplateId by remember { mutableStateOf<String?>(null) }
+    val expandedId = expandedTemplateId
+        ?.takeIf { id -> orderedTemplates.any { it.id == id } }
+        ?: orderedTemplates.firstOrNull()?.id
+
     fun lastDoneLabel(templateId: String): String {
         val days = daysSinceByTemplate[templateId] ?: return "Never trained"
         return when {
@@ -465,7 +483,7 @@ fun TodayScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    itemsIndexed(orderedTemplates) { index, localTemp ->
+                    items(orderedTemplates, key = { it.id }) { localTemp ->
                         val tempExercises = remember(localTemp.exercisesJson) {
                             try {
                                 json.decodeFromString<List<TemplateExercise>>(localTemp.exercisesJson)
@@ -474,9 +492,9 @@ fun TodayScreen(
                             }
                         }
 
-                        if (index == 0) {
-                            // The routine that is due, opened out: every exercise with a dot
-                            // per set, so the shape of the session is readable before starting.
+                        if (localTemp.id == expandedId) {
+                            // Opened out: every exercise with a dot per set, so the shape of
+                            // the session is readable before starting.
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -562,7 +580,9 @@ fun TodayScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(Color(0x08FFFFFF), RoundedCornerShape(12.dp))
-                                    .clickable { openPreview(localTemp, tempExercises) }
+                                    // Opens this routine out in place. Starting it is a
+                                    // second, deliberate tap on START.
+                                    .clickable { expandedTemplateId = localTemp.id }
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
