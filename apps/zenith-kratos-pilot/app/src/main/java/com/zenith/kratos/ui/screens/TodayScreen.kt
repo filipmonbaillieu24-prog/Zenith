@@ -1,12 +1,18 @@
 package com.zenith.kratos.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -27,6 +33,13 @@ import com.zenith.kratos.data.*
 import com.zenith.kratos.ui.theme.*
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+
+/** One exercise as the opened-out routine card draws it. */
+private data class RoutineRow(
+    val name: String,
+    val setTypes: List<String>,
+    val stallNote: String?
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,11 +63,6 @@ fun TodayScreen(
     var isSyncing by remember { mutableStateOf(false) }
     var cardioFactor by remember { mutableStateOf(1.0) }
     var unsyncedCount by remember { mutableStateOf(0) }
-
-    // Bottom Sheet Preview States
-    var selectedTemplateForPreview by remember { mutableStateOf<LocalTemplate?>(null) }
-    var showPreviewSheet by remember { mutableStateOf(false) }
-    var previewExercises by remember { mutableStateOf<List<ActiveExerciseState>>(emptyList()) }
 
     // Update unsynced count
     LaunchedEffect(Unit) {
@@ -150,22 +158,71 @@ fun TodayScreen(
     }
 
     /**
-     * Which routine is opened out, showing its exercises and its set dots.
-     *
-     * Defaults to the one that is due - the first in the order above - but any routine
-     * can be opened by tapping it. Tapping a collapsed routine used to go straight to
-     * the preview sheet, which meant the detail on this screen was only ever available
-     * for one of them, and the other routines could not be looked at without committing
-     * to opening a sheet over the top.
-     *
-     * Held as an id rather than an index so it survives the list being refreshed and
-     * reordered underneath it, and falls back to the due routine if the one that was
-     * open is no longer there.
+     * Which routine is opened out. Defaults to the one that is due; any routine opens on
+     * a tap. Held as an id rather than a position so it survives the list being
+     * refreshed and reordered underneath it.
      */
     var expandedTemplateId by remember { mutableStateOf<String?>(null) }
     val expandedId = expandedTemplateId
         ?.takeIf { id -> orderedTemplates.any { it.id == id } }
         ?: orderedTemplates.firstOrNull()?.id
+
+    /*
+     * Targets for the routine that is currently open, worked out as it opens rather than
+     * when START is pressed.
+     *
+     * This used to run on the tap and end by raising a preview sheet over the screen -
+     * a second list of the same exercises, in front of the card that already showed
+     * them. With the card carrying the detail the sheet had nothing left to say, so
+     * pressing START now goes straight into the session.
+     *
+     * Doing the work on open rather than on START has a second benefit: it is what lets
+     * the card show which lifts have stalled, which is the one thing worth reading
+     * before a session rather than after, and which had nowhere else to live once the
+     * sheet was gone.
+     */
+    var preparedFor by remember { mutableStateOf<String?>(null) }
+    var preparedExercises by remember { mutableStateOf<List<ActiveExerciseState>>(emptyList()) }
+    var isPreparing by remember { mutableStateOf(false) }
+    var pendingStart by remember { mutableStateOf(false) }
+
+    val expandedTemplate = orderedTemplates.find { it.id == expandedId }
+    LaunchedEffect(expandedId, expandedTemplate?.exercisesJson, exercisesCache.size) {
+        // A change of routine cancels this effect and restarts it, so a slow fetch for
+        // the routine you just left can never land on the one you just opened.
+        preparedFor = null
+        preparedExercises = emptyList()
+        pendingStart = false
+
+        val localTemp = expandedTemplate ?: return@LaunchedEffect
+        val tempExercises = try {
+            json.decodeFromString<List<TemplateExercise>>(localTemp.exercisesJson)
+        } catch (e: Exception) {
+            emptyList()
+        }
+        val active = buildActiveExercises(tempExercises, exercisesCache)
+        if (active.isEmpty()) return@LaunchedEffect
+
+        isPreparing = true
+        try {
+            applyProgressionTargets(repository, localTemp, tempExercises, active)
+            preparedExercises = active
+            preparedFor = localTemp.id
+        } finally {
+            isPreparing = false
+        }
+    }
+
+    // Pressed START before the targets were ready: go as soon as they are.
+    LaunchedEffect(pendingStart, preparedFor) {
+        if (pendingStart && preparedFor != null && preparedFor == expandedId) {
+            val localTemp = orderedTemplates.find { it.id == expandedId }
+            pendingStart = false
+            if (localTemp != null) {
+                onStartWorkout(localTemp.id, localTemp.name, preparedExercises, cardioFactor)
+            }
+        }
+    }
 
     fun lastDoneLabel(templateId: String): String {
         val days = daysSinceByTemplate[templateId] ?: return "Never trained"
@@ -175,155 +232,6 @@ fun TodayScreen(
             days < 7 -> "Last: ${days}d ago"
             days < 14 -> "Last: 1w ago"
             else -> "Last: ${days / 7}w ago"
-        }
-    }
-
-    /**
-     * Build this routine's targets and open the preview.
-     *
-     * Shared by tapping a routine and by the START button on the card at the top - the
-     * same decision either way, so the same code path.
-     */
-    val openPreview: (LocalTemplate, List<TemplateExercise>) -> Unit = { localTemp, tempExercises ->
-        val active = tempExercises.mapNotNull { te ->
-            val ex = exercisesCache.find { e -> e.id == te.exerciseId }
-            if (ex != null) {
-                ActiveExerciseState(
-                    exerciseId = te.exerciseId,
-                    name = ex.name,
-                    category = ex.category,
-                    weightUnit = ex.weightUnit,
-                    incrementWeight = ex.incrementWeight,
-                    incrementPerSide = ex.incrementPerSide,
-                    minWeight = ex.minWeight,
-                    maxWeight = ex.maxWeight,
-                    notes = ex.notes,
-                    isBodyweight = ex.isBodyweight,
-                    sets = androidx.compose.runtime.mutableStateListOf<ActiveSetState>().apply {
-                        addAll(
-                            te.sets.map { ts ->
-                                ActiveSetState(
-                                    type = ts.type,
-                                    targetWeight = 0.0,
-                                    targetReps = ts.minReps,
-                                    targetRir = ts.targetRir,
-                                    maxReps = ts.maxReps
-                                )
-                            }
-                        )
-                    }
-                )
-            } else null
-        }
-
-        // Async load previous weights for double progression starting values
-        scope.launch {
-            // Per exercise, the best of the last few sessions rather than
-            // whatever happened last time.
-            //
-            // Targets used to be built from the single most recent session,
-            // so one bad day set the baseline and the athlete had to climb
-            // back out of it. The cause is usually invisible in the data -
-            // a machine was busy so the order changed and the chest was
-            // pre-fatigued by the time the press came round, or they slept
-            // badly, or they were short on time. All of it looks the same
-            // from here: a set that fell short.
-            //
-            // Judged on best working-set e1RM, which is the same measure the
-            // web logbook uses to decide whether a lift is progressing.
-            val recentWorkouts = repository.getRecentWorkoutsForTemplate(localTemp.id, 3)
-            if (recentWorkouts.isNotEmpty()) {
-                for (ae in active) {
-                    val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }
-                    val workingTargets = tempEx?.sets?.filter { it.type == "working" } ?: emptyList()
-
-                    // Newest session in which the prescribed work was actually done, rather
-                    // than the heaviest of the last three. See Progression.kt: choosing by
-                    // best e1RM let a single abandoned overreach set the target for weeks.
-                    val log = chooseBaselineSession(
-                        sessions = recentWorkouts.mapNotNull { w -> w.sets.find { it.exerciseId == ae.exerciseId } },
-                        workingSetsOf = { exLog ->
-                            exLog.sets.filter { it.type == "working" }
-                                .map { SetOutcome(it.weight, it.reps, it.rir) }
-                        },
-                        repFloorFor = { idx ->
-                            (workingTargets.getOrNull(idx) ?: workingTargets.lastOrNull())?.minReps ?: 8
-                        }
-                    )
-
-                    if (log != null && log.sets.isNotEmpty()) {
-                        val workingSetsInLog = log.sets.filter { it.type == "working" }
-
-                        // The same set across the recent sessions, newest first, so a lift
-                        // that has stopped moving can be told apart from one bad day.
-                        val historyBySetIndex: List<List<SetOutcome>> =
-                            workingSetsInLog.indices.map { idx ->
-                                recentWorkouts.mapNotNull { w ->
-                                    w.sets.find { it.exerciseId == ae.exerciseId }
-                                        ?.sets?.filter { it.type == "working" }
-                                        ?.getOrNull(idx)
-                                        ?.let { SetOutcome(it.weight, it.reps, it.rir) }
-                                }
-                            }
-
-                        val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
-                        val snapFor: (Double) -> Double = { w ->
-                            snapToHardwareStep(w, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
-                        }
-
-                        // The whole exercise is progressed at once, because an ascending
-                        // ramp is one decision rather than three: only the top set is near
-                        // enough to failure for its reserve to carry information.
-                        val perSetHistories = workingSetsInLog.indices.map { idx ->
-                            val prevOutcome = workingSetsInLog[idx].let { SetOutcome(it.weight, it.reps, it.rir) }
-                            listOf(prevOutcome) +
-                                (historyBySetIndex.getOrNull(idx) ?: emptyList())
-                                    .filterNot { it == prevOutcome }
-                        }
-                        val perSetSpecs = workingSetsInLog.indices.map { idx ->
-                            val spec = workingTargets.getOrNull(idx) ?: workingTargets.lastOrNull()
-                            SetSpec(spec?.minReps ?: 8, spec?.maxReps ?: 12, spec?.targetRir ?: 2)
-                        }
-                        val computed = nextExerciseTargets(perSetHistories, perSetSpecs, step, snapFor)
-
-                        var workIdx = 0
-                        for (i in ae.sets.indices) {
-                            val setType = ae.sets[i].type
-                            if (setType == "working") {
-                                val next = computed.getOrNull(workIdx) ?: computed.lastOrNull()
-                                if (next != null) {
-                                    ae.sets[i].targetWeight = next.weight
-                                    ae.sets[i].targetReps = next.reps
-                                    ae.sets[i].coachNote = next.advice ?: next.reason
-                                    ae.sets[i].stalled = next.stall != StallState.NONE
-                                } else {
-                                    ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
-                                }
-                                workIdx++
-                            }
-                        }
-                    } else {
-                        for (i in ae.sets.indices) {
-                            ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
-                        }
-                    }
-                    val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                    recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
-                }
-            } else {
-                for (ae in active) {
-                    for (i in ae.sets.indices) {
-                        ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
-                    }
-                    val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
-                    recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
-                }
-            }
-
-            // Open Bottom Sheet Preview instead of starting immediately
-            previewExercises = active
-            selectedTemplateForPreview = localTemp
-            showPreviewSheet = true
         }
     }
 
@@ -484,68 +392,104 @@ fun TodayScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     items(orderedTemplates, key = { it.id }) { localTemp ->
-                        val tempExercises = remember(localTemp.exercisesJson) {
-                            try {
-                                json.decodeFromString<List<TemplateExercise>>(localTemp.exercisesJson)
-                            } catch (e: Exception) {
-                                emptyList()
+                        val expanded = localTemp.id == expandedId
+                        val ready = preparedFor == localTemp.id
+
+                        // The card changes weight rather than swapping for a different
+                        // one, so opening a routine reads as the same object opening.
+                        val spec = tween<Color>(durationMillis = 220)
+                        val cardFill by animateColorAsState(
+                            if (expanded) Color(0x1438BDF8) else Color(0x08FFFFFF), spec, label = "fill"
+                        )
+                        val cardStroke by animateColorAsState(
+                            if (expanded) ZenithAccent else Color.Transparent, spec, label = "stroke"
+                        )
+                        val titleTone by animateColorAsState(
+                            if (expanded) Color.White else ZenithSecondary, spec, label = "title"
+                        )
+
+                        val rows: List<RoutineRow> = remember(localTemp.exercisesJson, exercisesCache, ready, preparedExercises) {
+                            if (ready) {
+                                preparedExercises.map { ex ->
+                                    RoutineRow(
+                                        name = ex.name,
+                                        setTypes = ex.sets.map { it.type },
+                                        // A lift that has stopped moving is worth reading
+                                        // before the session rather than after.
+                                        stallNote = ex.sets.firstOrNull { it.stalled }?.coachNote
+                                    )
+                                }
+                            } else {
+                                val tempExercises = try {
+                                    json.decodeFromString<List<TemplateExercise>>(localTemp.exercisesJson)
+                                } catch (e: Exception) {
+                                    emptyList()
+                                }
+                                tempExercises.mapNotNull { te ->
+                                    val name = exercisesCache.find { e -> e.id == te.exerciseId }?.name
+                                    name?.let { RoutineRow(it, te.sets.map { s -> s.type }, null) }
+                                }
                             }
                         }
 
-                        if (localTemp.id == expandedId) {
-                            // Opened out: every exercise with a dot per set, so the shape of
-                            // the session is readable before starting.
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color(0x1438BDF8), RoundedCornerShape(12.dp))
-                                    .border(1.dp, ZenithAccent, RoundedCornerShape(12.dp))
-                                    .clickable { openPreview(localTemp, tempExercises) }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                        Column(
+                            modifier = Modifier
+                                .animateItem()
+                                .fillMaxWidth()
+                                .background(cardFill, RoundedCornerShape(12.dp))
+                                .border(1.dp, cardStroke, RoundedCornerShape(12.dp))
+                                // Only a closed routine responds to a tap on the card.
+                                // Opening one is the tap; starting it is START.
+                                .clickable(enabled = !expanded) { expandedTemplateId = localTemp.id }
+                                .padding(horizontal = 16.dp, vertical = 14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = localTemp.name,
-                                        color = Color.White,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = lastDoneLabel(localTemp.id),
-                                        color = ZenithSecondary,
-                                        fontSize = 9.sp
-                                    )
-                                }
+                                Text(
+                                    text = localTemp.name,
+                                    color = titleTone,
+                                    fontSize = if (expanded) 14.sp else 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = lastDoneLabel(localTemp.id),
+                                    color = if (expanded) ZenithSecondary else ZenithMuted,
+                                    fontSize = 9.sp
+                                )
+                            }
 
-                                Row(
-                                    modifier = Modifier.padding(top = 10.dp, bottom = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    SetDotLegend(filled = false, label = "warmup")
-                                    SetDotLegend(filled = true, label = "working")
-                                }
+                            AnimatedVisibility(
+                                visible = expanded,
+                                enter = expandVertically(animationSpec = tween(240)) + fadeIn(tween(200, delayMillis = 60)),
+                                exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(tween(120))
+                            ) {
+                                Column {
+                                    Row(
+                                        modifier = Modifier.padding(top = 10.dp, bottom = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        SetDotLegend(filled = false, label = "warmup")
+                                        SetDotLegend(filled = true, label = "working")
+                                    }
 
-                                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                                    tempExercises.forEach { te ->
-                                        val name = exercisesCache.find { e -> e.id == te.exerciseId }?.name
-                                        if (name != null) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                        rows.forEach { row ->
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Text(
-                                                    text = name,
-                                                    color = ZenithSecondary,
+                                                    text = row.name,
+                                                    color = if (row.stallNote != null) ZenithWarning else ZenithSecondary,
                                                     fontSize = 10.sp,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis,
@@ -556,210 +500,199 @@ fun TodayScreen(
                                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
-                                                    te.sets.forEach { ts -> SetDot(filled = ts.type != "warmup") }
+                                                    row.setTypes.forEach { type -> SetDot(filled = type != "warmup") }
                                                 }
+                                            }
+                                            row.stallNote?.let { note ->
+                                                Text(
+                                                    text = note,
+                                                    color = ZenithWarning,
+                                                    fontSize = 9.sp,
+                                                    lineHeight = 13.sp,
+                                                    modifier = Modifier.padding(bottom = 2.dp)
+                                                )
                                             }
                                         }
                                     }
-                                }
 
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 12.dp)
-                                        .height(36.dp)
-                                        .background(ZenithAccent, RoundedCornerShape(8.dp))
-                                        .clickable { openPreview(localTemp, tempExercises) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("START", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = ZenithOnAccent)
-                                }
-                            }
-                        } else {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color(0x08FFFFFF), RoundedCornerShape(12.dp))
-                                    // Opens this routine out in place. Starting it is a
-                                    // second, deliberate tap on START.
-                                    .clickable { expandedTemplateId = localTemp.id }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = localTemp.name,
-                                    color = ZenithSecondary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = lastDoneLabel(localTemp.id),
-                                    color = ZenithMuted,
-                                    fontSize = 9.sp
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Modal Bottom Sheet for Routine Preview
-        if (showPreviewSheet && selectedTemplateForPreview != null) {
-            val workingTargets = previewExercises.flatMap { ex -> ex.sets.filter { it.type == "working" } }
-            val avgRir = if (workingTargets.isEmpty()) null
-                else workingTargets.sumOf { it.targetRir }.toDouble() / workingTargets.size
-            val totalSets = previewExercises.sumOf { it.sets.size }
-
-            ModalBottomSheet(
-                onDismissRequest = { showPreviewSheet = false },
-                containerColor = ZenithSurface,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 20.dp)
-                ) {
-                    Text(
-                        text = selectedTemplateForPreview!!.name,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        // Everything here is counted or prescribed. There is no session
-                        // length estimate: the app does not know how long you rest.
-                        text = buildString {
-                            append("${previewExercises.size} exercises · $totalSets sets")
-                            if (avgRir != null) append(" · avg RIR ${String.format(java.util.Locale.US, "%.1f", avgRir)}")
-                        },
-                        fontSize = 9.sp,
-                        color = ZenithSecondary,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 320.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        itemsIndexed(previewExercises) { idx, ex ->
-                            // A lift that has stopped moving is the one thing on this
-                            // sheet worth reading before the session rather than after.
-                            val stalledNote = ex.sets.firstOrNull { it.stalled }?.coachNote
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(
-                                        if (stalledNote != null) Color(0x14F5A623) else ZenithGlass,
-                                        RoundedCornerShape(12.dp)
-                                    )
-                                    .border(
-                                        1.dp,
-                                        if (stalledNote != null) Color(0x4DF5A623) else ZenithGlassBorder,
-                                        RoundedCornerShape(12.dp)
-                                    )
-                                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(18.dp)
-                                                .background(ZenithAccentTintStrong, CircleShape),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = "${idx + 1}",
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = ZenithAccentSoft
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = ex.name,
-                                            color = Color.White,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                    Box(
+                                    if (rows.isNotEmpty()) Box(
                                         modifier = Modifier
-                                            .background(Color(0x0FFFFFFF), RoundedCornerShape(20.dp))
-                                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                                            .fillMaxWidth()
+                                            .padding(top = 12.dp)
+                                            .height(36.dp)
+                                            .background(ZenithAccent, RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                if (ready) {
+                                                    onStartWorkout(
+                                                        localTemp.id,
+                                                        localTemp.name,
+                                                        preparedExercises,
+                                                        cardioFactor
+                                                    )
+                                                } else {
+                                                    // Still working out the targets - go the
+                                                    // moment they land rather than doing
+                                                    // nothing and looking broken.
+                                                    pendingStart = true
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = "${ex.sets.size} sets",
-                                            color = ZenithSecondary,
-                                            fontSize = 9.sp
+                                            text = if (pendingStart && isPreparing) "PREPARING..." else "START",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ZenithOnAccent
                                         )
                                     }
-                                }
-
-                                val weightLabel = if (ex.incrementPerSide) "per side" else "total weight"
-                                Text(
-                                    text = "${ex.category} • ${ex.weightUnit.uppercase()} ($weightLabel)",
-                                    color = ZenithSecondary,
-                                    fontSize = 9.sp,
-                                    modifier = Modifier.padding(start = 26.dp, top = 4.dp)
-                                )
-
-                                if (stalledNote != null) {
-                                    Text(
-                                        text = stalledNote,
-                                        color = ZenithWarning,
-                                        fontSize = 9.sp,
-                                        lineHeight = 13.sp,
-                                        modifier = Modifier.padding(start = 26.dp, top = 6.dp)
-                                    )
                                 }
                             }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(44.dp)
-                            .background(ZenithAccent, RoundedCornerShape(10.dp))
-                            .clickable {
-                                showPreviewSheet = false
-                                onStartWorkout(
-                                    selectedTemplateForPreview!!.id,
-                                    selectedTemplateForPreview!!.name,
-                                    previewExercises,
-                                    cardioFactor
-                                )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Start Training", color = ZenithOnAccent, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
                 }
             }
         }
+    }
+}
+
+/** The routine's exercises as editable session state, before any targets are worked out. */
+private fun buildActiveExercises(
+    tempExercises: List<TemplateExercise>,
+    exercisesCache: List<LocalExercise>
+): List<ActiveExerciseState> = tempExercises.mapNotNull { te ->
+    val ex = exercisesCache.find { e -> e.id == te.exerciseId } ?: return@mapNotNull null
+    ActiveExerciseState(
+        exerciseId = te.exerciseId,
+        name = ex.name,
+        category = ex.category,
+        weightUnit = ex.weightUnit,
+        incrementWeight = ex.incrementWeight,
+        incrementPerSide = ex.incrementPerSide,
+        minWeight = ex.minWeight,
+        maxWeight = ex.maxWeight,
+        notes = ex.notes,
+        isBodyweight = ex.isBodyweight,
+        sets = androidx.compose.runtime.mutableStateListOf<ActiveSetState>().apply {
+            addAll(
+                te.sets.map { ts ->
+                    ActiveSetState(
+                        type = ts.type,
+                        targetWeight = 0.0,
+                        targetReps = ts.minReps,
+                        targetRir = ts.targetRir,
+                        maxReps = ts.maxReps
+                    )
+                }
+            )
+        }
+    )
+}
+
+/**
+ * Fill in what to lift, from what was lifted before.
+ *
+ * Per exercise, the best of the last few sessions rather than whatever happened last
+ * time. Targets used to be built from the single most recent session, so one bad day set
+ * the baseline and the athlete had to climb back out of it. The cause is usually
+ * invisible in the data - a machine was busy so the order changed and the chest was
+ * pre-fatigued by the time the press came round, or they slept badly, or they were short
+ * on time. All of it looks the same from here: a set that fell short.
+ */
+private suspend fun applyProgressionTargets(
+    repository: WorkoutRepository,
+    localTemp: LocalTemplate,
+    tempExercises: List<TemplateExercise>,
+    active: List<ActiveExerciseState>
+) {
+    val recentWorkouts = repository.getRecentWorkoutsForTemplate(localTemp.id, 3)
+
+    if (recentWorkouts.isEmpty()) {
+        for (ae in active) {
+            for (i in ae.sets.indices) {
+                ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
+            }
+            val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
+            recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
+        }
+        return
+    }
+
+    for (ae in active) {
+        val tempEx = tempExercises.find { it.exerciseId == ae.exerciseId }
+        val workingTargets = tempEx?.sets?.filter { it.type == "working" } ?: emptyList()
+
+        // Newest session in which the prescribed work was actually done, rather than the
+        // heaviest of the last three. See Progression.kt: choosing by best e1RM let a
+        // single abandoned overreach set the target for weeks.
+        val log = chooseBaselineSession(
+            sessions = recentWorkouts.mapNotNull { w -> w.sets.find { it.exerciseId == ae.exerciseId } },
+            workingSetsOf = { exLog ->
+                exLog.sets.filter { it.type == "working" }
+                    .map { SetOutcome(it.weight, it.reps, it.rir) }
+            },
+            repFloorFor = { idx ->
+                (workingTargets.getOrNull(idx) ?: workingTargets.lastOrNull())?.minReps ?: 8
+            }
+        )
+
+        if (log != null && log.sets.isNotEmpty()) {
+            val workingSetsInLog = log.sets.filter { it.type == "working" }
+
+            // The same set across the recent sessions, newest first, so a lift that has
+            // stopped moving can be told apart from one bad day.
+            val historyBySetIndex: List<List<SetOutcome>> =
+                workingSetsInLog.indices.map { idx ->
+                    recentWorkouts.mapNotNull { w ->
+                        w.sets.find { it.exerciseId == ae.exerciseId }
+                            ?.sets?.filter { it.type == "working" }
+                            ?.getOrNull(idx)
+                            ?.let { SetOutcome(it.weight, it.reps, it.rir) }
+                    }
+                }
+
+            val step = if (ae.incrementPerSide) 2.0 * ae.incrementWeight else ae.incrementWeight
+            val snapFor: (Double) -> Double = { w ->
+                snapToHardwareStep(w, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
+            }
+
+            // The whole exercise is progressed at once, because an ascending ramp is one
+            // decision rather than three: only the top set is near enough to failure for
+            // its reserve to carry information.
+            val perSetHistories = workingSetsInLog.indices.map { idx ->
+                val prevOutcome = workingSetsInLog[idx].let { SetOutcome(it.weight, it.reps, it.rir) }
+                listOf(prevOutcome) +
+                    (historyBySetIndex.getOrNull(idx) ?: emptyList())
+                        .filterNot { it == prevOutcome }
+            }
+            val perSetSpecs = workingSetsInLog.indices.map { idx ->
+                val spec = workingTargets.getOrNull(idx) ?: workingTargets.lastOrNull()
+                SetSpec(spec?.minReps ?: 8, spec?.maxReps ?: 12, spec?.targetRir ?: 2)
+            }
+            val computed = nextExerciseTargets(perSetHistories, perSetSpecs, step, snapFor)
+
+            var workIdx = 0
+            for (i in ae.sets.indices) {
+                if (ae.sets[i].type == "working") {
+                    val next = computed.getOrNull(workIdx) ?: computed.lastOrNull()
+                    if (next != null) {
+                        ae.sets[i].targetWeight = next.weight
+                        ae.sets[i].targetReps = next.reps
+                        ae.sets[i].coachNote = next.advice ?: next.reason
+                        ae.sets[i].stalled = next.stall != StallState.NONE
+                    } else {
+                        ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
+                    }
+                    workIdx++
+                }
+            }
+        } else {
+            for (i in ae.sets.indices) {
+                ae.sets[i].targetWeight = startingWeightFor(ae.minWeight, ae.incrementWeight, ae.incrementPerSide)
+            }
+        }
+
+        val workWeight = ae.sets.firstOrNull { it.type == "working" }?.targetWeight ?: 20.0
+        recalculateWarmupTargets(ae.sets, workWeight, ae.incrementWeight, ae.incrementPerSide, ae.minWeight, ae.maxWeight)
     }
 }
 
