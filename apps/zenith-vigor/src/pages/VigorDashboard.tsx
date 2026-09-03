@@ -27,13 +27,12 @@ import {
   Line,
   BarChart,
   Bar,
-  AreaChart,
-  Area,
   ComposedChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ReferenceLine
 } from 'recharts';
 
@@ -694,6 +693,20 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
     // Zenith Fuel's ZANE trend-weight convention) — smooths out day-to-day water/
     // glycogen noise so the underlying direction is visible next to the raw readings.
     let emaWeight: number | null = null;
+    // Body composition gets the same treatment as weight, and needs it more: a single
+    // impedance reading moves several points with hydration alone, so the raw line says
+    // more about how much the athlete drank than about their body.
+    //
+    // Each component keeps its own average and advances only on a day that was actually
+    // measured, so a gap in the readings neither freezes the trend nor invents a point
+    // to fill itself with.
+    let emaFat: number | null = null;
+    let emaWater: number | null = null;
+    let emaMuscle: number | null = null;
+    const step = (prev: number | null, value: number | null) =>
+      value === null || Number.isNaN(value) ? prev : (prev === null ? value : 0.15 * value + 0.85 * prev);
+    const round1 = (v: number | null) => (v === null ? null : Math.round(v * 10) / 10);
+
     return weights.map(w => {
       const weight = parseFloat(w.weight);
       const fat = w.body_fat ? parseFloat(w.body_fat) : null;
@@ -706,6 +719,10 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
       if (!Number.isNaN(weight)) {
         emaWeight = emaWeight === null ? weight : 0.15 * weight + 0.85 * emaWeight;
       }
+      emaFat = step(emaFat, fat);
+      emaWater = step(emaWater, water);
+      emaMuscle = step(emaMuscle, muscle);
+
       return {
         date: new Date(w.logged_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
         weight,
@@ -713,7 +730,12 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         fat,
         water,
         muscle,
-        other
+        other,
+        // Only where there is a reading to average. A trend drawn across a gap would
+        // be a straight line between two weeks, which looks like knowledge.
+        fatTrend: fat === null ? null : round1(emaFat),
+        waterTrend: water === null ? null : round1(emaWater),
+        muscleTrend: muscle === null ? null : round1(emaMuscle)
       };
     });
   }, [weights]);
@@ -1399,35 +1421,37 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartWeightData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorVet" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05}/>
-                      </linearGradient>
-                      <linearGradient id="colorVocht" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00f5ff" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#00f5ff" stopOpacity={0.05}/>
-                      </linearGradient>
-                      <linearGradient id="colorOverig" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#64748b" stopOpacity={0.2}/>
-                        <stop offset="95%" stopColor="#64748b" stopOpacity={0.02}/>
-                      </linearGradient>
-                    </defs>
+                  {/* Unstacked, with a trend per component.
+                      This was three areas stacked to 100% with muscle drawn over them.
+                      A stack cannot carry a trend line - the rendered height of the water
+                      band is fat + water, so a line at the true water figure would sit
+                      somewhere the eye reads as a third quantity. The stack also added
+                      nothing: "Other" was defined as 100 - fat - water, so it summed to
+                      100 by construction rather than by measurement, and muscle overlaps
+                      water anyway, being mostly made of it. */}
+                  <LineChart data={chartWeightData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid {...ZENITH_CHART_GRID} />
                     <XAxis dataKey="date" stroke="var(--text-muted)" tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
-                    <YAxis stroke="var(--text-muted)" domain={[0, 100]} tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
+                    <YAxis stroke="var(--text-muted)" domain={['dataMin - 4', 'dataMax + 4']} tickFormatter={(v: number) => `${Math.round(v)}`} tick={ZENITH_CHART_AXIS_TICK} tickLine={false} />
                     <Tooltip
                       contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
                       labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                     />
-                    {/* Areas stacked to exactly 100% */}
-                    <Area type="monotone" name="Fat %" dataKey="fat" stackId="1" stroke="#ef4444" strokeWidth={1.5} fill="url(#colorVet)" />
-                    <Area type="monotone" name="Water %" dataKey="water" stackId="1" stroke="#00f5ff" strokeWidth={1.5} fill="url(#colorVocht)" />
-                    <Area type="monotone" name="Other %" dataKey="other" stackId="1" stroke="#64748b" strokeWidth={1.5} fill="url(#colorOverig)" />
-                    {/* Muscle % as a line overlaying the areas */}
-                    <Line type="monotone" name="Muscle %" dataKey="muscle" stroke="#cbd5e1" strokeWidth={2.5} dot={{ r: 4, stroke: '#cbd5e1', strokeWidth: 1.5, fill: '#09090b' }} activeDot={{ r: 6 }} />
-                  </AreaChart>
+                    <Legend wrapperStyle={{ fontSize: 10 }} />
+
+                    {/* Readings faint, trends solid - the same convention as the weight
+                        chart above, where the raw line is what happened and the heavy one
+                        is what it means. connectNulls stays off so a fortnight without a
+                        reading looks like a fortnight without a reading. */}
+                    <Line type="monotone" name="Fat %" dataKey="fat" stroke="#ef4444" strokeOpacity={0.28} strokeWidth={1.2} dot={false} connectNulls={false} legendType="none" isAnimationActive={false} />
+                    <Line type="monotone" name="Fat trend" dataKey="fatTrend" stroke="#ef4444" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5 }} />
+
+                    <Line type="monotone" name="Water %" dataKey="water" stroke="#00f5ff" strokeOpacity={0.28} strokeWidth={1.2} dot={false} connectNulls={false} legendType="none" isAnimationActive={false} />
+                    <Line type="monotone" name="Water trend" dataKey="waterTrend" stroke="#00f5ff" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5 }} />
+
+                    <Line type="monotone" name="Muscle %" dataKey="muscle" stroke="#cbd5e1" strokeOpacity={0.28} strokeWidth={1.2} dot={false} connectNulls={false} legendType="none" isAnimationActive={false} />
+                    <Line type="monotone" name="Muscle trend" dataKey="muscleTrend" stroke="#cbd5e1" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5 }} />
+                  </LineChart>
                 </ResponsiveContainer>
               )}
             </div>
