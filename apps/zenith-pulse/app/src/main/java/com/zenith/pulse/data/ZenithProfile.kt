@@ -143,23 +143,88 @@ object ZenithProfileStore {
  * because it uses a proprietary equation nobody has published - neither figure is the
  * truth a DXA scan would give.
  *
- * Water, muscle and bone are deliberately absent. Each needs its own validated
- * equation, and inventing three more numbers to fill the boxes would make the screen
- * look complete while making it less true.
+ * Total body water comes from the same paper and the same cohort, so it cannot
+ * disagree with the fat-free mass beside it in the way two unrelated equations would.
+ *
+ * Skeletal muscle mass is Janssen et al. (2000), validated against whole-body MRI in
+ * 388 adults. It is worth being clear that this is not the same quantity a scale calls
+ * "muscle mass": this is skeletal muscle only, where a scale usually reports something
+ * closer to fat-free mass less bone. On this athlete the two happen to land within half
+ * a point of each other, which is luck rather than agreement.
+ *
+ * Bone is still absent. There is no foot-to-foot equation for it worth the name, and a
+ * fourth number invented to fill a box would make the screen look complete while making
+ * it less true.
  */
+/**
+ * The last confirmed composition, kept for the day it belongs to.
+ *
+ * Water and skeletal muscle are derived here, from an impedance reading that only
+ * exists for the moment the athlete stood on the scale. Body fat reaches Zenith by
+ * being written to Health Connect and read back, but Health Connect has a record type
+ * for neither of these - BodyWaterMassRecord exists but is a mass rather than the
+ * fraction the history shows, and there is no skeletal-muscle record at all.
+ *
+ * Rather than invent a home for them in a record that means something else, the
+ * confirmed figures are held here against their date and attached to the next sync for
+ * that same day. A reading from yesterday is not carried onto today.
+ */
+object BodyCompositionStore {
+
+    private const val PREFS = "zenith_body_composition"
+    private const val KEY_DATE = "date"
+    private const val KEY_WATER = "water_percent"
+    private const val KEY_MUSCLE = "muscle_percent"
+
+    data class Derived(val waterPercent: Double?, val musclePercent: Double?)
+
+    fun save(context: Context, date: LocalDate, waterPercent: Double?, musclePercent: Double?) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_DATE, date.toString())
+            .putFloat(KEY_WATER, (waterPercent ?: 0.0).toFloat())
+            .putFloat(KEY_MUSCLE, (musclePercent ?: 0.0).toFloat())
+            .apply()
+    }
+
+    /** Null fields when nothing was stored for this date - never yesterday's numbers. */
+    fun forDate(context: Context, date: String): Derived {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getString(KEY_DATE, null) != date) return Derived(null, null)
+        return Derived(
+            waterPercent = prefs.getFloat(KEY_WATER, 0f).toDouble().takeIf { it > 0 },
+            musclePercent = prefs.getFloat(KEY_MUSCLE, 0f).toDouble().takeIf { it > 0 }
+        )
+    }
+}
+
 object BodyComposition {
 
     data class Estimate(
         val fatFreeMassKg: Double,
-        val bodyFatPercent: Double
+        val bodyFatPercent: Double,
+        /** Total body water in litres, Sun et al. 2003. */
+        val totalBodyWaterL: Double,
+        val bodyWaterPercent: Double,
+        /**
+         * Skeletal muscle only, Janssen et al. 2000. Null when age is unknown, which
+         * that equation needs and Sun's does not.
+         */
+        val skeletalMuscleMassKg: Double?,
+        val skeletalMusclePercent: Double?
     )
 
-    /** Sun et al. 2003, NHANES III. Height in cm, resistance in ohms. */
+    /**
+     * Sun et al. 2003, NHANES III. Height in cm, resistance in ohms.
+     *
+     * `ageYears` is used only for skeletal muscle mass; leave it null and everything
+     * else is still returned.
+     */
     fun estimate(
         weightKg: Double,
         heightCm: Double,
         resistanceOhms: Double,
-        isMale: Boolean
+        isMale: Boolean,
+        ageYears: Int? = null
     ): Estimate? {
         if (weightKg < 20 || weightKg > 300) return null
         if (heightCm < 100 || heightCm > 250) return null
@@ -181,9 +246,32 @@ object BodyComposition {
         val fatPercent = ((weightKg - ffm) / weightKg) * 100.0
         if (fatPercent < 3 || fatPercent > 65) return null
 
+        // Sun et al. 2003 again, total body water rather than fat-free mass.
+        val tbw = if (isMale) {
+            1.203 + 0.449 * h2r + 0.176 * weightKg
+        } else {
+            3.747 + 0.450 * h2r + 0.113 * weightKg
+        }
+        // Water is roughly 73% of fat-free mass in a healthy adult; a figure outside
+        // this band means the inputs were wrong, whatever the arithmetic produced.
+        val waterPercent = (tbw / weightKg) * 100.0
+        if (waterPercent < 30 || waterPercent > 75) return null
+
+        // Janssen et al. 2000, validated against MRI. Sex enters as 1 for men, 0 for
+        // women. Age is the reason this one can come back null.
+        val smm = ageYears?.let { age ->
+            val raw = (h2r * 0.401) + (if (isMale) 3.825 else 0.0) + (age * -0.071) + 5.102
+            raw.takeIf { it > 5 && it < weightKg }
+        }
+        val smmPercent = smm?.let { (it / weightKg) * 100.0 }?.takeIf { it in 10.0..70.0 }
+
         return Estimate(
             fatFreeMassKg = Math.round(ffm * 10) / 10.0,
-            bodyFatPercent = Math.round(fatPercent * 10) / 10.0
+            bodyFatPercent = Math.round(fatPercent * 10) / 10.0,
+            totalBodyWaterL = Math.round(tbw * 10) / 10.0,
+            bodyWaterPercent = Math.round(waterPercent * 10) / 10.0,
+            skeletalMuscleMassKg = smm?.let { Math.round(it * 10) / 10.0 },
+            skeletalMusclePercent = smmPercent?.let { Math.round(it * 10) / 10.0 }
         )
     }
 }

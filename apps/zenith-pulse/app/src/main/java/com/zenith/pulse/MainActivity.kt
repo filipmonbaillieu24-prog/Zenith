@@ -30,6 +30,7 @@ import com.zenith.pulse.data.HealthConnectManager
 import com.zenith.pulse.data.ScaleBleManager
 import com.zenith.pulse.data.ZenithProfileStore
 import com.zenith.pulse.data.BodyComposition
+import com.zenith.pulse.data.BodyCompositionStore
 import com.zenith.pulse.sync.ZenithSyncManager
 import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.graphicsLayer
@@ -140,6 +141,9 @@ fun ZenithPulseScreen(
     LaunchedEffect(Unit) { zenithProfile = ZenithProfileStore.refresh(context) }
 
     var bodyCompositionNote by remember { mutableStateOf<String?>(null) }
+    // Kept so the confirmed reading can carry water and muscle through to Zenith, not
+    // only the body fat that has an input box of its own.
+    var lastEstimate by remember { mutableStateOf<BodyComposition.Estimate?>(null) }
     var weightInput by remember { mutableStateOf("") }
     var bodyFatInput by remember { mutableStateOf("") }
     var bodyStatsMessage by remember { mutableStateOf<String?>(null) }
@@ -211,15 +215,27 @@ fun ZenithPulseScreen(
             val height = zenithProfile.heightCm
             val male = zenithProfile.isMale
             if (r.bodyFatPercent == null && weight != null && ohms != null && height != null && male != null) {
-                BodyComposition.estimate(weight, height, ohms, male)?.let { est ->
+                BodyComposition.estimate(weight, height, ohms, male, zenithProfile.ageYears)?.let { est ->
                     bodyFatInput = String.format(java.util.Locale.US, "%.1f", est.bodyFatPercent)
-                    bodyCompositionNote =
-                        // Age is not an input. Sun et al. 2003 takes height, weight, sex
-                        // and resistance, and naming a variable the equation never sees
-                        // makes the estimate sound better founded than it is.
-                        "Body fat estimated from ${ohms.toInt()} Ω, your height and weight (Sun 2003) — " +
-                        "fat-free mass ${est.fatFreeMassKg} kg. Your scale's own app uses a different, " +
-                        "unpublished equation, so expect a few points of difference."
+                    lastEstimate = est
+                    bodyCompositionNote = buildString {
+                        // Age is not an input to Sun 2003 - it takes height, weight, sex
+                        // and resistance - so naming it would make the estimate sound
+                        // better founded than it is. Janssen's muscle equation does use
+                        // it, which is why that line can be missing and the others not.
+                        append("From ${ohms.toInt()} Ω, your height and weight: ")
+                        append("body fat ${est.bodyFatPercent}% (fat-free mass ${est.fatFreeMassKg} kg), ")
+                        append("water ${est.bodyWaterPercent}% (${est.totalBodyWaterL} L)")
+                        est.skeletalMusclePercent?.let {
+                            append(", skeletal muscle ${it}% (${est.skeletalMuscleMassKg} kg)")
+                        }
+                        append(". Fat and water are Sun 2003")
+                        if (est.skeletalMusclePercent != null) append("; muscle is Janssen 2000, skeletal muscle only")
+                        append(". Your scale's app uses its own unpublished equations, so expect some difference.")
+                        if (est.skeletalMusclePercent == null) {
+                            append(" Add your date of birth in the profile to get a muscle figure too.")
+                        }
+                    }
                 }
             }
             if (r.hasAnything) {
@@ -1048,6 +1064,15 @@ fun ZenithPulseScreen(
                                             return@launch
                                         }
 
+                                        // Hold the derived pair against today so the next
+                                        // sync can carry them; Health Connect has no home
+                                        // for either. Only for the reading just confirmed.
+                                        lastEstimate?.let { est ->
+                                            BodyCompositionStore.save(
+                                                context, LocalDate.now(),
+                                                est.bodyWaterPercent, est.skeletalMusclePercent
+                                            )
+                                        }
                                         val error = healthConnectManager.writeBodyStats(weight, fat, LocalDate.now())
                                         if (error != null) {
                                             bodyStatsMessage = error

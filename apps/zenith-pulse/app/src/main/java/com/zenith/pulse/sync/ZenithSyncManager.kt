@@ -128,6 +128,8 @@ object ZenithSyncManager {
                 put("weight_kg", data.latestWeightKg)
                 put("height_cm", data.heightCm)
                 put("body_fat_percent", data.bodyFatPercent)
+                put("body_water_percent", data.bodyWaterPercent)
+                put("skeletal_muscle_percent", data.skeletalMusclePercent)
                 put("lean_body_mass_kg", data.leanBodyMassKg)
                 put("spo2_percent", data.latestSpO2)
                 put("respiratory_rate", data.respiratoryRate)

@@ -46,6 +46,9 @@ data class HealthDataPayload(
     val latestWeightKg: Double = 0.0,
     val heightCm: Double = 0.0,
     val bodyFatPercent: Double = 0.0,
+    /** Derived from the same impedance reading as body fat; 0 when not measured today. */
+    val bodyWaterPercent: Double = 0.0,
+    val skeletalMusclePercent: Double = 0.0,
     val leanBodyMassKg: Double = 0.0,
     val latestSpO2: Double = 0.0,
     val respiratoryRate: Double = 0.0,
@@ -286,6 +289,9 @@ class HealthConnectManager(private val context: Context) {
         var latestWeight = 0.0
         var heightValueCm = 0.0
         var bodyFatPct = 0.0
+        // Water and skeletal muscle are this app's own derivation of the day's scale
+        // reading; Health Connect has nowhere to put either, so they travel alongside.
+        val derivedComposition = BodyCompositionStore.forDate(context, todayLocalDate.toString())
         var leanMassKg = 0.0
         var latestSpO2Val = 0.0
         var respRate = 0.0
@@ -924,6 +930,8 @@ class HealthConnectManager(private val context: Context) {
             latestWeightKg = latestWeight,
             heightCm = heightValueCm,
             bodyFatPercent = bodyFatPct,
+            bodyWaterPercent = derivedComposition.waterPercent ?: 0.0,
+            skeletalMusclePercent = derivedComposition.musclePercent ?: 0.0,
             leanBodyMassKg = leanMassKg,
             latestSpO2 = latestSpO2Val,
             respiratoryRate = respRate,
