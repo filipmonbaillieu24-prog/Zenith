@@ -214,7 +214,10 @@ fun ZenithPulseScreen(
                 BodyComposition.estimate(weight, height, ohms, male)?.let { est ->
                     bodyFatInput = String.format(java.util.Locale.US, "%.1f", est.bodyFatPercent)
                     bodyCompositionNote =
-                        "Body fat estimated from ${ohms.toInt()} Ω, your height and age (Sun 2003) — " +
+                        // Age is not an input. Sun et al. 2003 takes height, weight, sex
+                        // and resistance, and naming a variable the equation never sees
+                        // makes the estimate sound better founded than it is.
+                        "Body fat estimated from ${ohms.toInt()} Ω, your height and weight (Sun 2003) — " +
                         "fat-free mass ${est.fatFreeMassKg} kg. Your scale's own app uses a different, " +
                         "unpublished equation, so expect a few points of difference."
                 }
