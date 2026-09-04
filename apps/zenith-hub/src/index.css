@@ -1759,19 +1759,23 @@ body {
 
 /* Zenith Navigation Sidebar - Corporate Glassmorphic Theme */
 .zenith-sidebar {
-  width: 240px;
-  background: var(--bg-sidebar, rgba(18, 18, 22, 0.9));
+  width: 260px;
+  /* Its own ground rather than a flat grey panel, and inset so it reads as a
+     panel resting on the app rather than a wall bolted to the edge. */
+  background: var(--zenith-ground, linear-gradient(135deg, #090a0c 0%, #0d2634 100%));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-right: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  border-radius: 14px;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  margin-top: 0;
+  height: calc(100% - 24px);
+  margin: 12px 0 12px 12px;
+  overflow: hidden;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 100;
   flex-shrink: 0;
-  box-shadow: var(--shadow-main, 0 10px 30px rgba(0, 0, 0, 0.45));
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
 .zenith-sidebar.collapsed {
@@ -1794,14 +1798,15 @@ body {
   padding: 0;
 }
 
+/* The serif wordmark the phone apps use, so the family signs its name the
+   same way everywhere. It was a gradient-filled sans here and a serif on
+   Kratos Pilot and Pulse. */
 .zenith-sidebar-brand {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Noto Serif', Georgia, serif;
   font-size: 20px;
-  font-weight: 900;
-  letter-spacing: 2.5px;
-  background: linear-gradient(135deg, #ffffff 45%, var(--zenith-color-signature, #38bdf8) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-weight: 400;
+  letter-spacing: 1.5px;
+  color: #ffffff;
 }
 
 .zenith-sidebar-toggle-btn {
@@ -1812,8 +1817,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
@@ -1846,12 +1851,53 @@ body {
 .zenith-sidebar-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--zenith-color-surface, rgba(255, 255, 255, 0.045));
+  border: 1px solid var(--zenith-color-border, rgba(255, 255, 255, 0.08));
   border-radius: 12px;
   padding: 10px;
+}
+
+/* A heading that folds its group away. Styled as the heading it already was,
+   with the chevron as the only added furniture. */
+.zenith-sidebar-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.zenith-sidebar-group-chevron {
+  color: #5a6472;
+  flex-shrink: 0;
+  margin: 2px 4px 8px;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.zenith-sidebar-group-chevron.closed {
+  transform: rotate(-90deg);
+}
+
+/* Collapses on grid-template-rows rather than max-height, so the animation
+   does not need a measured pixel height and cannot be cut short by a group
+   that turns out taller than the guess. */
+.zenith-sidebar-group-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.zenith-sidebar-group-body > * {
+  overflow: hidden;
+}
+
+.zenith-sidebar-group-body.closed {
+  grid-template-rows: 0fr;
 }
 
 .zenith-sidebar-group-title {
@@ -1882,6 +1928,10 @@ body {
   flex-direction: column;
   gap: 5px;
   width: 100%;
+}
+
+.zenith-sidebar-group-body .zenith-sidebar-menu {
+  gap: 5px;
 }
 
 .zenith-sidebar-menu li {
@@ -1943,6 +1993,43 @@ body {
 
 .zenith-sidebar-menu-label {
   white-space: nowrap;
+}
+
+/* Two-line rows: what it is called, and what it is for. */
+.zenith-sidebar-menu-item.has-subtitle {
+  padding: 7px 10px;
+}
+
+.zenith-sidebar-menu-stack {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.zenith-sidebar-menu-item.has-subtitle .zenith-sidebar-menu-label {
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.zenith-sidebar-menu-sub {
+  color: #5a6472;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* An extension's icon carries the accent softly even when it is not the page
+   you are on - it is what distinguishes the five products from the plain
+   navigation above and below them. */
+.zenith-sidebar-menu-item.has-subtitle .zenith-sidebar-menu-icon {
+  color: var(--zenith-color-signature-bright, #7dd3fc);
+}
+
+.zenith-sidebar-menu-item.has-subtitle.active .zenith-sidebar-menu-label {
+  color: #ffffff;
 }
 
 /* Footer */

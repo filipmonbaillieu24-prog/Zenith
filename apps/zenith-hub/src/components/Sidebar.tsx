@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Brain, 
   LayoutDashboard, 
@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Bug,
   Terminal,
   Zap,
@@ -59,9 +60,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
 
+  // Groups a person can fold away. Absent means open, so a group only ever
+  // appears here once it has been deliberately closed.
+  const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
+  const toggleGroup = (title: string) =>
+    setClosedGroups((prev) => ({ ...prev, [title]: !prev[title] }));
+
   const navGroups = [
     {
       title: 'General',
+      // Always open: three items that are the point of the app, and folding
+      // them away would only ever cost a click.
+      collapsible: false,
       items: [
         { key: 'hub' as TabKey, label: 'Dashboard', icon: LayoutDashboard },
         { key: 'calendar' as TabKey, label: 'Calendar', icon: Calendar },
@@ -70,16 +80,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       title: 'Extensions',
+      collapsible: true,
+      // The subtitle is what each extension is for. Five one-word names in a
+      // column say nothing on their own, and "Vigor" is not self-explanatory
+      // to anyone who has not already used it.
       items: [
-        { key: 'aero' as TabKey, label: 'Aero', icon: Bike },
-        { key: 'vigor' as TabKey, label: 'Vigor', icon: Scale },
-        { key: 'kratos' as TabKey, label: 'Kratos', icon: Dumbbell },
-        { key: 'fuel' as TabKey, label: 'Fuel', icon: ChefHat },
-        { key: 'stride' as TabKey, label: 'Stride', icon: Footprints },
+        { key: 'aero' as TabKey, label: 'Aero', icon: Bike, subtitle: 'Cycling & rides' },
+        { key: 'vigor' as TabKey, label: 'Vigor', icon: Scale, subtitle: 'Recovery & health' },
+        { key: 'kratos' as TabKey, label: 'Kratos', icon: Dumbbell, subtitle: 'Strength training' },
+        { key: 'fuel' as TabKey, label: 'Fuel', icon: ChefHat, subtitle: 'Nutrition & recipes' },
+        { key: 'stride' as TabKey, label: 'Stride', icon: Footprints, subtitle: 'Running & walking' },
       ],
     },
     {
       title: 'System & Community',
+      collapsible: true,
       items: [
         { key: 'integrations' as TabKey, label: 'Integrations', icon: Link2 },
         { key: 'prijzen' as TabKey, label: 'Pricing & Pro', icon: Zap },
@@ -110,35 +125,68 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Navigation Links */}
       <div className="zenith-sidebar-content">
-        {navGroups.map((group, groupIdx) => (
-          <div key={groupIdx} className="zenith-sidebar-group">
-            {!isCollapsed && <h3 className="zenith-sidebar-group-title animate-fade-in">{group.title}</h3>}
-            <ul className="zenith-sidebar-menu">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.key;
-                return (
-                  <li key={item.key}>
-                    <button
-                      onClick={() => setActiveTab(item.key)}
-                      className={`zenith-sidebar-menu-item ${isActive ? 'active' : ''}`}
-                      title={isCollapsed ? item.label : undefined}
-                    >
-                      <span className="zenith-sidebar-menu-icon">
-                        <Icon size={18} />
-                      </span>
-                      {!isCollapsed && (
-                        <span className="zenith-sidebar-menu-label animate-fade-in">
-                          {item.label}
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+        {navGroups.map((group, groupIdx) => {
+          // Folding only applies to the expanded sidebar. Collapsed to icons
+          // there is no heading to click, and a hidden group would leave a gap
+          // with nothing to explain it.
+          const isClosed = !isCollapsed && group.collapsible && !!closedGroups[group.title];
+          return (
+            <div key={groupIdx} className="zenith-sidebar-group">
+              {!isCollapsed && (
+                group.collapsible ? (
+                  <button
+                    type="button"
+                    className="zenith-sidebar-group-toggle animate-fade-in"
+                    onClick={() => toggleGroup(group.title)}
+                    aria-expanded={!isClosed}
+                  >
+                    <span className="zenith-sidebar-group-title">{group.title}</span>
+                    <ChevronDown
+                      size={12}
+                      className={`zenith-sidebar-group-chevron ${isClosed ? 'closed' : ''}`}
+                    />
+                  </button>
+                ) : (
+                  <h3 className="zenith-sidebar-group-title animate-fade-in">{group.title}</h3>
+                )
+              )}
+              <div className={`zenith-sidebar-group-body ${isClosed ? 'closed' : ''}`}>
+                <ul className="zenith-sidebar-menu">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.key;
+                    const subtitle = (item as { subtitle?: string }).subtitle;
+                    return (
+                      <li key={item.key}>
+                        <button
+                          onClick={() => setActiveTab(item.key)}
+                          className={`zenith-sidebar-menu-item ${isActive ? 'active' : ''} ${subtitle && !isCollapsed ? 'has-subtitle' : ''}`}
+                          title={isCollapsed ? item.label : undefined}
+                        >
+                          <span className="zenith-sidebar-menu-icon">
+                            <Icon size={18} />
+                          </span>
+                          {!isCollapsed && (
+                            subtitle ? (
+                              <span className="zenith-sidebar-menu-stack animate-fade-in">
+                                <span className="zenith-sidebar-menu-label">{item.label}</span>
+                                <span className="zenith-sidebar-menu-sub">{subtitle}</span>
+                              </span>
+                            ) : (
+                              <span className="zenith-sidebar-menu-label animate-fade-in">
+                                {item.label}
+                              </span>
+                            )
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Sidebar Footer */}
