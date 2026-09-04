@@ -1819,17 +1819,18 @@ body {
   justify-content: center;
   width: 30px;
   height: 30px;
+  /* Explicit, because a global rule used to give every button 1.2em of side
+     padding, which on a fixed 30px border-box left no room for the icon. */
+  padding: 0;
   border-radius: 8px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+  transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .zenith-sidebar-toggle-btn:hover {
   color: #ffffff;
   background-color: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.18);
-  transform: scale(1.05);
 }
 
 /* Content & Groups */
@@ -1949,7 +1950,8 @@ body {
   gap: 12px;
   padding: 8px 10px;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
+  box-shadow: none;
   border-radius: 9px;
   color: var(--text-muted, #94a3b8);
   cursor: pointer;
@@ -2060,7 +2062,8 @@ body {
   gap: 10px;
   padding: 8px;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
+  box-shadow: none;
   border-radius: 10px;
   color: var(--text-muted, #94a3b8);
   cursor: pointer;
