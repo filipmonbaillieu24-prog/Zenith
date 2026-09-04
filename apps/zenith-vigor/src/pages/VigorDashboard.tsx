@@ -963,7 +963,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         
         {fluctuationInsight && (
           <div style={{
-            background: 'rgba(28, 28, 35, 0.75)',
+            background: 'rgba(255, 255, 255, 0.045)',
             border: `1px solid ${fluctuationInsight.color}30`,
             borderRadius: '16px',
             padding: '16px 20px',
@@ -1113,7 +1113,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <div className="zenith-label">Weight</div>
-              <div className="metric-icon-wrap" style={{ background: 'rgba(203, 213, 225, 0.08)', border: '1px solid rgba(203, 213, 225, 0.2)' }}>
+              <div className="metric-icon-wrap" style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
                 <Scale size={18} style={{ color: '#cbd5e1' }} />
               </div>
             </div>
@@ -1258,7 +1258,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
         
         {/* Goal Progress Summary Card */}
         {goalProgress && (
-          <div className="vigor-card" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 40, padding: '32px 40px', border: '1px solid rgba(203, 213, 225, 0.12)', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.35)' }}>
+          <div className="vigor-card" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 40, padding: '32px 40px', border: '1px solid rgba(56, 189, 248, 0.12)', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.35)' }}>
             
             {/* Left section: Header & description */}
             <div style={{ flex: '1.2', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1267,7 +1267,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                   Goal Progress
                 </span>
                 {goalProgress.forecastDateStr === null && (
-                  <span style={{ fontSize: 9, padding: '3px 8px', borderRadius: 6, background: 'var(--color-primary-dim)', color: 'var(--color-primary)', border: '1px solid rgba(203, 213, 225, 0.2)', fontWeight: 600 }}>
+                  <span style={{ fontSize: 9, padding: '3px 8px', borderRadius: 6, background: 'var(--color-primary-dim)', color: 'var(--color-primary)', border: '1px solid rgba(255, 255, 255, 0.2)', fontWeight: 600 }}>
                     Not enough weigh-ins yet
                   </span>
                 )}
@@ -1387,7 +1387,7 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     {profile.target_weight && (
                       <ReferenceLine y={profile.target_weight} stroke="rgba(239, 68, 68, 0.4)" strokeDasharray="3 3" label={{ value: `Goal: ${profile.target_weight}kg`, fill: '#ef4444', fontSize: 9, position: 'right' }} />
                     )}
-                    <Line type="monotone" name="Weight" dataKey="weight" stroke="rgba(203, 213, 225, 0.35)" strokeWidth={1.5} dot={{ r: 3, stroke: 'rgba(203, 213, 225, 0.35)', strokeWidth: 1, fill: '#09090b' }} activeDot={{ r: 5 }} />
+                    <Line type="monotone" name="Weight" dataKey="weight" stroke="rgba(255, 255, 255, 0.35)" strokeWidth={1.5} dot={{ r: 3, stroke: 'rgba(255, 255, 255, 0.35)', strokeWidth: 1, fill: '#09090b' }} activeDot={{ r: 5 }} />
                     <Line type="monotone" name="Trend" dataKey="trend" stroke="var(--color-primary-bright)" strokeWidth={2.5} dot={false} activeDot={{ r: 6 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -1449,8 +1449,8 @@ export const VigorDashboard: React.FC<VigorDashboardProps> = ({ session }) => {
                     <Line type="monotone" name="Water %" dataKey="water" stroke="#00f5ff" strokeOpacity={0.28} strokeWidth={1.2} dot={false} connectNulls={false} legendType="none" isAnimationActive={false} />
                     <Line type="monotone" name="Water trend" dataKey="waterTrend" stroke="#00f5ff" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5 }} />
 
-                    <Line type="monotone" name="Muscle %" dataKey="muscle" stroke="#cbd5e1" strokeOpacity={0.28} strokeWidth={1.2} dot={false} connectNulls={false} legendType="none" isAnimationActive={false} />
-                    <Line type="monotone" name="Muscle trend" dataKey="muscleTrend" stroke="#cbd5e1" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5 }} />
+                    <Line type="monotone" name="Muscle %" dataKey="muscle" stroke="#38bdf8" strokeOpacity={0.28} strokeWidth={1.2} dot={false} connectNulls={false} legendType="none" isAnimationActive={false} />
+                    <Line type="monotone" name="Muscle trend" dataKey="muscleTrend" stroke="#38bdf8" strokeWidth={2.5} dot={false} connectNulls={false} activeDot={{ r: 5 }} />
                   </LineChart>
                 </ResponsiveContainer>
               )}

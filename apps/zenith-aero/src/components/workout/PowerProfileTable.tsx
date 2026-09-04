@@ -70,7 +70,7 @@ export const PowerProfileTable: React.FC<Props> = ({ rides, weight }) => {
         alignItems: 'center',
         gap: 8,
       }}>
-        <Zap size={16} color="#cbd5e1" strokeWidth={1.8} />
+        <Zap size={16} color="#38bdf8" strokeWidth={1.8} />
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#f8fafc', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
             Power Profile (W/kg)

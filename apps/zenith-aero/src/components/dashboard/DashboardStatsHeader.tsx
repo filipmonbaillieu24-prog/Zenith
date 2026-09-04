@@ -35,7 +35,7 @@ export const DashboardStatsHeader: React.FC<DashboardStatsHeaderProps> = ({
               key={opt.value}
               onClick={() => setTimeRange(opt.value)}
               style={{
-                background: timeRange === opt.value ? 'rgba(203, 213, 225, 0.12)' : 'transparent',
+                background: timeRange === opt.value ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
                 border: 'none',
                 color: timeRange === opt.value ? '#cbd5e1' : '#94a3b8',
                 fontSize: '10px',

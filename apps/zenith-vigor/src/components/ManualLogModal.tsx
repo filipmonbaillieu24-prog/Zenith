@@ -140,12 +140,12 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
               gap: 8,
               padding: '10px 16px',
               borderRadius: '10px',
-              border: '1px solid ' + (activeTab === 'steps' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
+              border: '1px solid ' + (activeTab === 'steps' ? 'rgba(255, 255, 255, 0.25)' : 'transparent'),
               fontSize: '13px',
               fontWeight: 800,
               cursor: 'pointer',
               transition: 'all 0.2s',
-              background: activeTab === 'steps' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
+              background: activeTab === 'steps' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               color: activeTab === 'steps' ? '#fff' : 'var(--text-muted)'
             }}
           >
@@ -184,12 +184,12 @@ export const ManualLogModal: React.FC<ManualLogModalProps> = ({
               gap: 8,
               padding: '10px 16px',
               borderRadius: '10px',
-              border: '1px solid ' + (activeTab === 'weight' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
+              border: '1px solid ' + (activeTab === 'weight' ? 'rgba(255, 255, 255, 0.25)' : 'transparent'),
               fontSize: '13px',
               fontWeight: 800,
               cursor: 'pointer',
               transition: 'all 0.2s',
-              background: activeTab === 'weight' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
+              background: activeTab === 'weight' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               color: activeTab === 'weight' ? '#fff' : 'var(--text-muted)'
             }}
           >

@@ -204,7 +204,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
       {subSection !== 'zones' && (
         <div className="wd-profile-section wd-profile-section--wide">
           <div className="wd-profile-section__title" style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1"
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8"
               strokeWidth="2" style={{ display:'inline', flexShrink:0 }}>
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
@@ -234,8 +234,8 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({
 
           {/* Folder structure preview */}
           {gdrivePath.trim() && (
-            <div style={{ fontSize:11, marginBottom:10, lineHeight:2, background:'rgba(203, 213, 225,0.04)',
-              border:'1px solid rgba(203, 213, 225,0.1)', borderRadius:8, padding:'8px 12px' }}>
+            <div style={{ fontSize:11, marginBottom:10, lineHeight:2, background:'rgba(255, 255, 255, 0.04)',
+              border:'1px solid rgba(255, 255, 255, 0.1)', borderRadius:8, padding:'8px 12px' }}>
               <div style={{ color:'#666', display: 'flex', alignItems: 'center', gap: 6 }}><Folder size={12} strokeWidth={1.8} /> {gdrivePath.replace(/[/\\]+$/, '')}</div>
               <div style={{ paddingLeft:16, color:'#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}><Folder size={12} strokeWidth={1.8} /> {GDRIVE_ROUTES_FOLDER}</div>
               <div style={{ paddingLeft:16, color:'#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}><Folder size={12} strokeWidth={1.8} /> {GDRIVE_RIDES_FOLDER}</div>

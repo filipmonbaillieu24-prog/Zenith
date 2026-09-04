@@ -39,9 +39,9 @@ export const ZenithCard: React.FC<ZenithCardProps> = ({
               <div style={{
                 padding: 8,
                 borderRadius: 8,
-                background: 'rgba(203, 213, 225, 0.1)',
-                color: 'var(--zenith-color-primary, #cbd5e1)',
-                border: '1px solid rgba(203, 213, 225, 0.2)',
+                background: 'rgba(56, 189, 248, 0.12)',
+                color: 'var(--zenith-color-signature-bright, #7dd3fc)',
+                border: '1px solid rgba(56, 189, 248, 0.35)',
                 flexShrink: 0,
                 display: 'flex'
               }}>

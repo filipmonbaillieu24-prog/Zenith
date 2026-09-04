@@ -97,7 +97,7 @@ export const WorkoutBuilderTab: React.FC<WorkoutBuilderTabProps> = ({
 
         {/* Builder actions */}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={addCustomBlock} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px dashed rgba(203, 213, 225,0.2)', background: 'rgba(203, 213, 225,0.04)', color: '#cbd5e1', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <button onClick={addCustomBlock} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px dashed rgba(255, 255, 255, 0.2)', background: 'rgba(255, 255, 255, 0.04)', color: '#cbd5e1', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Plus size={14} /> Add Block
           </button>
 
@@ -109,7 +109,7 @@ export const WorkoutBuilderTab: React.FC<WorkoutBuilderTabProps> = ({
             const todayStr = `${y}-${m}-${d}`;
             planWorkoutInCalendar(customWorkout, todayStr, customTotalMin);
             setBuildPlanned(true); setTimeout(() => setBuildPlanned(false), 3000);
-          }} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: `1px solid ${buildPlanned ? 'rgba(57,255,20,0.3)' : 'rgba(57,255,20,0.2)'}`, background: buildPlanned ? 'rgba(57,255,20,0.12)' : 'rgba(57,255,20,0.06)', color: buildPlanned ? '#39ff14' : '#39ff14', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          }} style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: `1px solid ${buildPlanned ? 'rgba(56,189,248,0.3)' : 'rgba(56,189,248,0.2)'}`, background: buildPlanned ? 'rgba(56,189,248,0.12)' : 'rgba(56,189,248,0.06)', color: buildPlanned ? '#38bdf8' : '#38bdf8', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             {buildPlanned ? <CheckCircle size={14} /> : <CalendarPlus size={14} />}
             {buildPlanned ? 'Scheduled!' : 'Plan in calendar'}
           </button>

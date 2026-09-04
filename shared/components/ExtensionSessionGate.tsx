@@ -28,7 +28,10 @@ export const ExtensionSessionGate: React.FC<ExtensionSessionGateProps> = ({ appN
       minHeight: '100vh',
       width: '100vw',
       background: '#09090b',
-      backgroundImage: 'radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 40%)',
+      // The same ground the rest of Zenith stands on. This was flat black with
+      // an emerald and a sky bloom on it - a third palette, on the one screen
+      // every extension shows before anything else.
+      backgroundImage: 'linear-gradient(135deg, #090a0c 0%, #0d2634 100%)',
       fontFamily: "'Outfit', 'Inter', system-ui, -apple-system, sans-serif",
       color: '#f8fafc',
       padding: '24px',
@@ -52,10 +55,10 @@ export const ExtensionSessionGate: React.FC<ExtensionSessionGateProps> = ({ appN
       }}>
         <div style={{
           width: 56, height: 56, borderRadius: 14,
-          background: 'rgba(203, 213, 225, 0.08)',
-          border: '1px solid rgba(203, 213, 225, 0.15)',
+          background: 'rgba(56, 189, 248, 0.12)',
+          border: '1px solid rgba(56, 189, 248, 0.35)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#cbd5e1'
+          color: '#7dd3fc'
         }}>
           {icon}
         </div>
@@ -87,7 +90,7 @@ export const ExtensionSessionGate: React.FC<ExtensionSessionGateProps> = ({ appN
         <button
           onClick={goToHub}
           style={{
-            background: '#cbd5e1',
+            background: '#38bdf8',
             color: '#09090b',
             border: 'none',
             padding: '12px 24px',

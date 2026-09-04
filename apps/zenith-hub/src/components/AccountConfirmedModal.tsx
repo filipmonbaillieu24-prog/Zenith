@@ -49,11 +49,11 @@ export const AccountConfirmedModal: React.FC<AccountConfirmedModalProps> = ({
         maxWidth: '480px',
         width: '90%',
         background: 'linear-gradient(145deg, rgba(30, 27, 46, 0.95) 0%, rgba(18, 18, 24, 0.98) 100%)',
-        border: '1px solid rgba(57, 255, 20, 0.4)',
+        border: '1px solid rgba(56, 189, 248, 0.4)',
         borderRadius: '24px',
         padding: '40px 32px',
         textAlign: 'center',
-        boxShadow: '0 20px 60px rgba(57, 255, 20, 0.2), 0 0 30px rgba(168, 85, 247, 0.2)',
+        boxShadow: '0 20px 60px rgba(56, 189, 248, 0.2), 0 0 30px rgba(168, 85, 247, 0.2)',
         position: 'relative',
         overflow: 'hidden'
       }}>

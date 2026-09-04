@@ -23,7 +23,7 @@ export const ZenithModuleHeader: React.FC<ZenithModuleHeaderProps> = ({
       justifyContent: 'space-between',
       gap: 16,
       padding: 20,
-      background: 'rgba(24, 24, 27, 0.6)',
+      background: 'rgba(255, 255, 255, 0.045)',
       border: '1px solid rgba(255, 255, 255, 0.08)',
       borderRadius: 16,
       backdropFilter: 'blur(20px)',
@@ -71,9 +71,9 @@ export const ZenithModuleHeader: React.FC<ZenithModuleHeaderProps> = ({
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
-              background: 'rgba(203, 213, 225, 0.1)',
-              color: 'var(--zenith-color-primary, #cbd5e1)',
-              border: '1px solid rgba(203, 213, 225, 0.2)'
+              background: 'rgba(56, 189, 248, 0.12)',
+              color: 'var(--zenith-color-signature-bright, #7dd3fc)',
+              border: '1px solid rgba(56, 189, 248, 0.35)'
             }}>
               <span style={{
                 width: 6,

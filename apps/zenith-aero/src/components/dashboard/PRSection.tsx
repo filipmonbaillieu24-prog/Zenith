@@ -60,13 +60,13 @@ export const PRSection: React.FC<PRSectionProps> = ({
             gap: 8,
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid ' + (activeTab === 'fitness' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
+            border: '1px solid ' + (activeTab === 'fitness' ? 'rgba(255, 255, 255, 0.25)' : 'transparent'),
             fontSize: '13px',
             fontWeight: 800,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'all 0.2s',
-            background: activeTab === 'fitness' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
+            background: activeTab === 'fitness' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
             color: activeTab === 'fitness' ? '#fff' : '#64748b'
           }}
         >
@@ -82,13 +82,13 @@ export const PRSection: React.FC<PRSectionProps> = ({
             gap: 8,
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid ' + (activeTab === 'power' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
+            border: '1px solid ' + (activeTab === 'power' ? 'rgba(255, 255, 255, 0.25)' : 'transparent'),
             fontSize: '13px',
             fontWeight: 800,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'all 0.2s',
-            background: activeTab === 'power' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
+            background: activeTab === 'power' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
             color: activeTab === 'power' ? '#fff' : '#64748b'
           }}
         >
@@ -104,13 +104,13 @@ export const PRSection: React.FC<PRSectionProps> = ({
             gap: 8,
             padding: '10px 16px',
             borderRadius: '10px',
-            border: '1px solid ' + (activeTab === 'climbs' ? 'rgba(203, 213, 225, 0.25)' : 'transparent'),
+            border: '1px solid ' + (activeTab === 'climbs' ? 'rgba(255, 255, 255, 0.25)' : 'transparent'),
             fontSize: '13px',
             fontWeight: 800,
             cursor: 'pointer',
             fontFamily: 'inherit',
             transition: 'all 0.2s',
-            background: activeTab === 'climbs' ? 'rgba(203, 213, 225, 0.08)' : 'transparent',
+            background: activeTab === 'climbs' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
             color: activeTab === 'climbs' ? '#fff' : '#64748b'
           }}
         >
@@ -223,10 +223,10 @@ export const PRSection: React.FC<PRSectionProps> = ({
                           <Line
                             type="monotone"
                             dataKey="voorspelling"
-                            stroke="#cbd5e1"
+                            stroke="#38bdf8"
                             strokeWidth={2}
                             strokeDasharray="4 4"
-                            dot={{ fill: '#cbd5e1', r: 3 }}
+                            dot={{ fill: '#38bdf8', r: 3 }}
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -259,8 +259,8 @@ export const PRSection: React.FC<PRSectionProps> = ({
 
               return (
                 <div className="wd-section-card" style={{
-                  background: 'linear-gradient(135deg, rgba(203, 213, 225, 0.03), rgba(108, 92, 231, 0.01))',
-                  border: '1px solid rgba(203, 213, 225, 0.1)',
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(108, 92, 231, 0.01))',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 8,

@@ -386,7 +386,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
             {ride.hrTSS       && <StatCard label="hrTSS"         value={ride.hrTSS}                   color="#ff7675" typeClass="rp-stat-card--hr"
               sub={recover?.tip} />}
             {ride.efficiencyFactor && <StatCard label="Efficiency Factor" value={ride.efficiencyFactor}
-              sub={ride.hasPower ? 'NP/HR' : 'Speed/HR'} color="var(--color-accent,#39ff14)" />}
+              sub={ride.hasPower ? 'NP/HR' : 'Speed/HR'} color="var(--color-accent,#38bdf8)" />}
             {ride.decoupling != null && (
               <StatCard label="Cardiac drift" value={`${ride.decoupling}%`}
                 color={Math.abs(ride.decoupling) < 5 ? '#00b894' : '#fdcb6e'} typeClass="rp-stat-card--hr"
@@ -451,7 +451,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
                         label === l.key 
                           ? { background: l.color + '25', borderColor: l.color, color: l.color } 
                           : isPredicted 
-                            ? { border: '1px dashed #cbd5e1', boxShadow: '0 0 8px rgba(203, 213, 225, 0.2)', color: '#cbd5e1', background: 'rgba(203, 213, 225, 0.03)' } 
+                            ? { border: '1px dashed #38bdf8', boxShadow: '0 0 8px rgba(56, 189, 248, 0.2)', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.03)' } 
                             : {}
                       }
                       onClick={() => saveLabel(label === l.key ? undefined : l.key)}
@@ -490,8 +490,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
                       style={{
                         padding: '6px 0',
                         borderRadius: 6,
-                        border: isPredicted ? '1px dashed #cbd5e1' : 'none',
-                        boxShadow: isPredicted ? '0 0 6px rgba(203, 213, 225, 0.15)' : 'none',
+                        border: isPredicted ? '1px dashed #38bdf8' : 'none',
+                        boxShadow: isPredicted ? '0 0 6px rgba(56, 189, 248, 0.15)' : 'none',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
                         background: rpe === n
@@ -521,8 +521,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
                     fontSize: 10, 
                     cursor: 'pointer',
                     padding: '6px 8px',
-                    background: 'rgba(203, 213, 225, 0.03)',
-                    border: '1px solid rgba(203, 213, 225, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
                     borderRadius: 6,
                     width: 'fit-content'
                   }}
@@ -563,8 +563,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
                 <div style={{
                   marginTop: 12,
                   padding: '12px 14px',
-                  background: 'rgba(203, 213, 225, 0.02)',
-                  border: '1px solid rgba(203, 213, 225, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
                   borderRadius: 10,
                   fontSize: 11
                 }}>
@@ -657,7 +657,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
                       </div>
                     </div>
                   ) : (
-                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(203, 213, 225, 0.15)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255, 255, 255, 0.15)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <span style={{ color: '#cbd5e1', fontWeight: 700, fontSize: 10 }}>Set correct scores:</span>
                       
                       {/* Fatigue */}
@@ -743,8 +743,8 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
                             });
                           }}
                           style={{
-                            background: 'rgba(203, 213, 225, 0.08)',
-                            border: '1px solid #cbd5e1',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid #38bdf8',
                             color: '#cbd5e1',
                             padding: '4px 10px',
                             borderRadius: 6,
@@ -789,7 +789,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
               onClick={() => setActiveDetailTab('summary')}
               style={{
                 flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700,
-                background: activeDetailTab === 'summary' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
+                background: activeDetailTab === 'summary' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                 color: activeDetailTab === 'summary' ? '#cbd5e1' : '#94a3b8',
                 transition: 'all 0.15s', fontFamily: 'inherit'
               }}
@@ -800,7 +800,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
               onClick={() => setActiveDetailTab('zones')}
               style={{
                 flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700,
-                background: activeDetailTab === 'zones' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
+                background: activeDetailTab === 'zones' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                 color: activeDetailTab === 'zones' ? '#cbd5e1' : '#94a3b8',
                 transition: 'all 0.15s', fontFamily: 'inherit'
               }}
@@ -811,7 +811,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
               onClick={() => setActiveDetailTab('charts')}
               style={{
                 flex: 1, padding: '6px 8px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 10, fontWeight: 700,
-                background: activeDetailTab === 'charts' ? 'rgba(203, 213, 225, 0.1)' : 'transparent',
+                background: activeDetailTab === 'charts' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                 color: activeDetailTab === 'charts' ? '#cbd5e1' : '#94a3b8',
                 transition: 'all 0.15s', fontFamily: 'inherit'
               }}
@@ -883,7 +883,7 @@ const RidePage: React.FC<Props> = ({ rideId, onBack, profile, currentFtpWatts, c
                       </div>
                       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 8, padding: 8 }}>
                         <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Carbs Used</span>
-                        <strong style={{ color: '#39ff14', fontSize: 12 }}>{fuelPlan.totalCarbs}g ({fuelPlan.carbsPerHour}g/h)</strong>
+                        <strong style={{ color: '#38bdf8', fontSize: 12 }}>{fuelPlan.totalCarbs}g ({fuelPlan.carbsPerHour}g/h)</strong>
                       </div>
                       <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: 8, padding: 8 }}>
                         <span style={{ display: 'block', fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>Fluid Intake Advice</span>

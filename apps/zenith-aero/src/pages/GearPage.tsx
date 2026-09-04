@@ -277,7 +277,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                   {g.components.some(c => c.installedAt > 0) && (
                     <button
                       className="gp-comp-reset-btn"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(203, 213, 225,0.07)', borderColor: 'rgba(203, 213, 225,0.25)', color: '#cbd5e1', fontSize: 10 }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255, 255, 255, 0.07)', borderColor: 'rgba(255, 255, 255, 0.25)', color: '#cbd5e1', fontSize: 10 }}
                       onClick={() => handleSyncAllComponents(g.id)}
                       title="Synchronize all components with all rides of this bike"
                     >
@@ -337,7 +337,7 @@ export const GearPage: React.FC<GearPageProps> = () => {
                                 <button
                                   type="button"
                                   className="gp-comp-reset-btn"
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(203, 213, 225,0.06)', borderColor: 'rgba(203, 213, 225,0.2)', color: '#cbd5e1' }}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255, 255, 255, 0.06)', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#cbd5e1' }}
                                   onClick={() => handleSyncComponentToAllRides(g.id, c.id)}
                                   title="Synchronize with all rides (reset installation date to start)"
                                 >

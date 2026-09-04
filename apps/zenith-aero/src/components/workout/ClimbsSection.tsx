@@ -88,8 +88,8 @@ export const ClimbsSection: React.FC<ClimbsSectionProps> = ({ points, ftp, weigh
           alignItems: 'flex-start',
           gap: 10,
           padding: '10px 12px',
-          background: 'rgba(203, 213, 225, 0.03)',
-          border: '1px solid rgba(203, 213, 225, 0.08)',
+          background: 'rgba(255, 255, 255, 0.03)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: 10,
           marginBottom: 12
         }}>

@@ -726,7 +726,7 @@ ${logsMarkdown}
   const isTauri = typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window || !!(window as any).__TAURI_METADATA__);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', background: '#09090b', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', background: 'var(--zenith-ground)', overflow: 'hidden' }}>
       {isTauri && (
         <AppTitlebar
           onMinimize={handleMinimize}
@@ -828,7 +828,7 @@ ${logsMarkdown}
               switching back forced a full reload (re-auth, re-fetch, re-render) every
               single time - this is what made app-to-app navigation feel clunky. */}
           {visitedExtensionTabs.has('aero') && (
-            <div style={{ width: '100%', height: '100%', display: activeTab === 'aero' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'aero' ? 'block' : 'none', background: 'transparent', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="aero-iframe"
                 src={getAeroUrl()}
@@ -838,7 +838,7 @@ ${logsMarkdown}
             </div>
           )}
           {visitedExtensionTabs.has('vigor') && (
-            <div style={{ width: '100%', height: '100%', display: activeTab === 'vigor' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'vigor' ? 'block' : 'none', background: 'transparent', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="vigor-iframe"
                 src={vigorUrl}
@@ -848,7 +848,7 @@ ${logsMarkdown}
             </div>
           )}
           {visitedExtensionTabs.has('kratos') && (
-            <div style={{ width: '100%', height: '100%', display: activeTab === 'kratos' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'kratos' ? 'block' : 'none', background: 'transparent', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="kratos-iframe"
                 src={kratosUrl}
@@ -858,7 +858,7 @@ ${logsMarkdown}
             </div>
           )}
           {visitedExtensionTabs.has('fuel') && (
-            <div style={{ width: '100%', height: '100%', display: activeTab === 'fuel' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'fuel' ? 'block' : 'none', background: 'transparent', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="fuel-iframe"
                 src={fuelUrl}
@@ -868,7 +868,7 @@ ${logsMarkdown}
             </div>
           )}
           {visitedExtensionTabs.has('stride') && (
-            <div style={{ width: '100%', height: '100%', display: activeTab === 'stride' ? 'block' : 'none', background: '#09090b', position: 'relative' }} className="zenith-page-transition">
+            <div style={{ width: '100%', height: '100%', display: activeTab === 'stride' ? 'block' : 'none', background: 'transparent', position: 'relative' }} className="zenith-page-transition">
               <iframe
                 id="stride-iframe"
                 src={strideUrl}

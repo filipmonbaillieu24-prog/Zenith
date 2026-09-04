@@ -2738,7 +2738,7 @@ function App() {
 
   if (loadingSession) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#09090b' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--zenith-ground)' }}>
         <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>
           Loading Zenith Fuel...
         </div>

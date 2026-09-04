@@ -107,8 +107,8 @@ export const WeekOverview: React.FC<Props> = ({ rides }) => {
 
   return (
     <div style={{
-      background: 'linear-gradient(135deg, rgba(203, 213, 225,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-      border: '1px solid rgba(203, 213, 225,0.14)',
+      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255,255,255,0.01) 100%)',
+      border: '1px solid rgba(255, 255, 255, 0.14)',
       borderRadius: 12,
       padding: '14px 16px',
       display: 'flex',
@@ -142,7 +142,7 @@ export const WeekOverview: React.FC<Props> = ({ rides }) => {
               background: d.isToday
                 ? '#cbd5e1'
                 : d.hasRide
-                  ? 'rgba(203, 213, 225,0.35)'
+                  ? 'rgba(255, 255, 255, 0.35)'
                   : 'rgba(255,255,255,0.04)',
               borderRadius: 3,
               transition: 'height 0.3s ease',

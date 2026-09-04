@@ -48,7 +48,7 @@ function App() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#09090b', color: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--zenith-ground)', color: '#fff' }}>
         <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700 }}>Loading Vigor...</div>
       </div>
     );

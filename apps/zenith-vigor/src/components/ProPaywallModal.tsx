@@ -112,7 +112,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
           <div style={{ fontSize: 26, fontWeight: 900, color: '#ffffff', margin: '4px 0' }}>
             €9,99 <span style={{ fontSize: 13, fontWeight: 500, color: '#94a3b8' }}>/ month</span>
           </div>
-          <div style={{ fontSize: 11, color: '#39ff14', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <div style={{ fontSize: 11, color: '#38bdf8', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <CheckCircle2 size={12} /> 14-day free trial, cancel anytime
           </div>
         </div>

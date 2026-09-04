@@ -34,7 +34,7 @@ export const ZenithStatWidget: React.FC<ZenithStatWidgetProps> = ({
           style={{
             padding: 16,
             borderRadius: 14,
-            background: 'rgba(24, 24, 27, 0.6)',
+            background: 'rgba(255, 255, 255, 0.045)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',

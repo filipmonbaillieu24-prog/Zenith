@@ -115,14 +115,14 @@ export const PayPalModal: React.FC<PayPalModalProps> = ({
               width: 64,
               height: 64,
               borderRadius: '50%',
-              background: 'rgba(57, 255, 20, 0.15)',
-              border: '2px solid #39ff14',
+              background: 'rgba(56, 189, 248, 0.15)',
+              border: '2px solid #38bdf8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 20px'
             }}>
-              <CheckCircle2 size={36} color="#39ff14" />
+              <CheckCircle2 size={36} color="#38bdf8" />
             </div>
             <h3 style={{ fontSize: 20, fontWeight: 900, color: '#fff', marginBottom: 8 }}>
               Payment successful!

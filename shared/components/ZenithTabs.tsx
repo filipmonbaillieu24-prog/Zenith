@@ -54,12 +54,16 @@ export const ZenithTabs: React.FC<ZenithTabsProps> = ({
               flexShrink: 0,
               border: 'none',
               cursor: 'pointer',
-              background: isActive ? '#e2e8f0' : 'transparent',
-              color: isActive ? '#09090b' : '#a1a1aa',
-              boxShadow: isActive ? '0 4px 12px rgba(203, 213, 225, 0.15)' : 'none'
+              // The tab you are on answers "where am I", which is the one
+              // question the tab strip exists to answer - so it is worth the
+              // accent. It used to be a solid near-white slab, the brightest
+              // thing on the page whatever else was going on.
+              background: isActive ? 'rgba(56, 189, 248, 0.12)' : 'transparent',
+              color: isActive ? '#7dd3fc' : '#a1a1aa',
+              boxShadow: 'none'
             }}
           >
-            {tab.icon && <span style={{ display: 'flex', color: isActive ? '#09090b' : '#a1a1aa' }}>{tab.icon}</span>}
+            {tab.icon && <span style={{ display: 'flex', color: isActive ? '#7dd3fc' : '#a1a1aa' }}>{tab.icon}</span>}
             <span>{tab.label}</span>
             {tab.badge !== undefined && (
               <span style={{
@@ -67,8 +71,8 @@ export const ZenithTabs: React.FC<ZenithTabsProps> = ({
                 borderRadius: 999,
                 fontSize: 10,
                 fontWeight: 900,
-                background: isActive ? '#09090b' : 'rgba(203, 213, 225, 0.1)',
-                color: isActive ? '#cbd5e1' : '#cbd5e1'
+                background: isActive ? 'rgba(56, 189, 248, 0.22)' : 'rgba(255, 255, 255, 0.08)',
+                color: isActive ? '#7dd3fc' : '#cbd5e1'
               }}>
                 {tab.badge}
               </span>

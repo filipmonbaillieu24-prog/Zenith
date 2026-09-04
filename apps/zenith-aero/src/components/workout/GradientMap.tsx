@@ -31,12 +31,12 @@ export const MapBoundsUpdater: React.FC<{ positions: [number, number][] }> = ({ 
 const rideHoverIcon = L.divIcon({
   className: 'poi-marker-hover',
   html: `<div style="
-    background-color: #cbd5e1; 
+    background-color: #38bdf8; 
     width: 16px; 
     height: 16px; 
     border-radius: 50%; 
     border: 2px solid #ffffff; 
-    box-shadow: 0 0 15px #cbd5e1, 0 0 5px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 15px #38bdf8, 0 0 5px rgba(0, 0, 0, 0.8);
     animation: marker-pulse 1.5s infinite ease-out;
   "></div>`,
   iconSize: [16, 16],
@@ -196,7 +196,7 @@ export const GradientMap: React.FC<GradientMapProps> = ({ ride, weight, hoveredP
         {/* Start Marker */}
         <Marker position={startPt} icon={L.divIcon({
           className: 'custom-marker-start',
-          html: `<div style="background-color:#cbd5e1; width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px #cbd5e1;"></div>`,
+          html: `<div style="background-color:#38bdf8; width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px #38bdf8;"></div>`,
           iconSize: [12, 12],
           iconAnchor: [6, 6]
         })}>

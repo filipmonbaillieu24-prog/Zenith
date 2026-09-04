@@ -56,7 +56,7 @@ export const RideRow: React.FC<RideRowProps> = ({ ride, selected, comparing, onO
   return (
     <div
       className={`wd-ride-row ${selected ? 'wd-ride-row--selected' : ''} ${comparing ? 'wd-ride-row--comparing' : ''}`}
-      style={{ borderLeftColor: comparing ? '#39ff14' : accentColor, display: 'flex', gap: 12, alignItems: 'center' }}
+      style={{ borderLeftColor: comparing ? '#38bdf8' : accentColor, display: 'flex', gap: 12, alignItems: 'center' }}
       onClick={onOpen}
     >
       <div style={{ flex: 1, minWidth: 0 }}>

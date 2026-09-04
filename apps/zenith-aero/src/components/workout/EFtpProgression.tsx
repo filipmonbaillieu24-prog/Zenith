@@ -67,8 +67,8 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
           <button 
             onClick={() => setViewMode('watts')}
             style={{
-              background: viewMode === 'watts' ? 'rgba(203, 213, 225, 0.12)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${viewMode === 'watts' ? 'rgba(203, 213, 225, 0.25)' : 'rgba(255,255,255,0.08)'}`,
+              background: viewMode === 'watts' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${viewMode === 'watts' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255,255,255,0.08)'}`,
               color: viewMode === 'watts' ? '#cbd5e1' : '#94a3b8',
               fontSize: '9px',
               fontWeight: 700,
@@ -83,8 +83,8 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
           <button 
             onClick={() => setViewMode('wkg')}
             style={{
-              background: viewMode === 'wkg' ? 'rgba(203, 213, 225, 0.12)' : 'rgba(255,255,255,0.02)',
-              border: `1px solid ${viewMode === 'wkg' ? 'rgba(203, 213, 225, 0.25)' : 'rgba(255,255,255,0.08)'}`,
+              background: viewMode === 'wkg' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255,255,255,0.02)',
+              border: `1px solid ${viewMode === 'wkg' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255,255,255,0.08)'}`,
               color: viewMode === 'wkg' ? '#cbd5e1' : '#94a3b8',
               fontSize: '9px',
               fontWeight: 700,
@@ -145,11 +145,11 @@ export const EFtpProgression: React.FC<EFtpProgressionProps> = ({ rides, weight 
             <Area 
               type="monotone" 
               dataKey={viewMode === 'watts' ? 'watts' : 'wkg'} 
-              stroke="#cbd5e1" 
+              stroke="#38bdf8" 
               strokeWidth={2} 
               fillOpacity={1} 
               fill="url(#eftpGrad)" 
-              dot={{ fill: '#cbd5e1', r: 3 }}
+              dot={{ fill: '#38bdf8', r: 3 }}
             />
           </AreaChart>
         </ResponsiveContainer>

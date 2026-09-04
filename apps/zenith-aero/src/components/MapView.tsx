@@ -9,12 +9,12 @@ import { RoutePoint, GeneratedRoute } from '../types/route';
 const createStartIcon = () => L.divIcon({
   className: 'custom-marker-start',
   html: `<div style="
-    background-color: #cbd5e1; 
+    background-color: #38bdf8; 
     width: 14px; 
     height: 14px; 
     border-radius: 50%; 
     border: 2px solid #ffffff; 
-    box-shadow: 0 0 12px #cbd5e1, 0 0 3px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 12px #38bdf8, 0 0 3px rgba(0, 0, 0, 0.5);
   "></div>`,
   iconSize: [14, 14],
   iconAnchor: [7, 7]

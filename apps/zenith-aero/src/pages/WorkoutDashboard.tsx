@@ -238,7 +238,7 @@ const WorkoutDashboard: React.FC<Props> = ({
   const renderMain = () => {
     if (rides.length === 0 && !loading) return (
       <div className="wd-empty-state">
-        <div className="wd-empty-icon"><Bike size={52} color="#cbd5e1" strokeWidth={1.5} /></div>
+        <div className="wd-empty-icon"><Bike size={52} color="#38bdf8" strokeWidth={1.5} /></div>
         <h2>No rides</h2>
         <p style={{ marginBottom: 16, color: '#94a3b8', fontSize: 13 }}>
           Import a FIT, GPX or TCX file via the button <strong style={{ color: '#fff' }}>Import Ride</strong> in the header bar above to view your activity history.
@@ -319,7 +319,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                       </div>
                       <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
                         <div style={{ fontSize: 8, color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>Speed</div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: '#39ff14' }}>{latestRide.avgSpeed?.toFixed(1)} km/h</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: '#38bdf8' }}>{latestRide.avgSpeed?.toFixed(1)} km/h</div>
                       </div>
                     </div>
                   </div>
@@ -416,7 +416,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                         <XAxis dataKey="date" tick={ZENITH_CHART_AXIS_TICK} />
                         <YAxis tick={ZENITH_CHART_AXIS_TICK} domain={['auto', 'auto']} />
                         <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
-                        <Area type="monotone" dataKey="ef" stroke="#cbd5e1" strokeWidth={2} fillOpacity={1} fill="url(#colorEf)" />
+                        <Area type="monotone" dataKey="ef" stroke="#38bdf8" strokeWidth={2} fillOpacity={1} fill="url(#colorEf)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   )}
@@ -445,9 +445,9 @@ const WorkoutDashboard: React.FC<Props> = ({
                         labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                         formatter={(v: any) => [`${Math.round(v)} km`, 'Distance']}
                       />
-                      <Bar dataKey="distance" fill="rgba(203, 213, 225, 0.4)">
+                      <Bar dataKey="distance" fill="rgba(255, 255, 255, 0.4)">
                         {monthData.map((_entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={index === monthData.length - 1 ? '#cbd5e1' : 'rgba(203, 213, 225, 0.4)'} />
+                          <Cell key={`cell-${index}`} fill={index === monthData.length - 1 ? '#38bdf8' : 'rgba(255, 255, 255, 0.4)'} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -471,15 +471,15 @@ const WorkoutDashboard: React.FC<Props> = ({
                       <AreaChart data={cadData} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorCad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#39ff14" stopOpacity={0.25}/>
-                            <stop offset="95%" stopColor="#39ff14" stopOpacity={0.0}/>
+                            <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.25}/>
+                            <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.0}/>
                           </linearGradient>
                         </defs>
                         <CartesianGrid {...ZENITH_CHART_GRID} />
                         <XAxis dataKey="date" tick={ZENITH_CHART_AXIS_TICK} />
                         <YAxis tick={ZENITH_CHART_AXIS_TICK} domain={[60, 110]} />
                         <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
-                        <Area type="monotone" dataKey="rpm" stroke="#39ff14" strokeWidth={2} fillOpacity={1} fill="url(#colorCad)" />
+                        <Area type="monotone" dataKey="rpm" stroke="#38bdf8" strokeWidth={2} fillOpacity={1} fill="url(#colorCad)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   )}
@@ -505,7 +505,7 @@ const WorkoutDashboard: React.FC<Props> = ({
                         formatter={(v: any, name: any) => [`${v} km`, name === 'thisYear' ? String(new Date().getFullYear()) : String(new Date().getFullYear() - 1)]}
                       />
                       <Bar dataKey="lastYear"  fill="rgba(255,255,255,0.12)" radius={[2,2,0,0]} />
-                      <Bar dataKey="thisYear"  fill="rgba(203, 213, 225,0.65)"   radius={[2,2,0,0]} />
+                      <Bar dataKey="thisYear"  fill="rgba(255, 255, 255, 0.65)"   radius={[2,2,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -578,8 +578,8 @@ const WorkoutDashboard: React.FC<Props> = ({
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'rgba(203, 213, 225, 0.08)',
-          border: '2px dashed #cbd5e1',
+          background: 'rgba(255, 255, 255, 0.08)',
+          border: '2px dashed #38bdf8',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -616,8 +616,8 @@ const WorkoutDashboard: React.FC<Props> = ({
           <div style={{
             width: '40px',
             height: '40px',
-            border: '3px solid rgba(203, 213, 225, 0.1)',
-            borderTop: '3px solid #cbd5e1',
+            border: '3px solid rgba(255, 255, 255, 0.1)',
+            borderTop: '3px solid #38bdf8',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite'
           }} />

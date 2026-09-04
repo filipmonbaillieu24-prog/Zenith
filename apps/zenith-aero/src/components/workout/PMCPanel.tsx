@@ -82,7 +82,7 @@ export const PMCPanel: React.FC<PMCPanelProps> = ({ rides, timeRange = 90 }) => 
           
           {/* TSB Zones background */}
           <ReferenceArea y1={25} y2={50} fill="rgba(100, 116, 139, 0.02)" label={{ value: "Transition Zone", fill: "rgba(100, 116, 139, 0.25)", fontSize: 8, position: 'insideTopLeft' }} />
-          <ReferenceArea y1={0} y2={25} fill="rgba(203, 213, 225, 0.015)" label={{ value: "Freshness / Taper Zone", fill: "rgba(203, 213, 225, 0.25)", fontSize: 8, position: 'insideTopLeft' }} />
+          <ReferenceArea y1={0} y2={25} fill="rgba(255, 255, 255, 0.015)" label={{ value: "Freshness / Taper Zone", fill: "rgba(255, 255, 255, 0.25)", fontSize: 8, position: 'insideTopLeft' }} />
           <ReferenceArea y1={-10} y2={-30} fill="rgba(0, 184, 148, 0.015)" label={{ value: "Optimal Training Zone", fill: "rgba(0, 184, 148, 0.25)", fontSize: 8, position: 'insideTopLeft' }} />
           <ReferenceArea y1={-30} y2={-50} fill="rgba(255, 118, 117, 0.015)" label={{ value: "Overload Danger Zone", fill: "rgba(255, 118, 117, 0.25)", fontSize: 8, position: 'insideTopLeft' }} />
 

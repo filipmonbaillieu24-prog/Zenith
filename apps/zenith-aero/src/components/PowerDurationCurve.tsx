@@ -72,7 +72,7 @@ export const PowerDurationCurve: React.FC<Props> = ({
           {hasPower ? 'Power Duration Curve' : 'Speed Curve'}
         </h3>
         <div className="pdc-legend">
-          <span className="pdc-legend__dot" style={{ background: '#cbd5e1' }} /> All-time
+          <span className="pdc-legend__dot" style={{ background: '#38bdf8' }} /> All-time
           {hasLast90Data && (
             <>
               <span className="pdc-legend__dot" style={{ background: '#ffffff' }} /> Last 90d
@@ -117,11 +117,11 @@ export const PowerDurationCurve: React.FC<Props> = ({
           <Area
             type="monotone"
             dataKey="allTime"
-            stroke="#cbd5e1"
+            stroke="#38bdf8"
             strokeWidth={2.5}
             fill="url(#pdcAllTime)"
-            dot={{ fill: '#cbd5e1', r: 4, strokeWidth: 0 }}
-            activeDot={{ r: 6, fill: '#cbd5e1', stroke: '#fff', strokeWidth: 1.5 }}
+            dot={{ fill: '#38bdf8', r: 4, strokeWidth: 0 }}
+            activeDot={{ r: 6, fill: '#38bdf8', stroke: '#fff', strokeWidth: 1.5 }}
             connectNulls
           />
           {hasLast90Data && (

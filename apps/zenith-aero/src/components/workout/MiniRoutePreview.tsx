@@ -97,7 +97,7 @@ export const MiniRoutePreview: React.FC<MiniRoutePreviewProps> = ({ points }) =>
         strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
-        style={{ filter: 'drop-shadow(0 0 6px rgba(203, 213, 225, 0.45))' }}
+        style={{ filter: 'drop-shadow(0 0 6px rgba(255, 255, 255, 0.45))' }}
       />
       <circle cx={scaleX(lngs[0])} cy={scaleY(lats[0])} r="4" fill="#00b894" stroke="#fff" strokeWidth="1.5" />
       <circle cx={scaleX(lngs[lngs.length - 1])} cy={scaleY(lats[lats.length - 1])} r="4" fill="#d63031" stroke="#fff" strokeWidth="1.5" />

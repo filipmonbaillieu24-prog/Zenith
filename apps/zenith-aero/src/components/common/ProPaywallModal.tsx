@@ -25,7 +25,7 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
         style={{ 
           maxWidth: '520px', 
           background: 'linear-gradient(145deg, #121218 0%, #1a1a24 100%)',
-          border: '1px solid rgba(203, 213, 225, 0.2)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
           boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7)',
           padding: '28px'
         }}
@@ -101,8 +101,8 @@ export const ProPaywallModal: React.FC<ProPaywallModalProps> = ({
 
         {/* Pricing & CTA */}
         <div style={{ 
-          background: 'rgba(203, 213, 225, 0.06)', 
-          border: '1px solid rgba(203, 213, 225, 0.15)', 
+          background: 'rgba(255, 255, 255, 0.06)', 
+          border: '1px solid rgba(255, 255, 255, 0.15)', 
           borderRadius: '12px', 
           padding: '16px', 
           textAlign: 'center',

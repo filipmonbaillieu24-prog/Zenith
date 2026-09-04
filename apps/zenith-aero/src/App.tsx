@@ -734,8 +734,8 @@ function App() {
 
   if (sessionLoading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: '#09090b' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(203, 213, 225, 0.1)', borderTop: '3px solid #cbd5e1', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', width: '100vw', background: 'var(--zenith-ground)' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255, 255, 255, 0.1)', borderTop: '3px solid #38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
@@ -787,8 +787,8 @@ function App() {
         }}>
           <div style={{
             background: 'rgba(23, 23, 27, 0.9)',
-            border: '1px solid rgba(203, 213, 225, 0.15)',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5), 0 0 15px rgba(203, 213, 225, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.05)',
             borderRadius: '20px',
             width: '100%',
             maxWidth: '460px',
@@ -802,10 +802,10 @@ function App() {
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{
-                background: 'rgba(203, 213, 225, 0.1)',
+                background: 'rgba(255, 255, 255, 0.1)',
                 padding: '8px',
                 borderRadius: '12px',
-                border: '1px solid rgba(203, 213, 225, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -946,7 +946,7 @@ function App() {
                   cursor: 'pointer',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
-                  boxShadow: '0 0 12px rgba(203, 213, 225, 0.15)',
+                  boxShadow: '0 0 12px rgba(56, 189, 248, 0.15)',
                   fontFamily: 'inherit'
                 }}
               >

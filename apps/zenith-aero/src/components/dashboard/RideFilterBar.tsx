@@ -83,7 +83,7 @@ export const RideFilterBar: React.FC<RideFilterBarProps> = ({
           className={`wd-label-chip ${labelFilter === 'all' ? 'wd-label-chip--active' : ''}`}
           style={
             labelFilter === 'all'
-              ? { background: 'rgba(203, 213, 225, 0.12)', borderColor: '#cbd5e1', color: '#cbd5e1', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inherit' }
+              ? { background: 'rgba(255, 255, 255, 0.12)', borderColor: '#38bdf8', color: '#38bdf8', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inherit' }
               : { background: 'transparent', borderColor: 'rgba(255,255,255,0.03)', color: '#94a3b8', fontSize: 10, padding: '4px 10px', borderRadius: 6, border: '1px solid', cursor: 'pointer', fontFamily: 'inherit' }
           }
           onClick={() => setLabelFilter('all')}

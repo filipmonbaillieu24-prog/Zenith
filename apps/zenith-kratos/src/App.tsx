@@ -1646,7 +1646,7 @@ export default function App() {
                   <CartesianGrid {...ZENITH_CHART_GRID} />
                   <XAxis dataKey="dateStr" tick={ZENITH_CHART_AXIS_TICK} stroke="var(--border-color)" />
                   <YAxis yAxisId="left" tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(255,255,255,0.15)" domain={['auto', 'auto']} label={{ value: 'Measurement', angle: -90, position: 'insideLeft', fill: '#fff', fontSize: 10 }} />
-                  <YAxis yAxisId="right" orientation="right" tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(57, 255, 20, 0.15)" domain={['auto', 'auto']} label={{ value: 'Volume Since Last Measurement (kg)', angle: 90, position: 'insideRight', fill: 'var(--accent-neon)', fontSize: 10 }} />
+                  <YAxis yAxisId="right" orientation="right" tick={ZENITH_CHART_AXIS_TICK} stroke="rgba(56, 189, 248, 0.15)" domain={['auto', 'auto']} label={{ value: 'Volume Since Last Measurement (kg)', angle: 90, position: 'insideRight', fill: 'var(--accent-neon)', fontSize: 10 }} />
                   <Tooltip
                     contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
                     labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
@@ -1909,7 +1909,7 @@ export default function App() {
                         labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                       />
                       <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
-                      <Bar dataKey="Chest" stackId="a" fill="#cbd5e1" />
+                      <Bar dataKey="Chest" stackId="a" fill="#38bdf8" />
                       <Bar dataKey="Lats" stackId="a" fill="#94a3b8" />
                       <Bar dataKey="Upper Back" stackId="a" fill="#475569" />
                       <Bar dataKey="Quads" stackId="a" fill="#3f3f46" />
@@ -1970,7 +1970,7 @@ export default function App() {
                         <div style={{ width: '100%', height: 40 }}>
                           <ResponsiveContainer>
                             <LineChart data={sparkData}>
-                              <Line type="monotone" dataKey="estimated1RM" stroke="#cbd5e1" strokeWidth={1.5} dot={false} />
+                              <Line type="monotone" dataKey="estimated1RM" stroke="#38bdf8" strokeWidth={1.5} dot={false} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -2045,7 +2045,7 @@ export default function App() {
                           <XAxis dataKey="dateStr" stroke="#64748b" tick={ZENITH_CHART_AXIS_TICK} />
                           <YAxis stroke="#64748b" tick={ZENITH_CHART_AXIS_TICK} />
                           <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE} />
-                          <Line type="monotone" dataKey="estimated1RM" stroke="#cbd5e1" strokeWidth={2} activeDot={{ r: 4 }} />
+                          <Line type="monotone" dataKey="estimated1RM" stroke="#38bdf8" strokeWidth={2} activeDot={{ r: 4 }} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
@@ -2258,7 +2258,7 @@ export default function App() {
                           </div>
                           
                           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)', background: 'rgba(57, 255, 20, 0.02)', border: '1px dashed rgba(57, 255, 20, 0.1)', padding: '4px 10px', borderRadius: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-secondary)', background: 'rgba(56, 189, 248, 0.02)', border: '1px dashed rgba(56, 189, 248, 0.1)', padding: '4px 10px', borderRadius: 6 }}>
                               <Info size={12} style={{ color: 'var(--accent-neon)' }} />
                               <span>AI Rest Time: <strong>{aiRest}</strong></span>
                             </div>

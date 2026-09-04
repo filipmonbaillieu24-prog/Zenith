@@ -96,7 +96,7 @@ export function generateCoachAdvice(
       const efPct = ((rec - old) / old) * 100;
       if (efPct > 2) {
         advice.push({
-          category: 'progression', priority: 3, icon: '📈', color: 'var(--color-accent,#39ff14)',
+          category: 'progression', priority: 3, icon: '📈', color: 'var(--color-accent,#38bdf8)',
           title: 'Your aerobic efficiency is improving!',
           body:  `Your Efficiency Factor increased by ${efPct.toFixed(1)}% over the last few weeks. You are riding faster at the same heart rate - a clear sign of aerobic progress.`,
           action: 'Continue consistent Zone 2 training',
@@ -169,7 +169,7 @@ export function generateCoachAdvice(
       });
     } else if (wpkg < 3.0) {
       advice.push({
-        category: 'goal', priority: 3, icon: '🎯', color: 'var(--color-accent,#39ff14)',
+        category: 'goal', priority: 3, icon: '🎯', color: 'var(--color-accent,#38bdf8)',
         title: `Good level: ${wpkg.toFixed(2)} W/kg`,
         body:  'You are on your way to an advanced level (3.0+ W/kg). Combine long endurance rides with 1-2 interval sessions per week (sweet spot / threshold).',
       });
@@ -222,7 +222,7 @@ export function generateCoachAdvice(
 
     if (deepDepletionRides.length >= 2) {
       advice.push({
-        category: 'progression', priority: 3, icon: '🔋', color: '#39ff14',
+        category: 'progression', priority: 3, icon: '🔋', color: '#38bdf8',
         title: 'Deep anaerobic W\' depletion observed',
         body: `In ${deepDepletionRides.length} of your recent rides you heavily depleted your anaerobic tank ($W'$) via explosive efforts above threshold. This stimulates glycolytic capacity and sprint ability.`,
         action: 'Ensure at least 48h recovery after rides with such explosive efforts'

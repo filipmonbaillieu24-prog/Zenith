@@ -261,7 +261,7 @@
 }
 
 .integration-card {
-  background: rgba(24, 24, 27, 0.7);
+  background: var(--zenith-color-surface);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 24px;
@@ -520,7 +520,7 @@ input:checked + .toggle-slider:before {
 
 /* Logs section */
 .integrations-logs-section {
-  background: rgba(24, 24, 27, 0.6);
+  background: var(--zenith-color-surface);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 24px;

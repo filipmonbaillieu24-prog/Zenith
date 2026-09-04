@@ -18,7 +18,10 @@
 body {
   margin: 0;
   padding: 0;
-  background: #09090b;
+  background-color: var(--zenith-color-bg);
+  background-image: var(--zenith-ground);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -128,7 +131,7 @@ body {
 }
 
 .kpi-card {
-  background: rgba(24, 24, 27, 0.7);
+  background: var(--zenith-color-surface);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 20px;
@@ -185,7 +188,7 @@ body {
 
 /* Content & Toolbar */
 .stride-content-section {
-  background: rgba(24, 24, 27, 0.6);
+  background: var(--zenith-color-surface);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 20px;
   padding: 24px;

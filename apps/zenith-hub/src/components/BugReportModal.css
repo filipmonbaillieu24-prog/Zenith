@@ -53,7 +53,7 @@
 }
 
 .bug-icon-accent {
-  color: var(--color-accent, #39ff14);
+  color: var(--color-accent, var(--zenith-color-signature));
 }
 
 .bug-close-btn {
@@ -130,8 +130,8 @@
 .bug-form-group select:focus,
 .bug-form-group input:focus,
 .bug-form-group textarea:focus {
-  border-color: var(--color-accent, #39ff14);
-  box-shadow: 0 0 0 2px rgba(57, 255, 20, 0.15);
+  border-color: var(--color-accent, var(--zenith-color-signature));
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
 }
 
 .bug-form-group select option {
@@ -212,8 +212,8 @@
 
 .bug-upload-dropzone:hover,
 .bug-upload-dropzone.active {
-  border-color: var(--color-accent, #39ff14);
-  background-color: rgba(57, 255, 20, 0.03);
+  border-color: var(--color-accent, var(--zenith-color-signature));
+  background-color: rgba(56, 189, 248, 0.03);
 }
 
 .bug-upload-icon {
@@ -328,7 +328,7 @@
 }
 
 .bug-success-icon {
-  color: var(--color-accent, #39ff14);
+  color: var(--color-accent, var(--zenith-color-signature));
   margin-bottom: 8px;
 }
 
@@ -403,18 +403,18 @@
 }
 
 .bug-action-btn.primary {
-  background-color: var(--color-accent, #39ff14);
+  background-color: var(--color-accent, var(--zenith-color-signature));
   border: none;
   color: #000;
 }
 
 .bug-action-btn.primary:hover:not(:disabled) {
   opacity: 0.9;
-  box-shadow: 0 0 12px rgba(57, 255, 20, 0.3);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
 }
 
 .bug-action-btn.primary:disabled {
-  background-color: rgba(57, 255, 20, 0.3);
+  background-color: rgba(56, 189, 248, 0.3);
   color: rgba(0, 0, 0, 0.4);
   cursor: not-allowed;
 }

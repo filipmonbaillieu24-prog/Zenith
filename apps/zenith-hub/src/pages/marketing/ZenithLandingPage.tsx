@@ -27,7 +27,9 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
       width: '100vw',
       overflowY: 'auto',
       overflowX: 'hidden',
-      backgroundColor: '#09090b',
+      backgroundColor: 'var(--zenith-color-bg)',
+      backgroundImage: 'var(--zenith-ground)',
+      backgroundAttachment: 'fixed',
       color: '#f8fafc',
       fontFamily: "'Outfit', 'Inter', system-ui, -apple-system, sans-serif",
       position: 'relative'
@@ -41,7 +43,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
         width: '100%',
         maxWidth: '1200px',
         height: '600px',
-        background: 'radial-gradient(circle at 50% 10%, rgba(203, 213, 225, 0.15) 0%, rgba(203, 213, 225, 0.04) 45%, transparent 75%)',
+        background: 'radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.04) 45%, transparent 75%)',
         pointerEvents: 'none',
         zIndex: 0
       }} />
@@ -69,7 +71,7 @@ export const ZenithLandingPage: React.FC<ZenithLandingPageProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(203, 213, 225, 0.25)'
+            boxShadow: '0 0 20px rgba(56, 189, 248, 0.25)'
           }}>
             <Sparkles size={20} color="#09090b" />
           </div>

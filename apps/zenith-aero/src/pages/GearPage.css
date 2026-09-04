@@ -45,8 +45,8 @@
 }
 
 .gp-add-bike-btn {
-  background: rgba(203, 213, 225, 0.08);
-  border: 1px solid rgba(203, 213, 225, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #cbd5e1;
   font-size: 12px;
   font-weight: 600;
@@ -59,10 +59,10 @@
 }
 
 .gp-add-bike-btn:hover {
-  background: rgba(203, 213, 225, 0.15);
-  border-color: rgba(203, 213, 225, 0.35);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.35);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(203, 213, 225, 0.1);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.1);
 }
 
 /* Formulier */
@@ -135,7 +135,7 @@
 
 .gp-form-group input:focus,
 .gp-form-group select:focus {
-  border-color: rgba(203, 213, 225, 0.3);
+  border-color: rgba(255, 255, 255, 0.3);
   background: rgba(0, 0, 0, 0.35);
 }
 
@@ -215,7 +215,7 @@
 .gp-bike-icon-box {
   width: 40px;
   height: 40px;
-  background: rgba(203, 213, 225, 0.05);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -365,7 +365,7 @@
 
 .gp-comp-reset-btn:hover {
   color: #cbd5e1;
-  background: rgba(203, 213, 225, 0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .gp-comp-distance {

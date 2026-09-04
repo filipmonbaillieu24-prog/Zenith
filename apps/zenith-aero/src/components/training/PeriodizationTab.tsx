@@ -134,7 +134,7 @@ export const PeriodizationTab: React.FC<PeriodizationTabProps> = ({
               const isRest = focus === 'Rest' || focus === 'RACE';
 
               return (
-                <div key={day} style={{ padding: '10px 4px', textAlign: 'center', borderRight: i < 6 ? '1px solid rgba(255,255,255,0.04)' : 'none', background: rideInfo2 ? 'rgba(203,213,225,0.06)' : isToday2 ? `${phase.color}08` : 'transparent' }}>
+                <div key={day} style={{ padding: '10px 4px', textAlign: 'center', borderRight: i < 6 ? '1px solid rgba(255,255,255,0.04)' : 'none', background: rideInfo2 ? 'rgba(255, 255, 255, 0.06)' : isToday2 ? `${phase.color}08` : 'transparent' }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: isToday2 ? phase.color : '#334155', marginBottom: 3 }}>{day}</div>
                   {rideInfo2 ? (
                     <>

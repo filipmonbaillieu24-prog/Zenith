@@ -71,7 +71,7 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
       <div className="cmp-panel__head">
         <span className="cmp-panel__title">⇄ Comparison</span>
         <div className="cmp-legend">
-          <span className="cmp-legend__dot" style={{background:'#cbd5e1'}} /> {dateA}
+          <span className="cmp-legend__dot" style={{background:'#38bdf8'}} /> {dateA}
           <span className="cmp-legend__dot" style={{background:'#ffffff'}} /> {dateB}
         </div>
       </div>
@@ -96,7 +96,7 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
               <YAxis tick={ZENITH_CHART_AXIS_TICK} unit="W" width={40} />
               <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                 formatter={(v: any, name: any) => [`${v}W`, name === 'rideA' ? dateA : dateB]} />
-              <Line type="monotone" dataKey="rideA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
+              <Line type="monotone" dataKey="rideA" stroke="#38bdf8" strokeWidth={1.5} dot={false} connectNulls />
               <Line type="monotone" dataKey="rideB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
@@ -114,7 +114,7 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
               <YAxis tick={ZENITH_CHART_AXIS_TICK} unit="bpm" width={42} />
               <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                 formatter={(v: any, name: any) => [`${v} bpm`, name === 'rideA' ? dateA : dateB]} />
-              <Line type="monotone" dataKey="rideA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
+              <Line type="monotone" dataKey="rideA" stroke="#38bdf8" strokeWidth={1.5} dot={false} connectNulls />
               <Line type="monotone" dataKey="rideB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
             </ComposedChart>
           </ResponsiveContainer>
@@ -132,7 +132,7 @@ export const CompareOverlay: React.FC<CompareOverlayProps> = ({ rideA, rideB }) 
               <YAxis tick={ZENITH_CHART_AXIS_TICK} unit="km/h" width={42} />
               <Tooltip contentStyle={ZENITH_CHART_TOOLTIP_STYLE} labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                 formatter={(v: any, name: any) => [`${v} km/h`, name === 'rideA' ? dateA : dateB]} />
-              <Line type="monotone" dataKey="rideA" stroke="#cbd5e1" strokeWidth={1.5} dot={false} connectNulls />
+              <Line type="monotone" dataKey="rideA" stroke="#38bdf8" strokeWidth={1.5} dot={false} connectNulls />
               <Line type="monotone" dataKey="rideB" stroke="#ffffff" strokeWidth={1.5} dot={false} strokeDasharray="4 2" connectNulls />
             </ComposedChart>
           </ResponsiveContainer>

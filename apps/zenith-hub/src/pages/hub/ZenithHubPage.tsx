@@ -860,9 +860,9 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                       contentStyle={ZENITH_CHART_TOOLTIP_STYLE}
                       labelStyle={ZENITH_CHART_TOOLTIP_LABEL_STYLE}
                     />
-                    <ReferenceLine x={new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} stroke="#cbd5e1" strokeDasharray="3 3" label={{ value: 'Today', fill: '#cbd5e1', fontSize: 10 }} />
+                    <ReferenceLine x={new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} stroke="#38bdf8" strokeDasharray="3 3" label={{ value: 'Today', fill: '#38bdf8', fontSize: 10 }} />
                     <Bar dataKey="tss" fill="rgba(255,255,255,0.08)" radius={[2, 2, 0, 0]} name="Daily TSS" />
-                    <Line type="monotone" dataKey="ctl" stroke="#cbd5e1" strokeWidth={2} dot={false} name="Fitness (CTL)" />
+                    <Line type="monotone" dataKey="ctl" stroke="#38bdf8" strokeWidth={2} dot={false} name="Fitness (CTL)" />
                     <Line type="monotone" dataKey="atl" stroke="#ff7675" strokeWidth={1.5} dot={false} name="Fatigue (ATL)" />
                     <Line type="monotone" dataKey="tsb" stroke="#fdcb6e" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Form (TSB)" />
                   </ComposedChart>
@@ -871,7 +871,7 @@ export const ZenithHubPage: React.FC<ZenithHubPageProps> = ({
                 {/* Four series were being drawn with no key of any kind. */}
                 <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 8, fontSize: 10, color: '#94a3b8' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ width: 12, height: 2, background: '#cbd5e1', display: 'inline-block' }} /> Fitness
+                    <span style={{ width: 12, height: 2, background: '#38bdf8', display: 'inline-block' }} /> Fitness
                   </span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ width: 12, height: 2, background: '#ff7675', display: 'inline-block' }} /> Tiredness

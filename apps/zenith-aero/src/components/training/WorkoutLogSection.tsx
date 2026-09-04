@@ -49,8 +49,8 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
         <button
           onClick={() => setShowAdd((v) => !v)}
           style={{
-            background: 'rgba(203, 213, 225, 0.12)',
-            border: '1px solid rgba(203, 213, 225, 0.2)',
+            background: 'rgba(255, 255, 255, 0.12)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
             borderRadius: 6,
             color: '#cbd5e1',
             fontSize: 11,
@@ -124,7 +124,7 @@ export const WorkoutLogSection: React.FC<WorkoutLogSectionProps> = ({ logs, onAd
           <button
             type="submit"
             style={{
-              background: '#cbd5e1',
+              background: '#38bdf8',
               border: 'none',
               borderRadius: 6,
               color: '#090a0f',

@@ -5,15 +5,40 @@
   --zenith-font-body: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
 
   --zenith-color-bg: #09090b;
-  --zenith-color-surface: rgba(28, 28, 35, 0.65);
+
+  /* The ground every Zenith surface sits on: near-black warming towards deep
+     teal down the diagonal, the same figure Kratos Pilot draws on the phone.
+     Applied fixed to the viewport so it spans the window rather than
+     restarting at the top of each scrolling panel. */
+  --zenith-ground: linear-gradient(135deg, #090a0c 0%, #0d2634 100%);
+
+  /* Glass. A card is a lightening of whatever it sits on, not a grey panel
+     laid over it - which is what let the old solid grey panel read as a
+     flat slab once the ground stopped being flat itself. */
+  --zenith-color-surface: rgba(255, 255, 255, 0.045);
+  --zenith-color-surface-hover: rgba(255, 255, 255, 0.07);
+  /* Number fields, keypad keys, inert input chrome. */
+  --zenith-color-field: #27272e;
+  /* Opaque - sheets, dialogs and menus, which must not show the ground. */
+  --zenith-color-solid: #1c1c23;
+
   --zenith-color-primary: #cbd5e1;
+  --zenith-color-bright: #e2e8f0;
   --zenith-color-secondary: #94a3b8;
+  --zenith-color-muted: #5a6472;
   --zenith-color-dark: #475569;
-  --zenith-color-accent: #cbd5e1;
-  --zenith-color-accent-bright: #f8fafc;
-  --zenith-color-accent-glow: rgba(203, 213, 225, 0.12);
+
+  /* The accent IS the signature. These were two different colours - a steel
+     "accent" and a sky "signature" - so a button and the line it was meant to
+     match came out different shades of the same idea. */
+  --zenith-color-accent: #38bdf8;
+  --zenith-color-accent-bright: #7dd3fc;
+  --zenith-color-accent-glow: rgba(56, 189, 248, 0.12);
   --zenith-color-error: #ef4444;
   --zenith-color-border: rgba(255, 255, 255, 0.08);
+  --zenith-color-divider: rgba(255, 255, 255, 0.05);
+  /* Text and icons sitting ON the accent. */
+  --zenith-color-on-accent: #09090b;
 
   /* Signature brand color — the one color meant to mean "this is Zenith":
      primary actions, active nav state, focus rings, the one line that
@@ -23,6 +48,8 @@
   --zenith-color-signature-bright: #7dd3fc;
   --zenith-color-signature-soft: rgba(56, 189, 248, 0.12);
   --zenith-color-signature-border: rgba(56, 189, 248, 0.35);
+  /* A filled accent surface - an active row, a selected key. */
+  --zenith-color-signature-fill: rgba(56, 189, 248, 0.18);
 
   /* Semantic status colors — for state (improved/needs-attention/overreached/learned),
      kept separate from --zenith-color-accent so per-app category colors (macros, sleep
@@ -47,6 +74,21 @@
   --zenith-radius-md: 12px;
   --zenith-radius-lg: 16px;
   --zenith-radius-xl: 20px;
+}
+
+/* ==========================================================
+ * THE GROUND
+ * Every app paints this on body. Fixed attachment so the gradient belongs to
+ * the window and not to the document, which otherwise makes a long page fade
+ * back to black halfway down and start again.
+ * ========================================================== */
+
+.zenith-ground,
+body.zenith-ground {
+  background-color: var(--zenith-color-bg);
+  background-image: var(--zenith-ground);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 /* ==========================================================
@@ -129,8 +171,8 @@
 
 .zenith-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(203, 213, 225, 0.25);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 20px rgba(203, 213, 225, 0.08);
+  border-color: var(--zenith-color-signature-border);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.10);
 }
 
 .zenith-btn-primary {
@@ -176,23 +218,33 @@
 
 .zenith-btn-secondary:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(203, 213, 225, 0.2);
+  border-color: var(--zenith-color-signature-border);
   color: #fff;
 }
 
+/* A badge is a neutral chip by default. It used to be tinted and outlined in
+   the accent, which meant a screen with six labels on it had six things all
+   shouting the accent - and the accent then meant nothing. Ask for
+   .zenith-badge--accent when the badge is genuinely the thing to look at. */
 .zenith-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background: var(--zenith-color-accent-glow);
-  border: 1px solid rgba(203, 213, 225, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
   border-radius: 9999px;
   font-size: 11px;
   font-weight: 700;
-  color: var(--zenith-color-primary);
+  color: var(--zenith-color-secondary);
   text-transform: uppercase;
   letter-spacing: 0.8px;
+}
+
+.zenith-badge--accent {
+  background: var(--zenith-color-signature-soft);
+  border-color: var(--zenith-color-signature-border);
+  color: var(--zenith-color-signature-bright);
 }
 
 /* ==========================================================
@@ -244,7 +296,7 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--zenith-color-muted);
   border-bottom: 1px solid var(--zenith-color-border);
   white-space: nowrap;
 }
@@ -259,6 +311,16 @@
 
 .zenith-table tr:last-child td { border-bottom: none; }
 .zenith-table tbody tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+/* The row being acted on, lit the way Kratos Pilot lights the set you are on:
+   one row at a time, so everything above it reads as done and everything
+   below as not yet. */
+.zenith-table tbody tr.is-active td {
+  background: var(--zenith-color-signature-soft);
+  border-top: 1px solid var(--zenith-color-signature-border);
+  border-bottom: 1px solid var(--zenith-color-signature-border);
+  color: #fff;
+}
 
 .zenith-table-name {
   font-weight: 700;
@@ -527,9 +589,12 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+/* The tab you are on is the one place on the chrome worth spending the
+   accent: it answers "where am I", which is the question the header exists
+   to answer. */
 .zenith-header-tab.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  background: var(--zenith-color-signature-soft);
+  color: var(--zenith-color-signature-bright);
 }
 
 .zenith-header-spacer {
@@ -596,7 +661,168 @@
   width: 100%;
   max-width: 1200px;
   height: 600px;
-  background: radial-gradient(circle at 50% 10%, rgba(203, 213, 225, 0.12) 0%, rgba(203, 213, 225, 0.03) 45%, transparent 75%);
+  background: radial-gradient(circle at 50% 10%, rgba(56, 189, 248, 0.10) 0%, rgba(56, 189, 248, 0.03) 45%, transparent 75%);
   pointer-events: none;
   z-index: 0;
+}
+
+/* ==========================================================
+ * THE KRATOS PILOT IDIOM
+ *
+ * The vocabulary the phone app uses to say the same few things over and
+ * over: this is a small fact about the thing beside it (chip), this is item
+ * N of a series (numbered badge), this is a value you can change (field),
+ * this is the one row you are working on (row--active), and this needs
+ * reading before you act (note--warn).
+ *
+ * Six web apps had each invented their own version of all five.
+ * ========================================================== */
+
+/* A small fact attached to something larger: a count, an average, a unit.
+   Neutral by design - the chip is never the point, the thing it hangs off
+   is. */
+.zenith-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--zenith-color-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.zenith-chip--accent {
+  background: var(--zenith-color-signature-soft);
+  color: var(--zenith-color-signature-bright);
+}
+
+.zenith-chip--warn {
+  background: var(--zenith-color-warn-soft);
+  color: var(--zenith-color-warn);
+}
+
+/* Item N of a series. Round, because a number in a circle reads as an
+   ordinal and a number in a box reads as a quantity. */
+.zenith-num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--zenith-color-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Done: the accent, but held back, so a column of finished items does not
+   outshout the one still to do. */
+.zenith-num-badge--done {
+  background: var(--zenith-color-signature-fill);
+  color: var(--zenith-color-signature-bright);
+}
+
+/* Now: the only solid accent in the list. */
+.zenith-num-badge--active {
+  background: var(--zenith-color-signature);
+  color: var(--zenith-color-on-accent);
+  font-weight: 800;
+}
+
+.zenith-num-badge--sm { width: 18px; height: 18px; font-size: 9px; }
+
+/* Warmup hollow, working filled - the whole legend. */
+.zenith-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid #64748b;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.zenith-dot--filled {
+  border-color: transparent;
+  background: var(--zenith-color-signature);
+}
+
+/* A value you can change. Reads as inert until the row it belongs to is the
+   active one, at which point it takes the accent outline. */
+.zenith-field {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: var(--zenith-color-field);
+  border: 1.5px solid transparent;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.zenith-field:focus,
+.zenith-field:focus-visible,
+.zenith-row--active .zenith-field {
+  border-color: var(--zenith-color-signature);
+  outline: none;
+}
+
+.zenith-field--spent {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(248, 250, 252, 0.55);
+}
+
+/* One row at a time. A list where every row is equally lit is a list you
+   have to read; a list with one row lit is a list you can glance at. */
+.zenith-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--zenith-color-divider);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.zenith-row:last-child { border-bottom: none; }
+
+.zenith-row--active {
+  background: var(--zenith-color-signature-soft);
+  border: 1px solid var(--zenith-color-signature);
+  border-radius: 10px;
+  padding: 12px 10px;
+}
+
+.zenith-row--spent { color: var(--zenith-color-muted); }
+
+/* Something to read before acting, not after. Amber rather than red: a
+   stalled lift is not an error, it is a fact about the plan. */
+.zenith-note--warn {
+  color: var(--zenith-color-warn);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.zenith-note-card--warn {
+  background: var(--zenith-color-warn-soft);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  border-radius: var(--zenith-radius-md);
+  padding: 10px 14px;
+}
+
+/* Opaque: sheets, dialogs and menus must not show the ground through them. */
+.zenith-sheet {
+  background: var(--zenith-color-solid);
+  border: 1px solid var(--zenith-color-border);
+  border-radius: var(--zenith-radius-lg);
 }
