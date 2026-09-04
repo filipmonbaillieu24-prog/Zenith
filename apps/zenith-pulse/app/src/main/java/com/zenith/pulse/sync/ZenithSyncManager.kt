@@ -45,9 +45,29 @@ object ZenithSyncManager {
     var lastSyncStatus: String = "Never synced"
         private set
 
-    suspend fun performSync(context: Context, syncType: String = "MANUAL"): Boolean = withContext(Dispatchers.IO) {
+    /**
+     * The three things a sync does, in order, so the screen can say which one it is on.
+     *
+     * These are the real stages, not a decoration: each is reported when that step has
+     * genuinely finished, and a failure reports the stage it failed at. A sync that
+     * silently posts nothing is the failure mode this app has actually had - 157 of 185
+     * background syncs once posted a payload of zeros and every one returned success -
+     * so which step gave up is worth showing rather than a spinner that always ends
+     * the same way.
+     */
+    enum class SyncStage { AUTH, READ, UPLOAD }
+
+    suspend fun performSync(
+        context: Context,
+        syncType: String = "MANUAL",
+        onStage: ((SyncStage, Boolean) -> Unit)? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        // Reported on the caller's behalf from a background thread; the UI hops back to
+        // the main thread itself.
+        fun stage(s: SyncStage, ok: Boolean) = onStage?.invoke(s, ok)
         try {
             if (!UserAuthManager.isLoggedIn(context)) {
+                stage(SyncStage.AUTH, false)
                 lastSyncStatus = "⛔ Login required: No linked Zenith account"
                 Log.w("ZenithSyncManager", "Sync aborted: user not logged in.")
                 return@withContext false
@@ -61,10 +81,13 @@ object ZenithSyncManager {
             val userAccessToken = UserAuthManager.refreshAccessToken(context)
                 ?: UserAuthManager.getAccessToken(context)
             if (userAccessToken.isNullOrEmpty()) {
+                stage(SyncStage.AUTH, false)
                 lastSyncStatus = "⛔ Login expired: please sign in to Zenith Pulse again"
                 Log.w("ZenithSyncManager", "Sync aborted: no valid access token (refresh failed and no cached token).")
                 return@withContext false
             }
+
+            stage(SyncStage.AUTH, true)
 
             val manager = HealthConnectManager(context)
             val data = manager.fetchLatestHealthData()
@@ -80,6 +103,7 @@ object ZenithSyncManager {
             // was overwritten. That is the ingest being defensive, not this being safe:
             // the sync should not be sending it.
             if (!data.readSucceeded) {
+                stage(SyncStage.READ, false)
                 val background = manager.hasBackgroundReadPermission()
                 lastSyncStatus = if (!background) {
                     "⛔ Health Connect background access not granted — open Zenith Pulse and allow it, or sync manually"
@@ -93,6 +117,7 @@ object ZenithSyncManager {
 
             // Only cache a read that actually worked - overwriting this with zeros also
             // blanked the app's own display.
+            stage(SyncStage.READ, true)
             cachedPayload = data
 
             val userEmail = UserAuthManager.getUserEmail(context) ?: ""
@@ -213,10 +238,12 @@ object ZenithSyncManager {
             lastSyncTimestamp = System.currentTimeMillis()
 
             if (response.status.value in 200..299) {
+                stage(SyncStage.UPLOAD, true)
                 lastSyncStatus = "Successfully synced with Zenith! (${data.stepsCount} steps)"
                 Log.i("ZenithSyncManager", "Sync to Zenith Supabase succeeded: $bodyText")
                 return@withContext true
             } else {
+                stage(SyncStage.UPLOAD, false)
                 lastSyncStatus = "Sync Error (HTTP ${response.status.value}): $bodyText"
                 Log.w("ZenithSyncManager", "Sync failed with status ${response.status.value}: $bodyText")
                 return@withContext false

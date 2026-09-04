@@ -30,10 +30,22 @@ object UpdateManager {
     private const val PULSE_VERSION_URL =
         "https://raw.githubusercontent.com/filipmonbaillieu24-prog/Zenith/main/apk/pulse-version.json"
 
+    /**
+     * A unique query string, so a CDN cannot answer from cache.
+     *
+     * Both the manifest AND the APK need this, which is the whole point of it being a
+     * function. Kratos Pilot cache-busted only the manifest and hit exactly the failure
+     * that invites: GitHub served the fresh manifest but the previous APK, the download
+     * was checked against the new manifest's digest, and the update was rejected as
+     * corrupt on a file that was merely stale.
+     */
+    private fun cacheBusted(raw: String): String =
+        raw + (if (raw.contains('?')) "&" else "?") + "t=" + System.currentTimeMillis()
+
     suspend fun checkForUpdates(currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
-            val url = URL("$PULSE_VERSION_URL?t=${System.currentTimeMillis()}")
+            val url = URL(cacheBusted(PULSE_VERSION_URL))
             connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.setRequestProperty("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -78,7 +90,7 @@ object UpdateManager {
     ) = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
         try {
-            var currentUrl = downloadUrl
+            var currentUrl = cacheBusted(downloadUrl)
             var redirectCount = 0
             var responseCode: Int
 

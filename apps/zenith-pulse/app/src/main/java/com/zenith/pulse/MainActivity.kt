@@ -19,9 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +50,7 @@ import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import java.time.LocalDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -69,17 +73,56 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Zenith Hub Design Tokens
+/*
+ * The Zenith palette, shared with Kratos Pilot and the six web apps.
+ *
+ * Pulse was the last thing still wearing the neon green (#39FF14) that the rest of the
+ * ecosystem stopped using: one app in the family shouting in a colour none of its
+ * siblings owned. The names are kept so the hundred-odd call sites keep working; only
+ * what they resolve to has changed.
+ */
 val ZenithBgDark = Color(0xFF09090B)
-val ZenithCardBg = Color(0xFF141824)
+val PulseGradientTop = Color(0xFF090A0C)
+val PulseGradientBottom = Color(0xFF0D2634)
+
+val ZenithAccent = Color(0xFF38BDF8)
+val ZenithAccentSoft = Color(0xFF7DD3FC)
+/** A shade lighter, for the login button standing on nothing but the ground. */
+val PulseLoginAccent = Color(0xFF45BBEF)
+val ZenithOnAccent = Color(0xFF09090B)
+
+/** Glass - a card lightens the ground rather than covering it. */
+val ZenithGlass = Color(0x0BFFFFFF)
+val ZenithGlassBorder = Color(0x14FFFFFF)
+/** Opaque - dialogs and sheets, which sit over content and must not show it. */
+val ZenithCardBg = Color(0xFF1C1C23)
+/** Inert input chrome. */
+val ZenithField = Color(0xFF27272E)
+
 val ZenithSteelGrey = Color(0xFF1E293B)
-val ZenithSteelBorder = Color(0xFF334155)
-val ZenithAccent = Color(0xFF39FF14) // Zenith Hub neon green accent
+val ZenithSteelBorder = Color(0xFF27272A)
 val ZenithPurple = Color(0xFFA855F7)
 val ZenithTextMain = Color(0xFFF8FAFC)
+val ZenithTextBright = Color(0xFFCBD5E1)
 val ZenithTextMuted = Color(0xFF94A3B8)
 val ZenithTextSub = Color(0xFF64748B)
+val ZenithGood = Color(0xFF4ADE80)
+val ZenithWarn = Color(0xFFF5A623)
 val ZenithRed = Color(0xFFEF4444)
+
+/**
+ * The ground, top-left to bottom-right. `Offset.Infinite` is the far corner of whatever
+ * it is painted on, so the gradient runs the full diagonal on any screen size rather
+ * than a fixed number of pixels.
+ */
+val PulseGround = Brush.linearGradient(
+    colors = listOf(PulseGradientTop, PulseGradientBottom),
+    start = Offset.Zero,
+    end = Offset.Infinite
+)
+
+/** The wordmark face. Palatino is not on Android; Serif resolves to Noto Serif. */
+val PulseWordmark: FontFamily = FontFamily.Serif
 
 @Composable
 fun ZenithPulseTheme(content: @Composable () -> Unit) {
@@ -88,7 +131,8 @@ fun ZenithPulseTheme(content: @Composable () -> Unit) {
             background = ZenithBgDark,
             surface = ZenithCardBg,
             primary = ZenithAccent,
-            secondary = ZenithPurple,
+            secondary = ZenithAccentSoft,
+            onPrimary = ZenithOnAccent,
             onBackground = ZenithTextMain,
             onSurface = ZenithTextMain
         ),
@@ -117,6 +161,14 @@ fun ZenithPulseScreen(
     var hasPermissions by remember { mutableStateOf(false) }
     var isSyncing by remember { mutableStateOf(false) }
     var syncSuccess by remember { mutableStateOf(false) }
+
+    // What the running sync has actually got through. Keyed by SyncStage.name, with
+    // true for a stage that finished and false for the one that gave up; a stage with
+    // no entry has not been reached. Written from the sync's IO thread, which snapshot
+    // state handles.
+    val hcStages = remember { mutableStateMapOf<String, Boolean>() }
+    var hcOpen by remember { mutableStateOf(false) }
+    var hcFinished by remember { mutableStateOf(false) }
 
     // Update States
     var updateInfo by remember { mutableStateOf<com.zenith.pulse.update.UpdateInfo?>(null) }
@@ -364,16 +416,13 @@ fun ZenithPulseScreen(
         )
     }
 
-    // Background Gradient for entire screen
+    // The ground. Padding is left to each screen: the login centres on 28dp like the
+    // rest of the family, the dashboard sits on 20dp.
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(ZenithBgDark, Color(0xFF0C0E14), Color(0xFF09090B))
-                )
-            )
-            .padding(24.dp),
+            .background(PulseGround)
+            .systemBarsPadding(),
         contentAlignment = Alignment.Center
     ) {
         if (!isLoggedInState) {
@@ -383,41 +432,26 @@ fun ZenithPulseScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Circle Logo
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape)
-                        .border(2.dp, ZenithAccent, CircleShape)
-                        .background(ZenithCardBg),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_zenith_pulse),
-                        contentDescription = "Emblem",
-                        modifier = Modifier
-                            .size(70.dp)
-                            .clip(CircleShape)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
+                // The wordmark carries the screen, set large and light rather than
+                // heavy - a black serif at this size reads as a logo stamp.
                 Text(
-                    text = "ZENITH PULSE",
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Black,
-                    color = ZenithAccent,
-                    letterSpacing = 3.sp
+                    text = "PULSE",
+                    fontSize = 44.sp,
+                    fontWeight = FontWeight.Normal,
+                    fontFamily = PulseWordmark,
+                    color = Color.White,
+                    letterSpacing = 2.sp
                 )
                 Text(
-                    text = "Health Connect Ingestion Client",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = ZenithTextMuted
+                    text = "HEALTH & RECOVERY",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ZenithTextBright,
+                    letterSpacing = 1.sp
                 )
 
                 Spacer(modifier = Modifier.height(36.dp))
@@ -425,36 +459,37 @@ fun ZenithPulseScreen(
                 OutlinedTextField(
                     value = emailInput.value,
                     onValueChange = { emailInput.value = it },
-                    label = { Text("Email Address") },
+                    placeholder = { Text("Email address", color = ZenithTextMuted, fontSize = 14.sp) },
                     singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF141824),
-                        unfocusedContainerColor = Color(0xFF141824),
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
                         focusedBorderColor = ZenithAccent,
                         unfocusedBorderColor = ZenithSteelBorder,
-                        focusedLabelColor = ZenithAccent,
-                        unfocusedLabelColor = ZenithTextMuted,
+                        cursorColor = ZenithAccent,
                         focusedTextColor = ZenithTextMain,
                         unfocusedTextColor = ZenithTextMain
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 OutlinedTextField(
                     value = passwordInput.value,
                     onValueChange = { passwordInput.value = it },
-                    label = { Text("Password") },
+                    placeholder = { Text("Password", color = ZenithTextMuted, fontSize = 14.sp) },
                     singleLine = true,
+                    shape = RoundedCornerShape(8.dp),
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFF141824),
-                        unfocusedContainerColor = Color(0xFF141824),
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
                         focusedBorderColor = ZenithAccent,
                         unfocusedBorderColor = ZenithSteelBorder,
-                        focusedLabelColor = ZenithAccent,
-                        unfocusedLabelColor = ZenithTextMuted,
+                        cursorColor = ZenithAccent,
                         focusedTextColor = ZenithTextMain,
                         unfocusedTextColor = ZenithTextMain
                     ),
@@ -466,7 +501,7 @@ fun ZenithPulseScreen(
                     Text(text = msg, fontSize = 12.sp, color = ZenithRed)
                 }
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Button(
                     onClick = {
@@ -490,20 +525,20 @@ fun ZenithPulseScreen(
                     },
                     enabled = !isLoggingIn,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ZenithAccent,
+                        containerColor = PulseLoginAccent,
                         disabledContainerColor = ZenithSteelGrey
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(48.dp)
                 ) {
                     Text(
-                        text = if (isLoggingIn) "LOGGING IN..." else "SIGN IN",
-                        color = Color(0xFF09090B),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        letterSpacing = 1.sp
+                        text = if (isLoggingIn) "LOGGING IN..." else "LOG IN",
+                        color = ZenithOnAccent,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp,
+                        letterSpacing = 0.5.sp
                     )
                 }
             }
@@ -511,7 +546,7 @@ fun ZenithPulseScreen(
             // ==========================================
             // SCREEN 2: SYNC SCREEN (Zero-UI Concept)
             // ==========================================
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
                 // Top bar: Account & Logout
                 Row(
                     modifier = Modifier
@@ -520,168 +555,96 @@ fun ZenithPulseScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // The account, kept but demoted: it is reassurance, not a control.
                     Text(
                         text = userEmailState,
-                        color = ZenithTextMuted,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
+                        color = ZenithTextSub,
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.width(74.dp)
                     )
 
                     Text(
-                        text = "LOGOUT",
-                        color = ZenithRed,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.clickable {
-                            com.zenith.pulse.auth.UserAuthManager.logout(context)
-                            isLoggedInState = false
-                            userEmailState = ""
-                            syncSuccess = false
-                            isSyncing = false
-                        }
-                    )
-                }
-
-                // Center logo & pulse animation
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Double concentric pulse animation
-                    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-                    val scale1 by infiniteTransition.animateFloat(
-                        initialValue = 1.0f,
-                        targetValue = 2.0f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1800, easing = LinearOutSlowInEasing),
-                            repeatMode = RepeatMode.Restart
-                        ),
-                        label = "scale1"
-                    )
-                    val alpha1 by infiniteTransition.animateFloat(
-                        initialValue = 0.8f,
-                        targetValue = 0.0f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1800, easing = LinearOutSlowInEasing),
-                            repeatMode = RepeatMode.Restart
-                        ),
-                        label = "alpha1"
-                    )
-
-                    val scale2 by infiniteTransition.animateFloat(
-                        initialValue = 1.0f,
-                        targetValue = 2.0f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1800, delayMillis = 900, easing = LinearOutSlowInEasing),
-                            repeatMode = RepeatMode.Restart
-                        ),
-                        label = "scale2"
-                    )
-                    val alpha2 by infiniteTransition.animateFloat(
-                        initialValue = 0.8f,
-                        targetValue = 0.0f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1800, delayMillis = 900, easing = LinearOutSlowInEasing),
-                            repeatMode = RepeatMode.Restart
-                        ),
-                        label = "alpha2"
-                    )
-
-                    Box(contentAlignment = Alignment.Center) {
-                        if (isSyncing) {
-                            Box(
-                                modifier = Modifier
-                                    .size(160.dp)
-                                    .graphicsLayer {
-                                        scaleX = scale1
-                                        scaleY = scale1
-                                        alpha = alpha1
-                                    }
-                                    .background(ZenithAccent.copy(alpha = 0.35f), CircleShape)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .size(160.dp)
-                                    .graphicsLayer {
-                                        scaleX = scale2
-                                        scaleY = scale2
-                                        alpha = alpha2
-                                    }
-                                    .background(ZenithAccent.copy(alpha = 0.35f), CircleShape)
-                            )
-                        }
-
-                        // Circular Logo Button
-                        Box(
-                            modifier = Modifier
-                                .size(160.dp)
-                                .clip(CircleShape)
-                                .background(ZenithCardBg)
-                                .border(
-                                    width = 3.dp,
-                                    color = if (syncSuccess) ZenithAccent else if (hasPermissions) ZenithAccent.copy(alpha = 0.6f) else ZenithRed,
-                                    shape = CircleShape
-                                )
-                                .clickable(enabled = !isSyncing && hasPermissions) {
-                                    coroutineScope.launch {
-                                        isSyncing = true
-                                        val success = ZenithSyncManager.performSync(context)
-                                        isSyncing = false
-                                        if (success) {
-                                            syncSuccess = true
-                                            delay(3000)
-                                            syncSuccess = false
-                                        } else {
-                                            Toast.makeText(context, "Synchronization failed.", Toast.LENGTH_LONG).show()
-                                        }
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (syncSuccess) {
-                                Canvas(modifier = Modifier.size(64.dp)) {
-                                    val path = androidx.compose.ui.graphics.Path().apply {
-                                        moveTo(size.width * 0.25f, size.height * 0.5f)
-                                        lineTo(size.width * 0.45f, size.height * 0.7f)
-                                        lineTo(size.width * 0.75f, size.height * 0.3f)
-                                    }
-                                    drawPath(
-                                        path = path,
-                                        color = ZenithAccent,
-                                        style = Stroke(
-                                            width = 6.dp.toPx(),
-                                            cap = StrokeCap.Round,
-                                            join = StrokeJoin.Round
-                                        )
-                                    )
-                                }
-                            } else {
-                                Image(
-                                    painter = painterResource(id = R.drawable.ic_zenith_pulse),
-                                    contentDescription = "Zenith Logo",
-                                    modifier = Modifier
-                                        .size(100.dp)
-                                        .clip(CircleShape)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(28.dp))
-
-                    Text(
-                        text = if (isSyncing) "SYNCING..." else if (syncSuccess) "SUCCESS!" else "TAP TO SYNC",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (syncSuccess) ZenithAccent else ZenithTextMain,
+                        text = "PULSE",
+                        fontSize = 18.sp,
+                        fontFamily = PulseWordmark,
+                        color = Color.White,
                         letterSpacing = 1.sp
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0x1AFF7675), RoundedCornerShape(8.dp))
+                            .clickable {
+                                com.zenith.pulse.auth.UserAuthManager.logout(context)
+                                isLoggedInState = false
+                                userEmailState = ""
+                                syncSuccess = false
+                                isSyncing = false
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(text = "LOG OUT", color = ZenithRed, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // Center logo & pulse animation
+                // Scrollable, and centred only while it fits. The scale setup panel
+                // below expands into a scan list and a diagnostics dump, which on a
+                // shorter phone used to run off the bottom with no way to reach it.
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 44.dp, bottom = 8.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    SyncOrb(
+                        isSyncing = isSyncing,
+                        syncSuccess = syncSuccess,
+                        hasPermissions = hasPermissions,
+                        onClick = {
+                            coroutineScope.launch {
+                                hcStages.clear()
+                                hcFinished = false
+                                hcOpen = true
+                                isSyncing = true
+                                val success = ZenithSyncManager.performSync(context, "MANUAL") { stage, ok ->
+                                    hcStages[stage.name] = ok
+                                }
+                                isSyncing = false
+                                hcFinished = true
+                                if (success) {
+                                    syncSuccess = true
+                                    delay(3000)
+                                    syncSuccess = false
+                                }
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = if (isSyncing) "Transferring data to Zenith..." else if (syncSuccess) "Biometrics are up to date" else "Full offline synchronization",
-                        fontSize = 12.sp,
+                        text = "HEALTH CONNECT",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (hasPermissions) ZenithAccentSoft else ZenithRed,
+                        letterSpacing = 0.5.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = when {
+                            isSyncing -> "Transferring data to Zenith…"
+                            syncSuccess -> "Biometrics are up to date"
+                            !hasPermissions -> "Access not granted yet"
+                            else -> "Tap to sync"
+                        },
+                        fontSize = 10.sp,
                         color = ZenithTextMuted
                     )
 
@@ -696,9 +659,9 @@ fun ZenithPulseScreen(
                     // into another every day.
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF12161C)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x22FFFFFF))
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = ZenithGlass),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ZenithGlassBorder)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
@@ -772,7 +735,7 @@ fun ZenithPulseScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(Color(0xFF1A1F27), RoundedCornerShape(8.dp))
+                                        .background(ZenithField, RoundedCornerShape(8.dp))
                                         .padding(12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
@@ -865,7 +828,7 @@ fun ZenithPulseScreen(
                                             scaleScanning = true
                                         }
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = ZenithField),
                                     shape = RoundedCornerShape(8.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
@@ -898,7 +861,7 @@ fun ZenithPulseScreen(
                                             cm.setPrimaryClip(ClipData.newPlainText("Zenith scale diagnostics", text))
                                             Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
                                         },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2530)),
+                                        colors = ButtonDefaults.buttonColors(containerColor = ZenithField),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.weight(1f)
                                     ) {
@@ -938,7 +901,7 @@ fun ZenithPulseScreen(
                                                 awaitingConfirm = false
                                                 scaleManager.connect(dev.address)
                                             }
-                                            .background(Color(0xFF1A1F27), RoundedCornerShape(8.dp))
+                                            .background(ZenithField, RoundedCornerShape(8.dp))
                                             .padding(10.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
@@ -1019,7 +982,7 @@ fun ZenithPulseScreen(
                                             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .background(Color(0xFF0E1217), RoundedCornerShape(8.dp))
+                                                .background(Color(0xFF16161C), RoundedCornerShape(8.dp))
                                                 .padding(10.dp)
                                         )
                                     }
@@ -1202,6 +1165,330 @@ fun ZenithPulseScreen(
                             }
                         }
                     }
+                }
+            }
+        }
+
+        if (hcOpen) {
+            HealthConnectSyncSheet(
+                stages = hcStages,
+                finished = hcFinished,
+                statusText = ZenithSyncManager.lastSyncStatus,
+                onDismiss = { hcOpen = false }
+            )
+        }
+    }
+}
+
+/**
+ * The sync control: three rings breathing outwards, a slowly turning ring of accent,
+ * and a sphere that swells and settles.
+ *
+ * The rings run whether or not a sync is under way. This app's whole job is that data
+ * keeps moving, so its one control should look alive rather than look like a dead
+ * button until pressed. Colour is what carries state: the rings go red when Health
+ * Connect access is missing, because then pressing it cannot do anything.
+ */
+@Composable
+fun SyncOrb(
+    isSyncing: Boolean,
+    syncSuccess: Boolean,
+    hasPermissions: Boolean,
+    onClick: () -> Unit
+) {
+    val transition = rememberInfiniteTransition(label = "orb")
+    val ringColor = if (hasPermissions) ZenithAccent else ZenithRed
+
+    // Three rings on the same 2.4s expansion, started 0.8s apart. The offset is a
+    // start offset rather than a delay inside the tween: a delay would be part of each
+    // repeat and stretch the period to 3.2s, so the three would drift apart.
+    val ringPhases = listOf(0, 800, 1600).map { offsetMs ->
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2400, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+                initialStartOffset = StartOffset(offsetMs)
+            ),
+            label = "ring$offsetMs"
+        )
+    }
+
+    val spin by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "spin"
+    )
+
+    val breathe by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.035f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breathe"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(176.dp)
+            .clickable(enabled = !isSyncing) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        ringPhases.forEach { phase ->
+            val t = phase.value
+            Box(
+                modifier = Modifier
+                    .size(176.dp)
+                    .graphicsLayer {
+                        val sc = 1f + 0.7f * t
+                        scaleX = sc
+                        scaleY = sc
+                        alpha = 0.55f * (1f - t)
+                    }
+                    .border(1.dp, ringColor.copy(alpha = 0.35f), CircleShape)
+            )
+        }
+
+        Canvas(
+            modifier = Modifier
+                .size(154.dp)
+                .graphicsLayer { rotationZ = spin }
+        ) {
+            drawCircle(
+                brush = Brush.sweepGradient(
+                    listOf(ZenithAccent, ZenithAccentSoft, ZenithAccent)
+                ),
+                radius = size.minDimension / 2f - 2.dp.toPx(),
+                style = Stroke(width = 3.dp.toPx()),
+                alpha = 0.5f
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .size(132.dp)
+                .graphicsLayer {
+                    scaleX = breathe
+                    scaleY = breathe
+                }
+                .clip(CircleShape)
+                .drawBehind {
+                    // Lit from the upper left, so it reads as a sphere rather than a
+                    // flat disc.
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0xFF5FCBFA), Color(0xFF0EA5E9), Color(0xFF0369A1)),
+                            center = Offset(size.width * 0.35f, size.height * 0.30f),
+                            radius = size.width * 0.95f
+                        )
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            if (syncSuccess) {
+                Canvas(modifier = Modifier.size(56.dp)) {
+                    val path = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(size.width * 0.25f, size.height * 0.5f)
+                        lineTo(size.width * 0.45f, size.height * 0.7f)
+                        lineTo(size.width * 0.75f, size.height * 0.3f)
+                    }
+                    drawPath(
+                        path = path,
+                        color = Color(0xFF082F49),
+                        style = Stroke(
+                            width = 6.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
+                    )
+                }
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "⟳", fontSize = 26.sp, color = Color(0xFF082F49))
+                    Text(
+                        text = "SYNC",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF082F49),
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * What the sync is doing, while it does it.
+ *
+ * The three rows are the three things performSync actually performs, and each ticks
+ * when that step has genuinely returned - not on a timer. The distinction matters here
+ * more than most places: this app once had 157 of 185 background syncs post a payload
+ * of zeros and report success, and a spinner that always ends the same way is exactly
+ * what hid it. A step that fails shows a cross and stops the ones after it, and the
+ * reason is printed underneath.
+ */
+@Composable
+fun HealthConnectSyncSheet(
+    stages: Map<String, Boolean>,
+    finished: Boolean,
+    statusText: String,
+    onDismiss: () -> Unit
+) {
+    val rows = listOf(
+        ZenithSyncManager.SyncStage.AUTH.name to "Signing in",
+        ZenithSyncManager.SyncStage.READ.name to "Reading Health Connect",
+        ZenithSyncManager.SyncStage.UPLOAD.name to "Uploading to Zenith"
+    )
+    val failed = stages.values.any { !it }
+
+    val transition = rememberInfiniteTransition(label = "sheet")
+    val spin by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sheetSpin"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xB8050608))
+            // Dismissible at any point. The sync carries on either way, and a sheet
+            // that can only be closed once the network replies is a trap the moment a
+            // request hangs.
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .width(288.dp)
+                .background(ZenithCardBg, RoundedCornerShape(20.dp))
+                .border(1.dp, ZenithGlassBorder, RoundedCornerShape(20.dp))
+                .padding(horizontal = 22.dp, vertical = 26.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier.size(64.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .background(if (failed) ZenithRed else ZenithAccent, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (failed) "!" else "⟳",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        color = ZenithOnAccent
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "HEALTH CONNECT",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+                color = Color.White,
+                letterSpacing = 0.6.sp
+            )
+            Text(
+                text = when {
+                    failed -> "Sync stopped"
+                    finished -> "All done"
+                    else -> "Syncing your health data…"
+                },
+                fontSize = 10.sp,
+                color = ZenithTextMuted,
+                modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
+            )
+
+            rows.forEachIndexed { index, (key, label) ->
+                val state = stages[key]
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 12.sp,
+                        color = if (state == false) ZenithRed else ZenithTextBright
+                    )
+                    when {
+                        state == true -> Text("✓", fontSize = 14.sp, fontWeight = FontWeight.Black, color = ZenithGood)
+                        state == false -> Text("✕", fontSize = 13.sp, fontWeight = FontWeight.Black, color = ZenithRed)
+                        // Nothing reached this step because an earlier one gave up.
+                        finished -> Text("—", fontSize = 12.sp, color = ZenithTextSub)
+                        else -> Canvas(
+                            modifier = Modifier
+                                .size(13.dp)
+                                .graphicsLayer { rotationZ = spin }
+                        ) {
+                            drawArc(
+                                color = ZenithAccent,
+                                startAngle = 0f,
+                                sweepAngle = 110f,
+                                useCenter = false,
+                                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                            )
+                        }
+                    }
+                }
+                if (index < rows.lastIndex) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(Color(0x0FFFFFFF))
+                    )
+                }
+            }
+
+            if (failed && statusText.isNotBlank()) {
+                Text(
+                    text = statusText,
+                    fontSize = 10.sp,
+                    color = ZenithWarn,
+                    lineHeight = 14.sp,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+            }
+
+            if (finished) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                        .height(42.dp)
+                        .background(ZenithAccent, RoundedCornerShape(10.dp))
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "DONE",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Black,
+                        color = ZenithOnAccent,
+                        letterSpacing = 0.5.sp
+                    )
                 }
             }
         }
